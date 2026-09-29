@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { cleanMorseText, generatePractice, PRACTICE_WORDS, WORD_LENGTHS } from './audio';
+import {
+  cleanMorseText,
+  morseTimeline,
+  generatePractice,
+  PRACTICE_WORDS,
+  WORD_LENGTHS,
+} from './audio';
 
 describe('practice material', () => {
   it('contains only real-word pool entries with their declared exact length', () => {
@@ -57,5 +63,28 @@ describe('practice material', () => {
   it('keeps word gaps when text is pasted with mixed whitespace', () => {
     expect(cleanMorseText('cq\tde\n n1rwj')).toBe('CQ DE N1RWJ');
     expect(cleanMorseText('💡 HELLO!')).toBe('HELLO!');
+  });
+});
+
+describe('Morse timing', () => {
+  it('sends the PARIS standard in 50 units, stretching only the Farnsworth gaps', () => {
+    const normal = morseTimeline('PARIS', 20, 20);
+    const spaced = morseTimeline('PARIS', 20, 10);
+    expect(normal.duration + normal.wordGap).toBeCloseTo(3, 8);
+    expect(spaced.duration + spaced.wordGap).toBeCloseTo(6, 8);
+    expect(spaced.tones.map((tone) => tone.duration)).toEqual(
+      normal.tones.map((tone) => tone.duration),
+    );
+    expect(morseTimeline('EE E', 20, 20).tones.map((tone) => Number(tone.at.toFixed(2)))).toEqual([
+      0, 0.24, 0.72,
+    ]);
+  });
+  it('joins prosigns without a character gap, including generated QSO endings', () => {
+    expect(cleanMorseText('cq <kn> <sk>')).toBe('CQ <KN> <SK>');
+    expect(
+      morseTimeline('KN', 20, 20).duration - morseTimeline('<KN>', 20, 20).duration,
+    ).toBeCloseTo(0.12, 8);
+    expect(morseTimeline('<SK>', 20, 20).tones).toHaveLength(6);
+    expect(() => morseTimeline('E', 0, 10)).toThrow('speed');
   });
 });

@@ -54,15 +54,53 @@ export const MORSE: Record<string, string> = {
   _: '..--.-',
   $: '...-..-',
 };
+export const PROSIGNS: Record<string, string> = {
+  '<AR>': '.-.-.',
+  '<AS>': '.-...',
+  '<BT>': '-...-',
+  '<KN>': '-.--.',
+  '<SK>': '...-.-',
+  '<CL>': '-.-..-..',
+  '<SOS>': '...---...',
+};
+const morseTokens = (text: string) => text.toUpperCase().match(/<[A-Z]{2,3}>|\s+|./g) ?? [];
 export function cleanMorseText(text: string) {
-  return text
-    .toUpperCase()
-    .replace(/\s+/g, ' ')
-    .split('')
-    .filter((c) => c === ' ' || c === '\n' || MORSE[c])
+  return morseTokens(text)
+    .map((token) => (/^\s+$/.test(token) ? ' ' : MORSE[token] || PROSIGNS[token] ? token : ''))
     .join('')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Seconds relative to playback start; prosigns have no inter-character gap. */
+export function morseTimeline(text: string, characterWpm: number, effectiveWpm: number) {
+  if (
+    ![characterWpm, effectiveWpm].every(
+      (value) => Number.isFinite(value) && value >= 1 && value <= 150,
+    )
+  )
+    throw new Error('Choose a valid Morse speed.');
+  const cleaned = cleanMorseText(text);
+  if (!cleaned) throw new Error('Add some letters or numbers to play.');
+  const dit = 1.2 / characterWpm;
+  const gapUnit = Math.max(dit, (60 / Math.min(characterWpm, effectiveWpm) - 31 * dit) / 19);
+  const tones: { at: number; duration: number }[] = [];
+  let at = 0;
+  const words = cleaned.split(' ');
+  words.forEach((word, wi) => {
+    const letters = morseTokens(word);
+    letters.forEach((letter, ci) => {
+      const symbols = PROSIGNS[letter] ?? MORSE[letter];
+      [...symbols].forEach((symbol, si) => {
+        const duration = (symbol === '.' ? 1 : 3) * dit;
+        tones.push({ at, duration });
+        at += duration + (si < symbols.length - 1 ? dit : 0);
+      });
+      if (ci < letters.length - 1) at += 3 * gapUnit;
+    });
+    if (wi < words.length - 1) at += 7 * gapUnit;
+  });
+  return { tones, duration: at, wordGap: 7 * gapUnit };
 }
 export type PracticeMode = 'words' | 'groups' | 'numbers' | 'callsigns' | 'custom';
 export const WORD_LENGTHS = [2, 3, 4, 5, 6, 7, 8] as const;
@@ -159,9 +197,8 @@ export class MorsePlayer {
     this.context ??= new AudioContext();
     await this.context.resume();
     if (token !== this.playbackToken) return 0;
+    const timeline = morseTimeline(cleaned, characterWpm, effectiveWpm);
     const dit = 1.2 / characterWpm;
-    // PARIS has 31 fixed element units and 19 spacing units. Stretch only the latter.
-    const gapUnit = Math.max(dit, (60 / Math.min(characterWpm, effectiveWpm) - 31 * dit) / 19);
     this.gain = this.context.createGain();
     this.gain.gain.value = 0;
     this.gain.connect(this.context.destination);
@@ -169,24 +206,15 @@ export class MorsePlayer {
     this.oscillator.frequency.value = frequency;
     this.oscillator.type = 'sine';
     this.oscillator.connect(this.gain);
-    let time = this.context.currentTime + 0.06;
-    const start = time;
-    for (let wi = 0; wi < cleaned.split(' ').length; wi++) {
-      const word = cleaned.split(' ')[wi];
-      for (let ci = 0; ci < word.length; ci++) {
-        const symbols = MORSE[word[ci]];
-        for (let si = 0; si < symbols.length; si++) {
-          const duration = (symbols[si] === '.' ? 1 : 3) * dit;
-          const ramp = Math.min(0.004, dit / 8);
-          this.gain.gain.setValueAtTime(0, time);
-          this.gain.gain.linearRampToValueAtTime(volume * 0.2, time + ramp);
-          this.gain.gain.setValueAtTime(volume * 0.2, time + duration - ramp);
-          this.gain.gain.linearRampToValueAtTime(0, time + duration);
-          time += duration + (si < symbols.length - 1 ? dit : 0);
-        }
-        if (ci < word.length - 1) time += 3 * gapUnit;
-      }
-      if (wi < cleaned.split(' ').length - 1) time += 7 * gapUnit;
+    const start = this.context.currentTime + 0.06;
+    const time = start + timeline.duration;
+    for (const event of timeline.tones) {
+      const at = start + event.at;
+      const ramp = Math.min(0.004, dit / 8);
+      this.gain.gain.setValueAtTime(0, at);
+      this.gain.gain.linearRampToValueAtTime(volume * 0.2, at + ramp);
+      this.gain.gain.setValueAtTime(volume * 0.2, at + event.duration - ramp);
+      this.gain.gain.linearRampToValueAtTime(0, at + event.duration);
     }
     this.oscillator.onended = () => {
       if (token === this.playbackToken) {
