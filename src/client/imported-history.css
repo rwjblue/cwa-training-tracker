@@ -1,0 +1,109 @@
+.imported-history {
+  margin-top: 24px;
+  padding: 28px;
+}
+.imported-history,
+.imported-attempt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.imported-history p {
+  color: #59665c;
+  line-height: 1.65;
+}
+.imported-group {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.imported-group > summary {
+  font-weight: 650;
+  font-size: 16px;
+}
+.imported-item {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.imported-history summary,
+.imported-attempt summary {
+  cursor: pointer;
+  line-height: 1.6;
+}
+.imported-history summary:focus-visible,
+.imported-attempt summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+.imported-history h4,
+.imported-attempt h4 {
+  font-size: 14px;
+  margin: 16px 0 8px;
+}
+.imported-fields {
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.imported-fields > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  padding: 4px 0;
+}
+.imported-fields dt {
+  color: #59665c;
+}
+.imported-fields dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.imported-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+.imported-result + .imported-result {
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+.imported-attempt {
+  font-size: 13px;
+  margin-top: 10px;
+}
+.imported-attempt > summary {
+  color: #59665c;
+}
+.imported-attempt[open] {
+  padding-bottom: 8px;
+}
+.session-row:has(.imported-attempt[open]) > .activity-icon,
+.session-row:has(.imported-attempt[open]) > .session-date,
+.session-row:has(.imported-attempt[open]) > .session-minutes {
+  align-self: flex-start;
+}
+.imported-evidence {
+  margin-top: 14px;
+}
+@media (max-width: 600px) {
+  .imported-history {
+    padding: 20px;
+  }
+  .imported-fields > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
+    padding: 6px 0;
+  }
+  .imported-item {
+    padding: 10px;
+  }
+}
+
+.imported-history a,
+.imported-attempt a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

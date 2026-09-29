@@ -59,6 +59,7 @@ import TodayPlan from './TodayPlan';
 import type { PlannedTask } from '../shared/plan';
 import { practiceLaunchForTask, type PracticeLaunch } from './practice-launch';
 import WelcomePanel from './WelcomePanel';
+import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './ImportedHistory';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -683,6 +684,7 @@ function App() {
               )}
               {page === 'settings' && user && (
                 <Account
+                  key={user.id}
                   user={user}
                   profile={profile}
                   setProfile={setProfile}
@@ -1125,6 +1127,7 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
         </strong>
         <span>
           {entry.notes ||
+            legacyAttemptTitle(entry) ||
             (entry.characterWpm
               ? `${entry.characterWpm} character WPM${entry.effectiveWpm ? ` · ${entry.effectiveWpm} effective WPM` : ''}`
               : 'A little progress, logged.')}
@@ -1135,6 +1138,7 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
             <p>{entry.metadata.scratchpad}</p>
           </details>
         )}
+        <LegacyAttemptDetails entry={entry} />
       </div>
       <span className="session-date">
         {entry.date === dateString() ? 'Today' : prettyDate(entry.date, true)}
@@ -2030,6 +2034,7 @@ function Account({
   } | null>(null);
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [dataBusy, setDataBusy] = useState(false);
+  const [archiveVersion, setArchiveVersion] = useState(0);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetText, setResetText] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
@@ -2132,6 +2137,7 @@ function Account({
         data: importData.data,
         mode: importMode,
       });
+      setArchiveVersion((value) => value + 1);
       await reload();
       setImportData(null);
       notify(
@@ -2149,6 +2155,7 @@ function Account({
     setError('');
     try {
       await api('/reset', { confirmation: resetText });
+      setArchiveVersion((value) => value + 1);
       await reload();
       setResetOpen(false);
       setResetText('');
@@ -2447,6 +2454,7 @@ function Account({
         Email addresses are used for sign-in. Practice records are stored privately for your
         account. To keep your own archive, export a backup before replacing or resetting data.
       </p>
+      <ImportedHistory key={archiveVersion} />
       {removeKey && (
         <Modal title="Remove this passkey?" onClose={() => setRemoveKey(null)}>
           <p className="modal-intro">

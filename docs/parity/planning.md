@@ -14,9 +14,14 @@
 ## Changes since the baseline
 
 P14/P18/P33 are **partly addressed**: scratchpad text now has a dedicated editable
-save field and history details for new/native records. Personal-import scratchpads
-remain under metadata.legacyAttempt.scratchpad and are not yet surfaced. Structured
-LCWO/CWT/performance/report result views remain missing. P15/P16 are **not fixed**:
+save field and history details for native and imported records. Imported attempt
+details expose original performance/difficulty, recall, passes, per-file speeds,
+and individual Runner/LCWO/CWT observations without combining runs. Settings now
+loads the authenticated source archive on demand and renders saved advisor reports
+with answers/evidence, LCWO measurements, instructor materials/revision links,
+course assignments/resources/meetings, and browser report drafts/preferences.
+These are readable historical snapshots; native typed result entry, report
+authoring/submission, and material editing remain unfinished. P15/P16 are **not fixed**:
 unfinished time and notes are still in memory, not durable drafts or offline saves.
 Recorded playback now accrues actual media time, has a separate recall timer, and
 supports official speed variants with per-file time/speed metadata. The baseline
@@ -26,6 +31,21 @@ See [PracticeStudio](../../src/client/PracticeStudio.tsx),
 [practice clock](../../src/client/practice-clock.ts),
 [recording variants](../../src/client/recording-variants.ts), and
 [save/history UI](../../src/client/main.tsx) for the updated implementation.
+
+The subsequent historical-import work also addresses P34/P35: code-group speed
+maps to effective WPM, pure dismissal records stay out of the practice log, and
+Runner completion includes cumulative eligible seconds. Uncovered imported LCWO
+group results receive explicitly estimated one-minute entries; source measurements
+retain zero/missing values and stable identity. A course-timezone cutoff applies
+to practice and completion while the original source remains complete in the
+private archive. Settings states that boundary. See
+[import conversion](../../src/shared/training.ts),
+[completion](../../src/shared/plan.ts), and
+[historical reader](../../src/client/ImportedHistory.tsx). The synthetic
+[browser journey](../../e2e/imported-history.spec.ts) checks import through the file
+chooser, report/result/device-draft readability, safe source links and text,
+private export fidelity, accessibility, and mobile width. Original baseline
+findings below are retained as historical evidence.
 
 Read-only source audit, 2026-09-29. No personal records, private exports, production accounts, or source data were accessed. No browser/build/tests were run for this audit. Status describes implemented source behavior, not a live deployment claim. The app is being changed concurrently; the new practice clock is reviewed separately below this inventory.
 
