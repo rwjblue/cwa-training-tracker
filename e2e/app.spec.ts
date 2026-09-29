@@ -10,6 +10,7 @@ test('public practice is useful without signing in and fits a phone', async ({ p
   ).toBeVisible();
   await expectAccessible(page, 'overview');
   await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await page.getByRole('button', { name: 'Free practice', exact: true }).click();
   await page.getByRole('button', { name: 'Your text', exact: true }).click();
   await page.getByLabel('Practice text', { exact: true }).fill('CQ TEST');
   await page.getByRole('button', { name: 'Play Morse', exact: true }).click();

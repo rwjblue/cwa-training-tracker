@@ -1,7 +1,16 @@
+import type { WordList } from './word-content';
 import { WORD_LENGTHS, type PracticeMode, type WordLength } from './audio';
 
 export const PRACTICE_PREFERENCES_KEY = 'cwa.practice.preferences.v1';
 export interface PracticePreferences {
+  tool: 'words' | 'qso' | 'free';
+  wordList: WordList;
+  wordGap: number;
+  shuffleWords: boolean;
+  repeatList: boolean;
+  spokenAnswers: boolean;
+  hideTrainerText: boolean;
+  qsoScenario: string;
   characterWpm: number;
   effectiveWpm: number;
   tone: number;
@@ -11,6 +20,14 @@ export interface PracticePreferences {
   wordLength: WordLength;
 }
 export const DEFAULT_PRACTICE_PREFERENCES: PracticePreferences = {
+  tool: 'words',
+  wordList: 'common-qso',
+  wordGap: 1,
+  shuffleWords: true,
+  repeatList: true,
+  spokenAnswers: false,
+  hideTrainerText: true,
+  qsoScenario: 'short-contact',
   characterWpm: 20,
   effectiveWpm: 10,
   tone: 600,
@@ -29,6 +46,27 @@ export function normalizePracticePreferences(value: unknown): PracticePreference
   const defaults = DEFAULT_PRACTICE_PREFERENCES;
   const characterWpm = bounded(source.characterWpm, defaults.characterWpm, 5, 50);
   return {
+    tool: ['words', 'qso', 'free'].includes(String(source.tool))
+      ? (source.tool as PracticePreferences['tool'])
+      : source.mode
+        ? 'free'
+        : defaults.tool,
+    wordList: ['common-qso', 'common-30', 'custom'].includes(String(source.wordList))
+      ? (source.wordList as WordList)
+      : defaults.wordList,
+    wordGap: bounded(source.wordGap, defaults.wordGap, 0, 5, 0.5),
+    shuffleWords:
+      typeof source.shuffleWords === 'boolean' ? source.shuffleWords : defaults.shuffleWords,
+    repeatList: typeof source.repeatList === 'boolean' ? source.repeatList : defaults.repeatList,
+    spokenAnswers:
+      typeof source.spokenAnswers === 'boolean' ? source.spokenAnswers : defaults.spokenAnswers,
+    hideTrainerText:
+      typeof source.hideTrainerText === 'boolean'
+        ? source.hideTrainerText
+        : defaults.hideTrainerText,
+    qsoScenario: ['short-contact', 'ragchew', 'pota', 'repeat'].includes(String(source.qsoScenario))
+      ? String(source.qsoScenario)
+      : defaults.qsoScenario,
     characterWpm,
     effectiveWpm: Math.min(
       characterWpm,

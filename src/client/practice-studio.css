@@ -205,3 +205,203 @@
     font-size: 13px;
   }
 }
+
+.studio-tool-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 18px;
+  flex-wrap: wrap;
+}
+.studio-tool-tabs button {
+  border: 1px solid #bfcbb5;
+  border-radius: 8px;
+  padding: 12px 22px;
+  background: #fffefa;
+  color: #415836;
+  font-size: 14px;
+}
+.studio-tool-tabs button.selected {
+  background: #38513b;
+  color: white;
+  border-color: #38513b;
+}
+.studio-task-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 22px;
+  background: #eef1e4;
+  padding: 18px 22px;
+  border-radius: 8px;
+}
+.studio-task-context > div {
+  display: grid;
+  gap: 6px;
+}
+.studio-task-context strong {
+  font-family: Georgia, serif;
+  font-size: 21px;
+}
+.studio-task-context span {
+  font-size: 12px;
+  color: #526249;
+}
+.studio-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border: 1px solid #d2dcca;
+  background: #f3f5e9;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.studio-quick-actions > span {
+  flex: 1;
+  white-space: nowrap;
+  font:
+    14px ui-monospace,
+    monospace;
+}
+.studio-sound-settings {
+  margin-top: 24px;
+  border-top: 1px solid #dde4d6;
+  padding-top: 18px;
+}
+.studio-sound-settings summary,
+.trainer-catalog summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #42593a;
+}
+.studio-sound-settings[open] summary {
+  margin-bottom: 22px;
+}
+.word-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  margin-bottom: 20px;
+}
+.word-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #4a6040;
+}
+.word-options select {
+  border: 1px solid #c5d1bb;
+  padding: 8px;
+  border-radius: 4px;
+  background: #fffefa;
+  color: #3f5837;
+}
+.word-options input {
+  accent-color: #3d5b37;
+  width: 16px;
+  height: 16px;
+}
+.trainer-current {
+  display: grid;
+  min-height: 150px;
+  align-items: center;
+  padding: 25px 20px;
+  color: #38513b;
+  font-size: 14px;
+}
+.trainer-morse-text {
+  font-family: ui-monospace, monospace;
+  font-size: 17px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.trainer-step-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #c9d3c0;
+}
+.trainer-step-controls > span {
+  font-size: 11px;
+  color: #4a6040;
+  text-align: center;
+}
+.trainer-step-controls .text-button {
+  color: #38513b;
+  font-size: 12px;
+}
+.trainer-step-controls button:disabled {
+  opacity: 0.4;
+}
+.trainer-round-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.trainer-catalog {
+  margin-bottom: 20px;
+}
+.trainer-catalog p {
+  color: #425737;
+  background: #f3f5ec;
+  padding: 15px;
+  font-size: 13px;
+  margin-top: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+@media (max-width: 640px) {
+  .studio-tool-tabs {
+    gap: 6px;
+  }
+  .studio-tool-tabs button {
+    flex: 1;
+    padding: 11px 9px;
+    font-size: 12px;
+  }
+  .studio-quick-actions {
+    gap: 10px;
+    padding: 12px;
+  }
+  .studio-quick-actions .button {
+    padding: 11px 13px;
+    font-size: 12px;
+  }
+  .studio-quick-actions > span {
+    flex-basis: calc(50% - 12px);
+    font-size: 12px;
+  }
+  .studio-quick-actions > .button:last-child {
+    width: 100%;
+  }
+  .trainer-current {
+    min-height: 110px;
+    padding: 20px 16px;
+  }
+  .trainer-step-controls > span {
+    max-width: 100px;
+  }
+}
+.studio-task-notes {
+  flex-basis: 100%;
+  order: 1;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.studio-task-notes summary {
+  cursor: pointer;
+}
+.studio-task-notes p {
+  white-space: pre-wrap;
+  margin-top: 10px;
+}

@@ -6,6 +6,8 @@ test('practice preferences persist and generated material follows exact selected
 }) => {
   await page.goto('/#practice');
   await expect(page.getByRole('heading', { name: 'The listening room' })).toBeVisible();
+  await page.getByRole('button', { name: 'Free practice', exact: true }).click();
+  await page.getByText(/^Sound settings ·/).click();
   const characterSpeed = page.getByRole('slider', { name: 'Character speed', exact: true });
   const effectiveSpeed = page.getByRole('slider', { name: 'Effective speed', exact: true });
   await characterSpeed.press('End');
@@ -18,6 +20,7 @@ test('practice preferences persist and generated material follows exact selected
   expect(words.every((word) => word.length === 3 && /^[A-Z]+$/.test(word))).toBe(true);
 
   await page.reload();
+  await page.getByText(/^Sound settings ·/).click();
   await expect(characterSpeed).toHaveValue('50');
   await expect(effectiveSpeed).toHaveValue('50');
   await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toHaveValue('300');
@@ -118,4 +121,54 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(entries).toHaveLength(2);
   expect(entries.find((entry: { source: string }) => entry.source === 'manual').minutes).toBe(7);
   await page.clock.resume();
+});
+
+test('word and QSO trainers expose the complete material and remember listening choices', async ({
+  page,
+}) => {
+  await page.goto('/#practice');
+  await page.getByRole('button', { name: 'Word trainer', exact: true }).click();
+  const list = page.getByRole('combobox', { name: 'Word list', exact: true });
+  await expect(list).toHaveValue('common-qso');
+  await page.getByText('View word list', { exact: true }).click();
+  const vocabulary = page.locator('.trainer-catalog p');
+  expect((await vocabulary.innerText()).split(' ')).toHaveLength(70);
+  await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Reveal text', exact: true }).click();
+  await page.getByRole('button', { name: 'Start practice', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
+  await expect(page.locator('.trainer-current')).toHaveText('VVV');
+  await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toBeVisible();
+  await list.selectOption('common-30');
+  expect((await vocabulary.innerText()).split(' ')).toHaveLength(30);
+  await page.getByRole('combobox', { name: 'Extra word pause', exact: true }).selectOption('2');
+  await page.reload();
+  await expect(list).toHaveValue('common-30');
+  await expect(page.getByRole('combobox', { name: 'Extra word pause', exact: true })).toHaveValue(
+    '2',
+  );
+  await expect(page.getByRole('checkbox', { name: 'Shuffle list', exact: true })).not.toBeChecked();
+
+  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
+  await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('ragchew');
+  await page.getByText('View full conversation', { exact: true }).click();
+  const conversation = page.locator('.trainer-catalog p');
+  const first = await conversation.innerText();
+  expect(first).toContain('RIG HR');
+  expect(first).toContain('WX');
+  expect(first).toContain('<SK>');
+  await page.getByRole('button', { name: 'New QSO', exact: true }).click();
+  await expect(conversation).not.toHaveText(first);
+  await page.getByRole('button', { name: 'Play Morse', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Stop playback', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Stop playback', exact: true }).click();
+  await expectAccessible(page, 'qso-desktop');
+  await page.screenshot({ path: '.tmp/qso-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectAccessible(page, 'qso-mobile');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: '.tmp/qso-mobile.png', fullPage: true });
 });

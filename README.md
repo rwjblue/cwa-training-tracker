@@ -9,9 +9,15 @@ CWops. Official course material stays at the
 
 ## What it does
 
+- A word trainer with 70 common QSO tokens, 30 common English words, or your own
+  list. Shuffle, repeat, adjust pauses, and optionally hear three Morse repeats
+  followed by an answer from a local English voice on your device.
+- Four generated QSO scenarios: first contact, rigs/antennas/weather, POTA,
+  and asking for repeats. Replay the current transmission or generate a new contact.
 - Public Morse practice with character speed, Farnsworth spacing, tone, adjustable
   group and word lengths, generated callsigns, and custom text; no account required.
-  Playback preferences stay on your device. Timer sessions are logged explicitly.
+  Playback preferences stay on your device. Start practice plays and starts the
+  timer together; review and save explicitly when you finish.
 - A private practice journal with goals, course planning, activity summaries,
   and separate practice categories.
 - A Today view for your own assignments, next-class preparation, and unfinished
@@ -79,6 +85,7 @@ before operating your own instance. There are no production credentials in CI.
 
 - [Import and migration](docs/import.md)
 - [Architecture and security](docs/architecture.md)
+- [Testing strategy](docs/testing.md)
 - [Deployment and operations](docs/deployment.md)
 
 `src/client/` is the React interface, `src/shared/` holds training data and

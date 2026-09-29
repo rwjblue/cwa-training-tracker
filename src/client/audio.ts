@@ -241,4 +241,10 @@ export class MorsePlayer {
     this.gain?.disconnect();
     this.gain = null;
   }
+  dispose() {
+    this.stop();
+    const context = this.context;
+    this.context = null;
+    if (context && context.state !== 'closed') void context.close().catch(() => {});
+  }
 }

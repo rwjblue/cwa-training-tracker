@@ -44,6 +44,8 @@ describe('browser practice preferences', () => {
         mode: 'unknown',
       }),
     ).toEqual({
+      ...DEFAULT_PRACTICE_PREFERENCES,
+      tool: 'free',
       characterWpm: 5,
       effectiveWpm: 5,
       tone: 1000,

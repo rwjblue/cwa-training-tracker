@@ -25,6 +25,10 @@ import {
   normalizePracticePreferences,
   type PracticePreferences,
 } from './practice-preferences';
+import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTrainer';
+import type { PracticeLaunch } from './practice-launch';
+import { WORD_LISTS } from './word-content';
+import { QSO_TEMPLATES } from './qso-content';
 import './practice-studio.css';
 
 const duration = (seconds: number) =>
@@ -33,12 +37,22 @@ const duration = (seconds: number) =>
 export default function PracticeStudio({
   onLog,
   savedVersion,
+  launch,
+  onBack,
+  onUnsavedChange,
 }: {
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
+  launch?: PracticeLaunch;
+  onBack?: () => void;
+  onUnsavedChange?: (unsaved: boolean) => void;
 }) {
-  const [preferences, setPreferences] = useState(loadPracticePreferences);
-  const { mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } = preferences;
+  const [preferences, setPreferences] = useState(() => ({
+    ...loadPracticePreferences(),
+    ...(launch?.tool ? { tool: launch.tool } : {}),
+  }));
+  const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
+    preferences;
   const [text, setText] = useState(() => {
     const initial = loadPracticePreferences();
     return initial.mode === 'custom' ? '' : generatePractice(initial.mode, initial);
@@ -48,12 +62,18 @@ export default function PracticeStudio({
   const [hidden, setHidden] = useState(false);
   const [error, setError] = useState('');
   const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [timerMinutes, setTimerMinutes] = useState(15);
+  const [running, setRunningState] = useState(false);
+  const runningRef = useRef(false);
+  const setRunning = (value: boolean) => {
+    runningRef.current = value;
+    setRunningState(value);
+  };
+  const [timerMinutes, setTimerMinutes] = useState(launch?.task?.targetMinutes ?? 15);
   const [timerDone, setTimerDone] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const previousSaved = useRef(savedVersion);
   const player = useRef(new MorsePlayer());
+  const trainer = useRef<ListeningTrainerHandle>(null);
   const startedAt = useRef(0);
   const accumulatedMs = useRef(0);
   useEffect(() => {
@@ -69,11 +89,21 @@ export default function PracticeStudio({
       previousSaved.current = savedVersion;
     }
   }, [savedVersion]);
-  useEffect(() => () => player.current.stop(), []);
+  useEffect(() => () => player.current.dispose(), []);
+  useEffect(() => {
+    onUnsavedChange?.(running || seconds > 0);
+  }, [running, seconds, onUnsavedChange]);
+  useEffect(() => {
+    if (!launch) return;
+    resetTimer();
+    setTimerMinutes(launch.task?.targetMinutes ?? 15);
+    if (launch.tool) setPreferences((current) => ({ ...current, tool: launch.tool! }));
+  }, [launch?.id]);
   const elapsedMs = () =>
     Math.min(
       timerMinutes * 60000,
-      accumulatedMs.current + (running ? Math.max(0, performance.now() - startedAt.current) : 0),
+      accumulatedMs.current +
+        (runningRef.current ? Math.max(0, performance.now() - startedAt.current) : 0),
     );
   useEffect(() => {
     if (!running) return;
@@ -84,8 +114,7 @@ export default function PracticeStudio({
         accumulatedMs.current = timerMinutes * 60000;
         setRunning(false);
         setTimerDone(true);
-        player.current.stop();
-        setPlaying(false);
+        stopPlayback();
       }
     };
     const interval = setInterval(tick, 250);
@@ -93,6 +122,7 @@ export default function PracticeStudio({
   }, [running, timerMinutes]);
   const stopPlayback = () => {
     player.current.stop();
+    trainer.current?.stop();
     setPlaying(false);
   };
   const pauseTimer = () => {
@@ -121,16 +151,36 @@ export default function PracticeStudio({
     const elapsedSeconds = pauseTimer();
     if (elapsedSeconds < 1) return;
     onLog({
-      kind: 'listening',
+      kind: launch?.task?.kind ?? (tool === 'words' ? 'head-copy' : 'listening'),
+      lesson: launch?.task?.lesson,
+      notes: [
+        launch?.task?.title,
+        tool === 'words'
+          ? preferences.wordList === 'custom'
+            ? 'Custom word recognition'
+            : WORD_LISTS[preferences.wordList].title
+          : tool === 'qso'
+            ? QSO_TEMPLATES.find((item) => item.id === preferences.qsoScenario)?.title
+            : undefined,
+      ]
+        .filter(Boolean)
+        .join(' · '),
       minutes: elapsedSeconds / 60,
       characterWpm,
       effectiveWpm,
       source: 'morse',
-      metadata: { elapsedSeconds, practiceMode: mode },
+      metadata: {
+        elapsedSeconds,
+        practiceMode: mode,
+        practiceTool: tool,
+        ...(tool === 'words' ? { wordList: preferences.wordList } : {}),
+        ...(tool === 'qso' ? { qsoScenario: preferences.qsoScenario } : {}),
+        ...(launch?.task ? { plannedTaskId: launch.task.id } : {}),
+      },
     });
   };
   const changePreferences = (changes: Partial<PracticePreferences>, regenerate = false) => {
-    stopPlayback();
+    if (!('hideTrainerText' in changes)) stopPlayback();
     setError('');
     const next = normalizePracticePreferences({ ...preferences, ...changes });
     setPreferences(next);
@@ -144,13 +194,22 @@ export default function PracticeStudio({
     setError('');
     setPlaying(true);
     try {
+      if (tool !== 'free') {
+        await trainer.current?.play();
+        return;
+      }
       await player.current.play(text, characterWpm, effectiveWpm, tone, volume / 100, () =>
         setPlaying(false),
       );
     } catch (err) {
       setError((err as Error).message);
       setPlaying(false);
+      pauseTimer();
     }
+  };
+  const startPractice = async () => {
+    if (!running) startTimer();
+    if (!playing) await play();
   };
   const generate = () => {
     stopPlayback();
@@ -164,11 +223,82 @@ export default function PracticeStudio({
             <span className="small-line" /> TUNE IN. TAKE YOUR TIME.
           </div>
           <h1>Your practice studio.</h1>
-          <p>A clear tone, a little space, and your full attention. Free for everyone.</p>
+          <p>
+            Word recognition, QSO conversations, and free practice. No account required to listen.
+          </p>
         </div>
         <span className="chip">
           <span className="status-dot" /> No sign-in needed
         </span>
+      </div>
+      {launch?.task && (
+        <div className="studio-task-context">
+          <div>
+            <span className="eyebrow">ASSIGNED PRACTICE</span>
+            <strong>{launch.task.title}</strong>
+            <span>
+              {launch.task.targetMinutes} min target · Saved time stays linked to this exercise.
+            </span>
+          </div>
+          {launch.task.link && (
+            <a
+              className="text-button"
+              href={launch.task.link}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open exercise <ArrowRight size={14} />
+            </a>
+          )}
+          {launch.task.notes && (
+            <details className="studio-task-notes">
+              <summary>Exercise instructions</summary>
+              <p>{launch.task.notes}</p>
+            </details>
+          )}
+          {onBack && (
+            <button className="text-button" onClick={onBack}>
+              Back to Today <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+      )}
+      <div className="studio-tool-tabs" role="group" aria-label="Studio tools">
+        {(
+          [
+            ['words', 'Word trainer'],
+            ['qso', 'QSO practice'],
+            ['free', 'Free practice'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            className={tool === value ? 'selected' : ''}
+            aria-pressed={tool === value}
+            onClick={() => changePreferences({ tool: value })}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="studio-quick-actions">
+        <button
+          className="button dark"
+          disabled={timerDone}
+          onClick={() => (running ? pauseTimer() : void startPractice())}
+        >
+          {running ? <Square size={14} /> : <Play size={14} />}
+          {running ? 'Pause practice' : seconds > 0 ? 'Resume practice' : 'Start practice'}
+        </button>
+        <span>
+          <strong>{duration(seconds)}</strong> / {duration(timerMinutes * 60)}{' '}
+          <span className="field-hint">
+            {running ? 'timing' : seconds > 0 ? 'unsaved' : 'elapsed'}
+          </span>
+        </span>
+        <button className="button outline" disabled={seconds < 1} onClick={logTimedSession}>
+          Review &amp; save <ArrowRight size={14} />
+        </button>
       </div>
       <div className="practice-layout">
         <section className="card studio-card">
@@ -179,141 +309,157 @@ export default function PracticeStudio({
             </div>
             <Headphones size={23} />
           </div>
-          <div className="practice-tabs" role="group" aria-label="Practice content">
-            {[
-              ['words', 'Words'],
-              ['groups', 'Letter groups'],
-              ['numbers', 'Numbers'],
-              ['callsigns', 'Callsigns'],
-              ['custom', 'Your text'],
-            ].map(([value, label]) => (
-              <button
-                className={mode === value ? 'selected' : ''}
-                key={value}
-                aria-pressed={mode === value}
-                onClick={() => changePreferences({ mode: value as PracticeMode }, true)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {(mode === 'groups' || mode === 'numbers' || mode === 'words') && (
-            <div className="practice-generator-controls">
-              {mode === 'words' ? (
-                <label htmlFor="practice-word-length">
-                  Word length
-                  <select
-                    id="practice-word-length"
-                    value={wordLength}
-                    onChange={(e) =>
-                      changePreferences(
-                        {
-                          wordLength:
-                            e.target.value === 'mixed'
-                              ? 'mixed'
-                              : (Number(e.target.value) as PracticePreferences['wordLength']),
-                        },
-                        true,
-                      )
-                    }
+          {tool !== 'free' ? (
+            <ListeningTrainer
+              ref={trainer}
+              key={tool}
+              preferences={preferences}
+              onChange={changePreferences}
+              onPlaying={setPlaying}
+              onError={(message) => {
+                pauseTimer();
+                setError(message);
+              }}
+            />
+          ) : (
+            <>
+              <div className="practice-tabs" role="group" aria-label="Practice content">
+                {[
+                  ['words', 'Words'],
+                  ['groups', 'Letter groups'],
+                  ['numbers', 'Numbers'],
+                  ['callsigns', 'Callsigns'],
+                  ['custom', 'Your text'],
+                ].map(([value, label]) => (
+                  <button
+                    className={mode === value ? 'selected' : ''}
+                    key={value}
+                    aria-pressed={mode === value}
+                    onClick={() => changePreferences({ mode: value as PracticeMode }, true)}
                   >
-                    <option value="mixed">Mixed lengths · 2–8 letters</option>
-                    {WORD_LENGTHS.map((length) => (
-                      <option key={length} value={length}>
-                        Exactly {length} letters
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <label htmlFor="practice-group-length">
-                  {mode === 'numbers' ? 'Digits per group' : 'Letters per group'}
-                  <select
-                    id="practice-group-length"
-                    value={groupLength}
-                    onChange={(e) =>
-                      changePreferences({ groupLength: Number(e.target.value) }, true)
-                    }
-                  >
-                    {Array.from({ length: 10 }, (_, index) => index + 1).map((length) => (
-                      <option key={length} value={length}>
-                        {length}{' '}
-                        {mode === 'numbers'
-                          ? length === 1
-                            ? 'digit'
-                            : 'digits'
-                          : length === 1
-                            ? 'letter'
-                            : 'letters'}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <p>
-                {mode === 'words'
-                  ? 'Twelve real words from a varied everyday vocabulary. Changing the length creates a fresh set.'
-                  : `Twelve random ${mode === 'numbers' ? 'number' : 'letter'} groups. Changing the group length creates a fresh set.`}
-              </p>
-            </div>
-          )}
-          {mode === 'callsigns' && (
-            <p className="practice-generator-note">
-              These are fictional, randomly generated practice examples. They may happen to match
-              real callsigns; they are not a directory of operators.
-            </p>
-          )}
-          <div className="transmission-panel">
-            <div className="transmission-label">
-              <span>
-                <i className={playing ? 'pulse-dot' : ''} />{' '}
-                {playing ? 'TRANSMITTING' : 'READY TO LISTEN'}
-              </span>
-              <button onClick={() => setHidden(!hidden)}>
-                {hidden ? 'Reveal text' : 'Hide text'}
-              </button>
-            </div>
-            <label className="sr-only" htmlFor="practice-text">
-              Practice text
-            </label>
-            {hidden ? (
-              <div className="hidden-transmission">
-                <AudioLines size={30} />
-                <span>Trust your ears.</span>
-                <button onClick={() => setHidden(false)}>Reveal when you’re ready</button>
+                    {label}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <textarea
-                id="practice-text"
-                value={text}
-                maxLength={1200}
-                onChange={(e) => {
-                  stopPlayback();
-                  setText(e.target.value);
-                  setPreferences((current) => ({ ...current, mode: 'custom' }));
-                }}
-                spellCheck={false}
-                placeholder="Enter letters, numbers, or text to practice…"
-                aria-describedby="morse-text-help"
-              />
-            )}
-            <div className={`waveform ${playing ? 'is-playing' : ''}`} aria-hidden="true">
-              {Array.from({ length: 72 }, (_, i) => (
-                <i
-                  key={i}
-                  style={
-                    {
-                      '--height': `${[10, 18, 8, 31, 44, 22, 12, 36, 16, 28, 7, 20][i % 12]}px`,
-                      '--delay': `${i * 0.035}s`,
-                    } as React.CSSProperties
-                  }
-                />
-              ))}
-            </div>
-          </div>
-          <p id="morse-text-help" className="field-hint">
-            Letters, numbers, and common punctuation. Unsupported characters are skipped.
-          </p>
+              {(mode === 'groups' || mode === 'numbers' || mode === 'words') && (
+                <div className="practice-generator-controls">
+                  {mode === 'words' ? (
+                    <label htmlFor="practice-word-length">
+                      Word length
+                      <select
+                        id="practice-word-length"
+                        value={wordLength}
+                        onChange={(e) =>
+                          changePreferences(
+                            {
+                              wordLength:
+                                e.target.value === 'mixed'
+                                  ? 'mixed'
+                                  : (Number(e.target.value) as PracticePreferences['wordLength']),
+                            },
+                            true,
+                          )
+                        }
+                      >
+                        <option value="mixed">Mixed lengths · 2–8 letters</option>
+                        {WORD_LENGTHS.map((length) => (
+                          <option key={length} value={length}>
+                            Exactly {length} letters
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <label htmlFor="practice-group-length">
+                      {mode === 'numbers' ? 'Digits per group' : 'Letters per group'}
+                      <select
+                        id="practice-group-length"
+                        value={groupLength}
+                        onChange={(e) =>
+                          changePreferences({ groupLength: Number(e.target.value) }, true)
+                        }
+                      >
+                        {Array.from({ length: 10 }, (_, index) => index + 1).map((length) => (
+                          <option key={length} value={length}>
+                            {length}{' '}
+                            {mode === 'numbers'
+                              ? length === 1
+                                ? 'digit'
+                                : 'digits'
+                              : length === 1
+                                ? 'letter'
+                                : 'letters'}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <p>
+                    {mode === 'words'
+                      ? 'Twelve real words from a varied everyday vocabulary. Changing the length creates a fresh set.'
+                      : `Twelve random ${mode === 'numbers' ? 'number' : 'letter'} groups. Changing the group length creates a fresh set.`}
+                  </p>
+                </div>
+              )}
+              {mode === 'callsigns' && (
+                <p className="practice-generator-note">
+                  These are fictional, randomly generated practice examples. They may happen to
+                  match real callsigns; they are not a directory of operators.
+                </p>
+              )}
+              <div className="transmission-panel">
+                <div className="transmission-label">
+                  <span>
+                    <i className={playing ? 'pulse-dot' : ''} />{' '}
+                    {playing ? 'TRANSMITTING' : 'READY TO LISTEN'}
+                  </span>
+                  <button onClick={() => setHidden(!hidden)}>
+                    {hidden ? 'Reveal text' : 'Hide text'}
+                  </button>
+                </div>
+                <label className="sr-only" htmlFor="practice-text">
+                  Practice text
+                </label>
+                {hidden ? (
+                  <div className="hidden-transmission">
+                    <AudioLines size={30} />
+                    <span>Trust your ears.</span>
+                    <button onClick={() => setHidden(false)}>Reveal when you’re ready</button>
+                  </div>
+                ) : (
+                  <textarea
+                    id="practice-text"
+                    value={text}
+                    maxLength={1200}
+                    onChange={(e) => {
+                      stopPlayback();
+                      setText(e.target.value);
+                      setPreferences((current) => ({ ...current, mode: 'custom' }));
+                    }}
+                    spellCheck={false}
+                    placeholder="Enter letters, numbers, or text to practice…"
+                    aria-describedby="morse-text-help"
+                  />
+                )}
+                <div className={`waveform ${playing ? 'is-playing' : ''}`} aria-hidden="true">
+                  {Array.from({ length: 72 }, (_, i) => (
+                    <i
+                      key={i}
+                      style={
+                        {
+                          '--height': `${[10, 18, 8, 31, 44, 22, 12, 36, 16, 28, 7, 20][i % 12]}px`,
+                          '--delay': `${i * 0.035}s`,
+                        } as React.CSSProperties
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+              <p id="morse-text-help" className="field-hint">
+                Letters, numbers, and common punctuation. Unsupported characters are skipped.
+              </p>
+            </>
+          )}
           {error && (
             <div className="alert error" role="alert">
               {error}
@@ -323,7 +469,7 @@ export default function PracticeStudio({
             <button
               className="button dark play-button"
               onClick={play}
-              disabled={!cleanMorseText(text)}
+              disabled={tool === 'free' && !cleanMorseText(text)}
             >
               {playing ? (
                 <Square size={16} fill="currentColor" />
@@ -332,72 +478,79 @@ export default function PracticeStudio({
               )}
               {playing ? 'Stop playback' : 'Play Morse'}
             </button>
-            <button
-              className="button outline"
-              onClick={() => generate()}
-              disabled={mode === 'custom'}
-            >
-              <Shuffle size={16} /> New set
-            </button>
+            {tool === 'free' && (
+              <button
+                className="button outline"
+                onClick={() => generate()}
+                disabled={mode === 'custom'}
+              >
+                <Shuffle size={16} /> New set
+              </button>
+            )}
             <span className="playback-note">
               {characterWpm} / {effectiveWpm} WPM <span>·</span> {tone} Hz
             </span>
           </div>
           <p className="studio-playback-help">
-            Playing Morse does not start the timer or save a practice record.
+            Start practice plays and times your session. Play Morse only plays audio; review and
+            save when you finish.
           </p>
-          <div className="studio-divider" />
-          <div className="studio-preferences-heading">
-            <h3>Your listening preferences</h3>
-            <p>
-              {remembered
-                ? 'Saved on this device, including when you sign out. Custom text is not saved.'
-                : 'Active for this visit. Your browser is not allowing these preferences to be remembered.'}
-            </p>
-          </div>
-          <div className="studio-controls">
-            <Range
-              label="Character speed"
-              value={characterWpm}
-              min={5}
-              max={50}
-              unit="WPM"
-              onChange={(v) => changePreferences({ characterWpm: v })}
-              hint="The speed of each individual character."
-            />
-            <Range
-              label="Effective speed"
-              value={effectiveWpm}
-              min={3}
-              max={characterWpm}
-              unit="WPM"
-              onChange={(v) => changePreferences({ effectiveWpm: v })}
-              hint="Farnsworth spacing gives you time to hear."
-            />
-            <Range
-              label="Sidetone"
-              value={tone}
-              min={300}
-              max={1000}
-              step={25}
-              unit="Hz"
-              onChange={(v) => changePreferences({ tone: v })}
-              hint="Find a comfortable pitch for your ears."
-            />
-            <Range
-              label="Volume"
-              value={volume}
-              min={0}
-              max={100}
-              unit="%"
-              onChange={(v) => changePreferences({ volume: v })}
-              hint={
-                volume === 0
-                  ? 'Muted. Raise the volume when you’re ready to listen.'
-                  : 'Start softly. Comfort comes first.'
-              }
-            />
-          </div>
+          <details className="studio-sound-settings">
+            <summary>
+              Sound settings · {characterWpm}/{effectiveWpm} WPM · {tone} Hz
+            </summary>
+            <div className="studio-preferences-heading">
+              <h3>Your listening preferences</h3>
+              <p>
+                {remembered
+                  ? 'Saved on this device, including when you sign out. Custom text is not saved.'
+                  : 'Active for this visit. Your browser is not allowing these preferences to be remembered.'}
+              </p>
+            </div>
+            <div className="studio-controls">
+              <Range
+                label="Character speed"
+                value={characterWpm}
+                min={5}
+                max={50}
+                unit="WPM"
+                onChange={(v) => changePreferences({ characterWpm: v })}
+                hint="The speed of each individual character."
+              />
+              <Range
+                label="Effective speed"
+                value={effectiveWpm}
+                min={3}
+                max={characterWpm}
+                unit="WPM"
+                onChange={(v) => changePreferences({ effectiveWpm: v })}
+                hint="Farnsworth spacing gives you time to hear."
+              />
+              <Range
+                label="Sidetone"
+                value={tone}
+                min={300}
+                max={1000}
+                step={25}
+                unit="Hz"
+                onChange={(v) => changePreferences({ tone: v })}
+                hint="Find a comfortable pitch for your ears."
+              />
+              <Range
+                label="Volume"
+                value={volume}
+                min={0}
+                max={100}
+                unit="%"
+                onChange={(v) => changePreferences({ volume: v })}
+                hint={
+                  volume === 0
+                    ? 'Muted. Raise the volume when you’re ready to listen.'
+                    : 'Start softly. Comfort comes first.'
+                }
+              />
+            </div>
+          </details>
         </section>
         <div className="practice-aside">
           <section className="card timer-card">
@@ -416,20 +569,22 @@ export default function PracticeStudio({
               {duration(Math.max(0, timerMinutes * 60 - seconds))}
             </div>
             <div className="timer-presets">
-              {[5, 10, 15, 30].map((minutes) => (
-                <button
-                  key={minutes}
-                  className={timerMinutes === minutes ? 'selected' : ''}
-                  disabled={running || seconds > 0}
-                  aria-pressed={timerMinutes === minutes}
-                  onClick={() => {
-                    setTimerMinutes(minutes);
-                    resetTimer();
-                  }}
-                >
-                  {minutes} min
-                </button>
-              ))}
+              {[...new Set([5, 10, 15, 30, ...(launch?.task ? [launch.task.targetMinutes] : [])])]
+                .sort((a, b) => a - b)
+                .map((minutes) => (
+                  <button
+                    key={minutes}
+                    className={timerMinutes === minutes ? 'selected' : ''}
+                    disabled={running || seconds > 0}
+                    aria-pressed={timerMinutes === minutes}
+                    onClick={() => {
+                      setTimerMinutes(minutes);
+                      resetTimer();
+                    }}
+                  >
+                    {minutes} min
+                  </button>
+                ))}
             </div>
             <button
               className="button dark full"
@@ -509,7 +664,15 @@ export default function PracticeStudio({
                 className="text-button"
                 onClick={() => {
                   if (running) pauseTimer();
-                  onLog({ kind: 'listening', characterWpm, effectiveWpm, source: 'manual' });
+                  onLog({
+                    kind: launch?.task?.kind ?? 'listening',
+                    lesson: launch?.task?.lesson,
+                    notes: launch?.task?.title,
+                    characterWpm,
+                    effectiveWpm,
+                    source: 'manual',
+                    ...(launch?.task ? { metadata: { plannedTaskId: launch.task.id } } : {}),
+                  });
                 }}
               >
                 <Plus size={14} /> Log practice manually
