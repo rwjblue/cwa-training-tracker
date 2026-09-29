@@ -61,3 +61,31 @@ The checked-in CI workflow verifies pull requests and main commits. Deployment
 is manual through mise until a scoped deployment credential is deliberately
 configured in your GitHub environment. No token is needed for tests or a
 Wrangler dry run.
+
+## Choosing push-to-deploy
+
+Automatic deployment is not configured yet. For this repository, prefer a
+production deployment job after the existing GitHub Actions verification job
+succeeds. That keeps type checks, unit/Worker tests, browser journeys, and the
+Wrangler dry run ahead of each release. Run it only for pushes to `main`, never
+for pull requests, and serialize production deployments so migrations and
+Worker releases cannot race. Use a GitHub production environment for deployment
+credentials and restrict its allowed branch to `main`.
+
+This approach does not require installing the Cloudflare GitHub app. It needs
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the deployment environment.
+Limit the API credential to the necessary account/zone and Worker deployment,
+D1 migration, and configured email-binding permissions. Keep the existing
+`AUTH_SECRET` in Cloudflare; CI does not need a copy of that runtime secret.
+Use the repository's pinned Node version and mise tasks. See Cloudflare's
+[GitHub Actions guide](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/).
+
+Cloudflare Workers Builds is an alternative. Connect the existing
+`cwa-training-tracker` Worker to this repository using the Cloudflare GitHub app,
+granting access only to this repository and selecting `main` as the production
+branch. Configure validation in its build command and D1 migrations before its
+deploy command; do not rely on a separate GitHub workflow to gate a build that
+starts independently on push. Keep preview builds disabled until they have
+separate database, email, and secret bindings. Choose one production deployment
+system to avoid duplicate releases. See
+[Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/).
