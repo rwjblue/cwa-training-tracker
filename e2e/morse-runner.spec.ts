@@ -5,10 +5,28 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   page,
   context,
 }) => {
+  let releaseSimulator!: () => void;
+  const loading = new Promise<void>((resolve) => {
+    releaseSimulator = resolve;
+  });
+  await page.route('**/vendor/web-morse-runner/integration/main.js', async (route) => {
+    await loading;
+    await route.continue();
+  });
   await page.goto('/#practice');
   await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
-  await expect(page.frameLocator('iframe').getByRole('button', { name: /Run$/ })).toBeEnabled();
+  const publicRunner = page.frameLocator('iframe');
+  await expect(publicRunner.getByRole('button', { name: /Run$/ })).toBeDisabled();
+  releaseSimulator();
+  await expect(publicRunner.getByRole('button', { name: /Run$/ })).toBeEnabled();
+  await publicRunner.getByRole('button', { name: /Run$/ }).click();
+  await expect(page.getByRole('button', { name: 'Stop run', exact: true })).toBeEnabled();
+  await expect.poll(() => publicRunner.locator('#clock').textContent()).not.toBe('00:00:00');
+  await page.getByRole('button', { name: 'Stop run', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Review & save run', exact: true })).toBeEnabled();
   expect((await context.request.get('/api/entries')).status()).toBe(401);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Word trainer', exact: true }).click();
   await signIn(page);
   await page.clock.setFixedTime(new Date('2026-10-07T16:00:00Z'));
   const settings = (await (await context.request.get('/api/settings')).json()).settings;

@@ -108,6 +108,7 @@ export function makeBundle(revision, sources) {
   page = replaceOnce(page, '<textarea id="transcript_content"', '<textarea aria-label="Contact transcript" id="transcript_content"', "transcript label");
   page = replaceOnce(page, '<button id="close_expert"', '<button aria-label="Close expert configuration" id="close_expert"', "expert close label");
   page = replaceOnce(page, '<div class="block" id="log">', '<div class="block" id="log" tabindex="0" role="region" aria-label="Contact log">', "keyboard-accessible contact log");
+  page = replaceOnce(page, '<button id="run">', '<button id="run" disabled>', "Run disabled until bridge readiness");
   page = replaceOnce(page, "<body>", '<body data-pagefind-ignore>\n  <aside class="runner-provenance">Adapted from Web Morse Runner by DJ1TF. <a href="./LICENSE">Unlicense</a>. Synthetic practice calls; not real contacts.</aside>', "body");
   output["index.html"] = page;
   output["LICENSE"] = sources.LICENSE;
@@ -115,7 +116,7 @@ export function makeBundle(revision, sources) {
   output["UPSTREAM.json"] = JSON.stringify({
     repository, revision, license: "Unlicense", sourceSha256: sourceHashes(sources),
     generatedSha256: Object.fromEntries(Object.entries(output).map(([path, text]) => [path, sha256(text)])),
-    patches: ["module-relative AudioWorklet URL", "local synthetic calls URL", "namespaced storage keys", "local bootstrap, theme, and attribution", "document language and accessible control labels"],
+    patches: ["module-relative AudioWorklet URL", "local synthetic calls URL", "namespaced storage keys", "local bootstrap, theme, and attribution", "document language and accessible control labels", "Run disabled until bridge readiness"],
     excluded: ["upstream calls.txt (unverified provenance)", "Example_Calls/ (not required; third-party data)", "tests and documentation"],
   }, null, 2) + "\n";
   return output;

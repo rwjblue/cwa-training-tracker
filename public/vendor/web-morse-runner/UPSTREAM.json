@@ -87,7 +87,7 @@
     "runtime/view.js": "adee56f7c1952d9fcb7b6ea4aaaec63759b741ba493425c3a61ad7355359b0ab",
     "upstream/volume.js": "bddcc92d3027699c9514f397e85df8e206926a69b2c4c324144cd10a21463895",
     "runtime/volume.js": "bddcc92d3027699c9514f397e85df8e206926a69b2c4c324144cd10a21463895",
-    "index.html": "8b441620d06129e9e66fe1f8644843f9deaa9f15c5ec16a993f9149f9380593f",
+    "index.html": "1ed43538c780f1f0d3980649343f03a30c801e0dc6d9e43c9b2291ede2728efb",
     "LICENSE": "6b0382b16279f26ff69014300541967a356a666eb0b91b422f6862f6b7dad17e",
     "data/synthetic-calls.txt": "1bfc135155ab905fd6052b8884d21376b2ee001bbabb35a278f9f22d94306a22"
   },
@@ -96,7 +96,8 @@
     "local synthetic calls URL",
     "namespaced storage keys",
     "local bootstrap, theme, and attribution",
-    "document language and accessible control labels"
+    "document language and accessible control labels",
+    "Run disabled until bridge readiness"
   ],
   "excluded": [
     "upstream calls.txt (unverified provenance)",
