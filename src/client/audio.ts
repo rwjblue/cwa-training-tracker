@@ -85,9 +85,11 @@ export function morseTimeline(text: string, characterWpm: number, effectiveWpm: 
   const dit = 1.2 / characterWpm;
   const gapUnit = Math.max(dit, (60 / Math.min(characterWpm, effectiveWpm) - 31 * dit) / 19);
   const tones: { at: number; duration: number }[] = [];
+  const wordTimings: { text: string; start: number; end: number }[] = [];
   let at = 0;
   const words = cleaned.split(' ');
   words.forEach((word, wi) => {
+    const start = at;
     const letters = morseTokens(word);
     letters.forEach((letter, ci) => {
       const symbols = PROSIGNS[letter] ?? MORSE[letter];
@@ -98,9 +100,10 @@ export function morseTimeline(text: string, characterWpm: number, effectiveWpm: 
       });
       if (ci < letters.length - 1) at += 3 * gapUnit;
     });
+    wordTimings.push({ text: word, start, end: at });
     if (wi < words.length - 1) at += 7 * gapUnit;
   });
-  return { tones, duration: at, wordGap: 7 * gapUnit };
+  return { tones, words: wordTimings, duration: at, wordGap: 7 * gapUnit };
 }
 export type PracticeMode = 'words' | 'groups' | 'numbers' | 'callsigns' | 'custom';
 export const WORD_LENGTHS = [2, 3, 4, 5, 6, 7, 8] as const;
@@ -177,74 +180,14 @@ export function generatePractice(
     ).join(''),
   ).join(' ');
 }
-export class MorsePlayer {
-  private context: AudioContext | null = null;
-  private oscillator: OscillatorNode | null = null;
-  private gain: GainNode | null = null;
-  private playbackToken = 0;
-  async play(
-    text: string,
-    characterWpm: number,
-    effectiveWpm: number,
-    frequency: number,
-    volume: number,
-    onFinish: () => void,
-  ): Promise<number> {
-    this.stop();
-    const token = this.playbackToken;
-    const cleaned = cleanMorseText(text);
-    if (!cleaned) throw new Error('Add some letters or numbers to play.');
-    this.context ??= new AudioContext();
-    await this.context.resume();
-    if (token !== this.playbackToken) return 0;
-    const timeline = morseTimeline(cleaned, characterWpm, effectiveWpm);
-    const dit = 1.2 / characterWpm;
-    this.gain = this.context.createGain();
-    this.gain.gain.value = 0;
-    this.gain.connect(this.context.destination);
-    this.oscillator = this.context.createOscillator();
-    this.oscillator.frequency.value = frequency;
-    this.oscillator.type = 'sine';
-    this.oscillator.connect(this.gain);
-    const start = this.context.currentTime + 0.06;
-    const time = start + timeline.duration;
-    for (const event of timeline.tones) {
-      const at = start + event.at;
-      const ramp = Math.min(0.004, dit / 8);
-      this.gain.gain.setValueAtTime(0, at);
-      this.gain.gain.linearRampToValueAtTime(volume * 0.2, at + ramp);
-      this.gain.gain.setValueAtTime(volume * 0.2, at + event.duration - ramp);
-      this.gain.gain.linearRampToValueAtTime(0, at + event.duration);
-    }
-    this.oscillator.onended = () => {
-      if (token === this.playbackToken) {
-        this.stop();
-        onFinish();
-      }
-    };
-    this.oscillator.start(start);
-    this.oscillator.stop(time + 0.03);
-    return time - start;
-  }
-  stop() {
-    this.playbackToken++;
-    if (this.oscillator) {
-      this.oscillator.onended = null;
-      try {
-        this.oscillator.stop();
-        this.oscillator.disconnect();
-      } catch {
-        /* Already stopped. */
-      }
-    }
-    this.oscillator = null;
-    this.gain?.disconnect();
-    this.gain = null;
-  }
-  dispose() {
-    this.stop();
-    const context = this.context;
-    this.context = null;
-    if (context && context.state !== 'closed') void context.close().catch(() => {});
-  }
-}
+// Existing imports keep working while native playback and rendering remain independently testable.
+export {
+  buildMorseTrack,
+  renderMorseWav,
+  wordAtTime,
+  MORSE_SAMPLE_RATE,
+  MAX_MORSE_SECONDS,
+} from './morse-track';
+export type { MorseTrack, MorseTrackOptions, MorseTrackItem, MorseWord } from './morse-track';
+export { MorsePlayer } from './morse-player';
+export type { MorsePlaybackState, MorseProgress, MorsePlayerOptions } from './morse-player';
