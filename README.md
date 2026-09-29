@@ -9,8 +9,9 @@ CWops. Official course material stays at the
 
 ## What it does
 
-- Public Morse practice with character speed, Farnsworth spacing, tone, random
-  groups, callsigns, and custom text; no account required.
+- Public Morse practice with character speed, Farnsworth spacing, tone, adjustable
+  group and word lengths, generated callsigns, and custom text; no account required.
+  Playback preferences stay on your device. Timer sessions are logged explicitly.
 - A private practice journal with goals, course planning, activity summaries,
   and separate practice categories.
 - A personal homework plan with class dates, exercises, completion tracking,

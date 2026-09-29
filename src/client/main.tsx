@@ -13,7 +13,6 @@ import {
   BookOpen,
   CalendarDays,
   Check,
-  CheckCheck,
   Clock3,
   Coffee,
   Download,
@@ -32,9 +31,7 @@ import {
   Send,
   Settings2,
   ShieldCheck,
-  Shuffle,
   Signal,
-  Square,
   Target,
   Trash2,
   TrendingUp,
@@ -53,7 +50,7 @@ import {
   summarizePractice,
 } from '../shared/training';
 import { api, getEntries, getSettings, type Passkey, type User } from './api';
-import { cleanMorseText, generatePractice, MorsePlayer } from './audio';
+import PracticeStudio from './PracticeStudio';
 import './styles.css';
 import Plan from './Plan';
 import TimeZoneSelect from './TimeZoneSelect';
@@ -104,8 +101,6 @@ const prettyDate = (value: string, short = false) =>
     undefined,
     short ? { month: 'short', day: 'numeric' } : { weekday: 'long', month: 'long', day: 'numeric' },
   );
-const duration = (seconds: number) =>
-  `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 const sampleEntries: PracticeSession[] = [
   {
     id: 'sample-1',
@@ -219,6 +214,7 @@ function App() {
   };
   const [page, setPage] = useState<Page>(readPage);
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
+  const pendingLog = useRef<Partial<PracticeSession> | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [entries, setEntries] = useState<PracticeSession[]>([]);
   const [profile, setProfile] = useState<Profile>({
@@ -245,6 +241,7 @@ function App() {
       setEntries(sessionData.entries);
       setProfile(settingsData.settings);
       setDemo(false);
+      return settingsData.settings;
     }
   };
   useEffect(() => {
@@ -277,6 +274,7 @@ function App() {
   };
   const openLog = (initial: Partial<PracticeSession> = {}) => {
     if (!user) {
+      pendingLog.current = initial;
       setAuthOpen(true);
       return;
     }
@@ -301,7 +299,14 @@ function App() {
     setBooting(true);
     setAppError('');
     try {
-      await load(newUser);
+      const settings = await load(newUser);
+      if (pendingLog.current) {
+        setSessionEditor({
+          date: dateInTimezone(new Date(), settings?.timezone),
+          ...pendingLog.current,
+        });
+        pendingLog.current = null;
+      }
       notify('You’re signed in. Make yourself at home.');
     } catch (error) {
       setAppError((error as Error).message);
@@ -498,7 +503,7 @@ function App() {
                 />
               )}
               {page === 'practice' && (
-                <Practice onLog={openLog} savedVersion={savedPracticeVersion} />
+                <PracticeStudio onLog={openLog} savedVersion={savedPracticeVersion} />
               )}
               {page === 'logbook' && (
                 <Logbook
@@ -547,7 +552,15 @@ function App() {
           </footer>
         </main>
       </div>
-      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={signedIn} />}
+      {authOpen && (
+        <AuthModal
+          onClose={() => {
+            setAuthOpen(false);
+            pendingLog.current = null;
+          }}
+          onSuccess={signedIn}
+        />
+      )}
       {sessionEditor && (
         <SessionModal
           initial={sessionEditor}
@@ -971,389 +984,6 @@ function EmptyState({
       <h3>{title}</h3>
       <p>{description}</p>
       {action}
-    </div>
-  );
-}
-
-function Practice({
-  onLog,
-  savedVersion,
-}: {
-  onLog: (initial?: Partial<PracticeSession>) => void;
-  savedVersion: number;
-}) {
-  const [mode, setMode] = useState('words');
-  const [text, setText] = useState('GOOD MORNING HAVE A GREAT DAY 73');
-  const [characterWpm, setCharacterWpm] = useState(20);
-  const [effectiveWpm, setEffectiveWpm] = useState(10);
-  const [tone, setTone] = useState(600);
-  const [volume, setVolume] = useState(40);
-  const [playing, setPlaying] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  const [error, setError] = useState('');
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [timerMinutes, setTimerMinutes] = useState(15);
-  const [timerDone, setTimerDone] = useState(false);
-  const previousSaved = useRef(savedVersion);
-  useEffect(() => {
-    if (previousSaved.current !== savedVersion) {
-      setRunning(false);
-      setSeconds(0);
-      setTimerDone(false);
-      previousSaved.current = savedVersion;
-    }
-  }, [savedVersion]);
-  const player = useRef(new MorsePlayer());
-  const startedAt = useRef(0);
-  const elapsedAtStart = useRef(0);
-  useEffect(() => () => player.current.stop(), []);
-  useEffect(() => {
-    if (!running) return;
-    const tick = () => {
-      const elapsed = elapsedAtStart.current + Math.floor((Date.now() - startedAt.current) / 1000);
-      setSeconds(Math.min(elapsed, timerMinutes * 60));
-      if (elapsed >= timerMinutes * 60) {
-        setRunning(false);
-        setTimerDone(true);
-        player.current.stop();
-        setPlaying(false);
-      }
-    };
-    const interval = setInterval(tick, 250);
-    return () => clearInterval(interval);
-  }, [running, timerMinutes]);
-  const startTimer = () => {
-    if (timerDone) {
-      setSeconds(0);
-      elapsedAtStart.current = 0;
-      setTimerDone(false);
-    } else elapsedAtStart.current = seconds;
-    startedAt.current = Date.now();
-    setRunning(true);
-  };
-  const stopPlayback = () => {
-    player.current.stop();
-    setPlaying(false);
-  };
-  const play = async () => {
-    if (playing) {
-      stopPlayback();
-      return;
-    }
-    setError('');
-    setPlaying(true);
-    try {
-      await player.current.play(text, characterWpm, effectiveWpm, tone, volume / 100, () =>
-        setPlaying(false),
-      );
-    } catch (err) {
-      setError((err as Error).message);
-      setPlaying(false);
-    }
-  };
-  const generate = (newMode = mode) => {
-    stopPlayback();
-    setText(generatePractice(newMode));
-  };
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">
-            <span className="small-line" /> TUNE IN. TAKE YOUR TIME.
-          </div>
-          <h1>Your practice studio.</h1>
-          <p>A clear tone, a little space, and your full attention. Free for everyone.</p>
-        </div>
-        <span className="chip">
-          <span className="status-dot" /> No sign-in needed
-        </span>
-      </div>
-      <div className="practice-layout">
-        <section className="card studio-card">
-          <div className="section-heading">
-            <div>
-              <h2>The listening room</h2>
-              <p>Hear the sound. Let the letters follow.</p>
-            </div>
-            <Headphones size={23} />
-          </div>
-          <div className="practice-tabs" role="group" aria-label="Practice content">
-            {[
-              ['words', 'Words'],
-              ['groups', 'Letter groups'],
-              ['numbers', 'Numbers'],
-              ['callsigns', 'Callsigns'],
-              ['custom', 'Your text'],
-            ].map(([value, label]) => (
-              <button
-                className={mode === value ? 'selected' : ''}
-                key={value}
-                onClick={() => {
-                  setMode(value);
-                  if (value !== 'custom') generate(value);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="transmission-panel">
-            <div className="transmission-label">
-              <span>
-                <i className={playing ? 'pulse-dot' : ''} />{' '}
-                {playing ? 'TRANSMITTING' : 'READY TO LISTEN'}
-              </span>
-              <button onClick={() => setHidden(!hidden)}>
-                {hidden ? 'Reveal text' : 'Hide text'}
-              </button>
-            </div>
-            <label className="sr-only" htmlFor="practice-text">
-              Practice text
-            </label>
-            {hidden ? (
-              <div className="hidden-transmission">
-                <AudioLines size={30} />
-                <span>Trust your ears.</span>
-                <button onClick={() => setHidden(false)}>Reveal when you’re ready</button>
-              </div>
-            ) : (
-              <textarea
-                id="practice-text"
-                value={text}
-                maxLength={1200}
-                onChange={(e) => {
-                  stopPlayback();
-                  setText(e.target.value);
-                  setMode('custom');
-                }}
-                spellCheck={false}
-                aria-describedby="morse-text-help"
-              />
-            )}
-            <div className={`waveform ${playing ? 'is-playing' : ''}`} aria-hidden="true">
-              {Array.from({ length: 72 }, (_, i) => (
-                <i
-                  key={i}
-                  style={
-                    {
-                      '--height': `${[10, 18, 8, 31, 44, 22, 12, 36, 16, 28, 7, 20][i % 12]}px`,
-                      '--delay': `${i * 0.035}s`,
-                    } as React.CSSProperties
-                  }
-                />
-              ))}
-            </div>
-          </div>
-          <p id="morse-text-help" className="field-hint">
-            Letters, numbers, and common punctuation. Unsupported characters are skipped.
-          </p>
-          {error && (
-            <div className="alert error" role="alert">
-              {error}
-            </div>
-          )}
-          <div className="playback-toolbar">
-            <button
-              className="button dark play-button"
-              onClick={play}
-              disabled={!cleanMorseText(text)}
-            >
-              {playing ? (
-                <Square size={16} fill="currentColor" />
-              ) : (
-                <Play size={16} fill="currentColor" />
-              )}
-              {playing ? 'Stop playback' : 'Play Morse'}
-            </button>
-            <button
-              className="button outline"
-              onClick={() => generate()}
-              disabled={mode === 'custom'}
-            >
-              <Shuffle size={16} /> New set
-            </button>
-            <span className="playback-note">
-              {characterWpm} / {effectiveWpm} WPM <span>·</span> {tone} Hz
-            </span>
-          </div>
-          <div className="studio-divider" />
-          <div className="studio-controls">
-            <Range
-              label="Character speed"
-              value={characterWpm}
-              min={5}
-              max={50}
-              unit="WPM"
-              onChange={(v) => {
-                stopPlayback();
-                setCharacterWpm(v);
-                setEffectiveWpm(Math.min(effectiveWpm, v));
-              }}
-              hint="The speed of each individual character."
-            />
-            <Range
-              label="Effective speed"
-              value={effectiveWpm}
-              min={3}
-              max={characterWpm}
-              unit="WPM"
-              onChange={(v) => {
-                stopPlayback();
-                setEffectiveWpm(v);
-              }}
-              hint="Farnsworth spacing gives you time to hear."
-            />
-            <Range
-              label="Sidetone"
-              value={tone}
-              min={300}
-              max={1000}
-              step={25}
-              unit="Hz"
-              onChange={(v) => {
-                stopPlayback();
-                setTone(v);
-              }}
-              hint="Find a comfortable pitch for your ears."
-            />
-            <Range
-              label="Volume"
-              value={volume}
-              min={5}
-              max={100}
-              unit="%"
-              onChange={(v) => {
-                stopPlayback();
-                setVolume(v);
-              }}
-              hint="Start softly. Comfort comes first."
-            />
-          </div>
-        </section>
-        <div className="practice-aside">
-          <section className="card timer-card">
-            <div className="card-top">
-              <span className="eyebrow">A MOMENT FOR MORSE</span>
-              <Clock3 size={18} />
-            </div>
-            <h2>Make a little time.</h2>
-            <p>Short, focused sessions add up.</p>
-            <div className={`timer-readout ${running ? 'running' : ''}`} aria-live="off">
-              {duration(Math.max(0, timerMinutes * 60 - seconds))}
-            </div>
-            <div className="timer-presets">
-              {[5, 10, 15, 30].map((minutes) => (
-                <button
-                  key={minutes}
-                  className={timerMinutes === minutes ? 'selected' : ''}
-                  disabled={running}
-                  onClick={() => {
-                    setTimerMinutes(minutes);
-                    setSeconds(0);
-                    setTimerDone(false);
-                  }}
-                >
-                  {minutes} min
-                </button>
-              ))}
-            </div>
-            <button
-              className="button dark full"
-              onClick={() => (running ? setRunning(false) : startTimer())}
-            >
-              {running ? <Square size={14} /> : <Play size={14} />}
-              {running ? 'Pause timer' : seconds > 0 && !timerDone ? 'Resume timer' : 'Start timer'}
-            </button>
-            <div className="timer-secondary">
-              <button
-                className="text-button"
-                onClick={() => {
-                  setRunning(false);
-                  setSeconds(0);
-                  setTimerDone(false);
-                }}
-              >
-                <RotateCcw size={13} /> Reset
-              </button>
-              <button
-                className="text-button"
-                disabled={seconds < 60}
-                onClick={() => {
-                  setRunning(false);
-                  onLog({
-                    kind: 'listening',
-                    minutes: Math.max(1, Math.floor(seconds / 60)),
-                    characterWpm,
-                    effectiveWpm,
-                    source: 'morse',
-                  });
-                }}
-              >
-                Log {Math.floor(seconds / 60)} min <ArrowRight size={13} />
-              </button>
-            </div>
-            {timerDone && (
-              <div className="timer-complete" role="status">
-                <CheckCheck size={18} /> A little practice, well spent. Log your session to save it.
-              </div>
-            )}
-          </section>
-          <section className="practice-tip">
-            <span className="eyebrow">A NOTE FROM THE SHACK</span>
-            <h3>Listen for the music.</h3>
-            <p>
-              Try hearing each character as one complete sound, rather than counting dots and
-              dashes. Leave a little space. Let it sink in.
-            </p>
-            <div className="morse-word" aria-label="73 in Morse code">
-              − − · · · &nbsp; · · · − −
-            </div>
-          </section>
-        </div>
-      </div>
-    </>
-  );
-}
-function Range({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  unit,
-  onChange,
-  hint,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  unit: string;
-  onChange: (value: number) => void;
-  hint: string;
-}) {
-  const id = React.useId();
-  return (
-    <div className="range-control">
-      <div>
-        <label htmlFor={id}>{label}</label>
-        <span>
-          {value} <small>{unit}</small>
-        </span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-      <p>{hint}</p>
     </div>
   );
 }
