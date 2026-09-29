@@ -72,6 +72,15 @@ function legacyFixture() {
           recallSeconds: 30,
           completed: false,
           completedPasses: 1,
+          audioResults: [
+            {
+              url: 'https://example.org/audio.mp3',
+              title: 'Example audio',
+              speedWpm: 18,
+              activeSeconds: 570,
+              completedPasses: 1,
+            },
+          ],
           context: 'practice',
           note: 'Try again tomorrow',
           scratchpad: 'Private recall notes',
@@ -233,10 +242,14 @@ describe('legacy migration', () => {
       kind: 'listening',
       minutes: 9.5,
       lesson: 1,
-      characterWpm: 15,
+      characterWpm: 18,
       notes: 'Try again tomorrow',
     });
     expect(converted.sessions[0].metadata?.legacyAttempt).toEqual(original.snapshot.attempts[0]);
+    expect(converted.sessions[0].metadata).toMatchObject({
+      scratchpad: 'Private recall notes',
+      plannedTaskId: 'legacy-task:listening-1',
+    });
     expect(converted.legacy?.data).toEqual(original);
     expect(convertLegacyExport(original).sessions).toEqual(converted.sessions);
   });
@@ -275,6 +288,197 @@ describe('legacy migration', () => {
     const converted = convertLegacyExport(legacyFixture());
     expect(convertLegacyExport(JSON.parse(JSON.stringify(converted)))).toEqual(converted);
   });
+
+  const attempt = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    taskId: 'listening-1',
+    startedAt: '2026-09-28T12:00:00Z',
+    endedAt: '2026-09-28T12:01:00Z',
+    activeSeconds: 60,
+    context: 'practice',
+    completed: false,
+    ...extra,
+  });
+  const history = (attempts: Record<string, unknown>[], runs: Record<string, unknown>[] = []) => {
+    const original = legacyFixture();
+    return { ...original, snapshot: { ...original.snapshot, attempts, lcwo: { runs } } };
+  };
+
+  it('applies an exclusive course-local cutoff before deriving assignment completion', () => {
+    const original = history([
+      attempt('yesterday', { startedAt: '2026-09-29T03:59:00Z', endedAt: '2026-09-29T04:01:00Z' }),
+      attempt('today', { startedAt: '2026-09-29T04:00:00Z', completed: true }),
+    ]);
+    original.pending.attempts.push(attempt('pending-today', { startedAt: '2026-09-29T05:00:00Z' }));
+    const converted = convertLegacyExport(original, { beforeDate: '2026-09-29' });
+    expect(converted.sessions.map((entry) => entry.id)).toEqual(['legacy:yesterday']);
+    expect(converted.sessions[0].date).toBe('2026-09-28');
+    expect(converted.plan?.[0].done).toBe(false);
+    expect(converted.legacy?.data).toEqual(original);
+    expect(converted.legacy?.importedBefore).toEqual({
+      date: '2026-09-29',
+      timezone: 'America/New_York',
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(converted)))).toEqual(converted);
+    expect(() => convertLegacyExport(original, { beforeDate: '2026-02-30' })).toThrow('cutoff');
+    expect(() => convertLegacyExport(converted, { beforeDate: '2026-09-29' })).toThrow(
+      'original legacy',
+    );
+  });
+
+  it('drops pure dismissals while preserving zero-valued measurements and scratchpads', () => {
+    const converted = convertLegacyExport(
+      history([
+        attempt('dismissed', { activeSeconds: 0, note: '[Left missed]' }),
+        attempt('empty-elsewhere', { activeSeconds: 0, note: ' [Practiced elsewhere] ' }),
+        attempt('zero-contact', { activeSeconds: 0, note: '[Left missed]', qsoCount: 0 }),
+        attempt('zero-result', {
+          activeSeconds: 0,
+          note: '[Left missed]',
+          lcwoResult: { kind: 'callsign', score: 0 },
+        }),
+        attempt('zero-audio', {
+          activeSeconds: 0,
+          note: '[Left missed]',
+          audioResults: [{ completedPasses: 0 }],
+        }),
+        attempt('scratchpad', {
+          activeSeconds: 0,
+          note: '[Left missed]',
+          scratchpad: 'Learned: antenna',
+        }),
+        attempt('completed-elsewhere', {
+          activeSeconds: 0,
+          note: '[Practiced elsewhere]',
+          completed: true,
+        }),
+      ]),
+    );
+    expect(converted.sessions.map((entry) => entry.sourceId)).toEqual([
+      'zero-contact',
+      'zero-result',
+      'zero-audio',
+      'scratchpad',
+      'completed-elsewhere',
+    ]);
+    expect(converted.sessions[0].qsoCount).toBe(0);
+    expect(converted.sessions[3].metadata?.scratchpad).toBe('Learned: antenna');
+  });
+
+  it('uses observed speed semantics and maps optional listening and instructor practice', () => {
+    const original = history([
+      attempt('prescribed-only'),
+      attempt('actual-audio', { audioResults: [{ speedWpm: 21 }, { speedWpm: 21 }] }),
+      attempt('mixed-audio', { audioResults: [{ speedWpm: 15 }, { speedWpm: 21 }] }),
+      attempt('older-audio', {
+        note: 'Audio recording: WD101 (19 WPM); assigned 15 WPM. Source: https://example.org/audio.mp3',
+      }),
+      attempt('groups', { lcwoResult: { kind: 'letters', speedWpm: 13, errorPercent: 0 } }),
+      attempt('runner', { runnerResult: { wpm: 18, speeds: [18, 21] } }),
+      attempt('daily', { taskId: 'bob-77-words', assignmentId: 'daily-listening', review: true }),
+      attempt('review', { review: true }),
+      attempt('material', { taskId: 'material-1' }),
+    ]);
+    const converted = convertLegacyExport({
+      ...original,
+      snapshot: {
+        ...original.snapshot,
+        materials: [{ id: 'material-1', title: 'Instructor practice', session: 4 }],
+      },
+    });
+    const entries = converted.sessions;
+    expect(entries[0].characterWpm).toBeUndefined();
+    expect(entries[1].characterWpm).toBe(21);
+    expect(entries[2].characterWpm).toBeUndefined();
+    expect(entries[3].characterWpm).toBe(19);
+    expect(entries[4]).toMatchObject({ effectiveWpm: 13, accuracy: 100 });
+    expect(entries[4].characterWpm).toBeUndefined();
+    expect(entries[5].characterWpm).toBeUndefined();
+    expect(entries[6]).toMatchObject({ kind: 'listening' });
+    expect(entries[7].metadata?.plannedTaskId).toBeUndefined();
+    expect(entries[8]).toMatchObject({
+      kind: 'sending',
+      lesson: 4,
+      metadata: { legacyTask: { title: 'Instructor practice' } },
+    });
+  });
+
+  it('adds only uncovered unique code-group estimates without inventing timed blocks or task credit', () => {
+    const run = (id: string, recordedAt: string, extra: Record<string, unknown> = {}) => ({
+      id,
+      recordedAt,
+      kind: 'letters',
+      sourceType: 'groups',
+      characterWpm: 25,
+      effectiveWpm: 13,
+      ...extra,
+    });
+    const original = history(
+      [
+        attempt('review-block', {
+          taskId: 'other:icr',
+          review: true,
+          startedAt: '2026-09-28T03:55:00Z',
+          endedAt: '2026-09-28T04:05:00Z',
+        }),
+        attempt('manual-letters', {
+          startedAt: '2026-09-28T10:00:00Z',
+          endedAt: '2026-09-28T10:10:00Z',
+          lcwoResult: { kind: 'letters' },
+        }),
+        attempt('class-block', {
+          taskId: 'other:icr',
+          context: 'class',
+          startedAt: '2026-09-28T11:00:00Z',
+          endedAt: '2026-09-28T11:10:00Z',
+        }),
+        attempt('empty-block', {
+          taskId: 'other:icr',
+          activeSeconds: 0,
+          startedAt: '2026-09-28T12:00:00Z',
+          endedAt: '2026-09-28T12:10:00Z',
+        }),
+      ],
+      [
+        run('covered-start', '2026-09-28T03:55:00Z', { kind: 'custom' }),
+        run('covered-across-midnight', '2026-09-28T04:00:00Z'),
+        run('covered-end', '2026-09-28T04:05:00Z'),
+        run('covered-manual', '2026-09-28T10:05:00Z'),
+        run('different-drill', '2026-09-28T10:05:00Z', { kind: 'custom', accuracyPercent: 0 }),
+        run('class-does-not-cover', '2026-09-28T11:05:00Z'),
+        run('zero-does-not-cover', '2026-09-28T12:05:00Z'),
+        run('zero-does-not-cover', '2026-09-28T12:05:00Z'),
+        run('words', '2026-09-28T13:00:00Z', { sourceType: 'words', kind: 'words' }),
+        run('koch', '2026-09-28T13:00:00Z', { sourceType: 'koch', kind: 'koch' }),
+        run('today', '2026-09-29T04:00:00Z'),
+      ],
+    );
+    const converted = convertLegacyExport(original, { beforeDate: '2026-09-29' });
+    const estimates = converted.sessions.filter((entry) => entry.metadata?.estimatedMinutes);
+    expect(estimates.map((entry) => entry.id)).toEqual([
+      'legacy-lcwo-estimate:different-drill',
+      'legacy-lcwo-estimate:class-does-not-cover',
+      'legacy-lcwo-estimate:zero-does-not-cover',
+    ]);
+    expect(estimates[0]).toMatchObject({
+      minutes: 1,
+      kind: 'icr',
+      characterWpm: 25,
+      effectiveWpm: 13,
+      accuracy: 0,
+    });
+    expect(
+      estimates.every(
+        (entry) =>
+          entry.metadata?.plannedTaskId === undefined &&
+          entry.metadata?.legacyAttempt === undefined,
+      ),
+    ).toBe(true);
+    expect(summarizePractice(converted.sessions, '2026-09-28').totalMinutes).toBe(5);
+    expect(convertLegacyExport(original, { beforeDate: '2026-09-29' }).sessions).toEqual(
+      converted.sessions,
+    );
+  });
 });
 
 describe('local migration command', () => {
@@ -291,6 +495,26 @@ describe('local migration command', () => {
       expect(statSync(output).mode & 0o777).toBe(0o600);
       expect(readFileSync(source, 'utf8')).toBe(original);
       expect(spawnSync(process.execPath, [script, source, '--output', output]).status).not.toBe(0);
+      const filteredOutput = join(directory, 'filtered.json');
+      execFileSync(process.execPath, [
+        script,
+        source,
+        '--output',
+        filteredOutput,
+        '--before',
+        '2026-09-07',
+        '--keep-profile',
+      ]);
+      const filtered = JSON.parse(readFileSync(filteredOutput, 'utf8'));
+      expect(filtered.sessions).toEqual([]);
+      expect(filtered.profile).toBeUndefined();
+      expect(filtered.legacy.importedBefore).toEqual({
+        date: '2026-09-07',
+        timezone: 'America/New_York',
+      });
+      expect(filtered.legacy.data).toEqual(JSON.parse(original));
+      expect(statSync(filteredOutput).mode & 0o777).toBe(0o600);
+      expect(readFileSync(source, 'utf8')).toBe(original);
       const unsafe = fileURLToPath(
         new URL('./private-import-must-not-exist.json', import.meta.url),
       );

@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from './index';
-import { DEFAULT_PROFILE } from '../shared/training';
+import { DEFAULT_PROFILE, type TrainingExport } from '../shared/training';
 import type { PlannedTask } from '../shared/plan';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
@@ -474,6 +474,80 @@ describe('private training data', () => {
       await request('/api/export', 'GET', undefined, auth.cookie)
     ).json()) as { sessions: { id: string }[] };
     expect(exported.sessions.map((value) => value.id)).toEqual(['test-entry']);
+  });
+
+  it('merges historical imports without changing current data and rolls back failed archive writes', async () => {
+    const auth = await signIn('a@example.com');
+    const other = await signIn('b@example.com');
+    const settings = { ...DEFAULT_PROFILE, callsign: 'W1AW', timezone: 'America/New_York' };
+    await request('/api/settings', 'PUT', settings, auth.cookie);
+    const today = {
+      ...entry('today'),
+      date: '2026-09-29',
+      createdAt: '2026-09-29T12:00:00Z',
+    };
+    await request('/api/entries', 'POST', today, auth.cookie);
+    await request('/api/entries', 'POST', entry('legacy:historical'), other.cookie);
+    const legacy = {
+      source: 'rwjblue.com',
+      importedBefore: { date: '2026-09-29', timezone: 'America/New_York' },
+      data: { attempts: [{ id: 'historical' }, { id: 'today-not-converted' }] },
+    };
+    // The preconverted historical file intentionally omits profile so existing
+    // account preferences survive, while its archive retains the complete source.
+    const historical = { ...entry('legacy:historical'), source: 'legacy', minutes: 9.5 };
+    const data = {
+      ...backup([historical]),
+      legacy,
+    };
+    expect(
+      await (await request('/api/import', 'POST', { data, mode: 'merge' }, auth.cookie)).json(),
+    ).toEqual({ imported: 1, skipped: 0 });
+    expect(
+      await (await request('/api/import', 'POST', { data, mode: 'merge' }, auth.cookie)).json(),
+    ).toEqual({ imported: 0, skipped: 1 });
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.profile).toEqual(settings);
+    expect(exported.sessions).toEqual([
+      { ...today, createdAt: '2026-09-29T12:00:00.000Z' },
+      { ...historical, createdAt: '2026-09-28T12:00:00.000Z' },
+    ]);
+    expect(exported.legacy).toEqual(legacy);
+
+    db.sqlite.exec(
+      `CREATE TRIGGER test_archive_failure BEFORE INSERT ON import_sources BEGIN SELECT RAISE(ABORT, 'test_archive_failure'); END;`,
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            data: { ...data, sessions: [entry('another-historical-entry')] },
+            mode: 'merge',
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(500);
+    const afterFailure = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(afterFailure).toMatchObject({
+      profile: exported.profile,
+      sessions: exported.sessions,
+      legacy: exported.legacy,
+    });
+    const otherExport = (await (
+      await request('/api/export', 'GET', undefined, other.cookie)
+    ).json()) as TrainingExport;
+    expect(otherExport.sessions).toEqual([
+      { ...entry('legacy:historical'), createdAt: '2026-09-28T12:00:00.000Z' },
+    ]);
+    expect(otherExport).not.toHaveProperty('legacy');
   });
 
   it('merges against the transaction state when another browser deletes a known entry', async () => {

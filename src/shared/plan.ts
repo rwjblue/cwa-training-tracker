@@ -429,14 +429,9 @@ export function legacyPlan(
 ): PlannedTask[] {
   const assignments = Array.isArray(course.assignments) ? course.assignments : [];
   const resources = Array.isArray(course.resources) ? course.resources : [];
-  const completion = new Set(
-    attempts
-      .filter(
-        (attempt) =>
-          attempt.completed === true && attempt.review !== true && attempt.context !== 'class',
-      )
-      .map((attempt) => String(attempt.taskId)),
-  );
+  const practice = [
+    ...new Map(attempts.map((attempt, index) => [attempt.id ?? index, attempt])).values(),
+  ].filter((attempt) => attempt.review !== true && attempt.context !== 'class');
   const legacyKinds: Record<string, PracticeKind> = {
     sending: 'sending',
     audio: 'listening',
@@ -455,12 +450,29 @@ export function legacyPlan(
       const task = value as Record<string, unknown>;
       if (typeof task.id !== 'string' || typeof task.title !== 'string')
         throw new Error('A legacy course exercise is missing its ID or title.');
+      const relevant = practice.filter((attempt) => attempt.taskId === task.id);
+      const runner =
+        task.kind === 'simulator' &&
+        /\bmorse[\s-]+runner\b/i.test(`${task.title} ${String(task.instructions ?? '')}`);
+      const seconds = (attempt: Record<string, unknown>) =>
+        typeof attempt.activeSeconds === 'number' && Number.isFinite(attempt.activeSeconds)
+          ? Math.max(0, attempt.activeSeconds)
+          : 0;
+      const done = runner
+        ? relevant.reduce((total, attempt) => total + seconds(attempt), 0) >=
+          (typeof task.minutes === 'number' ? task.minutes : 15) * 60
+        : task.kind === 'simulator' && typeof task.minutes === 'number'
+          ? relevant.some(
+              (attempt) =>
+                attempt.completed === true && seconds(attempt) >= Number(task.minutes) * 60,
+            )
+          : relevant.some((attempt) => attempt.completed === true);
       const result: PlannedTask = {
         id: `legacy-task:${task.id}`,
         title: task.title,
         kind: legacyKinds[String(task.kind)] ?? 'other',
         targetMinutes: typeof task.minutes === 'number' && task.minutes > 0 ? task.minutes : 15,
-        done: completion.has(task.id),
+        done,
         notes: typeof task.instructions === 'string' ? task.instructions : '',
         createdAt,
         source: 'legacy',

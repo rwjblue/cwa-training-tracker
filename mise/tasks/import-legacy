@@ -2,5 +2,10 @@
 #MISE description="Convert a legacy training export into a private, repeatable import"
 #USAGE arg "<source>" help="JSON export from the original training tracker"
 #USAGE flag "-o --output <file>" default="data/private/training-import.json" help="Private output JSON; existing files are never overwritten"
+#USAGE flag "--before <date>" help="Only import practice before YYYY-MM-DD in the source course timezone"
+#USAGE flag "--keep-profile" help="Preserve the signed-in account's existing preferences"
 set -euo pipefail
-node scripts/import-legacy.ts "$usage_source" --output "$usage_output"
+args=("$usage_source" --output "$usage_output")
+if [[ -n "${usage_before:-}" ]]; then args+=(--before "$usage_before"); fi
+if [[ "${usage_keep_profile:-false}" == "true" ]]; then args+=(--keep-profile); fi
+node scripts/import-legacy.ts "${args[@]}"

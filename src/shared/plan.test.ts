@@ -238,6 +238,77 @@ describe('private planned exercises', () => {
 });
 
 describe('legacy homework migration', () => {
+  it('derives Runner completion from unique required practice while retaining uninterrupted simulator rules', () => {
+    const course = {
+      assignments: [
+        {
+          session: 1,
+          tasks: [
+            { id: 'runner', title: 'Morse Runner', kind: 'simulator', minutes: 15 },
+            { id: 'short-runner', title: 'Morse-Runner review', kind: 'simulator', minutes: 15 },
+            {
+              id: 'other-simulator',
+              title: 'A different simulator',
+              kind: 'simulator',
+              minutes: 15,
+            },
+          ],
+        },
+      ],
+    };
+    const first = {
+      id: 'first',
+      taskId: 'runner',
+      context: 'practice',
+      activeSeconds: 300,
+      completed: false,
+    };
+    const attempts = [
+      first,
+      first,
+      { id: 'second', taskId: 'runner', context: 'practice', activeSeconds: 600, completed: false },
+      {
+        id: 'short',
+        taskId: 'short-runner',
+        context: 'practice',
+        activeSeconds: 300,
+        completed: true,
+      },
+      {
+        id: 'review',
+        taskId: 'short-runner',
+        context: 'practice',
+        activeSeconds: 600,
+        completed: true,
+        review: true,
+      },
+      {
+        id: 'class',
+        taskId: 'short-runner',
+        context: 'class',
+        activeSeconds: 900,
+        completed: true,
+      },
+      {
+        id: 'sim-a',
+        taskId: 'other-simulator',
+        context: 'practice',
+        activeSeconds: 600,
+        completed: true,
+      },
+      {
+        id: 'sim-b',
+        taskId: 'other-simulator',
+        context: 'practice',
+        activeSeconds: 600,
+        completed: true,
+      },
+    ];
+    const plan = legacyPlan(course, attempts, '2026-09-28T12:00:00Z');
+    expect(plan.map((task) => task.done)).toEqual([true, false, false]);
+    expect(legacyPlan(course, [first, first], '2026-09-28T12:00:00Z')[0].done).toBe(false);
+  });
+
   it('opens the referenced exercise resource and safely falls back to the syllabus', () => {
     const tasks = legacyPlan(
       {
