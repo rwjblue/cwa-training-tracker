@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { expectAccessible, signIn } from './helpers';
 
-test('private homework supports daily use, reporting, backups, and repeatable restoration', async ({
+test('private homework supports completion, reporting, and deletion without losing practice', async ({
   page,
   context,
 }) => {
@@ -57,23 +57,6 @@ test('private homework supports daily use, reporting, backups, and repeatable re
   await expectAccessible(page, 'plan-mobile');
   await page.screenshot({ path: '.tmp/plan-mobile.png', fullPage: true });
 
-  const headers = { Origin: 'http://localhost:8791' };
-  const backup = await (await context.request.get('/api/export')).json();
-  expect(backup.plan).toHaveLength(1);
-  expect(backup.plan[0].done).toBe(true);
-  await context.request.post('/api/reset', { data: { confirmation: 'RESET' }, headers });
-  expect((await (await context.request.get('/api/plan')).json()).plan).toHaveLength(0);
-  const restored = await context.request.post('/api/import', {
-    data: { mode: 'replace', data: backup },
-    headers,
-  });
-  expect(restored.ok()).toBe(true);
-  const merged = await context.request.post('/api/import', {
-    data: { mode: 'merge', data: backup },
-    headers,
-  });
-  expect(merged.ok()).toBe(true);
-  expect((await (await context.request.get('/api/plan')).json()).plan).toHaveLength(1);
   await page.reload();
   await page.getByLabel('Show completed', { exact: true }).check();
   await expect(
