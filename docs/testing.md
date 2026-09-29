@@ -45,7 +45,9 @@ Wait for a visible result, a specific response, or a polled condition. Avoid
 arbitrary sleeps, positional locators, and assertions tied to React state or CSS
 class names. An explicit geometry assertion is appropriate when testing overflow.
 Use the browser clock for timers; minutes of practice should take milliseconds
-of test time. Fix the date/timezone when a scenario depends on a calendar day.
+of test time. That applies to manual and recall timers, not native audio credit:
+use a short synthetic recording and its actual media movement for listening.
+Fix the date/timezone when a scenario depends on a calendar day.
 
 Do not repeat every validation case in every layer. A regression may need both a
 logic test and one browser test when the failure crosses a boundary, such as a
@@ -95,6 +97,14 @@ physical iPhone: start a Morse-only round in Safari, lock for at least one full
 word/transmission boundary, exercise the lock-screen pause/resume controls, then
 unlock and confirm the transcript follows the actual audio position. Repeat with
 an official recording. Test local spoken answers separately with the page open.
+
+Keep time-credit boundaries in fast clock tests: paused/buffering media, seeks,
+repeated listening, native rates, manual/recall transitions, and multiple source
+files. The assigned-recording journey should prove native Play starts counting,
+speed changes retain notes/time, and the reviewed saved record contains actual
+sources and scratchpad text. Reuse synthetic audio instead of downloading course
+recordings. Catalog tests protect exact URL groups and known replacements; live
+network availability is an explicit catalog maintenance check, not a CI test.
 
 For QSO copy checks, test scenario-specific answer keys and accepted formatting
 at the pure-logic layer. Missing substantive details, wrong station attribution,

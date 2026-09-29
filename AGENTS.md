@@ -13,6 +13,8 @@ redistribute restricted course documents, audio, or personal training data.
 - Use mise file tasks under `mise/tasks/`; keep commands out of TOML tasks.
 - Run `mise run check`, `mise run test`, and `mise run build` before committing.
 - Follow [docs/testing.md](docs/testing.md) for test scope, layers, and fast feedback.
+- Consult and update [docs/trainer-parity.md](docs/trainer-parity.md) before porting
+  trainer features or declaring parity; verify the complete workflow, not only UI names.
 - Verify interface changes at desktop and mobile widths in a browser.
 - Generate Worker binding types with `mise run types` after config changes.
 - Production is the top-level Worker configuration. Deploy with `mise run deploy`.

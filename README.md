@@ -23,15 +23,23 @@ CWops. Official course material stays at the
   visit and does not automatically create a practice-log entry.
 - Continuous native audio playback with pause/resume, a seek bar, current-word
   highlighting, and clickable words. Morse rounds include their silence in one
-  audio file so playback does not depend on background JavaScript timers.
+  audio file so playback does not depend on background JavaScript timers. Native
+  Play automatically counts actual listening time; pauses, seeks, and buffering
+  add no idle time. Assigned recordings have a separate timer for focused recall.
+- Official recording speed choices keep the assigned speed visible and offer
+  verified faster files when available. An Assigned/Next default is remembered on
+  your device, and saved practice retains the actual recordings and speeds used.
+- A practice scratchpad for recall and questions. Review and edit it when saving
+  a session, then read or revise the saved scratchpad from your practice log.
 - Embedded Web Morse Runner for Single Call and WPX practice, with synthetic
   calls and assignment settings filled in automatically. Save the engine's
   measured time, QSO count, and verified score to your journal. Public runs
   work without an account; keep this interactive simulator visible while running.
 - Public Morse practice with character speed, Farnsworth spacing, tone, adjustable
   group and word lengths, generated callsigns, and custom text; no account required.
-  Playback preferences stay on your device. Start practice plays and starts the
-  timer together; review and save explicitly when you finish.
+  Playback preferences stay on your device. Listening starts timing automatically;
+  manual timers remain available for other practice. Review and save explicitly
+  when you finish; the time target never cuts a session short.
 - A private practice journal with goals, course planning, activity summaries,
   and separate practice categories.
 - A Today view for your own assignments, next-class preparation, and unfinished
@@ -104,6 +112,7 @@ before operating your own instance. There are no production credentials in CI.
 - [Import and migration](docs/import.md)
 - [Architecture and security](docs/architecture.md)
 - [Testing strategy](docs/testing.md)
+- [Trainer parity and remaining work](docs/trainer-parity.md)
 - [Morse Runner source and updates](docs/morse-runner.md)
 - [Deployment and operations](docs/deployment.md)
 
