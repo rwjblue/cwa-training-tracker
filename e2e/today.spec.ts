@@ -166,8 +166,8 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.setViewportSize({ width: 1280, height: 900 });
 
   // Exercise browser media playback without relying on the remote recording or
-  // redistributing course audio: this is a one-second synthetic silent WAV.
-  const recording = Buffer.alloc(44 + 16000);
+  // redistributing course audio: this is a four-second synthetic silent WAV.
+  const recording = Buffer.alloc(44 + 64000);
   recording.write('RIFF', 0);
   recording.writeUInt32LE(recording.length - 8, 4);
   recording.write('WAVEfmt ', 8);
@@ -179,7 +179,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   recording.writeUInt16LE(2, 32);
   recording.writeUInt16LE(16, 34);
   recording.write('data', 36);
-  recording.writeUInt32LE(16000, 40);
+  recording.writeUInt32LE(64000, 40);
   await page.route(assigned.exercise.url, (route) =>
     route.fulfill({ status: 200, contentType: 'audio/wav', body: recording }),
   );
@@ -196,23 +196,51 @@ test('course dates populate Today with playable assignments and preserve linked 
     true,
   );
   await page.screenshot({ path: '.tmp/assigned-recording-mobile.png', fullPage: true });
+  await page
+    .getByRole('textbox', { name: 'Scratchpad', exact: true })
+    .fill('Copied ALICE in OH. Revisit the final sentence.');
+  // Native controls are enough to begin timing; no separate Start practice click.
+  await audio.evaluate((element: HTMLAudioElement) => element.play());
+  await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
+  await expect
+    .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
+    .toBeGreaterThan(1.2);
+  await audio.evaluate((element: HTMLAudioElement) => element.pause());
+  await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
+  const listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
   await page.clock.install({ time: new Date('2026-10-06T16:00:00Z') });
   await page.clock.pauseAt(new Date('2026-10-06T16:00:01Z'));
-  await page.getByRole('button', { name: 'Start practice', exact: true }).click();
-  await expect
-    .poll(() => audio.evaluate((element) => !(element as HTMLAudioElement).paused))
-    .toBe(true);
   await page.clock.fastForward(65_000);
+  await page.getByRole('button', { name: 'Start recall timer', exact: true }).click();
+  await page.clock.fastForward(20_000);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
+    'Copied ALICE in OH. Revisit the final sentence.',
+  );
+  await dialog
+    .getByRole('textbox', { name: 'Scratchpad', exact: true })
+    .fill('Copied ALICE in OH. Replayed the final sentence.');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0].metadata.plannedTaskId).toBe(assigned.id);
-  expect(entries[0].minutes).toBeCloseTo(65 / 60, 8);
+  expect(entries[0].metadata.scratchpad).toBe('Copied ALICE in OH. Replayed the final sentence.');
+  expect(entries[0].metadata.recallSeconds).toBe(20);
+  expect(entries[0].metadata.elapsedSeconds).toBeGreaterThanOrEqual(20 + Math.floor(listened) - 1);
+  expect(entries[0].metadata.elapsedSeconds).toBeLessThanOrEqual(20 + Math.ceil(listened));
+  expect(entries[0].minutes).toBe(entries[0].metadata.elapsedSeconds / 60);
+  expect(entries[0].metadata.recordings[0].url).toBe(assigned.exercise.url);
 
+  const nativeRecording = await audio.elementHandle();
+  await audio.evaluate((element: HTMLAudioElement) => element.play());
+  await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  expect(await nativeRecording!.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
   await row.getByRole('checkbox', { name: `Mark ${assigned.title} complete`, exact: true }).click();

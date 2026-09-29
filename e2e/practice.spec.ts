@@ -121,6 +121,17 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(entries).toHaveLength(2);
   expect(entries.find((entry: { source: string }) => entry.source === 'manual').minutes).toBe(7);
   await page.clock.resume();
+  await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill('Unsaved copy notes');
+  await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'current session before opening Morse Runner',
+  );
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
+    'Unsaved copy notes',
+  );
+  await page.getByRole('button', { name: 'Reset session', exact: true }).click();
+  await page.getByRole('button', { name: 'Discard & reset', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
 });
 
 test('word and QSO trainers expose the complete material and remember listening choices', async ({

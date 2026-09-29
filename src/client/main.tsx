@@ -341,7 +341,11 @@ function App() {
   }, [booting, user, page]);
   const confirmLeaveStudio = () => {
     if (currentPage.current !== 'practice' || !studioUnsaved.current) return true;
-    if (!window.confirm('Leave this practice? Your unsaved practice time will be discarded.'))
+    if (
+      !window.confirm(
+        'Leave this practice? Your unsaved practice time and notes will be discarded.',
+      )
+    )
       return false;
     studioUnsaved.current = false;
     return true;
@@ -1116,6 +1120,12 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
               ? `${entry.characterWpm} character WPM${entry.effectiveWpm ? ` · ${entry.effectiveWpm} effective WPM` : ''}`
               : 'A little progress, logged.')}
         </span>
+        {typeof entry.metadata?.scratchpad === 'string' && entry.metadata.scratchpad && (
+          <details className="session-scratchpad">
+            <summary>Scratchpad</summary>
+            <p>{entry.metadata.scratchpad}</p>
+          </details>
+        )}
       </div>
       <span className="session-date">
         {entry.date === dateString() ? 'Today' : prettyDate(entry.date, true)}
@@ -1779,6 +1789,7 @@ function SessionModal({
     accuracy: initial.accuracy === undefined ? '' : String(initial.accuracy),
     lesson: initial.lesson === undefined ? '' : String(initial.lesson),
     notes: initial.notes ?? '',
+    scratchpad: typeof initial.metadata?.scratchpad === 'string' ? initial.metadata.scratchpad : '',
     context: initial.context ?? 'practice',
     qsoCount: initial.qsoCount === undefined ? '' : String(initial.qsoCount),
   });
@@ -1796,6 +1807,7 @@ function SessionModal({
       kind: form.kind,
       minutes: Number(form.minutes),
       notes: form.notes,
+      metadata: { ...initial.metadata, scratchpad: form.scratchpad },
       context: form.context,
       source: initial.source ?? 'manual',
     };
@@ -1930,6 +1942,17 @@ function SessionModal({
             placeholder="What clicked? What would you like to try next time?"
           />
         </label>
+        {(form.scratchpad || typeof initial.metadata?.scratchpad === 'string') && (
+          <label className="field">
+            Scratchpad
+            <textarea
+              value={form.scratchpad}
+              onChange={(event) => update('scratchpad', event.target.value)}
+              maxLength={10000}
+              rows={5}
+            />
+          </label>
+        )}
         <label className="checkbox-label">
           <input
             type="checkbox"

@@ -31,6 +31,7 @@ import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTraine
 import MorseTranscript from './MorseTranscript';
 import MorseRunnerStudio, { DEFAULT_RUNNER_SETTINGS } from './MorseRunnerStudio';
 import type { PracticeLaunch } from './practice-launch';
+import { usePracticeClock } from './usePracticeClock';
 import { WORD_LISTS } from './word-content';
 import { QSO_TEMPLATES } from './qso-content';
 import './practice-studio.css';
@@ -59,6 +60,10 @@ export default function PracticeStudio({
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
   const recording = useRef<HTMLAudioElement>(null);
+  const attachRecording = useCallback((element: HTMLAudioElement | null) => {
+    if (recording.current && recording.current !== element) recording.current.pause();
+    recording.current = element;
+  }, []);
   const [freeTrack, setFreeTrack] = useState<MorseTrack | null>(null);
   const [freeWord, setFreeWord] = useState(-1);
   const preparedFree = useRef('');
@@ -76,15 +81,12 @@ export default function PracticeStudio({
   const [playing, setPlaying] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [error, setError] = useState('');
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunningState] = useState(false);
-  const runningRef = useRef(false);
-  const setRunning = (value: boolean) => {
-    runningRef.current = value;
-    setRunningState(value);
-  };
+  const timer = usePracticeClock();
+  const seconds = Math.floor(timer.seconds);
+  const running = timer.running;
+  const [scratchpad, setScratchpad] = useState('');
   const [timerMinutes, setTimerMinutes] = useState(launch?.task?.targetMinutes ?? 15);
-  const [timerDone, setTimerDone] = useState(false);
+  const timerDone = seconds >= timerMinutes * 60;
   const [confirmReset, setConfirmReset] = useState(false);
   const previousSaved = useRef(savedVersion);
   const player = useRef(new MorsePlayer());
@@ -96,84 +98,55 @@ export default function PracticeStudio({
     }
   }, []);
   const trainer = useRef<ListeningTrainerHandle>(null);
-  const startedAt = useRef(0);
-  const accumulatedMs = useRef(0);
   useEffect(() => {
     setRemembered(savePracticePreferences(preferences));
   }, [preferences]);
   useEffect(() => {
     if (previousSaved.current !== savedVersion) {
-      setRunning(false);
-      setSeconds(0);
-      accumulatedMs.current = 0;
-      setTimerDone(false);
+      timer.reset();
+      setScratchpad('');
       setConfirmReset(false);
       previousSaved.current = savedVersion;
     }
   }, [savedVersion]);
   useEffect(() => () => player.current.dispose(), []);
   useEffect(() => {
-    onUnsavedChange?.(runnerUnsaved || running || seconds > 0);
-  }, [runnerUnsaved, running, seconds, onUnsavedChange]);
+    onUnsavedChange?.(runnerUnsaved || running || seconds > 0 || scratchpad.length > 0);
+  }, [runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
+    setScratchpad('');
     setPublicRunner(false);
     setRunnerUnsaved(false);
     setTimerMinutes(launch.task?.targetMinutes ?? 15);
     if (launch.tool) setPreferences((current) => ({ ...current, tool: launch.tool! }));
   }, [launch?.id]);
-  const elapsedMs = () =>
-    Math.min(
-      timerMinutes * 60000,
-      accumulatedMs.current +
-        (runningRef.current ? Math.max(0, performance.now() - startedAt.current) : 0),
-    );
-  useEffect(() => {
-    if (!running) return;
-    const tick = () => {
-      const elapsed = elapsedMs();
-      setSeconds(Math.floor(elapsed / 1000));
-      if (elapsed >= timerMinutes * 60000) {
-        accumulatedMs.current = timerMinutes * 60000;
-        setRunning(false);
-        setTimerDone(true);
-        stopPlayback();
-      }
-    };
-    const interval = setInterval(tick, 250);
-    return () => clearInterval(interval);
-  }, [running, timerMinutes]);
   const stopPlayback = () => {
+    timer.pauseMedia();
     player.current.pause();
     recording.current?.pause();
     trainer.current?.stop();
     setPlaying(false);
   };
   const pauseTimer = () => {
-    const elapsed = elapsedMs();
-    accumulatedMs.current = elapsed;
-    setSeconds(Math.floor(elapsed / 1000));
-    setRunning(false);
+    const elapsed = timer.pause();
     stopPlayback();
-    return Math.floor(elapsed / 1000);
+    return Math.floor(elapsed.seconds);
   };
   const startTimer = () => {
-    if (timerDone || isRunner) return;
+    if (isRunner || running) return;
     setConfirmReset(false);
-    startedAt.current = performance.now();
-    setRunning(true);
+    timer.startManual(activity?.type === 'audio');
   };
   const resetTimer = () => {
-    setRunning(false);
-    setSeconds(0);
-    accumulatedMs.current = 0;
-    setTimerDone(false);
-    setConfirmReset(false);
     stopPlayback();
+    timer.reset();
+    setConfirmReset(false);
   };
   const logTimedSession = () => {
     const elapsedSeconds = pauseTimer();
+    const measured = timer.snapshot();
     if (elapsedSeconds < 1) return;
     onLog({
       kind: launch?.task?.kind ?? (tool === 'words' ? 'head-copy' : 'listening'),
@@ -201,6 +174,9 @@ export default function PracticeStudio({
       source: assigned ? 'timer' : 'morse',
       metadata: {
         elapsedSeconds,
+        ...(scratchpad ? { scratchpad } : {}),
+        recallSeconds: measured.recallSeconds,
+        ...(measured.recordings.length ? { recordings: measured.recordings } : {}),
         practiceTool: assigned ? activity?.type : tool,
         ...(!assigned ? { practiceMode: mode } : {}),
         ...(activity?.type === 'audio' ? { recordingUrl: activity.url } : {}),
@@ -293,7 +269,7 @@ export default function PracticeStudio({
       seconds === 0
     )
       window.open(activity.url, '_blank', 'noopener,noreferrer');
-    if (!running) startTimer();
+    if (assigned && activity?.type !== 'audio' && !running) startTimer();
     if (!playing) await play();
   };
   const generate = () => {
@@ -313,11 +289,9 @@ export default function PracticeStudio({
   };
   const chooseRunner = () => {
     if (publicRunner) return;
-    if (running || seconds > 0) {
+    if (running || seconds > 0 || scratchpad.length > 0) {
       pauseTimer();
-      setError(
-        'Review and save, or reset, your current practice timer before opening Morse Runner.',
-      );
+      setError('Review and save, or discard, your current session before opening Morse Runner.');
       return;
     }
     stopPlayback();
@@ -419,7 +393,7 @@ export default function PracticeStudio({
           <div className="studio-quick-actions">
             <button
               className="button dark"
-              disabled={timerDone || (activity?.type === 'audio' && !activity.url)}
+              disabled={activity?.type === 'audio' && !activity.url}
               onClick={() => (running ? pauseTimer() : void startPractice())}
             >
               {running ? <Square size={14} /> : <Play size={14} />}
@@ -442,7 +416,19 @@ export default function PracticeStudio({
             </button>
           </div>
           <div className={`practice-layout ${assigned ? 'is-assigned' : ''}`}>
-            <section className="card studio-card">
+            <section
+              className="card studio-card"
+              onPlayingCapture={timer.onMedia}
+              onTimeUpdateCapture={timer.onMedia}
+              onPauseCapture={timer.onMedia}
+              onEndedCapture={timer.onMedia}
+              onSeekingCapture={timer.onMedia}
+              onSeekedCapture={timer.onMedia}
+              onWaitingCapture={timer.onMedia}
+              onEmptiedCapture={timer.onMedia}
+              onRateChangeCapture={timer.onMedia}
+              onErrorCapture={timer.onMedia}
+            >
               <div className="section-heading">
                 <div>
                   <h2>{assigned ? 'Your assigned exercise' : 'The listening room'}</h2>
@@ -466,11 +452,13 @@ export default function PracticeStudio({
                     <>
                       <audio
                         key={`${launch?.id}:${activity.url}`}
-                        ref={recording}
+                        ref={attachRecording}
                         controls
                         preload="metadata"
                         src={activity.url}
                         aria-label="Assigned recording"
+                        data-recording="true"
+                        data-speed={activity.characterWpm}
                         onPlay={() => setPlaying(true)}
                         onPause={() => setPlaying(false)}
                         onEnded={() => setPlaying(false)}
@@ -707,9 +695,29 @@ export default function PracticeStudio({
               )}
               <p className="studio-playback-help">
                 {assigned
-                  ? 'Start practice times this exercise. Review and save your elapsed time when you finish.'
-                  : 'Start practice plays and times your session. Play Morse only plays audio; review and save when you finish.'}
+                  ? activity?.type === 'audio'
+                    ? 'Press Play in the audio controls to count listening time. Pauses and seeks do not add time. Use the recall timer for focused notes between listens.'
+                    : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
+                  : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
               </p>
+              <div className="studio-scratchpad">
+                <label className="field" htmlFor="practice-scratchpad">
+                  Scratchpad
+                  <textarea
+                    id="practice-scratchpad"
+                    rows={5}
+                    maxLength={10000}
+                    value={scratchpad}
+                    onChange={(event) => setScratchpad(event.target.value)}
+                    placeholder="Jot down what you hear, difficult words, or details to revisit…"
+                    aria-describedby="scratchpad-help"
+                  />
+                </label>
+                <p id="scratchpad-help" className="field-hint">
+                  Included when you review and save this session. Save before leaving or reloading;
+                  unfinished notes stay only in this visit.
+                </p>
+              </div>
               {!assigned && (
                 <details className="studio-sound-settings">
                   <summary>
@@ -776,9 +784,13 @@ export default function PracticeStudio({
                   <Clock3 size={18} />
                 </div>
                 <h2>Time your practice.</h2>
-                <p>Start the timer, practice, then review and save your elapsed time.</p>
+                <p>
+                  Audio playback counts automatically. Use the timer for{' '}
+                  {activity?.type === 'audio' ? 'focused recall and notes' : 'other practice'}, then
+                  review and save.
+                </p>
                 <div className="studio-timer-steps" aria-label="How to log timed practice">
-                  <span>1. Start timer</span>
+                  <span>1. Play or start timer</span>
                   <span>2. Practice</span>
                   <span>3. Save session</span>
                 </div>
@@ -813,14 +825,13 @@ export default function PracticeStudio({
                 </div>
                 <button
                   className="button dark full"
-                  disabled={timerDone}
                   onClick={() => (running ? pauseTimer() : startTimer())}
                 >
                   {running ? <Square size={14} /> : <Play size={14} />}
-                  {timerDone
-                    ? 'Timer complete'
-                    : running
-                      ? 'Pause timer'
+                  {running
+                    ? 'Pause timer'
+                    : activity?.type === 'audio'
+                      ? 'Start recall timer'
                       : seconds > 0
                         ? 'Resume timer'
                         : 'Start timer'}
@@ -828,11 +839,20 @@ export default function PracticeStudio({
                 <p className="timer-elapsed">
                   <strong>{duration(seconds)}</strong> practiced ·{' '}
                   {running
-                    ? 'timer running'
+                    ? timer.recalling
+                      ? 'recall timer running'
+                      : playing
+                        ? 'listening'
+                        : 'timer running'
                     : seconds > 0
                       ? 'paused, not yet saved'
                       : 'ready when you are'}
                 </p>
+                {timer.recallSeconds > 0 && (
+                  <p className="field-hint">
+                    Includes {duration(Math.floor(timer.recallSeconds))} of focused recall.
+                  </p>
+                )}
                 <button
                   className="button outline full studio-save-session"
                   disabled={seconds < 1}
@@ -850,13 +870,13 @@ export default function PracticeStudio({
                     className="text-button"
                     disabled={running && seconds < 1}
                     onClick={() => {
-                      if (seconds > 0) {
+                      if (seconds > 0 || scratchpad.length > 0) {
                         pauseTimer();
                         setConfirmReset(true);
                       } else resetTimer();
                     }}
                   >
-                    <RotateCcw size={13} /> Reset timer
+                    <RotateCcw size={13} /> Reset session
                   </button>
                 </div>
                 {confirmReset && (
@@ -865,12 +885,21 @@ export default function PracticeStudio({
                     role="group"
                     aria-label="Confirm timer reset"
                   >
-                    <p>Discard {duration(seconds)} of unsaved timer time?</p>
+                    <p>
+                      Discard {duration(seconds)} of unsaved time
+                      {scratchpad ? ' and your scratchpad' : ''}?
+                    </p>
                     <div>
                       <button className="text-button" onClick={() => setConfirmReset(false)}>
                         Keep timer
                       </button>
-                      <button className="text-button danger-text" onClick={resetTimer}>
+                      <button
+                        className="text-button danger-text"
+                        onClick={() => {
+                          resetTimer();
+                          setScratchpad('');
+                        }}
+                      >
                         Discard &amp; reset
                       </button>
                     </div>
@@ -878,13 +907,14 @@ export default function PracticeStudio({
                 )}
                 {timerDone && (
                   <div className="timer-complete" role="status">
-                    <CheckCheck size={18} /> Session finished. Review and save your time, or reset
-                    to discard it.
+                    <CheckCheck size={18} /> Target reached. Keep practicing as long as you need,
+                    then review and save.
                   </div>
                 )}
                 <p className="studio-timer-scope">
-                  The timer includes pauses between audio sets. Save before leaving the studio;
-                  timer time is not kept between visits.
+                  Listening time follows the audio, including when your screen locks. The target is
+                  a guide, not a limit. Save before leaving; unfinished time is not kept between
+                  visits.
                 </p>
                 <div className="studio-manual-log">
                   <h3>Already practiced?</h3>
@@ -903,7 +933,10 @@ export default function PracticeStudio({
                             ? { characterWpm: activity.characterWpm }
                             : {}),
                         source: 'manual',
-                        ...(launch?.task ? { metadata: { plannedTaskId: launch.task.id } } : {}),
+                        metadata: {
+                          ...(launch?.task ? { plannedTaskId: launch.task.id } : {}),
+                          ...(scratchpad ? { scratchpad } : {}),
+                        },
                       });
                     }}
                   >

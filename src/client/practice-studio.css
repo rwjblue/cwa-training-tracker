@@ -464,3 +464,24 @@
 .practice-layout.is-assigned .studio-card {
   align-self: start;
 }
+
+.studio-scratchpad {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #d8e0d0;
+}
+.studio-scratchpad textarea {
+  font-family: ui-monospace, monospace;
+}
+.session-scratchpad {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.session-scratchpad summary {
+  cursor: pointer;
+}
+.session-scratchpad p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 10px;
+}
