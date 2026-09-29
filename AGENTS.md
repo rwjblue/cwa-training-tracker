@@ -22,5 +22,8 @@ redistribute restricted course documents, audio, or personal training data.
 - Keep import operations validated, transactional, repeatable, and reversible
   through a user export. Never mutate the source personal site during import.
 - This repo uses colocated Jujutsu. Use `jj` to commit; preserve push signing.
+- Make focused, logical commits as each coherent change is completed and
+  validated. Keep unrelated features in separate commits instead of batching
+  an entire work session into one commit.
 
 commit-message-default: auto
