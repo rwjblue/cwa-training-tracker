@@ -50,7 +50,7 @@ import {
   summarizePractice,
 } from '../shared/training';
 import { api, getEntries, getSettings, type Passkey, type User } from './api';
-import PracticeStudio from './PracticeStudio';
+const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
 import './styles.css';
 import Plan from './Plan';
 import TimeZoneSelect from './TimeZoneSelect';
@@ -637,16 +637,18 @@ function App() {
                   />
                 ))}
               {page === 'practice' && (
-                <PracticeStudio
-                  onLog={openLog}
-                  savedVersion={savedPracticeVersion}
-                  savedEntry={savedPracticeEntry}
-                  launch={practiceLaunch}
-                  onBack={() => navigate('overview')}
-                  onUnsavedChange={(unsaved: boolean) => {
-                    studioUnsaved.current = unsaved;
-                  }}
-                />
+                <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
+                  <PracticeStudio
+                    onLog={openLog}
+                    savedVersion={savedPracticeVersion}
+                    savedEntry={savedPracticeEntry}
+                    launch={practiceLaunch}
+                    onBack={() => navigate('overview')}
+                    onUnsavedChange={(unsaved: boolean) => {
+                      studioUnsaved.current = unsaved;
+                    }}
+                  />
+                </React.Suspense>
               )}
               {page === 'logbook' && (
                 <Logbook

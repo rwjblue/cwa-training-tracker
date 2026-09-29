@@ -473,15 +473,3 @@
 .studio-scratchpad textarea {
   font-family: ui-monospace, monospace;
 }
-.session-scratchpad {
-  margin-top: 8px;
-  font-size: 13px;
-}
-.session-scratchpad summary {
-  cursor: pointer;
-}
-.session-scratchpad p {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  margin-top: 10px;
-}

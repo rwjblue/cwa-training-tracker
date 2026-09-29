@@ -207,7 +207,31 @@ test('course dates populate Today with playable assignments and preserve linked 
     .toBeGreaterThan(1.2);
   await audio.evaluate((element: HTMLAudioElement) => element.pause());
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
-  const listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
+  let listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
+  const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
+  const fasterUrl = await speed.getByRole('option', { name: /^13 WPM/ }).getAttribute('value');
+  expect(fasterUrl).toBeTruthy();
+  await page.route(fasterUrl!, (route) =>
+    route.fulfill({ status: 200, contentType: 'audio/wav', body: recording }),
+  );
+  await speed.selectOption(fasterUrl!);
+  await expect(audio).toHaveAttribute('src', fasterUrl!);
+  expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+  expect(await audio.evaluate((element: HTMLAudioElement) => element.currentTime)).toBe(0);
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
+    'Copied ALICE in OH. Revisit the final sentence.',
+  );
+  await page
+    .getByRole('combobox', { name: 'Recording speed default', exact: true })
+    .selectOption('next');
+  await expect(audio).toHaveAttribute('src', fasterUrl!);
+  await audio.evaluate((element: HTMLAudioElement) => element.play());
+  await expect
+    .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
+    .toBeGreaterThan(1.2);
+  await audio.evaluate((element: HTMLAudioElement) => element.pause());
+  listened += await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
+
   await page.clock.install({ time: new Date('2026-10-06T16:00:00Z') });
   await page.clock.pauseAt(new Date('2026-10-06T16:00:01Z'));
   await page.clock.fastForward(65_000);
@@ -233,7 +257,14 @@ test('course dates populate Today with playable assignments and preserve linked 
   expect(entries[0].metadata.elapsedSeconds).toBeGreaterThanOrEqual(20 + Math.floor(listened) - 1);
   expect(entries[0].metadata.elapsedSeconds).toBeLessThanOrEqual(20 + Math.ceil(listened));
   expect(entries[0].minutes).toBe(entries[0].metadata.elapsedSeconds / 60);
-  expect(entries[0].metadata.recordings[0].url).toBe(assigned.exercise.url);
+  expect(entries[0].metadata.recordings).toHaveLength(2);
+  expect(entries[0].metadata.recordings[0]).toMatchObject({
+    url: assigned.exercise.url,
+    speedWpm: 10,
+  });
+  expect(entries[0].metadata.recordings[1]).toMatchObject({ url: fasterUrl, speedWpm: 13 });
+  expect(entries[0].metadata.assignedCharacterWpm).toBe(10);
+  expect(entries[0].characterWpm).toBeUndefined(); // mixed speeds are not mislabeled as one speed
 
   const nativeRecording = await audio.elementHandle();
   await audio.evaluate((element: HTMLAudioElement) => element.play());
@@ -243,6 +274,9 @@ test('course dates populate Today with playable assignments and preserve linked 
   expect(await nativeRecording!.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
+  await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
+  await expect(audio).toHaveAttribute('src', fasterUrl!); // remembered next-faster default
+  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   await row.getByRole('checkbox', { name: `Mark ${assigned.title} complete`, exact: true }).click();
   await expect(row).toHaveCount(0);
   await expect(panel.getByText('1/4 done', { exact: true })).toBeVisible();

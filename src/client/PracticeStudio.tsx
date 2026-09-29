@@ -31,6 +31,8 @@ import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTraine
 import MorseTranscript from './MorseTranscript';
 import MorseRunnerStudio, { DEFAULT_RUNNER_SETTINGS } from './MorseRunnerStudio';
 import type { PracticeLaunch } from './practice-launch';
+import RecordingSpeedSelect from './RecordingSpeedSelect';
+import { preferredRecording } from './recording-variants';
 import { usePracticeClock } from './usePracticeClock';
 import { WORD_LISTS } from './word-content';
 import { QSO_TEMPLATES } from './qso-content';
@@ -56,6 +58,15 @@ export default function PracticeStudio({
 }) {
   const activity = launch?.activity;
   const assigned = Boolean(activity);
+  const [selectedRecording, setSelectedRecording] = useState(() =>
+    activity?.type === 'audio'
+      ? preferredRecording(activity.url, activity.characterWpm)
+      : undefined,
+  );
+  const recordingUrl =
+    activity?.type === 'audio' ? (selectedRecording?.url ?? activity.url) : undefined;
+  const recordingWpm =
+    activity?.type === 'audio' ? (selectedRecording?.speedWpm ?? activity.characterWpm) : undefined;
   const [publicRunner, setPublicRunner] = useState(false);
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
@@ -117,6 +128,11 @@ export default function PracticeStudio({
     if (!launch) return;
     resetTimer();
     setScratchpad('');
+    setSelectedRecording(
+      activity?.type === 'audio'
+        ? preferredRecording(activity.url, activity.characterWpm)
+        : undefined,
+    );
     setPublicRunner(false);
     setRunnerUnsaved(false);
     setTimerMinutes(launch.task?.targetMinutes ?? 15);
@@ -147,12 +163,27 @@ export default function PracticeStudio({
   const logTimedSession = () => {
     const elapsedSeconds = pauseTimer();
     const measured = timer.snapshot();
+    const playedSpeeds = [
+      ...new Set(
+        measured.recordings
+          .map((item) => item.speedWpm)
+          .filter((speed): speed is number => speed !== undefined),
+      ),
+    ];
     if (elapsedSeconds < 1) return;
     onLog({
       kind: launch?.task?.kind ?? (tool === 'words' ? 'head-copy' : 'listening'),
       lesson: launch?.task?.lesson,
       notes: [
         launch?.task?.title,
+        measured.recordings.length
+          ? measured.recordings
+              .map(
+                (item) =>
+                  `${item.speedWpm ? `${item.speedWpm} WPM` : 'Recording'}: ${duration(Math.floor(item.seconds))} listened`,
+              )
+              .join('; ')
+          : undefined,
         assigned
           ? undefined
           : tool === 'words'
@@ -168,8 +199,8 @@ export default function PracticeStudio({
       minutes: elapsedSeconds / 60,
       ...(!assigned
         ? { characterWpm, effectiveWpm }
-        : activity?.type === 'audio' && activity.characterWpm
-          ? { characterWpm: activity.characterWpm }
+        : activity?.type === 'audio' && playedSpeeds.length === 1
+          ? { characterWpm: playedSpeeds[0] }
           : {}),
       source: assigned ? 'timer' : 'morse',
       metadata: {
@@ -179,7 +210,15 @@ export default function PracticeStudio({
         ...(measured.recordings.length ? { recordings: measured.recordings } : {}),
         practiceTool: assigned ? activity?.type : tool,
         ...(!assigned ? { practiceMode: mode } : {}),
-        ...(activity?.type === 'audio' ? { recordingUrl: activity.url } : {}),
+        ...(activity?.type === 'audio'
+          ? {
+              assignedRecordingUrl: activity.url,
+              assignedCharacterWpm: activity.characterWpm,
+              ...(measured.recordings.length === 1
+                ? { recordingUrl: measured.recordings[0].url }
+                : {}),
+            }
+          : {}),
         ...(!assigned && tool === 'words' ? { wordList: preferences.wordList } : {}),
         ...(!assigned && tool === 'qso' ? { qsoScenario: preferences.qsoScenario } : {}),
         ...(launch?.task ? { plannedTaskId: launch.task.id } : {}),
@@ -237,7 +276,7 @@ export default function PracticeStudio({
     setError('');
     try {
       if (activity?.type === 'audio') {
-        if (!activity.url || !recording.current)
+        if (!recordingUrl || !recording.current)
           throw new Error(
             activity.unresolved ??
               'This recording is unavailable. Open the official exercise for alternatives.',
@@ -259,7 +298,7 @@ export default function PracticeStudio({
     }
   };
   const startPractice = async () => {
-    if (activity?.type === 'audio' && !activity.url) {
+    if (activity?.type === 'audio' && !recordingUrl) {
       setError(activity.unresolved ?? 'This recording is unavailable.');
       return;
     }
@@ -393,11 +432,11 @@ export default function PracticeStudio({
           <div className="studio-quick-actions">
             <button
               className="button dark"
-              disabled={activity?.type === 'audio' && !activity.url}
+              disabled={activity?.type === 'audio' && !recordingUrl}
               onClick={() => (running ? pauseTimer() : void startPractice())}
             >
               {running ? <Square size={14} /> : <Play size={14} />}
-              {activity?.type === 'audio' && !activity.url
+              {activity?.type === 'audio' && !recordingUrl
                 ? 'Recording unavailable'
                 : running
                   ? 'Pause practice'
@@ -443,22 +482,29 @@ export default function PracticeStudio({
               {activity?.type === 'audio' ? (
                 <div className="assigned-recording">
                   <p>
-                    {activity.characterWpm ? `${activity.characterWpm} WPM · ` : ''}
+                    {recordingWpm
+                      ? `${recordingWpm} WPM${recordingWpm !== activity.characterWpm && activity.characterWpm ? ` selected (${activity.characterWpm} assigned)` : ''} · `
+                      : ''}
                     {activity.minimumPasses
                       ? `${activity.minimumPasses}${activity.maximumPasses && activity.maximumPasses !== activity.minimumPasses ? `–${activity.maximumPasses}` : ''} listening passes assigned.`
                       : 'Listen at the recording’s original speed.'}
                   </p>
-                  {activity.url ? (
+                  {recordingUrl ? (
                     <>
                       <audio
-                        key={`${launch?.id}:${activity.url}`}
+                        key={`${launch?.id}:${recordingUrl}`}
                         ref={attachRecording}
                         controls
                         preload="metadata"
-                        src={activity.url}
+                        src={recordingUrl}
                         aria-label="Assigned recording"
                         data-recording="true"
-                        data-speed={activity.characterWpm}
+                        data-speed={recordingWpm}
+                        controlsList="noplaybackrate"
+                        onRateChange={(event) => {
+                          if (event.currentTarget.playbackRate !== 1)
+                            event.currentTarget.playbackRate = 1;
+                        }}
                         onPlay={() => setPlaying(true)}
                         onPause={() => setPlaying(false)}
                         onEnded={() => setPlaying(false)}
@@ -469,6 +515,18 @@ export default function PracticeStudio({
                           pauseTimer();
                         }}
                       />
+                      {activity.url && (
+                        <RecordingSpeedSelect
+                          assignedUrl={activity.url}
+                          assignedWpm={activity.characterWpm}
+                          selectedUrl={recordingUrl}
+                          onChange={(variant) => {
+                            pauseTimer();
+                            setSelectedRecording(variant);
+                            setError('');
+                          }}
+                        />
+                      )}
                       <p className="field-hint">
                         The recording plays directly from CWops. You can pause, seek, and use your
                         device’s audio controls.
@@ -479,8 +537,8 @@ export default function PracticeStudio({
                       {activity.unresolved ?? 'This recording is not currently available.'}
                     </p>
                   )}
-                  {activity.url && (
-                    <a className="text-button" href={activity.url} target="_blank" rel="noreferrer">
+                  {recordingUrl && (
+                    <a className="text-button" href={recordingUrl} target="_blank" rel="noreferrer">
                       Open recording <ArrowRight size={14} />
                     </a>
                   )}
@@ -929,8 +987,8 @@ export default function PracticeStudio({
                         notes: launch?.task?.title,
                         ...(!assigned
                           ? { characterWpm, effectiveWpm }
-                          : activity?.type === 'audio' && activity.characterWpm
-                            ? { characterWpm: activity.characterWpm }
+                          : activity?.type === 'audio' && recordingWpm
+                            ? { characterWpm: recordingWpm }
                             : {}),
                         source: 'manual',
                         metadata: {
