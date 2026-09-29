@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Check TypeScript types"
+set -euo pipefail
+npm run check

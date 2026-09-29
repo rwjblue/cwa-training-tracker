@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Validate before committing"
+set -euo pipefail
+npm run check
+npm test
+npm run build

@@ -1,0 +1,630 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import worker from './index';
+import { DEFAULT_PROFILE } from '../shared/training';
+
+// Run production SQL against SQLite, including D1's transactional batch behavior.
+// The cast bridges only the D1 transport API; SQL and schema are not mocked.
+class SQLiteDatabase {
+  sqlite = new DatabaseSync(':memory:');
+  constructor() {
+    const directory = new URL('../../migrations/', import.meta.url);
+    for (const file of readdirSync(directory)
+      .filter((name) => name.endsWith('.sql'))
+      .sort()) {
+      this.sqlite.exec(readFileSync(new URL(file, directory), 'utf8'));
+    }
+  }
+  prepare(sql: string) {
+    return new SQLiteStatement(this.sqlite, sql);
+  }
+  async batch(statements: SQLiteStatement[]) {
+    this.sqlite.exec('BEGIN');
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.all());
+      this.sqlite.exec('COMMIT');
+      return results;
+    } catch (error) {
+      this.sqlite.exec('ROLLBACK');
+      throw error;
+    }
+  }
+  async exec(sql: string) {
+    this.sqlite.exec(sql);
+    return { count: 0, duration: 0 };
+  }
+  withSession(): never {
+    throw new Error('Session API is not used by this worker.');
+  }
+  async dump(): Promise<ArrayBuffer> {
+    throw new Error('Dump API is not used by this worker.');
+  }
+}
+
+class SQLiteStatement {
+  values: SQLInputValue[] = [];
+  constructor(
+    private sqlite: DatabaseSync,
+    private sql: string,
+  ) {}
+  bind(...values: SQLInputValue[]) {
+    this.values = values;
+    return this;
+  }
+  async first<T = Record<string, unknown>>(column?: string): Promise<T | null> {
+    const row = this.sqlite.prepare(this.sql).get(...this.values);
+    return (row ? (column ? row[column] : row) : null) as T | null;
+  }
+  async all<T = Record<string, unknown>>(): Promise<D1Result<T>> {
+    const before = Number(this.sqlite.prepare('SELECT total_changes() AS count').get()?.count ?? 0);
+    const results = this.sqlite.prepare(this.sql).all(...this.values);
+    // D1 reports total changes, including writes performed inside triggers.
+    const changes =
+      Number(this.sqlite.prepare('SELECT total_changes() AS count').get()?.count ?? 0) - before;
+    return {
+      results: results as T[],
+      success: true,
+      meta: {
+        changes: Number(changes),
+        duration: 0,
+        size_after: 0,
+        rows_read: 0,
+        rows_written: 0,
+        last_row_id: 0,
+        changed_db: false,
+      },
+    };
+  }
+  async run<T = Record<string, unknown>>() {
+    return this.all<T>();
+  }
+  async raw(): Promise<never> {
+    throw new Error('Raw API is not used by this worker.');
+  }
+}
+
+type Mail = { text?: string; to: unknown };
+let db: SQLiteDatabase;
+let env: Env;
+let mail: Mail[];
+const origin = 'https://cwa.n1rwj.com';
+
+function request(
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  cookies = '',
+  headers: Record<string, string> = {},
+) {
+  return worker.fetch(
+    new Request(`${origin}${path}`, {
+      method,
+      headers: { Origin: origin, 'Content-Type': 'application/json', Cookie: cookies, ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+    env,
+  );
+}
+function cookiesFrom(response: Response) {
+  return response.headers
+    .getSetCookie()
+    .map((value) => value.split(';')[0])
+    .join('; ');
+}
+function code() {
+  return mail.at(-1)?.text?.match(/code is (\d{6})/)?.[1] ?? '';
+}
+async function signIn(email: string) {
+  const requested = await request('/api/auth/email/request', 'POST', { email });
+  expect(requested.status).toBe(200);
+  const verified = await request(
+    '/api/auth/email/verify',
+    'POST',
+    { email, code: code() },
+    cookiesFrom(requested),
+  );
+  expect(verified.status).toBe(200);
+  return {
+    cookie: cookiesFrom(verified),
+    user: ((await verified.json()) as { user: { id: string; email: string } }).user,
+  };
+}
+const entry = (id = 'test-entry') => ({
+  id,
+  date: '2026-09-28',
+  kind: 'listening',
+  minutes: 15,
+  notes: 'Private practice',
+  createdAt: '2026-09-28T12:00:00Z',
+});
+const backup = (sessions: unknown[] = [entry()]) => ({
+  format: 'cwa-training-tracker',
+  version: 1,
+  exportedAt: '2026-09-28T12:00:00Z',
+  sessions,
+});
+
+beforeEach(() => {
+  db = new SQLiteDatabase();
+  mail = [];
+  env = {
+    DB: db as D1Database,
+    ASSETS: {
+      fetch: async () => new Response('static'),
+      connect: () => {
+        throw new Error('Sockets are not used.');
+      },
+    },
+    EMAIL: {
+      send: async (message) => {
+        mail.push(message as Mail);
+        return { messageId: 'test-message' };
+      },
+    },
+    APP_ORIGIN: origin,
+    EMAIL_FROM: 'signin@cwa.n1rwj.com',
+    ENVIRONMENT: 'production',
+    AUTH_SECRET: 'test-secret-long-enough-for-hmac-testing',
+  };
+});
+afterEach(() => {
+  db.sqlite.close();
+  vi.restoreAllMocks();
+});
+
+describe('authentication boundary', () => {
+  it('keeps private routes behind authentication and rejects foreign origins', async () => {
+    expect(await (await request('/api/me')).json()).toEqual({ user: null });
+    expect((await request('/api/entries')).status).toBe(401);
+    expect(
+      (
+        await request('/api/settings', 'PUT', DEFAULT_PROFILE, '', {
+          Origin: 'https://attacker.example',
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request('/api/auth/email/request', 'POST', { email: 'person@example.com' }, '', {
+          'Sec-Fetch-Site': 'cross-site',
+        })
+      ).status,
+    ).toBe(403);
+    expect(mail).toHaveLength(0);
+  });
+
+  it('issues five-minute browser-bound codes, hashes credentials, and consumes each code once', async () => {
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const requested = await request('/api/auth/email/request', 'POST', {
+      email: ' Person@Example.com ',
+    });
+    expect(await requested.json()).toEqual({ ok: true, expiresIn: 300 });
+    expect(requested.headers.get('Set-Cookie')).toContain('__Host-cwa-email=');
+    expect(requested.headers.get('Set-Cookie')).toContain('Max-Age=300; Secure');
+    const stored = db.sqlite.prepare('SELECT * FROM email_codes').get();
+    expect(stored?.expires_at).toBe(now + 300_000);
+    expect(stored?.code_hash).not.toBe(code());
+    const verified = await request(
+      '/api/auth/email/verify',
+      'POST',
+      { email: 'person@example.com', code: code() },
+      cookiesFrom(requested),
+    );
+    expect(verified.status).toBe(200);
+    expect(verified.headers.get('Cache-Control')).toBe('no-store');
+    expect(verified.headers.getSetCookie()[0]).toContain('HttpOnly; SameSite=Lax');
+    const sessionHash = db.sqlite.prepare('SELECT token_hash FROM sessions').get()?.token_hash;
+    expect(cookiesFrom(verified)).not.toContain(String(sessionHash));
+    expect(
+      (
+        await request(
+          '/api/auth/email/verify',
+          'POST',
+          { email: 'person@example.com', code: code() },
+          cookiesFrom(requested),
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  it('does not accept an email code in another browser or for another email', async () => {
+    const response = await request('/api/auth/email/request', 'POST', { email: 'one@example.com' });
+    expect(
+      (await request('/api/auth/email/verify', 'POST', { email: 'one@example.com', code: code() }))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/auth/email/verify',
+          'POST',
+          { email: 'two@example.com', code: code() },
+          cookiesFrom(response),
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  it('locks a code after five wrong guesses', async () => {
+    const response = await request('/api/auth/email/request', 'POST', { email: 'one@example.com' });
+    const wrong = code() === '000000' ? '111111' : '000000';
+    for (let attempt = 0; attempt < 5; attempt++) {
+      expect(
+        (
+          await request(
+            '/api/auth/email/verify',
+            'POST',
+            { email: 'one@example.com', code: wrong },
+            cookiesFrom(response),
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect(
+      (
+        await request(
+          '/api/auth/email/verify',
+          'POST',
+          { email: 'one@example.com', code: code() },
+          cookiesFrom(response),
+        )
+      ).status,
+    ).toBe(400);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM sessions').get()?.count).toBe(0);
+  });
+
+  it('rejects a code exactly at the five-minute expiration boundary', async () => {
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const response = await request('/api/auth/email/request', 'POST', { email: 'one@example.com' });
+    vi.spyOn(Date, 'now').mockReturnValue(now + 300_000);
+    expect(
+      (
+        await request(
+          '/api/auth/email/verify',
+          'POST',
+          { email: 'one@example.com', code: code() },
+          cookiesFrom(response),
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  it('allows only one concurrent successful consumption', async () => {
+    const response = await request('/api/auth/email/request', 'POST', { email: 'one@example.com' });
+    const responses = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        request(
+          '/api/auth/email/verify',
+          'POST',
+          { email: 'one@example.com', code: code() },
+          cookiesFrom(response),
+        ),
+      ),
+    );
+    expect(responses.map((value) => value.status).sort()).toEqual([200, 400, 400, 400]);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM sessions').get()?.count).toBe(1);
+  });
+
+  it('invalidates a code when delivery fails and rate-limits resends', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    env.EMAIL.send = async () => {
+      throw new Error('private provider details');
+    };
+    const response = await request('/api/auth/email/request', 'POST', { email: 'one@example.com' });
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain('private provider');
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM email_codes').get()?.count).toBe(0);
+    expect(
+      (await request('/api/auth/email/request', 'POST', { email: 'one@example.com' })).status,
+    ).toBe(429);
+  });
+
+  it('revokes the server session on logout and enforces its absolute expiry', async () => {
+    const auth = await signIn('one@example.com');
+    expect((await request('/api/entries', 'GET', undefined, auth.cookie)).status).toBe(200);
+    await request('/api/auth/logout', 'POST', {}, auth.cookie);
+    expect((await request('/api/entries', 'GET', undefined, auth.cookie)).status).toBe(401);
+    const other = await signIn('two@example.com');
+    db.sqlite.exec('UPDATE sessions SET expires_at = 0');
+    expect((await request('/api/entries', 'GET', undefined, other.cookie)).status).toBe(401);
+  });
+
+  it('creates browser-bound passkey options and consumes rejected challenges', async () => {
+    const options = await request('/api/auth/passkeys/login/options', 'POST', {});
+    expect(((await options.json()) as { userVerification: string }).userVerification).toBe(
+      'required',
+    );
+    expect(options.headers.get('Set-Cookie')).toContain('__Host-cwa-ceremony');
+    const fakeResponse = {
+      id: 'unregistered',
+      rawId: 'unregistered',
+      type: 'public-key',
+      clientExtensionResults: {},
+      response: { clientDataJSON: '', authenticatorData: '', signature: '' },
+    };
+    expect(
+      (
+        await request(
+          '/api/auth/passkeys/login/verify',
+          'POST',
+          { response: fakeResponse },
+          cookiesFrom(options),
+        )
+      ).status,
+    ).toBe(400);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM ceremonies').get()?.count).toBe(0);
+    const auth = await signIn('one@example.com');
+    const register = await request('/api/auth/passkeys/register/options', 'POST', {}, auth.cookie);
+    const body = (await register.json()) as {
+      rp: { id: string };
+      authenticatorSelection: { residentKey: string; userVerification: string };
+    };
+    expect(body.rp.id).toBe('cwa.n1rwj.com');
+    expect(body.authenticatorSelection).toMatchObject({
+      residentKey: 'required',
+      userVerification: 'required',
+    });
+    db.sqlite.exec('UPDATE sessions SET created_at = 0');
+    expect(
+      (await request('/api/auth/passkeys/register/options', 'POST', {}, auth.cookie)).status,
+    ).toBe(403);
+  });
+});
+
+describe('private training data', () => {
+  it('isolates create, edit, delete, settings, and reset by account', async () => {
+    const a = await signIn('a@example.com');
+    const b = await signIn('b@example.com');
+    expect((await request('/api/entries', 'POST', entry(), a.cookie)).status).toBe(201);
+    expect(await (await request('/api/entries', 'GET', undefined, b.cookie)).json()).toEqual({
+      entries: [],
+    });
+    expect(
+      (await request('/api/entries/test-entry', 'PUT', { ...entry(), notes: 'stolen' }, b.cookie))
+        .status,
+    ).toBe(404);
+    await request('/api/entries/test-entry', 'DELETE', undefined, b.cookie);
+    expect((await request('/api/entries', 'POST', entry('b-entry'), b.cookie)).status).toBe(201);
+    await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, callsign: 'W1AW' }, a.cookie);
+    const bSettings = (await (
+      await request('/api/settings', 'GET', undefined, b.cookie)
+    ).json()) as { settings: { callsign: string } };
+    expect(bSettings.settings.callsign).toBe('');
+    expect((await request('/api/reset', 'POST', { confirmation: 'wrong' }, a.cookie)).status).toBe(
+      400,
+    );
+    await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie);
+    expect(await (await request('/api/entries', 'GET', undefined, a.cookie)).json()).toEqual({
+      entries: [],
+    });
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, b.cookie)).json()) as {
+          entries: unknown[];
+        }
+      ).entries,
+    ).toHaveLength(1);
+    expect((await request('/api/me', 'GET', undefined, a.cookie)).status).toBe(200);
+  });
+
+  it('merges imports idempotently and validates replacements before removing data', async () => {
+    const auth = await signIn('a@example.com');
+    expect(
+      await (
+        await request('/api/import', 'POST', { data: backup(), mode: 'merge' }, auth.cookie)
+      ).json(),
+    ).toEqual({ imported: 1, skipped: 0 });
+    expect(
+      await (
+        await request('/api/import', 'POST', { data: backup(), mode: 'merge' }, auth.cookie)
+      ).json(),
+    ).toEqual({ imported: 0, skipped: 1 });
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { data: backup([{ ...entry(), minutes: -1 }]), mode: 'replace' },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()) as {
+          entries: unknown[];
+        }
+      ).entries,
+    ).toHaveLength(1);
+    await request(
+      '/api/import',
+      'POST',
+      { data: backup([entry('new-entry')]), mode: 'replace' },
+      auth.cookie,
+    );
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as { sessions: { id: string }[] };
+    expect(exported.sessions.map((value) => value.id)).toEqual(['new-entry']);
+  });
+
+  it('rolls back the whole replacement if a database write fails', async () => {
+    const auth = await signIn('a@example.com');
+    await request('/api/entries', 'POST', entry(), auth.cookie);
+    db.sqlite.exec(
+      `CREATE TRIGGER test_failure BEFORE INSERT ON practice_entries WHEN NEW.id = 'broken' BEGIN SELECT RAISE(ABORT, 'test_failure'); END;`,
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { data: backup([entry('broken')]), mode: 'replace' },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(500);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as { sessions: { id: string }[] };
+    expect(exported.sessions.map((value) => value.id)).toEqual(['test-entry']);
+  });
+
+  it('merges against the transaction state when another browser deletes a known entry', async () => {
+    const auth = await signIn('a@example.com');
+    await request('/api/entries', 'POST', entry(), auth.cookie);
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, 'batch').mockImplementationOnce(async (statements) => {
+      db.sqlite.prepare('DELETE FROM practice_entries WHERE user_id = ?').run(auth.user.id);
+      return batch(statements);
+    });
+    const data = { ...backup(), profile: DEFAULT_PROFILE };
+    const response = await request('/api/import', 'POST', { data, mode: 'merge' }, auth.cookie);
+    expect(await response.json()).toEqual({ imported: 1, skipped: 0 });
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()) as {
+          entries: unknown[];
+        }
+      ).entries,
+    ).toHaveLength(1);
+  });
+
+  it('preserves a large original private archive across export and reimport', async () => {
+    const auth = await signIn('a@example.com');
+    const legacy = { source: 'rwjblue.com', data: { note: 'Original 😀 '.repeat(25_000) } };
+    const data = { ...backup(), legacy };
+    expect(
+      (await request('/api/import', 'POST', { data, mode: 'merge' }, auth.cookie)).status,
+    ).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as { legacy: unknown };
+    expect(exported.legacy).toEqual(legacy);
+    expect(
+      (await request('/api/import', 'POST', { data: exported, mode: 'replace' }, auth.cookie))
+        .status,
+    ).toBe(200);
+  });
+
+  it('rejects unbounded bodies and non-JSON writes', async () => {
+    const response = await request('/api/auth/email/request', 'POST', {
+      email: 'x'.repeat(20_000),
+    });
+    expect(response.status).toBe(413);
+    expect(
+      (
+        await request('/api/auth/email/request', 'POST', { email: 'a@example.com' }, '', {
+          'Content-Type': 'text/plain',
+        })
+      ).status,
+    ).toBe(415);
+  });
+
+  it('isolates private plans and includes them in export, replacement, and reset', async () => {
+    const a = await signIn('a@example.com');
+    const b = await signIn('b@example.com');
+    const task = {
+      id: 'private-exercise',
+      title: 'My assigned exercise',
+      kind: 'listening',
+      targetMinutes: 15,
+      done: false,
+      notes: 'Private notes',
+      createdAt: '2026-09-28T12:00:00Z',
+    };
+    expect((await request('/api/plan', 'POST', task, a.cookie)).status).toBe(201);
+    expect(await (await request('/api/plan', 'GET', undefined, b.cookie)).json()).toEqual({
+      plan: [],
+    });
+    expect(
+      (await request('/api/plan/private-exercise', 'PUT', { ...task, done: true }, b.cookie))
+        .status,
+    ).toBe(404);
+    const exported = (await (await request('/api/export', 'GET', undefined, a.cookie)).json()) as {
+      plan: unknown[];
+    };
+    expect(exported.plan).toEqual([{ ...task, createdAt: '2026-09-28T12:00:00.000Z' }]);
+    await request('/api/import', 'POST', { data: exported, mode: 'replace' }, a.cookie);
+    expect(
+      (
+        (await (await request('/api/plan', 'GET', undefined, a.cookie)).json()) as {
+          plan: unknown[];
+        }
+      ).plan,
+    ).toHaveLength(1);
+    await request('/api/import', 'POST', { data: backup([]), mode: 'replace' }, a.cookie);
+    expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
+      plan: [],
+    });
+    await request('/api/plan', 'POST', task, a.cookie);
+    await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie);
+    expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
+      plan: [],
+    });
+  });
+
+  it('enforces the storage budget transactionally and restores bytes after deletion', async () => {
+    const auth = await signIn('a@example.com');
+    const large = {
+      ...backup(),
+      legacy: { source: 'rwjblue.com', data: 'x'.repeat(6 * 1024 * 1024) },
+    };
+    expect(
+      (await request('/api/import', 'POST', { data: large, mode: 'merge' }, auth.cookie)).status,
+    ).toBe(400);
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    ).toBe(0);
+    expect(await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()).toEqual({
+      entries: [],
+    });
+    await request('/api/entries', 'POST', entry(), auth.cookie);
+    const storedBytes = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    expect(storedBytes).toBeGreaterThan(0);
+    await request(
+      '/api/entries/test-entry',
+      'PUT',
+      { ...entry(), notes: 'longer private practice note' },
+      auth.cookie,
+    );
+    expect(
+      Number(
+        db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+          ?.storage_bytes,
+      ),
+    ).toBeGreaterThan(storedBytes);
+    await request('/api/entries/test-entry', 'DELETE', undefined, auth.cookie);
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    ).toBe(0);
+  });
+
+  it('replaces the retained legacy archive during merge without invisible history', async () => {
+    const auth = await signIn('a@example.com');
+    for (const note of ['first', 'second']) {
+      const data = { ...backup(), legacy: { source: 'rwjblue.com', data: { note } } };
+      expect(
+        (await request('/api/import', 'POST', { data, mode: 'merge' }, auth.cookie)).status,
+      ).toBe(200);
+    }
+    expect(
+      db.sqlite.prepare('SELECT count(DISTINCT source_hash) AS count FROM import_sources').get()
+        ?.count,
+    ).toBe(1);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as { legacy: { data: unknown } };
+    expect(exported.legacy.data).toEqual({ note: 'second' });
+  });
+});

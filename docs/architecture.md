@@ -1,0 +1,105 @@
+# Architecture and security
+
+The application runs as one Cloudflare Worker with Static Assets and a D1
+database. React renders the public tools and private workspace. Public practice
+tools work without a login; every saved profile, practice entry, import archive,
+and private task belongs to an authenticated account. Official course materials
+are linked publicly. Imported personal materials remain in the private database.
+
+## Authentication
+
+Email sign-in creates accounts after verification. Six-digit codes are generated
+with Web Crypto and rejection sampling. Each code expires after exactly five
+minutes, permits at most five verification attempts, and is bound to an HttpOnly
+browser cookie. D1 stores a keyed HMAC of the code and a SHA-256 hash of the
+cookie token. A conditional delete consumes the code once, including under
+concurrent requests. Failed delivery deletes the code. Codes are sent through
+the native Cloudflare Email Service binding; production never returns or logs
+them. Email and IP request limits, resend cooldowns, and verification limits are
+enforced with atomic D1 counters. Account existence is not disclosed by the
+request-code response.
+
+Passkeys use SimpleWebAuthn. Discoverable credentials and user verification are
+required. Both registration and authentication verify the configured application
+origin and relying-party hostname. Five-minute challenges are browser-bound and
+consumed once. Registration also binds its challenge to the current account and
+session. Passkey creation and removal require authentication within the previous
+ten minutes. Accounts can hold ten passkeys. Email remains available for recovery.
+
+Sessions use random 256-bit tokens; only SHA-256 hashes are stored in D1. Cookies
+are HttpOnly, Secure, SameSite=Lax, host-only, and scoped to `/`. Production uses
+the `__Host-` cookie prefix. A session expires after 30 days and is revoked on
+logout. Sign-in rotates the current browser's session. An account retains at
+most 20 sessions. Expired credentials and rate buckets are removed by a daily
+scheduled handler.
+
+`AUTH_SECRET` must be at least 32 characters and is a Worker secret, never a
+checked-in variable. Rotating it invalidates outstanding email codes and rate
+keys. Existing sessions and passkeys remain valid. Rotate sessions separately by
+deleting their rows if an operational incident requires universal sign-out.
+
+## Request boundaries
+
+Every modifying API request must carry an exact matching `Origin` and cannot
+come from a cross-site fetch context. Requests containing JSON require the JSON
+content type and are read with a byte limit, including chunked requests. API
+responses are never cached. The Worker also returns frame, MIME-sniffing,
+referrer, permissions, and HTTPS transport security headers. SQL values always
+use bound parameters. Private operations include the authenticated `user_id` in
+their queries. No user IDs supplied by clients establish ownership.
+
+The origin setting also controls WebAuthn. During local development set
+`APP_ORIGIN` to the exact browser URL, including its port; for example,
+`http://localhost:8787` for the built preview. Use `localhost`, rather than an IP
+address, so browsers permit the WebAuthn relying-party hostname. HTTP cookies are allowed only by
+this explicit local configuration. Do not configure an HTTP production origin.
+Wrangler's local Email Service simulator can inspect development mail without
+contacting real recipients. There is no development authentication bypass.
+
+## Data, backup, and import
+
+Practice records use a shared validated domain model, stored as JSON with an
+indexed account ID and calendar date. Profiles retain the learner's IANA
+timezone. The browser timezone initializes a newly verified account; subsequent
+sign-ins preserve the saved timezone.
+
+Each account can store up to 20,000 practice records and 2,000 planned tasks.
+SQLite triggers enforce a shared 6 MiB storage budget for entries, tasks, and
+the retained source archive. Transactional byte accounting prevents concurrent
+writes from bypassing the quota. This budget leaves space for export wrappers
+and profiles within the 8 MiB import-request ceiling. Individual requests and
+domain fields have smaller validation limits.
+
+Native exports are versioned. Imports support native backups and the personal
+site's legacy snapshot format. Merge skips existing record IDs; it does not
+silently overwrite edited records. Replace clears the current training records,
+private plan, and source archives, then imports the validated backup. The
+operation uses a D1 transactional batch, so any write failure rolls it back.
+Legacy imports retain the full original source privately in bounded, Unicode-safe
+chunks. An import carrying a source archive replaces the previous archive within
+the same transaction; imports without an archive preserve the current one in
+merge mode. This latest source is included in native exports for future
+remapping. Repeated legacy conversion produces stable IDs. Legacy imports keep
+an existing display name and callsign when the source has no identity fields.
+
+Reset requires the literal confirmation `RESET`. It clears training records,
+private tasks, source archives, and profile settings. It keeps the account,
+sessions, and passkeys so the same account can import a fresh backup. Export
+before resetting or replacing data you want to retain. Import never writes to
+the original personal site.
+
+## Operations and verification
+
+Bindings and environment types come from `wrangler types`; do not hand-maintain
+an alternate Env interface. Apply migrations before deployment. Production
+observability logs contain event names and exception classes, not request
+bodies, email addresses, codes, tokens, or provider error details. D1 Time Travel
+provides operational database recovery; user JSON exports provide portable
+per-account backups.
+
+The Worker integration tests run the production schema and SQL against SQLite,
+including transactional batches. They cover code expiry and replay, concurrent
+consumption, guess limits, failed delivery, origins, session revocation, account
+isolation, invalid and repeated imports, rollback, and retained archives. Browser
+tests exercise the actual Worker and passkey flows. Run `mise run check`,
+`mise run test`, `mise run build`, and the browser suite before deployment.

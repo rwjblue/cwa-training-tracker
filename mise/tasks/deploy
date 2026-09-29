@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="Validate, migrate, and deploy production"
+set -euo pipefail
+npm run check
+npm test
+npm run build
+npx wrangler deploy --dry-run
+npx wrangler d1 migrations apply DB --remote
+npx wrangler deploy

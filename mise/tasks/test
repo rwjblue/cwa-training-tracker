@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run domain and API regression tests"
+set -euo pipefail
+npm test

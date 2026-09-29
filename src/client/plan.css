@@ -1,0 +1,346 @@
+.plan-card {
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+.plan-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 28px 20px;
+}
+.plan-heading h2 {
+  margin: 8px 0;
+  font-size: 24px;
+}
+.plan-heading p,
+.plan-status,
+.plan-task-meta,
+.plan-footnote,
+.plan-form-hint {
+  color: #626e5d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.plan-heading-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plan-status {
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin: 0 28px;
+  padding: 12px 16px;
+  background: #f5f6ef;
+  border-radius: 8px;
+}
+.plan-status span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.plan-toolbar {
+  padding: 20px 28px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.plan-toolbar .practice-tabs {
+  margin: 0;
+}
+.plan-show-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.plan-list {
+  margin: 0;
+  padding: 0 28px;
+  list-style: none;
+}
+.plan-task {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 20px 0;
+  border-bottom: 1px solid #e8ebe3;
+}
+.plan-task:last-child {
+  border-bottom: 0;
+}
+.plan-check {
+  width: 19px;
+  height: 19px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: #426945;
+  cursor: pointer;
+}
+.plan-task-body {
+  min-width: 0;
+  flex: 1;
+}
+.plan-task-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.plan-task-title h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.plan-task.is-done h3 {
+  color: #657060;
+  text-decoration: line-through;
+}
+.plan-task-meta {
+  margin: 4px 0 0;
+}
+.plan-overdue {
+  color: #8c6231;
+  background: #f8f0e2;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.plan-notes {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #596357;
+}
+.plan-notes summary {
+  cursor: pointer;
+}
+.plan-notes p {
+  white-space: pre-wrap;
+  line-height: 1.65;
+  padding: 12px;
+  background: #f7f8f3;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.plan-task-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 10px;
+}
+.plan-task-links a,
+.plan-task-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #426945;
+  border: 0;
+  background: none;
+  text-decoration: none;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.plan-task-actions {
+  display: flex;
+  gap: 2px;
+}
+.plan-empty {
+  text-align: center;
+  padding: 35px 28px;
+  color: #657060;
+}
+.plan-empty svg {
+  margin: 0 auto 12px;
+}
+.plan-empty h3 {
+  color: #293b2b;
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+.plan-empty p {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 470px;
+  margin: 0 auto 18px;
+}
+.plan-empty .button svg {
+  margin: 0;
+}
+.plan-footnote {
+  margin: 0;
+  padding: 15px 28px;
+  background: #fafbf7;
+  border-top: 1px solid #e8ebe3;
+  font-size: 11px;
+}
+.plan-card > .alert {
+  margin: 12px 28px;
+}
+.plan-dialog {
+  border: 1px solid #dfe4d8;
+  border-radius: 18px;
+  width: min(580px, calc(100vw - 28px));
+  max-height: calc(100dvh - 48px);
+  padding: 26px;
+  color: #25342b;
+  background: #fffefb;
+  box-shadow: 0 24px 90px #17221640;
+}
+.plan-dialog::backdrop {
+  background: #17221677;
+  backdrop-filter: blur(3px);
+}
+.plan-dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.plan-dialog-heading h2 {
+  font-size: 24px;
+  margin: 0;
+}
+.plan-dialog > p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #697365;
+}
+.plan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.plan-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.plan-form input,
+.plan-form select,
+.plan-form textarea {
+  width: 100%;
+  font: inherit;
+  font-weight: 400;
+  color: #263b29;
+  border: 1px solid #dce2d5;
+  border-radius: 7px;
+  padding: 10px 11px;
+  background: white;
+}
+.plan-form textarea {
+  resize: vertical;
+  min-height: 95px;
+  line-height: 1.6;
+}
+.plan-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.plan-form-hint {
+  margin: -7px 0 0;
+  font-size: 11px;
+}
+.plan-form-actions {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.plan-report {
+  width: min(720px, calc(100vw - 28px));
+}
+.plan-report-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.8;
+  background: #f6f8f0;
+  padding: 20px;
+  border-radius: 8px;
+  max-height: 45vh;
+  overflow-y: auto;
+  margin-top: 20px;
+}
+@media (max-width: 800px) {
+  .plan-heading {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .plan-status,
+  .plan-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .plan-task-actions {
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .plan-heading,
+  .plan-toolbar {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .plan-list {
+    padding: 0 18px;
+  }
+  .plan-status {
+    margin: 0 18px;
+  }
+  .plan-heading-actions .button {
+    font-size: 11px;
+  }
+  .plan-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .plan-dialog {
+    padding: 20px;
+  }
+}
+@media print {
+  body:has(.plan-report[open]) * {
+    visibility: hidden !important;
+  }
+  body:has(.plan-report[open]) .plan-report,
+  body:has(.plan-report[open]) .plan-report * {
+    visibility: visible !important;
+  }
+  body:has(.plan-report[open]) .plan-report {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+    padding: 15px;
+  }
+  body:has(.plan-report[open]) .plan-report .plan-no-print,
+  body:has(.plan-report[open]) .plan-report .plan-no-print * {
+    display: none;
+  }
+  .plan-report::backdrop {
+    background: none;
+  }
+  .plan-report-text {
+    max-height: none;
+    overflow: visible;
+    background: white;
+    color: black;
+    padding: 0;
+  }
+}

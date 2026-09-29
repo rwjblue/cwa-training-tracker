@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Build and serve the complete site locally"
+set -euo pipefail
+npm run build
+npx wrangler d1 migrations apply DB --local
+npx wrangler dev --ip 127.0.0.1 --port 8787

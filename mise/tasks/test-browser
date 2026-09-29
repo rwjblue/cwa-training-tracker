@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run browser integration tests"
+set -euo pipefail
+npm run test:e2e

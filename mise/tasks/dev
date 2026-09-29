@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run frontend with hot reload (API: mise run dev-api)"
+set -euo pipefail
+npm run dev

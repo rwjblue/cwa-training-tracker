@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Build the production static site"
+set -euo pipefail
+npm run build

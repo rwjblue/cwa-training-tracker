@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Format source and project documentation"
+set -euo pipefail
+npx prettier --write .

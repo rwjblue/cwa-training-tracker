@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Install locked project dependencies"
+set -euo pipefail
+npm ci

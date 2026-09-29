@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate Cloudflare Worker binding types"
+set -euo pipefail
+npx wrangler types --strict-vars=false

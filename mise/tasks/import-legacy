@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Convert a legacy training export into a private, repeatable import"
+#USAGE arg "<source>" help="JSON export from the original training tracker"
+#USAGE flag "-o --output <file>" default="data/private/training-import.json" help="Private output JSON; existing files are never overwritten"
+set -euo pipefail
+node scripts/import-legacy.ts "$usage_source" --output "$usage_output"
