@@ -222,6 +222,7 @@ function App() {
   const studioUnsaved = useRef(false);
   const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
+  const [savedPracticeEntry, setSavedPracticeEntry] = useState<PracticeSession>();
   const pendingLog = useRef<Partial<PracticeSession> | null>(null);
   const pendingDestination = useRef<Page | null>(null);
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
@@ -635,6 +636,7 @@ function App() {
                 <PracticeStudio
                   onLog={openLog}
                   savedVersion={savedPracticeVersion}
+                  savedEntry={savedPracticeEntry}
                   launch={practiceLaunch}
                   onBack={() => navigate('overview')}
                   onUnsavedChange={(unsaved: boolean) => {
@@ -713,6 +715,7 @@ function App() {
           initial={sessionEditor}
           onClose={() => setSessionEditor(null)}
           onSaved={(entry) => {
+            setSavedPracticeEntry(entry);
             setEntries((current) =>
               [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
                 b.date.localeCompare(a.date),

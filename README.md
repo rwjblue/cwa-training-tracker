@@ -20,6 +20,10 @@ CWops. Official course material stays at the
 - Continuous native audio playback with pause/resume, a seek bar, current-word
   highlighting, and clickable words. Morse rounds include their silence in one
   audio file so playback does not depend on background JavaScript timers.
+- Embedded Web Morse Runner for Single Call and WPX practice, with synthetic
+  calls and assignment settings filled in automatically. Save the engine's
+  measured time, QSO count, and verified score to your journal. Public runs
+  work without an account; keep this interactive simulator visible while running.
 - Public Morse practice with character speed, Farnsworth spacing, tone, adjustable
   group and word lengths, generated callsigns, and custom text; no account required.
   Playback preferences stay on your device. Start practice plays and starts the
@@ -96,6 +100,7 @@ before operating your own instance. There are no production credentials in CI.
 - [Import and migration](docs/import.md)
 - [Architecture and security](docs/architecture.md)
 - [Testing strategy](docs/testing.md)
+- [Morse Runner source and updates](docs/morse-runner.md)
 - [Deployment and operations](docs/deployment.md)
 
 `src/client/` is the React interface, `src/shared/` holds training data and

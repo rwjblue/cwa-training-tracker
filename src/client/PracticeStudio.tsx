@@ -29,6 +29,7 @@ import {
 } from './practice-preferences';
 import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTrainer';
 import MorseTranscript from './MorseTranscript';
+import MorseRunnerStudio, { DEFAULT_RUNNER_SETTINGS } from './MorseRunnerStudio';
 import type { PracticeLaunch } from './practice-launch';
 import { WORD_LISTS } from './word-content';
 import { QSO_TEMPLATES } from './qso-content';
@@ -40,18 +41,23 @@ const duration = (seconds: number) =>
 export default function PracticeStudio({
   onLog,
   savedVersion,
+  savedEntry,
   launch,
   onBack,
   onUnsavedChange,
 }: {
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
+  savedEntry?: PracticeSession;
   launch?: PracticeLaunch;
   onBack?: () => void;
   onUnsavedChange?: (unsaved: boolean) => void;
 }) {
   const activity = launch?.activity;
   const assigned = Boolean(activity);
+  const [publicRunner, setPublicRunner] = useState(false);
+  const [runnerUnsaved, setRunnerUnsaved] = useState(false);
+  const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
   const recording = useRef<HTMLAudioElement>(null);
   const [freeTrack, setFreeTrack] = useState<MorseTrack | null>(null);
   const [freeWord, setFreeWord] = useState(-1);
@@ -107,11 +113,13 @@ export default function PracticeStudio({
   }, [savedVersion]);
   useEffect(() => () => player.current.dispose(), []);
   useEffect(() => {
-    onUnsavedChange?.(running || seconds > 0);
-  }, [running, seconds, onUnsavedChange]);
+    onUnsavedChange?.(runnerUnsaved || running || seconds > 0);
+  }, [runnerUnsaved, running, seconds, onUnsavedChange]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
+    setPublicRunner(false);
+    setRunnerUnsaved(false);
     setTimerMinutes(launch.task?.targetMinutes ?? 15);
     if (launch.tool) setPreferences((current) => ({ ...current, tool: launch.tool! }));
   }, [launch?.id]);
@@ -151,7 +159,7 @@ export default function PracticeStudio({
     return Math.floor(elapsed / 1000);
   };
   const startTimer = () => {
-    if (timerDone) return;
+    if (timerDone || isRunner) return;
     setConfirmReset(false);
     startedAt.current = performance.now();
     setRunning(true);
@@ -292,6 +300,30 @@ export default function PracticeStudio({
     stopPlayback();
     if (mode !== 'custom') setText(generatePractice(mode, preferences));
   };
+  const chooseListeningTool = (nextTool: PracticePreferences['tool']) => {
+    if (
+      publicRunner &&
+      runnerUnsaved &&
+      !window.confirm('Leave Morse Runner? Your unsaved run and results will be discarded.')
+    )
+      return;
+    setPublicRunner(false);
+    setRunnerUnsaved(false);
+    changePreferences({ tool: nextTool });
+  };
+  const chooseRunner = () => {
+    if (publicRunner) return;
+    if (running || seconds > 0) {
+      pauseTimer();
+      setError(
+        'Review and save, or reset, your current practice timer before opening Morse Runner.',
+      );
+      return;
+    }
+    stopPlayback();
+    setError('');
+    setPublicRunner(true);
+  };
   return (
     <>
       <div className="page-heading">
@@ -302,8 +334,10 @@ export default function PracticeStudio({
           <h1>{assigned ? 'Your assigned practice.' : 'Your practice studio.'}</h1>
           <p>
             {assigned
-              ? 'Your course material and practice timer, together.'
-              : 'Word recognition, QSO conversations, and free practice. No account required to listen.'}
+              ? isRunner
+                ? 'Your assigned simulator settings and engine results, together.'
+                : 'Your course material and practice timer, together.'
+              : 'Word recognition, QSO conversations, and simulator practice. No account required to practice.'}
           </p>
         </div>
         <span className="chip">
@@ -354,509 +388,544 @@ export default function PracticeStudio({
           ).map(([value, label]) => (
             <button
               key={value}
-              className={tool === value ? 'selected' : ''}
-              aria-pressed={tool === value}
-              onClick={() => changePreferences({ tool: value })}
+              className={!publicRunner && tool === value ? 'selected' : ''}
+              aria-pressed={!publicRunner && tool === value}
+              onClick={() => chooseListeningTool(value)}
             >
               {label}
             </button>
           ))}
+          <button
+            className={publicRunner ? 'selected' : ''}
+            aria-pressed={publicRunner}
+            onClick={chooseRunner}
+          >
+            Morse Runner
+          </button>
         </div>
       )}
-      <div className="studio-quick-actions">
-        <button
-          className="button dark"
-          disabled={timerDone || (activity?.type === 'audio' && !activity.url)}
-          onClick={() => (running ? pauseTimer() : void startPractice())}
-        >
-          {running ? <Square size={14} /> : <Play size={14} />}
-          {activity?.type === 'audio' && !activity.url
-            ? 'Recording unavailable'
-            : running
-              ? 'Pause practice'
-              : seconds > 0
-                ? 'Resume practice'
-                : 'Start practice'}
-        </button>
-        <span>
-          <strong>{duration(seconds)}</strong> / {duration(timerMinutes * 60)}{' '}
-          <span className="field-hint">
-            {running ? 'timing' : seconds > 0 ? 'unsaved' : 'elapsed'}
-          </span>
-        </span>
-        <button className="button outline" disabled={seconds < 1} onClick={logTimedSession}>
-          Review &amp; save <ArrowRight size={14} />
-        </button>
-      </div>
-      <div className={`practice-layout ${assigned ? 'is-assigned' : ''}`}>
-        <section className="card studio-card">
-          <div className="section-heading">
-            <div>
-              <h2>{assigned ? 'Your assigned exercise' : 'The listening room'}</h2>
-              <p>
-                {assigned
-                  ? 'Practice this material, then save your time.'
-                  : 'Hear the sound. Let the letters follow.'}
-              </p>
-            </div>
-            <Headphones size={23} />
-          </div>
-          {activity?.type === 'audio' ? (
-            <div className="assigned-recording">
-              <p>
-                {activity.characterWpm ? `${activity.characterWpm} WPM · ` : ''}
-                {activity.minimumPasses
-                  ? `${activity.minimumPasses}${activity.maximumPasses && activity.maximumPasses !== activity.minimumPasses ? `–${activity.maximumPasses}` : ''} listening passes assigned.`
-                  : 'Listen at the recording’s original speed.'}
-              </p>
-              {activity.url ? (
-                <>
-                  <audio
-                    key={`${launch?.id}:${activity.url}`}
-                    ref={recording}
-                    controls
-                    preload="metadata"
-                    src={activity.url}
-                    aria-label="Assigned recording"
-                    onPlay={() => setPlaying(true)}
-                    onPause={() => setPlaying(false)}
-                    onEnded={() => setPlaying(false)}
-                    onError={() => {
-                      setError(
-                        'The recording could not load. Open the official exercise to check its availability.',
-                      );
-                      pauseTimer();
-                    }}
-                  />
-                  <p className="field-hint">
-                    The recording plays directly from CWops. You can pause, seek, and use your
-                    device’s audio controls.
-                  </p>
-                </>
-              ) : (
-                <p role="status">
-                  {activity.unresolved ?? 'This recording is not currently available.'}
-                </p>
-              )}
-              {activity.url && (
-                <a className="text-button" href={activity.url} target="_blank" rel="noreferrer">
-                  Open recording <ArrowRight size={14} />
-                </a>
-              )}
-            </div>
-          ) : assigned ? (
-            <div className="assigned-offline">
-              <p>
-                {activity?.type === 'sending'
-                  ? 'Use your key and the assigned sending sections. Start practice opens the exercise and times your session.'
-                  : activity?.type === 'external'
-                    ? 'Start practice opens the assigned tool in a new tab and starts your timer here.'
-                    : 'Use your key, radio, or other practice material. The timer keeps your time linked to this exercise.'}
-              </p>
-              {activity?.type === 'sending' && <p>Sections: {activity.sections.join(', ')}.</p>}
-            </div>
-          ) : tool !== 'free' ? (
-            <ListeningTrainer
-              ref={trainer}
-              key={tool}
-              preferences={preferences}
-              onChange={changePreferences}
-              onPlaying={setPlaying}
-              onError={(message) => {
-                pauseTimer();
-                setError(message);
-              }}
-            />
-          ) : (
-            <>
-              <div className="practice-tabs" role="group" aria-label="Practice content">
-                {[
-                  ['words', 'Words'],
-                  ['groups', 'Letter groups'],
-                  ['numbers', 'Numbers'],
-                  ['callsigns', 'Callsigns'],
-                  ['custom', 'Your text'],
-                ].map(([value, label]) => (
-                  <button
-                    className={mode === value ? 'selected' : ''}
-                    key={value}
-                    aria-pressed={mode === value}
-                    onClick={() => changePreferences({ mode: value as PracticeMode }, true)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {(mode === 'groups' || mode === 'numbers' || mode === 'words') && (
-                <div className="practice-generator-controls">
-                  {mode === 'words' ? (
-                    <label htmlFor="practice-word-length">
-                      Word length
-                      <select
-                        id="practice-word-length"
-                        value={wordLength}
-                        onChange={(e) =>
-                          changePreferences(
-                            {
-                              wordLength:
-                                e.target.value === 'mixed'
-                                  ? 'mixed'
-                                  : (Number(e.target.value) as PracticePreferences['wordLength']),
-                            },
-                            true,
-                          )
-                        }
-                      >
-                        <option value="mixed">Mixed lengths · 2–8 letters</option>
-                        {WORD_LENGTHS.map((length) => (
-                          <option key={length} value={length}>
-                            Exactly {length} letters
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : (
-                    <label htmlFor="practice-group-length">
-                      {mode === 'numbers' ? 'Digits per group' : 'Letters per group'}
-                      <select
-                        id="practice-group-length"
-                        value={groupLength}
-                        onChange={(e) =>
-                          changePreferences({ groupLength: Number(e.target.value) }, true)
-                        }
-                      >
-                        {Array.from({ length: 10 }, (_, index) => index + 1).map((length) => (
-                          <option key={length} value={length}>
-                            {length}{' '}
-                            {mode === 'numbers'
-                              ? length === 1
-                                ? 'digit'
-                                : 'digits'
-                              : length === 1
-                                ? 'letter'
-                                : 'letters'}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <p>
-                    {mode === 'words'
-                      ? 'Twelve real words from a varied everyday vocabulary. Changing the length creates a fresh set.'
-                      : `Twelve random ${mode === 'numbers' ? 'number' : 'letter'} groups. Changing the group length creates a fresh set.`}
-                  </p>
-                </div>
-              )}
-              {mode === 'callsigns' && (
-                <p className="practice-generator-note">
-                  These are fictional, randomly generated practice examples. They may happen to
-                  match real callsigns; they are not a directory of operators.
-                </p>
-              )}
-              <div className="transmission-panel">
-                <div className="transmission-label">
-                  <span>
-                    <i className={playing ? 'pulse-dot' : ''} />{' '}
-                    {playing ? 'TRANSMITTING' : 'READY TO LISTEN'}
-                  </span>
-                  <button onClick={() => setHidden(!hidden)}>
-                    {hidden ? 'Reveal text' : 'Hide text'}
-                  </button>
-                </div>
-                <label className="sr-only" htmlFor="practice-text">
-                  Practice text
-                </label>
-                {hidden ? (
-                  <div className="hidden-transmission">
-                    <AudioLines size={30} />
-                    <span>Trust your ears.</span>
-                    <button onClick={() => setHidden(false)}>Reveal when you’re ready</button>
-                  </div>
-                ) : (
-                  <textarea
-                    id="practice-text"
-                    value={text}
-                    maxLength={1200}
-                    onChange={(e) => {
-                      stopPlayback();
-                      setText(e.target.value);
-                      setPreferences((current) => ({ ...current, mode: 'custom' }));
-                    }}
-                    spellCheck={false}
-                    placeholder="Enter letters, numbers, or text to practice…"
-                    aria-describedby="morse-text-help"
-                  />
-                )}
-                <div className={`waveform ${playing ? 'is-playing' : ''}`} aria-hidden="true">
-                  {Array.from({ length: 72 }, (_, i) => (
-                    <i
-                      key={i}
-                      style={
-                        {
-                          '--height': `${[10, 18, 8, 31, 44, 22, 12, 36, 16, 28, 7, 20][i % 12]}px`,
-                          '--delay': `${i * 0.035}s`,
-                        } as React.CSSProperties
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-              <p id="morse-text-help" className="field-hint">
-                Letters, numbers, and common punctuation. Unsupported characters are skipped.
-              </p>
-              <div className="native-morse-player" hidden={!freeTrack}>
-                <audio
-                  ref={attachFreeAudio}
-                  controls
-                  preload="metadata"
-                  aria-label="Practice audio"
-                />
-              </div>
-              {freeTrack && !hidden && (
-                <MorseTranscript track={freeTrack} activeWord={freeWord} onSeek={seekFree} />
-              )}
-            </>
-          )}
-          {error && (
-            <div className="alert error" role="alert">
-              {error}
-            </div>
-          )}
-          {!assigned && (
-            <div className="playback-toolbar">
-              <button
-                className="button dark play-button"
-                onClick={play}
-                disabled={tool === 'free' && !cleanMorseText(text)}
-              >
-                {playing ? (
-                  <Square size={16} fill="currentColor" />
-                ) : (
-                  <Play size={16} fill="currentColor" />
-                )}
-                {playing ? 'Stop playback' : 'Play Morse'}
-              </button>
-              {tool === 'free' && (
-                <button
-                  className="button outline"
-                  onClick={() => generate()}
-                  disabled={mode === 'custom'}
-                >
-                  <Shuffle size={16} /> New set
-                </button>
-              )}
-              <span className="playback-note">
-                {characterWpm} / {effectiveWpm} WPM <span>·</span> {tone} Hz
-              </span>
-            </div>
-          )}
-          <p className="studio-playback-help">
-            {assigned
-              ? 'Start practice times this exercise. Review and save your elapsed time when you finish.'
-              : 'Start practice plays and times your session. Play Morse only plays audio; review and save when you finish.'}
-          </p>
-          {!assigned && (
-            <details className="studio-sound-settings">
-              <summary>
-                Sound settings · {characterWpm}/{effectiveWpm} WPM · {tone} Hz
-              </summary>
-              <div className="studio-preferences-heading">
-                <h3>Your listening preferences</h3>
-                <p>
-                  {remembered
-                    ? 'Saved on this device, including when you sign out. Custom text is not saved.'
-                    : 'Active for this visit. Your browser is not allowing these preferences to be remembered.'}
-                </p>
-              </div>
-              <div className="studio-controls">
-                <Range
-                  label="Character speed"
-                  value={characterWpm}
-                  min={5}
-                  max={50}
-                  unit="WPM"
-                  onChange={(v) => changePreferences({ characterWpm: v })}
-                  hint="The speed of each individual character."
-                />
-                <Range
-                  label="Effective speed"
-                  value={effectiveWpm}
-                  min={3}
-                  max={characterWpm}
-                  unit="WPM"
-                  onChange={(v) => changePreferences({ effectiveWpm: v })}
-                  hint="Farnsworth spacing gives you time to hear."
-                />
-                <Range
-                  label="Sidetone"
-                  value={tone}
-                  min={300}
-                  max={1000}
-                  step={25}
-                  unit="Hz"
-                  onChange={(v) => changePreferences({ tone: v })}
-                  hint="Find a comfortable pitch for your ears."
-                />
-                <Range
-                  label="Volume"
-                  value={volume}
-                  min={0}
-                  max={100}
-                  unit="%"
-                  onChange={(v) => changePreferences({ volume: v })}
-                  hint={
-                    volume === 0
-                      ? 'Muted. Raise the volume when you’re ready to listen.'
-                      : 'Start softly. Comfort comes first.'
-                  }
-                />
-              </div>
-            </details>
-          )}
-        </section>
-        <div className="practice-aside">
-          <section className="card timer-card">
-            <div className="card-top">
-              <span className="eyebrow">A MOMENT FOR MORSE</span>
-              <Clock3 size={18} />
-            </div>
-            <h2>Time your practice.</h2>
-            <p>Start the timer, practice, then review and save your elapsed time.</p>
-            <div className="studio-timer-steps" aria-label="How to log timed practice">
-              <span>1. Start timer</span>
-              <span>2. Practice</span>
-              <span>3. Save session</span>
-            </div>
-            <div className={`timer-readout ${running ? 'running' : ''}`} aria-live="off">
-              {duration(Math.max(0, timerMinutes * 60 - seconds))}
-            </div>
-            <div className="timer-presets">
-              {[...new Set([5, 10, 15, 30, ...(launch?.task ? [launch.task.targetMinutes] : [])])]
-                .sort((a, b) => a - b)
-                .map((minutes) => (
-                  <button
-                    key={minutes}
-                    className={timerMinutes === minutes ? 'selected' : ''}
-                    disabled={running || seconds > 0}
-                    aria-pressed={timerMinutes === minutes}
-                    onClick={() => {
-                      setTimerMinutes(minutes);
-                      resetTimer();
-                    }}
-                  >
-                    {minutes} min
-                  </button>
-                ))}
-            </div>
+      {isRunner ? (
+        <MorseRunnerStudio
+          key={launch?.id ?? 'public-runner'}
+          settings={activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS}
+          externalUrl={activity?.type === 'morse-runner' ? activity.url : undefined}
+          task={launch?.task}
+          savedEntry={savedEntry}
+          onLog={onLog}
+          onUnsavedChange={setRunnerUnsaved}
+        />
+      ) : (
+        <>
+          <div className="studio-quick-actions">
             <button
-              className="button dark full"
-              disabled={timerDone}
-              onClick={() => (running ? pauseTimer() : startTimer())}
+              className="button dark"
+              disabled={timerDone || (activity?.type === 'audio' && !activity.url)}
+              onClick={() => (running ? pauseTimer() : void startPractice())}
             >
               {running ? <Square size={14} /> : <Play size={14} />}
-              {timerDone
-                ? 'Timer complete'
+              {activity?.type === 'audio' && !activity.url
+                ? 'Recording unavailable'
                 : running
-                  ? 'Pause timer'
+                  ? 'Pause practice'
                   : seconds > 0
-                    ? 'Resume timer'
-                    : 'Start timer'}
+                    ? 'Resume practice'
+                    : 'Start practice'}
             </button>
-            <p className="timer-elapsed">
-              <strong>{duration(seconds)}</strong> practiced ·{' '}
-              {running
-                ? 'timer running'
-                : seconds > 0
-                  ? 'paused, not yet saved'
-                  : 'ready when you are'}
-            </p>
-            <button
-              className="button outline full studio-save-session"
-              disabled={seconds < 1}
-              onClick={logTimedSession}
-            >
-              Review &amp; save {seconds > 0 ? duration(seconds) : 'session'}{' '}
-              <ArrowRight size={14} />
+            <span>
+              <strong>{duration(seconds)}</strong> / {duration(timerMinutes * 60)}{' '}
+              <span className="field-hint">
+                {running ? 'timing' : seconds > 0 ? 'unsaved' : 'elapsed'}
+              </span>
+            </span>
+            <button className="button outline" disabled={seconds < 1} onClick={logTimedSession}>
+              Review &amp; save <ArrowRight size={14} />
             </button>
-            <p className="studio-save-help">
-              This opens a practice entry for you to review. Nothing is added to your log until you
-              choose Save practice.
-            </p>
-            <div className="timer-secondary">
-              <button
-                className="text-button"
-                disabled={running && seconds < 1}
-                onClick={() => {
-                  if (seconds > 0) {
-                    pauseTimer();
-                    setConfirmReset(true);
-                  } else resetTimer();
-                }}
-              >
-                <RotateCcw size={13} /> Reset timer
-              </button>
-            </div>
-            {confirmReset && (
-              <div className="studio-reset-confirm" role="group" aria-label="Confirm timer reset">
-                <p>Discard {duration(seconds)} of unsaved timer time?</p>
+          </div>
+          <div className={`practice-layout ${assigned ? 'is-assigned' : ''}`}>
+            <section className="card studio-card">
+              <div className="section-heading">
                 <div>
-                  <button className="text-button" onClick={() => setConfirmReset(false)}>
-                    Keep timer
+                  <h2>{assigned ? 'Your assigned exercise' : 'The listening room'}</h2>
+                  <p>
+                    {assigned
+                      ? 'Practice this material, then save your time.'
+                      : 'Hear the sound. Let the letters follow.'}
+                  </p>
+                </div>
+                <Headphones size={23} />
+              </div>
+              {activity?.type === 'audio' ? (
+                <div className="assigned-recording">
+                  <p>
+                    {activity.characterWpm ? `${activity.characterWpm} WPM · ` : ''}
+                    {activity.minimumPasses
+                      ? `${activity.minimumPasses}${activity.maximumPasses && activity.maximumPasses !== activity.minimumPasses ? `–${activity.maximumPasses}` : ''} listening passes assigned.`
+                      : 'Listen at the recording’s original speed.'}
+                  </p>
+                  {activity.url ? (
+                    <>
+                      <audio
+                        key={`${launch?.id}:${activity.url}`}
+                        ref={recording}
+                        controls
+                        preload="metadata"
+                        src={activity.url}
+                        aria-label="Assigned recording"
+                        onPlay={() => setPlaying(true)}
+                        onPause={() => setPlaying(false)}
+                        onEnded={() => setPlaying(false)}
+                        onError={() => {
+                          setError(
+                            'The recording could not load. Open the official exercise to check its availability.',
+                          );
+                          pauseTimer();
+                        }}
+                      />
+                      <p className="field-hint">
+                        The recording plays directly from CWops. You can pause, seek, and use your
+                        device’s audio controls.
+                      </p>
+                    </>
+                  ) : (
+                    <p role="status">
+                      {activity.unresolved ?? 'This recording is not currently available.'}
+                    </p>
+                  )}
+                  {activity.url && (
+                    <a className="text-button" href={activity.url} target="_blank" rel="noreferrer">
+                      Open recording <ArrowRight size={14} />
+                    </a>
+                  )}
+                </div>
+              ) : assigned ? (
+                <div className="assigned-offline">
+                  <p>
+                    {activity?.type === 'sending'
+                      ? 'Use your key and the assigned sending sections. Start practice opens the exercise and times your session.'
+                      : activity?.type === 'external'
+                        ? 'Start practice opens the assigned tool in a new tab and starts your timer here.'
+                        : 'Use your key, radio, or other practice material. The timer keeps your time linked to this exercise.'}
+                  </p>
+                  {activity?.type === 'sending' && <p>Sections: {activity.sections.join(', ')}.</p>}
+                </div>
+              ) : tool !== 'free' ? (
+                <ListeningTrainer
+                  ref={trainer}
+                  key={tool}
+                  preferences={preferences}
+                  onChange={changePreferences}
+                  onPlaying={setPlaying}
+                  onError={(message) => {
+                    pauseTimer();
+                    setError(message);
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="practice-tabs" role="group" aria-label="Practice content">
+                    {[
+                      ['words', 'Words'],
+                      ['groups', 'Letter groups'],
+                      ['numbers', 'Numbers'],
+                      ['callsigns', 'Callsigns'],
+                      ['custom', 'Your text'],
+                    ].map(([value, label]) => (
+                      <button
+                        className={mode === value ? 'selected' : ''}
+                        key={value}
+                        aria-pressed={mode === value}
+                        onClick={() => changePreferences({ mode: value as PracticeMode }, true)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {(mode === 'groups' || mode === 'numbers' || mode === 'words') && (
+                    <div className="practice-generator-controls">
+                      {mode === 'words' ? (
+                        <label htmlFor="practice-word-length">
+                          Word length
+                          <select
+                            id="practice-word-length"
+                            value={wordLength}
+                            onChange={(e) =>
+                              changePreferences(
+                                {
+                                  wordLength:
+                                    e.target.value === 'mixed'
+                                      ? 'mixed'
+                                      : (Number(
+                                          e.target.value,
+                                        ) as PracticePreferences['wordLength']),
+                                },
+                                true,
+                              )
+                            }
+                          >
+                            <option value="mixed">Mixed lengths · 2–8 letters</option>
+                            {WORD_LENGTHS.map((length) => (
+                              <option key={length} value={length}>
+                                Exactly {length} letters
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <label htmlFor="practice-group-length">
+                          {mode === 'numbers' ? 'Digits per group' : 'Letters per group'}
+                          <select
+                            id="practice-group-length"
+                            value={groupLength}
+                            onChange={(e) =>
+                              changePreferences({ groupLength: Number(e.target.value) }, true)
+                            }
+                          >
+                            {Array.from({ length: 10 }, (_, index) => index + 1).map((length) => (
+                              <option key={length} value={length}>
+                                {length}{' '}
+                                {mode === 'numbers'
+                                  ? length === 1
+                                    ? 'digit'
+                                    : 'digits'
+                                  : length === 1
+                                    ? 'letter'
+                                    : 'letters'}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      <p>
+                        {mode === 'words'
+                          ? 'Twelve real words from a varied everyday vocabulary. Changing the length creates a fresh set.'
+                          : `Twelve random ${mode === 'numbers' ? 'number' : 'letter'} groups. Changing the group length creates a fresh set.`}
+                      </p>
+                    </div>
+                  )}
+                  {mode === 'callsigns' && (
+                    <p className="practice-generator-note">
+                      These are fictional, randomly generated practice examples. They may happen to
+                      match real callsigns; they are not a directory of operators.
+                    </p>
+                  )}
+                  <div className="transmission-panel">
+                    <div className="transmission-label">
+                      <span>
+                        <i className={playing ? 'pulse-dot' : ''} />{' '}
+                        {playing ? 'TRANSMITTING' : 'READY TO LISTEN'}
+                      </span>
+                      <button onClick={() => setHidden(!hidden)}>
+                        {hidden ? 'Reveal text' : 'Hide text'}
+                      </button>
+                    </div>
+                    <label className="sr-only" htmlFor="practice-text">
+                      Practice text
+                    </label>
+                    {hidden ? (
+                      <div className="hidden-transmission">
+                        <AudioLines size={30} />
+                        <span>Trust your ears.</span>
+                        <button onClick={() => setHidden(false)}>Reveal when you’re ready</button>
+                      </div>
+                    ) : (
+                      <textarea
+                        id="practice-text"
+                        value={text}
+                        maxLength={1200}
+                        onChange={(e) => {
+                          stopPlayback();
+                          setText(e.target.value);
+                          setPreferences((current) => ({ ...current, mode: 'custom' }));
+                        }}
+                        spellCheck={false}
+                        placeholder="Enter letters, numbers, or text to practice…"
+                        aria-describedby="morse-text-help"
+                      />
+                    )}
+                    <div className={`waveform ${playing ? 'is-playing' : ''}`} aria-hidden="true">
+                      {Array.from({ length: 72 }, (_, i) => (
+                        <i
+                          key={i}
+                          style={
+                            {
+                              '--height': `${[10, 18, 8, 31, 44, 22, 12, 36, 16, 28, 7, 20][i % 12]}px`,
+                              '--delay': `${i * 0.035}s`,
+                            } as React.CSSProperties
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <p id="morse-text-help" className="field-hint">
+                    Letters, numbers, and common punctuation. Unsupported characters are skipped.
+                  </p>
+                  <div className="native-morse-player" hidden={!freeTrack}>
+                    <audio
+                      ref={attachFreeAudio}
+                      controls
+                      preload="metadata"
+                      aria-label="Practice audio"
+                    />
+                  </div>
+                  {freeTrack && !hidden && (
+                    <MorseTranscript track={freeTrack} activeWord={freeWord} onSeek={seekFree} />
+                  )}
+                </>
+              )}
+              {error && (
+                <div className="alert error" role="alert">
+                  {error}
+                </div>
+              )}
+              {!assigned && (
+                <div className="playback-toolbar">
+                  <button
+                    className="button dark play-button"
+                    onClick={play}
+                    disabled={tool === 'free' && !cleanMorseText(text)}
+                  >
+                    {playing ? (
+                      <Square size={16} fill="currentColor" />
+                    ) : (
+                      <Play size={16} fill="currentColor" />
+                    )}
+                    {playing ? 'Stop playback' : 'Play Morse'}
                   </button>
-                  <button className="text-button danger-text" onClick={resetTimer}>
-                    Discard &amp; reset
+                  {tool === 'free' && (
+                    <button
+                      className="button outline"
+                      onClick={() => generate()}
+                      disabled={mode === 'custom'}
+                    >
+                      <Shuffle size={16} /> New set
+                    </button>
+                  )}
+                  <span className="playback-note">
+                    {characterWpm} / {effectiveWpm} WPM <span>·</span> {tone} Hz
+                  </span>
+                </div>
+              )}
+              <p className="studio-playback-help">
+                {assigned
+                  ? 'Start practice times this exercise. Review and save your elapsed time when you finish.'
+                  : 'Start practice plays and times your session. Play Morse only plays audio; review and save when you finish.'}
+              </p>
+              {!assigned && (
+                <details className="studio-sound-settings">
+                  <summary>
+                    Sound settings · {characterWpm}/{effectiveWpm} WPM · {tone} Hz
+                  </summary>
+                  <div className="studio-preferences-heading">
+                    <h3>Your listening preferences</h3>
+                    <p>
+                      {remembered
+                        ? 'Saved on this device, including when you sign out. Custom text is not saved.'
+                        : 'Active for this visit. Your browser is not allowing these preferences to be remembered.'}
+                    </p>
+                  </div>
+                  <div className="studio-controls">
+                    <Range
+                      label="Character speed"
+                      value={characterWpm}
+                      min={5}
+                      max={50}
+                      unit="WPM"
+                      onChange={(v) => changePreferences({ characterWpm: v })}
+                      hint="The speed of each individual character."
+                    />
+                    <Range
+                      label="Effective speed"
+                      value={effectiveWpm}
+                      min={3}
+                      max={characterWpm}
+                      unit="WPM"
+                      onChange={(v) => changePreferences({ effectiveWpm: v })}
+                      hint="Farnsworth spacing gives you time to hear."
+                    />
+                    <Range
+                      label="Sidetone"
+                      value={tone}
+                      min={300}
+                      max={1000}
+                      step={25}
+                      unit="Hz"
+                      onChange={(v) => changePreferences({ tone: v })}
+                      hint="Find a comfortable pitch for your ears."
+                    />
+                    <Range
+                      label="Volume"
+                      value={volume}
+                      min={0}
+                      max={100}
+                      unit="%"
+                      onChange={(v) => changePreferences({ volume: v })}
+                      hint={
+                        volume === 0
+                          ? 'Muted. Raise the volume when you’re ready to listen.'
+                          : 'Start softly. Comfort comes first.'
+                      }
+                    />
+                  </div>
+                </details>
+              )}
+            </section>
+            <div className="practice-aside">
+              <section className="card timer-card">
+                <div className="card-top">
+                  <span className="eyebrow">A MOMENT FOR MORSE</span>
+                  <Clock3 size={18} />
+                </div>
+                <h2>Time your practice.</h2>
+                <p>Start the timer, practice, then review and save your elapsed time.</p>
+                <div className="studio-timer-steps" aria-label="How to log timed practice">
+                  <span>1. Start timer</span>
+                  <span>2. Practice</span>
+                  <span>3. Save session</span>
+                </div>
+                <div className={`timer-readout ${running ? 'running' : ''}`} aria-live="off">
+                  {duration(Math.max(0, timerMinutes * 60 - seconds))}
+                </div>
+                <div className="timer-presets">
+                  {[
+                    ...new Set([
+                      5,
+                      10,
+                      15,
+                      30,
+                      ...(launch?.task ? [launch.task.targetMinutes] : []),
+                    ]),
+                  ]
+                    .sort((a, b) => a - b)
+                    .map((minutes) => (
+                      <button
+                        key={minutes}
+                        className={timerMinutes === minutes ? 'selected' : ''}
+                        disabled={running || seconds > 0}
+                        aria-pressed={timerMinutes === minutes}
+                        onClick={() => {
+                          setTimerMinutes(minutes);
+                          resetTimer();
+                        }}
+                      >
+                        {minutes} min
+                      </button>
+                    ))}
+                </div>
+                <button
+                  className="button dark full"
+                  disabled={timerDone}
+                  onClick={() => (running ? pauseTimer() : startTimer())}
+                >
+                  {running ? <Square size={14} /> : <Play size={14} />}
+                  {timerDone
+                    ? 'Timer complete'
+                    : running
+                      ? 'Pause timer'
+                      : seconds > 0
+                        ? 'Resume timer'
+                        : 'Start timer'}
+                </button>
+                <p className="timer-elapsed">
+                  <strong>{duration(seconds)}</strong> practiced ·{' '}
+                  {running
+                    ? 'timer running'
+                    : seconds > 0
+                      ? 'paused, not yet saved'
+                      : 'ready when you are'}
+                </p>
+                <button
+                  className="button outline full studio-save-session"
+                  disabled={seconds < 1}
+                  onClick={logTimedSession}
+                >
+                  Review &amp; save {seconds > 0 ? duration(seconds) : 'session'}{' '}
+                  <ArrowRight size={14} />
+                </button>
+                <p className="studio-save-help">
+                  This opens a practice entry for you to review. Nothing is added to your log until
+                  you choose Save practice.
+                </p>
+                <div className="timer-secondary">
+                  <button
+                    className="text-button"
+                    disabled={running && seconds < 1}
+                    onClick={() => {
+                      if (seconds > 0) {
+                        pauseTimer();
+                        setConfirmReset(true);
+                      } else resetTimer();
+                    }}
+                  >
+                    <RotateCcw size={13} /> Reset timer
                   </button>
                 </div>
-              </div>
-            )}
-            {timerDone && (
-              <div className="timer-complete" role="status">
-                <CheckCheck size={18} /> Session finished. Review and save your time, or reset to
-                discard it.
-              </div>
-            )}
-            <p className="studio-timer-scope">
-              The timer includes pauses between audio sets. Save before leaving the studio; timer
-              time is not kept between visits.
-            </p>
-            <div className="studio-manual-log">
-              <h3>Already practiced?</h3>
-              <p>Enter time from a recording, your key, or a session away from the studio.</p>
-              <button
-                className="text-button"
-                onClick={() => {
-                  if (running) pauseTimer();
-                  onLog({
-                    kind: launch?.task?.kind ?? 'listening',
-                    lesson: launch?.task?.lesson,
-                    notes: launch?.task?.title,
-                    ...(!assigned
-                      ? { characterWpm, effectiveWpm }
-                      : activity?.type === 'audio' && activity.characterWpm
-                        ? { characterWpm: activity.characterWpm }
-                        : {}),
-                    source: 'manual',
-                    ...(launch?.task ? { metadata: { plannedTaskId: launch.task.id } } : {}),
-                  });
-                }}
-              >
-                <Plus size={14} /> Log practice manually
-              </button>
+                {confirmReset && (
+                  <div
+                    className="studio-reset-confirm"
+                    role="group"
+                    aria-label="Confirm timer reset"
+                  >
+                    <p>Discard {duration(seconds)} of unsaved timer time?</p>
+                    <div>
+                      <button className="text-button" onClick={() => setConfirmReset(false)}>
+                        Keep timer
+                      </button>
+                      <button className="text-button danger-text" onClick={resetTimer}>
+                        Discard &amp; reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {timerDone && (
+                  <div className="timer-complete" role="status">
+                    <CheckCheck size={18} /> Session finished. Review and save your time, or reset
+                    to discard it.
+                  </div>
+                )}
+                <p className="studio-timer-scope">
+                  The timer includes pauses between audio sets. Save before leaving the studio;
+                  timer time is not kept between visits.
+                </p>
+                <div className="studio-manual-log">
+                  <h3>Already practiced?</h3>
+                  <p>Enter time from a recording, your key, or a session away from the studio.</p>
+                  <button
+                    className="text-button"
+                    onClick={() => {
+                      if (running) pauseTimer();
+                      onLog({
+                        kind: launch?.task?.kind ?? 'listening',
+                        lesson: launch?.task?.lesson,
+                        notes: launch?.task?.title,
+                        ...(!assigned
+                          ? { characterWpm, effectiveWpm }
+                          : activity?.type === 'audio' && activity.characterWpm
+                            ? { characterWpm: activity.characterWpm }
+                            : {}),
+                        source: 'manual',
+                        ...(launch?.task ? { metadata: { plannedTaskId: launch.task.id } } : {}),
+                      });
+                    }}
+                  >
+                    <Plus size={14} /> Log practice manually
+                  </button>
+                </div>
+              </section>
+              <section className="practice-tip">
+                <span className="eyebrow">A NOTE FROM THE SHACK</span>
+                <h3>Listen for the music.</h3>
+                <p>
+                  Try hearing each character as one complete sound, rather than counting dots and
+                  dashes. Leave a little space. Let it sink in.
+                </p>
+                <div className="morse-word" aria-label="73 in Morse code">
+                  − − · · · &nbsp; · · · − −
+                </div>
+              </section>
             </div>
-          </section>
-          <section className="practice-tip">
-            <span className="eyebrow">A NOTE FROM THE SHACK</span>
-            <h3>Listen for the music.</h3>
-            <p>
-              Try hearing each character as one complete sound, rather than counting dots and
-              dashes. Leave a little space. Let it sink in.
-            </p>
-            <div className="morse-word" aria-label="73 in Morse code">
-              − − · · · &nbsp; · · · − −
-            </div>
-          </section>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

@@ -121,6 +121,22 @@ spoken answers still use the device's local speech engine and require the page
 to remain open. Official recordings stream directly from CWops through native
 audio, with only the CWops media origins added to the Content Security Policy.
 
+Web Morse Runner is a pinned, reviewed local dependency, embedded from an exact
+same-origin document. Only that document permits same-origin framing; the main
+application and API continue to deny framing. Its Content Security Policy allows
+connections only to the vendored asset path. The parent verifies message origin,
+iframe source, run identity, sequence, elapsed time, and result bounds before
+accepting engine events. The iframe receives practice settings, not profile or
+account data. This is trusted same-origin code, not an isolation boundary for
+untrusted scripts; review vendor updates accordingly. See
+[vendor provenance and maintenance](morse-runner.md).
+
+Each runner frame represents one continuous run. Measured audio-engine time,
+actual settings, speed changes, and results remain together; wall-clock time is
+never substituted for missing events. Backgrounding or stopping the run ends it.
+Saving remains explicit, and only the matching saved run clears its unsaved
+state. Starting again creates a new frame and run identity.
+
 Bindings and environment types come from `wrangler types`; do not hand-maintain
 an alternate Env interface. Apply migrations before deployment. Production
 observability logs contain event names and exception classes, not request

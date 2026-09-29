@@ -95,3 +95,11 @@ physical iPhone: start a Morse-only round in Safari, lock for at least one full
 word/transmission boundary, exercise the lock-screen pause/resume controls, then
 unlock and confirm the transcript follows the actual audio position. Repeat with
 an official recording. Test local spoken answers separately with the page open.
+
+For embedded Morse Runner, keep protocol and result validation in pure tests.
+One browser journey should start the actual vendored AudioWorklet, stop a short
+run, and save its measured time and score against the assignment. Do not fake
+postMessage results in that journey or fast-forward its JavaScript clock: only
+the audio engine establishes credited practice time. Check the iframe's narrow
+security headers and desktop/mobile fit in the same journey. Verify pinned
+vendor hashes when updating the bundle; do not duplicate upstream engine tests.

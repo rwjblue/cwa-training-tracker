@@ -44,6 +44,18 @@ describe('automatic curriculum plan', () => {
     expect(unavailable[0].exercise?.url).toBeUndefined();
     for (const title of ['CWT208-20', 'CWT212-25'])
       expect(plan.find((task) => task.title === title)?.exercise?.url).toMatch(/\.mp3$/);
+    const simulators = plan.filter((task) => task.kind === 'simulator');
+    expect(simulators).toHaveLength(23);
+    expect(new Set(simulators.map((task) => task.exercise?.type))).toEqual(
+      new Set(['morse-runner']),
+    );
+    const settings = simulators.map((task) =>
+      task.exercise?.type === 'morse-runner' ? task.exercise.settings : undefined,
+    );
+    expect(new Set(settings.map((value) => value?.mode))).toEqual(new Set(['SingleCall', 'WPX']));
+    expect(settings.every((value) => value?.durationSeconds === 900 && value.activity === 2)).toBe(
+      true,
+    );
   });
 
   it('preserves saved completion and private legacy detail through rescheduling without duplicate tasks or lost minutes', () => {
@@ -122,6 +134,7 @@ describe('automatic curriculum plan', () => {
       { type: 'audio', url: 'https://example.org/audio.mp3', minimumPasses: 3, maximumPasses: 1 },
       { type: 'sending', url: 'https://example.org/scales', sections: ['invented'] },
       { type: 'external', url: 'https://name:secret@example.org/' },
+      { type: 'morse-runner', url: 'https://example.org/', settings: { mode: 'SingleCall' } },
     ])
       expect(() => validatePlannedTask({ ...task, exercise })).toThrow();
     expect(() =>

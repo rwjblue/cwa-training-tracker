@@ -1,4 +1,5 @@
 import type { PracticeKind, PracticeSession, Profile } from './training';
+import { isRunnerSettings, type RunnerSettings } from './runner.ts';
 
 export type SendingSection = 'warm-up' | 'drill' | 'exercise';
 export type PracticeExercise =
@@ -11,6 +12,7 @@ export type PracticeExercise =
       unresolved?: string;
     }
   | { type: 'sending'; url: string; sections: SendingSection[] }
+  | { type: 'morse-runner'; url: string; settings: RunnerSettings }
   | { type: 'external'; url: string; characterWpm?: number };
 
 /** Private homework and progress, with links to optional curriculum metadata. */
@@ -65,8 +67,16 @@ function exerciseResource(value: unknown): PracticeExercise {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid exercise resource.');
   const input = value as Record<string, unknown>;
-  if (!['audio', 'sending', 'external'].includes(String(input.type)))
+  if (!['audio', 'sending', 'external', 'morse-runner'].includes(String(input.type)))
     throw new Error('Choose a valid exercise resource type.');
+  if (input.type === 'morse-runner') {
+    if (!isRunnerSettings(input.settings)) throw new Error('Choose valid Morse Runner settings.');
+    return {
+      type: 'morse-runner',
+      url: exerciseUrl(input.url),
+      settings: { ...input.settings, conditions: { ...input.settings.conditions } },
+    };
+  }
   if (input.type === 'sending') {
     if (
       !Array.isArray(input.sections) ||

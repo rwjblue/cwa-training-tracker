@@ -85,7 +85,17 @@ function practiceDetails(
       title: row.mode === 'wpx' ? 'Morse Runner: WPX' : 'Morse Runner: single calls',
       kind: 'simulator',
       notes: `${row.minutes} minutes at ${row.characterWpm} WPM in ${row.mode === 'wpx' ? 'WPX mode, activity 2' : 'single-call mode'}. Check the official curriculum for the remaining settings.`,
-      exercise: { type: 'external', url: RUNNER_URL, characterWpm: row.characterWpm },
+      exercise: {
+        type: 'morse-runner',
+        url: RUNNER_URL,
+        settings: {
+          mode: row.mode === 'wpx' ? 'WPX' : 'SingleCall',
+          wpm: row.characterWpm!,
+          durationSeconds: row.minutes! * 60,
+          activity: 2,
+          conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+        },
+      },
     };
   return {
     title: row.mode === 'contacts' ? 'CWT: contacts or exchange copy' : 'CWT: listen to exchanges',
