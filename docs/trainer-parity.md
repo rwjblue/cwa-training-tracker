@@ -58,6 +58,7 @@ These baseline gaps no longer describe the current implementation:
 | Scratchpad | Notes can be written during practice, edited when saving, and read in history for new/native records. [Save/history UI](../src/client/main.tsx). | **Unfinished text remains in memory until saved.** It is not an autosaved/recoverable draft or an advisor-report learned-word workflow. |
 | Official recording speeds | Verified native-speed files, device-local Assigned/Next preference, and mixed-speed per-file actual-time metadata are supported. Official files remain at 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [catalog matching](../src/client/recording-variants.ts). | Per-task remembered overrides, actual pass/coverage tracking, bookmarks, and report aggregation remain open. |
 | Leaving or switching practice | Native assigned audio stops on detach; a scratchpad-only draft blocks an unnoticed switch to Runner. | Navigation warnings are not recovery after reload/crash. |
+| Lock-screen information | Official recordings and generated Morse share Media Session artwork and controls. Official titles include the session and selected recording, with actual WPM in the album; generated tracks name the active word list or QSO scenario. [Media Session](../src/client/media-session.ts). | Browser metadata, PNG availability, and ownership are tested; physical iPhone artwork and locked playback still need device verification. |
 
 ## Remaining inventory
 

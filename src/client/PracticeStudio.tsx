@@ -34,6 +34,7 @@ import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
 import { preferredRecording } from './recording-variants';
 import { usePracticeClock } from './usePracticeClock';
+import { MediaSessionController } from './media-session';
 import { WORD_LISTS } from './word-content';
 import { QSO_TEMPLATES } from './qso-content';
 import './practice-studio.css';
@@ -71,10 +72,36 @@ export default function PracticeStudio({
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
   const recording = useRef<HTMLAudioElement>(null);
+  const recordingSession = useRef(new MediaSessionController());
   const attachRecording = useCallback((element: HTMLAudioElement | null) => {
-    if (recording.current && recording.current !== element) recording.current.pause();
+    if (recording.current && recording.current !== element) {
+      recording.current.pause();
+      recordingSession.current.release();
+    }
     recording.current = element;
   }, []);
+  const claimRecordingSession = (audio: HTMLAudioElement) => {
+    const session = recordingSession.current;
+    session.claim({
+      title: `${launch?.task?.lesson ? `Session ${launch.task.lesson} · ` : ''}${selectedRecording?.title ?? launch?.task?.title ?? 'Assigned recording'}`,
+      album: `CW Academy practice${recordingWpm ? ` · ${recordingWpm} WPM` : ''}`,
+      onPlay: () => audio.play(),
+      onPause: () => audio.pause(),
+      onStop: () => {
+        audio.pause();
+        audio.currentTime = 0;
+        session.release();
+      },
+      onSeek: (position) => {
+        audio.currentTime = position;
+      },
+      getPosition: () => ({
+        duration: audio.duration,
+        position: audio.currentTime,
+        playbackRate: audio.playbackRate,
+      }),
+    });
+  };
   const [freeTrack, setFreeTrack] = useState<MorseTrack | null>(null);
   const [freeWord, setFreeWord] = useState(-1);
   const preparedFree = useRef('');
@@ -504,15 +531,28 @@ export default function PracticeStudio({
                         onRateChange={(event) => {
                           if (event.currentTarget.playbackRate !== 1)
                             event.currentTarget.playbackRate = 1;
+                          recordingSession.current.updatePosition();
                         }}
                         onPlay={() => setPlaying(true)}
-                        onPause={() => setPlaying(false)}
-                        onEnded={() => setPlaying(false)}
+                        onPlaying={(event) => claimRecordingSession(event.currentTarget)}
+                        onTimeUpdate={() => recordingSession.current.updatePosition()}
+                        onLoadedMetadata={() => recordingSession.current.updatePosition()}
+                        onDurationChange={() => recordingSession.current.updatePosition()}
+                        onSeeked={() => recordingSession.current.updatePosition()}
+                        onPause={() => {
+                          setPlaying(false);
+                          recordingSession.current.setPlaybackState('paused');
+                        }}
+                        onEnded={() => {
+                          setPlaying(false);
+                          recordingSession.current.release();
+                        }}
                         onError={() => {
                           setError(
                             'The recording could not load. Open the official exercise to check its availability.',
                           );
                           pauseTimer();
+                          recordingSession.current.release();
                         }}
                       />
                       {activity.url && (

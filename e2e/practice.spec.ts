@@ -182,6 +182,28 @@ test('word and QSO trainers expose the complete material and remember listening 
   const media = page.getByLabel('Practice audio', { exact: true });
   await expect(media).toHaveAttribute('src', /^blob:/);
   await expect
+    .poll(() => page.evaluate(() => navigator.mediaSession.metadata?.title))
+    .toBe('Rigs, antennas, and weather');
+  expect(await page.evaluate(() => navigator.mediaSession.metadata?.artist)).toBe(
+    'CW Academy Companion',
+  );
+  // Real, same-origin PNGs are usable by the OS independently of the page favicon.
+  expect(
+    await page.evaluate(async () => {
+      return Promise.all(
+        (navigator.mediaSession.metadata?.artwork ?? []).map(async (art) => {
+          const image = new Image();
+          image.src = art.src;
+          await image.decode();
+          return [image.naturalWidth, image.naturalHeight];
+        }),
+      );
+    }),
+  ).toEqual([
+    [512, 512],
+    [192, 192],
+  ]);
+  await expect
     .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(0);
   const laterWord = conversation.getByRole('button', { name: /^Play from word 12:/ });

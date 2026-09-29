@@ -203,10 +203,32 @@ test('course dates populate Today with playable assignments and preserve linked 
   await audio.evaluate((element: HTMLAudioElement) => element.play());
   await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
   await expect
+    .poll(() => page.evaluate(() => navigator.mediaSession.metadata?.title))
+    .toBe(`Session ${assigned.lesson} · WD101-10`);
+  expect(await page.evaluate(() => navigator.mediaSession.metadata?.album)).toBe(
+    'CW Academy practice · 10 WPM',
+  );
+  expect(
+    await page.evaluate(() =>
+      navigator.mediaSession.metadata?.artwork.map((art) => ({
+        path: new URL(art.src).pathname,
+        sizes: art.sizes,
+        type: art.type,
+      })),
+    ),
+  ).toEqual([
+    { path: '/media/cwa-512.png', sizes: '512x512', type: 'image/png' },
+    { path: '/media/cwa-192.png', sizes: '192x192', type: 'image/png' },
+  ]);
+  await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
   await audio.evaluate((element: HTMLAudioElement) => element.pause());
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('paused');
+  expect(await page.evaluate(() => navigator.mediaSession.metadata?.title)).toBe(
+    `Session ${assigned.lesson} · WD101-10`,
+  );
   let listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
   const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
   const fasterUrl = await speed.getByRole('option', { name: /^13 WPM/ }).getAttribute('value');
@@ -216,6 +238,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   );
   await speed.selectOption(fasterUrl!);
   await expect(audio).toHaveAttribute('src', fasterUrl!);
+  expect(await page.evaluate(() => navigator.mediaSession.metadata)).toBeNull();
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   expect(await audio.evaluate((element: HTMLAudioElement) => element.currentTime)).toBe(0);
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
@@ -226,6 +249,12 @@ test('course dates populate Today with playable assignments and preserve linked 
     .selectOption('next');
   await expect(audio).toHaveAttribute('src', fasterUrl!);
   await audio.evaluate((element: HTMLAudioElement) => element.play());
+  await expect
+    .poll(() => page.evaluate(() => navigator.mediaSession.metadata?.title))
+    .toBe(`Session ${assigned.lesson} · WD101-13`);
+  expect(await page.evaluate(() => navigator.mediaSession.metadata?.album)).toBe(
+    'CW Academy practice · 13 WPM',
+  );
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
@@ -272,6 +301,8 @@ test('course dates populate Today with playable assignments and preserve linked 
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   expect(await nativeRecording!.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+  expect(await page.evaluate(() => navigator.mediaSession.metadata)).toBeNull();
+  expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('none');
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();

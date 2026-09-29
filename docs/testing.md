@@ -97,6 +97,10 @@ physical iPhone: start a Morse-only round in Safari, lock for at least one full
 word/transmission boundary, exercise the lock-screen pause/resume controls, then
 unlock and confirm the transcript follows the actual audio position. Repeat with
 an official recording. Test local spoken answers separately with the page open.
+Check the displayed lesson/selected recording title and CWA artwork on the phone
+as well. Browser journeys should inspect actual Media Session metadata and decode
+the artwork URLs; shared-controller tests cover platform actions and ownership
+transfer without trying to emulate an OS lock screen.
 
 Keep time-credit boundaries in fast clock tests: paused/buffering media, seeks,
 repeated listening, native rates, manual/recall transitions, and multiple source

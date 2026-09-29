@@ -26,6 +26,8 @@ CWops. Official course material stays at the
   audio file so playback does not depend on background JavaScript timers. Native
   Play automatically counts actual listening time; pauses, seeks, and buffering
   add no idle time. Assigned recordings have a separate timer for focused recall.
+  Media Session controls include the current lesson or listening title and CWA
+  Morse artwork for the device's lock screen.
 - Official recording speed choices keep the assigned speed visible and offer
   verified faster files when available. An Assigned/Next default is remembered on
   your device, and saved practice retains the actual recordings and speeds used.

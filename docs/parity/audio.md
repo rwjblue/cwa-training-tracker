@@ -21,6 +21,15 @@ Assigned/Next preference and actual per-file usage metadata. Official recordings
 at native 1x playback. Assigned-audio unmount cleanup and the scratchpad-only guard
 before switching to Runner are fixed.
 
+**Lock-screen metadata follow-up:** official recordings now publish the session,
+selected catalog title, actual WPM, and CWA Morse artwork. Generated tracks use
+the same artwork and shared [Media Session controller](../../src/client/media-session.ts).
+Only actual playback claims ownership; old player cleanup cannot remove the next
+player's metadata or controls. Source changes and leaving practice release the old
+session. The 192/512 PNGs are raster exports of `public/favicon.svg`. Browser
+journeys cover official speed switches, generated-track titles, artwork decoding,
+pause state, and teardown. This does not establish physical iPhone appearance.
+
 **Still missing or partial:** unfinished scratchpad/time recovery and offline saves,
 per-task remembered speed overrides, actual completed passes/coverage, difficult marks,
 short replay controls, full generated-player retiming continuity, background spoken

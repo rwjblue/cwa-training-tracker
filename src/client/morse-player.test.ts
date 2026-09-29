@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MorsePlayer, type MorseProgress } from './morse-player';
 import { buildMorseTrack } from './morse-track';
+import { MediaSessionController } from './media-session';
 
 // Native media behavior is covered in Playwright. This small boundary fake lets us
 // deterministically exercise permission rejection, metadata delays, and cleanup races.
@@ -161,5 +162,48 @@ describe('native media playback boundary', () => {
     second.dispose();
     expect([...handlers.values()].every((handler) => handler === null)).toBe(true);
     expect(mediaSession.playbackState).toBe('none');
+  });
+
+  it('claims shared recording controls only after successful playback and preserves ownership on rejection', async () => {
+    const mediaSession = {
+      playbackState: 'none',
+      metadata: null as MediaMetadata | null,
+      setPositionState: vi.fn(),
+      setActionHandler: vi.fn(),
+    };
+    vi.stubGlobal('navigator', { mediaSession });
+    vi.stubGlobal(
+      'MediaMetadata',
+      class {
+        constructor(values: MediaMetadataInit) {
+          Object.assign(this, values);
+        }
+      },
+    );
+    const official = new MediaSessionController();
+    const pauseOfficial = vi.fn();
+    official.claim({
+      title: 'WD101-13',
+      onPlay: vi.fn(),
+      onPause: pauseOfficial,
+      onSeek: vi.fn(),
+      getPosition: () => ({ duration: 200, position: 10 }),
+    });
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    attach(player, audio);
+    player.prepare(track(), { title: 'A first contact' });
+    expect(mediaSession.metadata?.title).toBe('WD101-13');
+    audio.play.mockRejectedValueOnce(new DOMException('Denied', 'NotAllowedError'));
+    await expect(player.resume()).rejects.toThrow('Tap Play');
+    expect(pauseOfficial).not.toHaveBeenCalled();
+    expect(mediaSession.metadata?.title).toBe('WD101-13');
+    await player.resume();
+    expect(pauseOfficial).toHaveBeenCalledOnce();
+    expect(mediaSession.metadata?.title).toBe('A first contact');
+    official.release();
+    expect(mediaSession.metadata?.title).toBe('A first contact');
+    player.dispose();
+    expect(mediaSession.metadata).toBeNull();
   });
 });

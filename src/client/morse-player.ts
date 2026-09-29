@@ -1,4 +1,5 @@
 import { buildMorseTrack, renderMorseWav, wordAtTime, type MorseTrack } from './morse-track';
+import { MediaSessionController } from './media-session';
 
 export type MorsePlaybackState = 'idle' | 'ready' | 'playing' | 'paused' | 'ended' | 'error';
 export interface MorseProgress {
@@ -17,16 +18,6 @@ export interface MorsePlayerOptions {
   onError?: (message: string) => void;
 }
 
-let mediaOwner: MorsePlayer | undefined;
-const mediaActions: MediaSessionAction[] = [
-  'play',
-  'pause',
-  'stop',
-  'seekto',
-  'seekbackward',
-  'seekforward',
-];
-
 /** A persistent native media element owns playback, including every pause in a round. */
 export class MorsePlayer {
   private audio: HTMLAudioElement | null = null;
@@ -41,6 +32,7 @@ export class MorsePlayer {
   private lastFrame = 0;
   private disposed = false;
   private listeners: [string, EventListener][] = [];
+  private mediaSession = new MediaSessionController();
 
   get track() {
     return this.recording;
@@ -114,6 +106,7 @@ export class MorsePlayer {
     }
     this.generation++;
     this.cancelFrames();
+    this.mediaSession.release();
     this.status = 'idle';
     this.options = {};
     this.audio!.pause();
@@ -135,7 +128,6 @@ export class MorsePlayer {
     if (this.disposed || !this.audio || !this.recording) return;
     if (this.position >= this.recording.duration || this.audio.ended) this.seek(0);
     const run = ++this.generation;
-    this.claimMediaSession();
     try {
       // No await, async render, context.resume(), or timer before this native play call.
       await this.audio.play();
@@ -149,6 +141,7 @@ export class MorsePlayer {
       throw new Error(message);
     }
     if (this.disposed || run !== this.generation || this.audio.paused) return;
+    this.claimMediaSession();
     this.setState('playing');
     this.startFrames();
   }
@@ -200,7 +193,7 @@ export class MorsePlayer {
     }
     if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
     this.objectUrl = null;
-    this.releaseMediaSession();
+    this.mediaSession.release();
     onState?.('idle');
   }
 
@@ -261,7 +254,7 @@ export class MorsePlayer {
     this.recording = null;
     this.pendingSeek = undefined;
     this.status = 'idle';
-    this.releaseMediaSession();
+    this.mediaSession.release();
   }
 
   private setState(state: MorsePlaybackState) {
@@ -326,75 +319,25 @@ export class MorsePlayer {
   }
 
   private claimMediaSession() {
-    if (typeof navigator === 'undefined' || !navigator.mediaSession) return;
-    if (mediaOwner !== this) {
-      mediaOwner?.pause();
-      mediaOwner?.releaseMediaSession();
-      mediaOwner = this;
-    }
-    const session = navigator.mediaSession;
-    if (typeof MediaMetadata !== 'undefined') {
-      session.metadata = new MediaMetadata({
-        title: this.options.title ?? 'Morse practice',
-        artist: 'CW Academy Companion',
-      });
-    }
-    const handlers: Partial<Record<MediaSessionAction, MediaSessionActionHandler>> = {
-      play: () => {
-        void this.resume().catch(() => {
-          /* resume reports the error. */
-        });
-      },
-      pause: () => this.pause(),
-      stop: () => this.stop(),
-      seekto: (event) => {
-        if (event.seekTime !== undefined) this.seek(event.seekTime);
-      },
-      seekbackward: (event) => this.seek(this.position - (event.seekOffset ?? 10)),
-      seekforward: (event) => this.seek(this.position + (event.seekOffset ?? 10)),
-    };
-    for (const action of mediaActions) {
-      try {
-        session.setActionHandler(action, handlers[action] ?? null);
-      } catch {
-        /* Optional platform action. */
-      }
-    }
-    this.updateMediaPosition();
+    this.mediaSession.claim({
+      title: this.options.title ?? 'Morse practice',
+      onPlay: () => this.resume(),
+      onPause: () => this.pause(),
+      onStop: () => this.stop(),
+      onSeek: (seconds) => this.seek(seconds),
+      getPosition: () =>
+        this.recording
+          ? {
+              duration: this.recording.duration,
+              position: this.position,
+              playbackRate: this.audio?.playbackRate || 1,
+            }
+          : undefined,
+    });
   }
 
   private updateMediaPosition() {
-    if (mediaOwner !== this || !this.recording || typeof navigator === 'undefined') return;
-    const session = navigator.mediaSession;
-    session.playbackState = this.status === 'playing' ? 'playing' : 'paused';
-    try {
-      session.setPositionState?.({
-        duration: this.recording.duration,
-        position: this.position,
-        playbackRate: this.audio?.playbackRate || 1,
-      });
-    } catch {
-      /* Some browsers do not expose a seekable media-session timeline. */
-    }
-  }
-
-  private releaseMediaSession() {
-    if (mediaOwner !== this || typeof navigator === 'undefined') return;
-    const session = navigator.mediaSession;
-    for (const action of mediaActions) {
-      try {
-        session.setActionHandler(action, null);
-      } catch {
-        /* Optional platform action. */
-      }
-    }
-    session.metadata = null;
-    session.playbackState = 'none';
-    try {
-      session.setPositionState?.();
-    } catch {
-      /* Optional platform action. */
-    }
-    mediaOwner = undefined;
+    this.mediaSession.setPlaybackState(this.status === 'playing' ? 'playing' : 'paused');
+    this.mediaSession.updatePosition();
   }
 }
