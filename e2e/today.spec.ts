@@ -269,6 +269,8 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.clock.fastForward(20_000);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
   const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await page.screenshot({ path: '.tmp/practice-review-mobile.png', fullPage: true });
   await expect(dialog.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Copied ALICE in OH. Revisit the final sentence.',
   );

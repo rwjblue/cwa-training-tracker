@@ -25,8 +25,11 @@ test('private homework supports completion, reporting, and deletion without losi
   ).toBeVisible();
   await page.getByRole('button', { name: 'Log practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(page.getByRole('region', { name: 'What should I do today?' })).toBeVisible();
   const savedEntry = (await (await context.request.get('/api/entries')).json()).entries[0];
   expect(savedEntry.minutes).toBe(12);
   expect(savedEntry.metadata.plannedTaskId).toBeTruthy();
@@ -34,6 +37,7 @@ test('private homework supports completion, reporting, and deletion without losi
   expect(pendingTask.done).toBe(false);
 
   // Completion is server-confirmed and removes this row from the pending view.
+  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
   await page
     .getByRole('checkbox', { name: 'Mark Practice a clear exchange complete', exact: true })
     .click();

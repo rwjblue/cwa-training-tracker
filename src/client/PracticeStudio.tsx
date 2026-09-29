@@ -1020,7 +1020,10 @@ export default function PracticeStudio({
                   <button
                     className="text-button"
                     onClick={() => {
-                      if (running) pauseTimer();
+                      if (pauseTimer() > 0) {
+                        logTimedSession();
+                        return;
+                      }
                       onLog({
                         kind: launch?.task?.kind ?? 'listening',
                         lesson: launch?.task?.lesson,

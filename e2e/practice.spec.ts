@@ -92,6 +92,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect((await context.request.get('/api/entries')).status()).toBe(401);
   await page.getByRole('button', { name: 'Review & save 01:23', exact: true }).click();
   await signIn(page, { dialogAlreadyOpen: true });
+  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
   expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(83 / 60, 8);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page).toHaveURL(/#practice$/);
@@ -102,7 +103,12 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByRole('button', { name: 'Resume timer', exact: true }).click();
   await page.clock.fastForward(42_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
-  await page.getByRole('button', { name: 'Review & save 02:05', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Scratchpad', exact: true })
+    .fill('Copied the final call.');
+  await page.getByRole('button', { name: 'Log practice manually', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(125 / 60, 8);
   await page.route(
     '**/api/entries',
     (route) =>
@@ -120,6 +126,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   const timed = (await (await context.request.get('/api/entries')).json()).entries[0];
   expect(timed.minutes).toBeCloseTo(125 / 60, 10);
   expect(timed.metadata.elapsedSeconds).toBe(125);
+  expect(timed.metadata.scratchpad).toBe('Copied the final call.');
   expect(timed.source).toBe('morse');
   await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await expect(
@@ -131,11 +138,19 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByLabel(/^Time practiced/).fill('7');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#overview$/);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(2);
   expect(entries.find((entry: { source: string }) => entry.source === 'manual').minutes).toBe(7);
   await page.clock.resume();
+  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('button', { name: `Edit Head copy on ${timed.date}`, exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#logbook$/);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(2);
+  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill('Unsaved copy notes');
   await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText(

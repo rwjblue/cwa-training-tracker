@@ -730,10 +730,13 @@ function App() {
             setSessionEditor(null);
             if (entry.source === 'morse' || entry.source === 'timer') {
               setSavedPracticeVersion((v) => v + 1);
-              if (currentPage.current === 'practice' && !sessionEditor.id) {
-                studioUnsaved.current = false;
-                navigate('overview');
-              }
+            }
+            if (
+              !sessionEditor.id &&
+              (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
+            ) {
+              studioUnsaved.current = false;
+              navigate('overview');
             }
             notify('Practice logged. A little progress adds up.');
           }}
@@ -1526,11 +1529,13 @@ function Modal({
   onClose,
   children,
   wide = false,
+  initialFocus,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  initialFocus?: React.RefObject<HTMLElement | null>;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = React.useId();
@@ -1546,7 +1551,10 @@ function Modal({
       );
     // Establish focus before the dialog is painted. A delayed autofocus can
     // steal focus from a field the user has already started filling.
-    const target = panel.current?.querySelector<HTMLElement>('[autofocus], input') ?? elements()[0];
+    const target =
+      initialFocus?.current ??
+      panel.current?.querySelector<HTMLElement>('[autofocus], input') ??
+      elements()[0];
     target?.focus();
     const handle = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -1786,6 +1794,7 @@ function SessionModal({
   onClose: () => void;
   onSaved: (entry: PracticeSession) => void;
 }) {
+  const saveButton = useRef<HTMLButtonElement>(null);
   const [form, setForm] = useState({
     date: initial.date ?? dateString(),
     kind: initial.kind ?? 'listening',
@@ -1839,6 +1848,7 @@ function SessionModal({
       title={initial.id ? 'A closer look at your practice.' : 'A little progress, worth recording.'}
       onClose={onClose}
       wide
+      initialFocus={saveButton}
     >
       <p className="modal-intro">
         Capture what you practiced and how it felt. The details are up to you.
@@ -1976,7 +1986,7 @@ function SessionModal({
           <button className="button outline" type="button" onClick={onClose}>
             Cancel
           </button>
-          <button className="button dark" disabled={busy} type="submit">
+          <button ref={saveButton} className="button dark" disabled={busy} type="submit">
             {busy ? 'Saving…' : initial.id ? 'Save changes' : 'Save practice'}
             <Check size={16} />
           </button>

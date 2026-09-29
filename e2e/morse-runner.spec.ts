@@ -98,7 +98,9 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'simulator',
   );
-  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await page.screenshot({ path: '.tmp/runner-review-desktop.png', fullPage: true });
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
