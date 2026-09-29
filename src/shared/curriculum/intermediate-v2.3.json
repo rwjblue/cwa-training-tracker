@@ -1,0 +1,1931 @@
+{
+  "id": "cwa-intermediate-v2.3",
+  "version": "2.3",
+  "sourceUrl": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm",
+  "resourcesUrl": "https://cwops.org/intermediate-practice-files/",
+  "verifiedAt": "2026-09-29",
+  "sessionLinks": {
+    "1": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984024",
+    "2": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984025",
+    "3": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984026",
+    "4": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984027",
+    "5": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984028",
+    "6": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984029",
+    "7": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984030",
+    "8": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984031",
+    "9": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984032",
+    "10": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984033",
+    "11": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984034",
+    "12": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984035",
+    "13": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984036",
+    "14": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984037",
+    "15": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984038",
+    "16": "https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984039"
+  },
+  "exercises": [
+    {
+      "id": "s1-d1-t1",
+      "session": 1,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s1-d1-t2",
+      "session": 1,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD101-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD101_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d1-t3",
+      "session": 1,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR101-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR101_10.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d1-t4",
+      "session": 1,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d2-t1",
+      "session": 1,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s1-d2-t2",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d2-t3",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ES4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d2-t4",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d2-t5",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d2-t6",
+      "session": 1,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 10,
+      "minutes": 15
+    },
+    {
+      "id": "s1-d3-t1",
+      "session": 1,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s1-d3-t2",
+      "session": 1,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO101-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_101_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d3-t3",
+      "session": 1,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA102-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA102_10.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 10
+    },
+    {
+      "id": "s1-d3-t4",
+      "session": 1,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d1-t1",
+      "session": 2,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s2-d1-t2",
+      "session": 2,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD102-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD102_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d1-t3",
+      "session": 2,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR102-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR102_10.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d1-t4",
+      "session": 2,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 10,
+      "minutes": 15
+    },
+    {
+      "id": "s2-d2-t1",
+      "session": 2,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s2-d2-t2",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d2-t3",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "LY4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d2-t4",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IM4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d2-t5",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "UN4-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN4_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d2-t6",
+      "session": 2,
+      "day": 2,
+      "kind": "icr",
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d3-t1",
+      "session": 2,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s2-d3-t2",
+      "session": 2,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO103-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_103_10.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d3-t3",
+      "session": 2,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA104-10",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA104_10.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 10
+    },
+    {
+      "id": "s2-d3-t4",
+      "session": 2,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 10,
+      "minutes": 15
+    },
+    {
+      "id": "s3-d1-t1",
+      "session": 3,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s3-d1-t2",
+      "session": 3,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD103-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD103_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d1-t3",
+      "session": 3,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR103-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR103_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d1-t4",
+      "session": 3,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d2-t1",
+      "session": 3,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s3-d2-t2",
+      "session": 3,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d2-t3",
+      "session": 3,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ES5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d2-t4",
+      "session": 3,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN4-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN4_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d2-t5",
+      "session": 3,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 13,
+      "minutes": 15
+    },
+    {
+      "id": "s3-d3-t1",
+      "session": 3,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s3-d3-t2",
+      "session": 3,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO105-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_105_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d3-t3",
+      "session": 3,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA106-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA106_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s3-d3-t4",
+      "session": 3,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d1-t1",
+      "session": 4,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s4-d1-t2",
+      "session": 4,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD202-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD202_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d1-t3",
+      "session": 4,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR202-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR202_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d1-t4",
+      "session": 4,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 13,
+      "minutes": 15
+    },
+    {
+      "id": "s4-d2-t1",
+      "session": 4,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s4-d2-t2",
+      "session": 4,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d2-t3",
+      "session": 4,
+      "day": 2,
+      "kind": "audio",
+      "recording": "LY5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d2-t4",
+      "session": 4,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d2-t5",
+      "session": 4,
+      "day": 2,
+      "kind": "icr",
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d3-t1",
+      "session": 4,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s4-d3-t2",
+      "session": 4,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO107-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_107_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d3-t3",
+      "session": 4,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA108-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA108_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s4-d3-t4",
+      "session": 4,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 13,
+      "minutes": 15
+    },
+    {
+      "id": "s5-d1-t1",
+      "session": 5,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s5-d1-t2",
+      "session": 5,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD203-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD203_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d1-t3",
+      "session": 5,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR203-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR203_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d1-t4",
+      "session": 5,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d2-t1",
+      "session": 5,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s5-d2-t2",
+      "session": 5,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING6-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING6_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d2-t3",
+      "session": 5,
+      "day": 2,
+      "kind": "audio",
+      "recording": "DIS4-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS4_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d2-t4",
+      "session": 5,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IM5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d2-t5",
+      "session": 5,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 13,
+      "minutes": 15
+    },
+    {
+      "id": "s5-d3-t1",
+      "session": 5,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s5-d3-t2",
+      "session": 5,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO201-13",
+      "url": "https://cwops.org/wp-content/uploads/2022/07/qso201_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d3-t3",
+      "session": 5,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA110-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA110_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s5-d3-t4",
+      "session": 5,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d1-t1",
+      "session": 6,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s6-d1-t2",
+      "session": 6,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD205-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD205_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d1-t3",
+      "session": 6,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR205-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR205_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d1-t4",
+      "session": 6,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 13,
+      "minutes": 15
+    },
+    {
+      "id": "s6-d2-t1",
+      "session": 6,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s6-d2-t2",
+      "session": 6,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ES6-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES6_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d2-t3",
+      "session": 6,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d2-t4",
+      "session": 6,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN5-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN5_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d2-t5",
+      "session": 6,
+      "day": 2,
+      "kind": "icr",
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d3-t1",
+      "session": 6,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s6-d3-t2",
+      "session": 6,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO203-13",
+      "url": "https://cwops.org/wp-content/uploads/2022/07/qso203_13.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d3-t3",
+      "session": 6,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA202-13",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA202_13.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 13
+    },
+    {
+      "id": "s6-d3-t4",
+      "session": 6,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 13,
+      "minutes": 15
+    },
+    {
+      "id": "s7-d1-t1",
+      "session": 7,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s7-d1-t2",
+      "session": 7,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD301-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD301_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d1-t3",
+      "session": 7,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR301-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR301_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d1-t4",
+      "session": 7,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d2-t1",
+      "session": 7,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s7-d2-t2",
+      "session": 7,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED6-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED6_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d2-t3",
+      "session": 7,
+      "day": 2,
+      "kind": "audio",
+      "recording": "LY6-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY6_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d2-t4",
+      "session": 7,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR6-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR6_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d2-t5",
+      "session": 7,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s7-d3-t1",
+      "session": 7,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s7-d3-t2",
+      "session": 7,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO205-15",
+      "url": "https://cwops.org/wp-content/uploads/2024/05/qso205_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d3-t3",
+      "session": 7,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA204-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA204_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s7-d3-t4",
+      "session": 7,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d1-t1",
+      "session": 8,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s8-d1-t2",
+      "session": 8,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD302-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD302_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d1-t3",
+      "session": 8,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR302-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR302_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d1-t4",
+      "session": 8,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s8-d2-t1",
+      "session": 8,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s8-d2-t2",
+      "session": 8,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING7-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING7_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d2-t3",
+      "session": 8,
+      "day": 2,
+      "kind": "audio",
+      "recording": "DIS5-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS5_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d2-t4",
+      "session": 8,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IM6-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM6_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d2-t5",
+      "session": 8,
+      "day": 2,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d3-t1",
+      "session": 8,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s8-d3-t2",
+      "session": 8,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO207-15",
+      "url": "https://cwops.org/wp-content/uploads/2026/09/qso207_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d3-t3",
+      "session": 8,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA206-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA206_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s8-d3-t4",
+      "session": 8,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s9-d1-t1",
+      "session": 9,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s9-d1-t2",
+      "session": 9,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD303-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD303_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d1-t3",
+      "session": 9,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR303-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR303_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d1-t4",
+      "session": 9,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d2-t1",
+      "session": 9,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s9-d2-t2",
+      "session": 9,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ES7-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES7_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d2-t3",
+      "session": 9,
+      "day": 2,
+      "kind": "audio",
+      "recording": "UN5-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN5_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d2-t4",
+      "session": 9,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN6-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN6_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d2-t5",
+      "session": 9,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s9-d3-t1",
+      "session": 9,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s9-d3-t2",
+      "session": 9,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO301-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_301_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d3-t3",
+      "session": 9,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA208-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA208_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s9-d3-t4",
+      "session": 9,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d1-t1",
+      "session": 10,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s10-d1-t2",
+      "session": 10,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD304-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD304_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d1-t3",
+      "session": 10,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR304-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR304_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d1-t4",
+      "session": 10,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s10-d2-t1",
+      "session": 10,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s10-d2-t2",
+      "session": 10,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED7-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED7_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d2-t3",
+      "session": 10,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE6-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE6_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d2-t4",
+      "session": 10,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR7-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR7_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d2-t5",
+      "session": 10,
+      "day": 2,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d3-t1",
+      "session": 10,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s10-d3-t2",
+      "session": 10,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO303-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_303_15.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d3-t3",
+      "session": 10,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA210-15",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA210_15.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 15
+    },
+    {
+      "id": "s10-d3-t4",
+      "session": 10,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s11-d1-t1",
+      "session": 11,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s11-d1-t2",
+      "session": 11,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD305-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD305_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d1-t3",
+      "session": 11,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR305-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR305_18.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d1-t4",
+      "session": 11,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d2-t1",
+      "session": 11,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s11-d2-t2",
+      "session": 11,
+      "day": 2,
+      "kind": "audio",
+      "recording": "LY7-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY7_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d2-t3",
+      "session": 11,
+      "day": 2,
+      "kind": "audio",
+      "recording": "DIS6-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS6_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d2-t4",
+      "session": 11,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IM7-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM7_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d2-t5",
+      "session": 11,
+      "day": 2,
+      "kind": "icr",
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d2-t6",
+      "session": 11,
+      "day": 2,
+      "kind": "audio",
+      "recording": "SS101-18",
+      "url": "https://cwops.org/wp-content/uploads/2022/11/SS101_18.mp3",
+      "minimumPasses": 1,
+      "maximumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d3-t1",
+      "session": 11,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s11-d3-t2",
+      "session": 11,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO305-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_305_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d3-t3",
+      "session": 11,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA301-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA301_18.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 18
+    },
+    {
+      "id": "s11-d3-t4",
+      "session": 11,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 15,
+      "minutes": 15
+    },
+    {
+      "id": "s12-d1-t1",
+      "session": 12,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s12-d1-t2",
+      "session": 12,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD401-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD401_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d1-t3",
+      "session": 12,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR401-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR401_18.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d1-t4",
+      "session": 12,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 18,
+      "minutes": 15
+    },
+    {
+      "id": "s12-d2-t1",
+      "session": 12,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s12-d2-t2",
+      "session": 12,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING8-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING8_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d2-t3",
+      "session": 12,
+      "day": 2,
+      "kind": "audio",
+      "recording": "UN6-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN6_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d2-t4",
+      "session": 12,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN7-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN7_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d2-t5",
+      "session": 12,
+      "day": 2,
+      "kind": "audio",
+      "recording": "SS103-18",
+      "url": "https://cwops.org/wp-content/uploads/2022/11/SS103_18.mp3",
+      "minimumPasses": 1,
+      "maximumPasses": 1,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d2-t6",
+      "session": 12,
+      "day": 2,
+      "kind": "review",
+      "optional": true
+    },
+    {
+      "id": "s12-d3-t1",
+      "session": 12,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s12-d3-t2",
+      "session": 12,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO307-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_307_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d3-t3",
+      "session": 12,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA302-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA302_18.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 18
+    },
+    {
+      "id": "s12-d3-t4",
+      "session": 12,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "wpx",
+      "characterWpm": 18,
+      "minutes": 15
+    },
+    {
+      "id": "s13-d1-t1",
+      "session": 13,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s13-d1-t2",
+      "session": 13,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD402-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD402_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d1-t3",
+      "session": 13,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR402-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR402_18.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d1-t4",
+      "session": 13,
+      "day": 1,
+      "kind": "icr",
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d2-t1",
+      "session": 13,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s13-d2-t2",
+      "session": 13,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ES8-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES8_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d2-t3",
+      "session": 13,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE7-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE7_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d2-t4",
+      "session": 13,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR8-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR8_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d2-t5",
+      "session": 13,
+      "day": 2,
+      "kind": "audio",
+      "recording": "CWT201-20",
+      "url": "https://cwops.org/wp-content/uploads/2020/06/CWT-201-20.mp3",
+      "characterWpm": 20
+    },
+    {
+      "id": "s13-d2-t6",
+      "session": 13,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 18,
+      "minutes": 15
+    },
+    {
+      "id": "s13-d3-t1",
+      "session": 13,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s13-d3-t2",
+      "session": 13,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO401-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_401_18.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d3-t3",
+      "session": 13,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA304-18",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA304_18.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 18
+    },
+    {
+      "id": "s13-d3-t4",
+      "session": 13,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 15
+    },
+    {
+      "id": "s14-d1-t1",
+      "session": 14,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s14-d1-t2",
+      "session": 14,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD403-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD403_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d1-t3",
+      "session": 14,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR403-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR403_20.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d1-t4",
+      "session": 14,
+      "day": 1,
+      "kind": "audio",
+      "recording": "CWT202-20",
+      "url": "https://cwops.org/wp-content/uploads/2018/12/CWT-202-20.mp3",
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d2-t1",
+      "session": 14,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s14-d2-t2",
+      "session": 14,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ES8-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES8_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d2-t3",
+      "session": 14,
+      "day": 2,
+      "kind": "audio",
+      "recording": "DIS7-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS7_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d2-t4",
+      "session": 14,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IM8-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM8_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d2-t5",
+      "session": 14,
+      "day": 2,
+      "kind": "live",
+      "mode": "monitor",
+      "count": 5
+    },
+    {
+      "id": "s14-d3-t1",
+      "session": 14,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s14-d3-t2",
+      "session": 14,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO403-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_403_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d3-t3",
+      "session": 14,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA306-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA306_20.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 20
+    },
+    {
+      "id": "s14-d3-t4",
+      "session": 14,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 20,
+      "minutes": 15
+    },
+    {
+      "id": "s15-d1-t1",
+      "session": 15,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s15-d1-t2",
+      "session": 15,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD404-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD404_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d1-t3",
+      "session": 15,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR404-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR404_20.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d1-t4",
+      "session": 15,
+      "day": 1,
+      "kind": "audio",
+      "recording": "CWT208-20",
+      "url": "https://cwops.org/wp-content/uploads/2018/12/CWT-208-20.mp3",
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d2-t1",
+      "session": 15,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s15-d2-t2",
+      "session": 15,
+      "day": 2,
+      "kind": "audio",
+      "recording": "LY8-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY8_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d2-t3",
+      "session": 15,
+      "day": 2,
+      "kind": "audio",
+      "recording": "UN7-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN7_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d2-t4",
+      "session": 15,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN8-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN8_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d2-t5",
+      "session": 15,
+      "day": 2,
+      "kind": "simulator",
+      "mode": "wpx",
+      "characterWpm": 20,
+      "minutes": 15
+    },
+    {
+      "id": "s15-d3-t1",
+      "session": 15,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s15-d3-t2",
+      "session": 15,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO405-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_405_20.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d3-t3",
+      "session": 15,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA308-20",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA308_20.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 20
+    },
+    {
+      "id": "s15-d3-t4",
+      "session": 15,
+      "day": 3,
+      "kind": "icr",
+      "characterWpm": 20
+    },
+    {
+      "id": "s16-d1-t1",
+      "session": 16,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s16-d1-t2",
+      "session": 16,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD405-25",
+      "minimumPasses": 2,
+      "characterWpm": 25,
+      "unresolved": "http-404"
+    },
+    {
+      "id": "s16-d1-t3",
+      "session": 16,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR405-25",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR405_25.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d1-t4",
+      "session": 16,
+      "day": 1,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 25,
+      "minutes": 15
+    },
+    {
+      "id": "s16-d1-t5",
+      "session": 16,
+      "day": 1,
+      "kind": "audio",
+      "recording": "CWT212-25",
+      "url": "https://cwops.org/wp-content/uploads/2018/12/CWT-212-25.mp3",
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d2-t1",
+      "session": 16,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up", "drill"]
+    },
+    {
+      "id": "s16-d2-t2",
+      "session": 16,
+      "day": 2,
+      "kind": "audio",
+      "recording": "UN8-25",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN8_25.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d2-t3",
+      "session": 16,
+      "day": 2,
+      "kind": "audio",
+      "recording": "DIS8-25",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS8_25.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d2-t4",
+      "session": 16,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE8-25",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE8_25.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d2-t5",
+      "session": 16,
+      "day": 2,
+      "kind": "live",
+      "mode": "contacts",
+      "count": 5
+    },
+    {
+      "id": "s16-d3-t1",
+      "session": 16,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s16-d3-t2",
+      "session": 16,
+      "day": 3,
+      "kind": "audio",
+      "recording": "QSO407-25",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_407_25.mp3",
+      "minimumPasses": 2,
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d3-t3",
+      "session": 16,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA310-25",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA310_25.mp3",
+      "minimumPasses": 3,
+      "characterWpm": 25
+    },
+    {
+      "id": "s16-d3-t4",
+      "session": 16,
+      "day": 3,
+      "kind": "simulator",
+      "mode": "single-call",
+      "characterWpm": 25,
+      "minutes": 15
+    }
+  ]
+}

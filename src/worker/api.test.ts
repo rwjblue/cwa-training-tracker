@@ -3,6 +3,7 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from './index';
 import { DEFAULT_PROFILE } from '../shared/training';
+import type { PlannedTask } from '../shared/plan';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -567,6 +568,60 @@ describe('private training data', () => {
     expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
       plan: [],
     });
+  });
+
+  it('derives assigned exercises and preserves private completion through rescheduling and restore', async () => {
+    const a = await signIn('a@example.com');
+    const b = await signIn('b@example.com');
+    const settings = {
+      ...DEFAULT_PROFILE,
+      level: 'intermediate',
+      firstClassDate: '2026-10-08',
+      classDays: [1, 4],
+    };
+    for (const auth of [a, b]) await request('/api/settings', 'PUT', settings, auth.cookie);
+    const plan = async (cookie: string) =>
+      (
+        (await (await request('/api/plan', 'GET', undefined, cookie)).json()) as {
+          plan: PlannedTask[];
+        }
+      ).plan;
+    const initial = await plan(a.cookie);
+    const task = initial.find((task) => task.exercise?.type === 'audio')!;
+    expect(task.dueDate).toBe('2026-10-06');
+    expect(
+      (
+        await request(
+          `/api/plan/${encodeURIComponent(task.id)}`,
+          'PUT',
+          { ...task, done: true, notes: 'My private reminder' },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await plan(b.cookie)).find((item) => item.id === task.id)).toMatchObject({
+      done: false,
+      notes: task.notes,
+    });
+    await request('/api/settings', 'PUT', { ...settings, firstClassDate: '2026-10-15' }, a.cookie);
+    const shifted = await plan(a.cookie);
+    expect(shifted).toHaveLength(initial.length);
+    expect(shifted.find((item) => item.id === task.id)).toMatchObject({
+      done: true,
+      dueDate: '2026-10-13',
+      notes: 'My private reminder',
+    });
+    expect(
+      (await request(`/api/plan/${encodeURIComponent(task.id)}`, 'DELETE', undefined, a.cookie))
+        .status,
+    ).toBe(400);
+    const saved = await (await request('/api/export', 'GET', undefined, a.cookie)).json();
+    await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie);
+    expect(await plan(a.cookie)).toEqual([]);
+    expect(
+      (await request('/api/import', 'POST', { data: saved, mode: 'replace' }, a.cookie)).status,
+    ).toBe(200);
+    expect(await plan(a.cookie)).toEqual(shifted);
   });
 
   it('enforces the storage budget transactionally and restores bytes after deletion', async () => {

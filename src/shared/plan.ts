@@ -1,6 +1,19 @@
 import type { PracticeKind, PracticeSession, Profile } from './training';
 
-/** Personal homework, not a preloaded copy of an official curriculum. */
+export type SendingSection = 'warm-up' | 'drill' | 'exercise';
+export type PracticeExercise =
+  | {
+      type: 'audio';
+      url?: string;
+      characterWpm?: number;
+      minimumPasses?: number;
+      maximumPasses?: number;
+      unresolved?: string;
+    }
+  | { type: 'sending'; url: string; sections: SendingSection[] }
+  | { type: 'external'; url: string; characterWpm?: number };
+
+/** Private homework and progress, with links to optional curriculum metadata. */
 export interface PlannedTask {
   id: string;
   title: string;
@@ -12,7 +25,9 @@ export interface PlannedTask {
   done: boolean;
   notes: string;
   createdAt: string;
-  source?: 'manual' | 'legacy';
+  source?: 'manual' | 'legacy' | 'curriculum';
+  curriculum?: { id: string; exerciseId: string; day: 1 | 2 | 3; sourceUrl: string };
+  exercise?: PracticeExercise;
 }
 
 export const MAX_PLAN_TASKS = 2000;
@@ -30,6 +45,85 @@ function validDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T12:00:00Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function exerciseUrl(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 2048)
+    throw new Error('Enter a full http or https exercise link.');
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('Enter a full http or https exercise link.');
+  }
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password)
+    throw new Error('Enter an http or https link without embedded credentials.');
+  return url.href;
+}
+
+function exerciseResource(value: unknown): PracticeExercise {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid exercise resource.');
+  const input = value as Record<string, unknown>;
+  if (!['audio', 'sending', 'external'].includes(String(input.type)))
+    throw new Error('Choose a valid exercise resource type.');
+  if (input.type === 'sending') {
+    if (
+      !Array.isArray(input.sections) ||
+      input.sections.length < 1 ||
+      input.sections.length > 3 ||
+      input.sections.some((section) => !['warm-up', 'drill', 'exercise'].includes(section)) ||
+      new Set(input.sections).size !== input.sections.length
+    )
+      throw new Error('Choose valid sending sections.');
+    return {
+      type: 'sending',
+      url: exerciseUrl(input.url),
+      sections: input.sections as SendingSection[],
+    };
+  }
+  const output: Extract<PracticeExercise, { type: 'audio' | 'external' }> =
+    input.type === 'external'
+      ? { type: 'external', url: exerciseUrl(input.url) }
+      : { type: 'audio' };
+  if (input.characterWpm !== undefined) {
+    if (
+      typeof input.characterWpm !== 'number' ||
+      !Number.isFinite(input.characterWpm) ||
+      input.characterWpm < 1 ||
+      input.characterWpm > 150
+    )
+      throw new Error('Choose a valid exercise speed.');
+    output.characterWpm = input.characterWpm;
+  }
+  if (output.type === 'audio') {
+    if (input.url !== undefined) output.url = exerciseUrl(input.url);
+    if (input.unresolved !== undefined) {
+      if (
+        typeof input.unresolved !== 'string' ||
+        !input.unresolved.trim() ||
+        input.unresolved.length > 500
+      )
+        throw new Error('Invalid unavailable recording note.');
+      output.unresolved = input.unresolved.trim();
+    }
+    if (!output.url && !output.unresolved)
+      throw new Error('A recording needs a link or an unavailable note.');
+    for (const key of ['minimumPasses', 'maximumPasses'] as const) {
+      if (input[key] === undefined) continue;
+      if (
+        typeof input[key] !== 'number' ||
+        !Number.isInteger(input[key]) ||
+        input[key] < 1 ||
+        input[key] > 100
+      )
+        throw new Error('Recording repetitions must be between 1 and 100.');
+      output[key] = input[key];
+    }
+    if (output.minimumPasses && output.maximumPasses && output.minimumPasses > output.maximumPasses)
+      throw new Error('Maximum repetitions must not be below the minimum.');
+  }
+  return output;
 }
 
 export function validatePlannedTask(value: unknown): PlannedTask {
@@ -101,9 +195,34 @@ export function validatePlannedTask(value: unknown): PlannedTask {
     task.link = url.href;
   }
   if (input.source !== undefined) {
-    if (input.source !== 'manual' && input.source !== 'legacy')
+    if (input.source !== 'manual' && input.source !== 'legacy' && input.source !== 'curriculum')
       throw new Error('Invalid exercise source.');
     task.source = input.source;
+  }
+  if (input.exercise !== undefined) task.exercise = exerciseResource(input.exercise);
+  if (input.curriculum !== undefined) {
+    if (
+      !input.curriculum ||
+      typeof input.curriculum !== 'object' ||
+      Array.isArray(input.curriculum)
+    )
+      throw new Error('Invalid curriculum reference.');
+    const reference = input.curriculum as Record<string, unknown>;
+    if (
+      typeof reference.id !== 'string' ||
+      !/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]{0,99}$/.test(reference.id) ||
+      typeof reference.exerciseId !== 'string' ||
+      !/^s(?:[1-9]|1[0-6])-d[1-3]-t\d{1,2}$/.test(reference.exerciseId) ||
+      ![1, 2, 3].includes(Number(reference.day)) ||
+      typeof reference.day !== 'number'
+    )
+      throw new Error('Invalid curriculum reference.');
+    task.curriculum = {
+      id: reference.id,
+      exerciseId: reference.exerciseId,
+      day: reference.day as 1 | 2 | 3,
+      sourceUrl: exerciseUrl(reference.sourceUrl),
+    };
   }
   return task;
 }
@@ -145,6 +264,12 @@ export function dailyPlanSummary(
     .filter((meeting) => meeting.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))[0];
   const progress = new Map<string, { loggedMinutes: number; todayMinutes: number }>();
+  const aliases = new Map<string, string>();
+  for (const task of tasks) {
+    if (!task.curriculum) continue;
+    aliases.set(`curriculum:${task.curriculum.id}:${task.curriculum.exerciseId}`, task.id);
+    aliases.set(`legacy-task:${task.curriculum.exerciseId}`, task.id);
+  }
   const seenEntries = new Set<string>();
   for (const entry of entries) {
     if (seenEntries.has(entry.id)) continue;
@@ -168,10 +293,11 @@ export function dailyPlanSummary(
       }
     }
     if (typeof taskId !== 'string') continue;
-    const total = progress.get(taskId) ?? { loggedMinutes: 0, todayMinutes: 0 };
+    const progressId = aliases.get(taskId) ?? taskId;
+    const total = progress.get(progressId) ?? { loggedMinutes: 0, todayMinutes: 0 };
     total.loggedMinutes += entry.minutes;
     if (entry.date === today) total.todayMinutes += entry.minutes;
-    progress.set(taskId, total);
+    progress.set(progressId, total);
   }
   const assignedToday: DailyPlannedTask[] = [];
   const preparation: DailyPlannedTask[] = [];
