@@ -32,6 +32,7 @@ import { api } from './api';
 import './plan.css';
 
 interface Props {
+  startNewTask?: boolean;
   profile: Profile;
   entries: PracticeSession[];
   onLog: (initial?: Partial<PracticeSession>) => void;
@@ -45,13 +46,15 @@ const dayLabel = (date: string) =>
     day: 'numeric',
   });
 
-export default function Plan({ profile, entries, onLog }: Props) {
+export default function Plan({ profile, entries, onLog, startNewTask }: Props) {
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [view, setView] = useState<'next' | 'week' | 'all'>('next');
   const [showDone, setShowDone] = useState(false);
-  const [editing, setEditing] = useState<Partial<PlannedTask> | null>(null);
+  const [editing, setEditing] = useState<Partial<PlannedTask> | null>(
+    startNewTask ? { dueDate: dateInTimezone(new Date(), profile.timezone) } : null,
+  );
   const [deleting, setDeleting] = useState<PlannedTask | null>(null);
   const [busy, setBusy] = useState('');
   const [reportOpen, setReportOpen] = useState(false);

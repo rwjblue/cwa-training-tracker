@@ -1,0 +1,450 @@
+.today-plan {
+  min-width: 0;
+  overflow: hidden;
+  align-self: start;
+}
+.today-plan-heading {
+  padding: 24px 25px 18px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.today-plan-heading h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 26px;
+  line-height: 1.24;
+  letter-spacing: -0.45px;
+  margin: 9px 0;
+  color: #243f31;
+}
+.today-plan-heading p {
+  color: #616e59;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.today-plan-heading p span {
+  display: inline;
+  overflow-wrap: anywhere;
+}
+.today-plan-manage {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px 0;
+  color: #415e3f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.today-plan-manage:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.today-plan-next-class {
+  margin: 0 25px 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #eef2e7;
+  color: #50614a;
+  border: 1px solid #e1e7d7;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.today-plan-next-class > svg {
+  flex-shrink: 0;
+}
+.today-plan-next-class strong {
+  display: inline;
+  margin-left: 6px;
+  font-weight: 600;
+}
+.today-plan-count {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.today-plan-group {
+  padding: 0 25px;
+}
+.today-plan-group-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #40563a;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  padding: 2px 0 6px;
+}
+.today-plan-group-title span,
+.today-plan-disclosure summary > span {
+  color: #5c6b54;
+  font-size: 12px;
+  border-radius: 4px;
+  background: #edf1e7;
+  padding: 1px 5px;
+}
+.today-plan-group-hint {
+  font-size: 13px;
+  color: #62705b;
+  line-height: 1.6;
+  margin: 2px 0 8px;
+}
+.today-plan-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.today-plan-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 0;
+  border-top: 1px solid #e7eade;
+}
+.today-plan-task:first-child {
+  border-top: 0;
+}
+.today-plan-check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 3px 0 0;
+  accent-color: #41633e;
+  cursor: pointer;
+}
+.today-plan-task-content {
+  min-width: 0;
+  flex: 1;
+}
+.today-plan-task-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  align-items: center;
+}
+.today-plan-task-title h4 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: #2c4333;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.today-plan-task.is-done h4 {
+  color: #5f6e57;
+  text-decoration: line-through;
+}
+.today-plan-started {
+  background: #f1eadd;
+  color: #745a30;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.today-plan-task-meta {
+  color: #607057;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 3px;
+}
+.today-plan-logged {
+  color: #496244;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 2px;
+}
+.today-plan-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+  align-items: center;
+}
+.today-plan-task-actions > a,
+.today-plan-task-actions > button {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  color: #3d623d;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 0;
+  line-height: 1.5;
+}
+.today-plan-task-actions > a:hover,
+.today-plan-task-actions > button:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.today-plan-task-actions > span {
+  color: #5f6e57;
+  font-size: 12px;
+}
+.today-plan-instructions {
+  color: #56694b;
+  font-size: 13px;
+  margin-top: 7px;
+}
+.today-plan-instructions summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.today-plan-instructions p {
+  margin-top: 9px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+  border-left: 2px solid #dce4d2;
+  padding: 4px 0 4px 12px;
+}
+.today-plan-disclosure {
+  border-top: 1px solid #e4e9dc;
+  margin: 0 25px;
+  padding: 12px 0;
+}
+.today-plan-disclosure > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #4e6345;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.today-plan-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.today-plan-disclosure > summary > svg:last-child {
+  margin-left: auto;
+}
+.today-plan-disclosure[open] > summary > svg:last-child {
+  transform: rotate(180deg);
+}
+.today-plan-disclosure > .today-plan-group-hint {
+  padding-top: 9px;
+}
+.today-plan-disclosure > .today-plan-list {
+  padding-top: 3px;
+}
+.today-plan-upcoming {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 25px;
+  font-size: 12px;
+  color: #627057;
+  border-top: 1px solid #e6ebdf;
+  line-height: 1.6;
+}
+.today-plan-upcoming button {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 12px;
+  color: #4d6443;
+}
+.today-plan-empty,
+.today-plan-clear {
+  padding: 5px 25px 22px;
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+.today-plan-empty h3,
+.today-plan-clear h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 19px;
+  color: #344f37;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.today-plan-empty p,
+.today-plan-clear p {
+  font-size: 14px;
+  color: #5f7056;
+  line-height: 1.7;
+}
+.today-plan-empty > div,
+.today-plan-clear > div {
+  min-width: 0;
+}
+.today-plan-empty-icon {
+  border-radius: 9px;
+  background: #eff2e6;
+  width: 37px;
+  height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #556e43;
+  flex-shrink: 0;
+}
+.today-plan-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-top: 15px;
+  align-items: center;
+}
+.today-plan-empty-actions .text-button {
+  font-size: 12px;
+  gap: 5px;
+}
+.today-plan-studio {
+  padding: 14px 0 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: #506749;
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: left;
+}
+.today-plan-studio > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.today-plan-clear .text-button {
+  margin-top: 11px;
+  font-size: 13px;
+}
+.today-plan-footnote {
+  border-top: 1px solid #e6ebdf;
+  background: #fafbf5;
+  padding: 13px 25px;
+  color: #627057;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.today-plan-message {
+  padding: 5px 25px 25px;
+  font-size: 14px;
+  color: #5e7054;
+}
+.today-plan-error {
+  margin: 0 25px 20px;
+  border-radius: 6px;
+  background: #fcf1eb;
+  border: 1px solid #edcbbb;
+  color: #843d2c;
+  padding: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+@media (max-width: 1180px) and (min-width: 1021px) {
+  .today-plan-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .today-plan-next-class {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 640px) {
+  .today-plan-heading {
+    padding: 21px 18px 17px;
+    gap: 10px;
+    flex-direction: column;
+  }
+  .today-plan-heading h2 {
+    font-size: 25px;
+  }
+  .today-plan-heading p {
+    font-size: 13px;
+  }
+  .today-plan-manage {
+    font-size: 14px;
+  }
+  .today-plan-next-class {
+    margin: 0 18px 16px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .today-plan-next-class strong {
+    display: block;
+    margin-left: 0;
+  }
+  .today-plan-group {
+    padding: 0 18px;
+  }
+  .today-plan-group-title {
+    font-size: 14px;
+  }
+  .today-plan-task-title h4 {
+    font-size: 15px;
+  }
+  .today-plan-task-meta,
+  .today-plan-logged {
+    font-size: 13px;
+  }
+  .today-plan-task-actions {
+    gap: 17px;
+  }
+  .today-plan-task-actions > a,
+  .today-plan-task-actions > button {
+    font-size: 14px;
+    padding: 4px 0;
+  }
+  .today-plan-instructions {
+    font-size: 14px;
+  }
+  .today-plan-instructions p {
+    font-size: 13px;
+  }
+  .today-plan-disclosure {
+    margin: 0 18px;
+  }
+  .today-plan-disclosure > summary {
+    font-size: 14px;
+  }
+  .today-plan-empty,
+  .today-plan-clear {
+    padding: 0 18px 22px;
+    gap: 11px;
+  }
+  .today-plan-empty-icon {
+    width: 29px;
+    height: 33px;
+    border-radius: 6px;
+  }
+  .today-plan-empty-icon > svg {
+    width: 18px;
+  }
+  .today-plan-empty h3,
+  .today-plan-clear h3 {
+    font-size: 20px;
+  }
+  .today-plan-empty-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+  }
+  .today-plan-empty-actions .text-button {
+    font-size: 13px;
+  }
+  .today-plan-studio {
+    font-size: 13px;
+  }
+  .today-plan-footnote,
+  .today-plan-upcoming {
+    padding-left: 18px;
+    padding-right: 18px;
+    font-size: 13px;
+  }
+}
+
+.today-plan-empty-actions .button.small {
+  font-size: 13px;
+}

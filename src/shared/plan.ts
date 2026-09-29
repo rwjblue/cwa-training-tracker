@@ -124,6 +124,107 @@ export function taskDueDate(
   return task.dueDate ?? meetings.find((meeting) => meeting.lesson === task.lesson)?.date;
 }
 
+export interface DailyPlannedTask {
+  task: PlannedTask;
+  dueDate?: string;
+  status: 'ready' | 'started' | 'done';
+  /** Only practice explicitly linked to this task, excluding class time. */
+  loggedMinutes: number;
+  todayMinutes: number;
+}
+
+/** Keep today's assignments ahead of earlier work, without advancing future daily work. */
+export function dailyPlanSummary(
+  tasks: readonly PlannedTask[],
+  meetings: readonly { lesson: number; date: string }[],
+  entries: readonly PracticeSession[],
+  today: string,
+) {
+  if (!validDate(today)) throw new Error('Choose a valid date for today’s plan.');
+  const nextMeeting = [...meetings]
+    .filter((meeting) => meeting.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  const progress = new Map<string, { loggedMinutes: number; todayMinutes: number }>();
+  const seenEntries = new Set<string>();
+  for (const entry of entries) {
+    if (seenEntries.has(entry.id)) continue;
+    seenEntries.add(entry.id);
+    if (
+      entry.context === 'class' ||
+      !validDate(entry.date) ||
+      entry.date > today ||
+      !Number.isFinite(entry.minutes) ||
+      entry.minutes <= 0
+    )
+      continue;
+    let taskId = entry.metadata?.plannedTaskId;
+    if (typeof taskId !== 'string' && entry.source === 'legacy') {
+      const original = entry.metadata?.legacyAttempt;
+      if (original && typeof original === 'object' && !Array.isArray(original)) {
+        const attempt = original as Record<string, unknown>;
+        // Extra review remains useful practice but does not advance assigned work.
+        if (attempt.review !== true && typeof attempt.taskId === 'string')
+          taskId = `legacy-task:${attempt.taskId}`;
+      }
+    }
+    if (typeof taskId !== 'string') continue;
+    const total = progress.get(taskId) ?? { loggedMinutes: 0, todayMinutes: 0 };
+    total.loggedMinutes += entry.minutes;
+    if (entry.date === today) total.todayMinutes += entry.minutes;
+    progress.set(taskId, total);
+  }
+  const assignedToday: DailyPlannedTask[] = [];
+  const preparation: DailyPlannedTask[] = [];
+  const earlier: DailyPlannedTask[] = [];
+  const unscheduled: DailyPlannedTask[] = [];
+  const future: DailyPlannedTask[] = [];
+  const seenTasks = new Set<string>();
+  for (const task of tasks) {
+    if (seenTasks.has(task.id)) continue;
+    seenTasks.add(task.id);
+    const dueDate = taskDueDate(task, meetings);
+    const minutes = progress.get(task.id) ?? { loggedMinutes: 0, todayMinutes: 0 };
+    const item: DailyPlannedTask = {
+      task,
+      dueDate,
+      ...minutes,
+      status: task.done ? 'done' : minutes.loggedMinutes > 0 ? 'started' : 'ready',
+    };
+    if (dueDate === today) assignedToday.push(item);
+    else if (dueDate && dueDate < today) {
+      if (!task.done) earlier.push(item);
+    } else if (dueDate && !task.dueDate && nextMeeting && task.lesson === nextMeeting.lesson)
+      preparation.push(item);
+    else if (dueDate) {
+      if (!task.done) future.push(item);
+    } else if (!task.done) unscheduled.push(item);
+  }
+  const compare = (a: DailyPlannedTask, b: DailyPlannedTask) =>
+    (a.dueDate ?? '').localeCompare(b.dueDate ?? '') ||
+    (a.task.lesson ?? 0) - (b.task.lesson ?? 0) ||
+    a.task.createdAt.localeCompare(b.task.createdAt) ||
+    a.task.id.localeCompare(b.task.id, undefined, { numeric: true });
+  for (const group of [assignedToday, preparation, earlier, unscheduled, future])
+    group.sort(compare);
+  const current = [...assignedToday, ...preparation];
+  const completed = current.filter((item) => item.task.done);
+  const nextPracticeDate = future[0]?.dueDate;
+  return {
+    assignedToday: assignedToday.filter((item) => !item.task.done),
+    preparation: preparation.filter((item) => !item.task.done),
+    completed,
+    earlier,
+    unscheduled,
+    upcoming: future.filter((item) => item.dueDate === nextPracticeDate),
+    nextPracticeDate,
+    nextMeeting,
+    currentCount: current.length,
+    completedCount: completed.length,
+    pendingCount: current.length - completed.length,
+    hasUndatedLessons: unscheduled.some((item) => item.task.lesson !== undefined),
+  };
+}
+
 /** Practice credit and completing homework are deliberately separate decisions. */
 export function practiceForTask(task: PlannedTask, date: string): Partial<PracticeSession> {
   return {
@@ -191,6 +292,7 @@ export function legacyPlan(
   createdAt: string,
 ): PlannedTask[] {
   const assignments = Array.isArray(course.assignments) ? course.assignments : [];
+  const resources = Array.isArray(course.resources) ? course.resources : [];
   const completion = new Set(
     attempts
       .filter(
@@ -230,6 +332,26 @@ export function legacyPlan(
       if (typeof assignment.session === 'number') result.lesson = assignment.session;
       if (typeof assignment.date === 'string') result.dueDate = assignment.date;
       if (typeof task.sourceUrl === 'string' && task.sourceUrl) result.link = task.sourceUrl;
+      // A task's source is often the syllabus; its resource is the actual recording.
+      // Read only the learner's supplied archive and retain a safe source fallback.
+      if (typeof task.resourceId === 'string' && task.resourceId) {
+        const resource = resources.find(
+          (value): value is Record<string, unknown> =>
+            Boolean(value) &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            (value as Record<string, unknown>).id === task.resourceId,
+        );
+        if (resource && !resource.unresolved && typeof resource.url === 'string') {
+          try {
+            const url = new URL(resource.url);
+            if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password)
+              result.link = url.href;
+          } catch {
+            // Missing or malformed legacy resource URLs retain the syllabus link.
+          }
+        }
+      }
       output.set(result.id, validatePlannedTask(result));
     }
   }

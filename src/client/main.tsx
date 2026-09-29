@@ -55,6 +55,8 @@ import './styles.css';
 import Plan from './Plan';
 import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
+import TodayPlan from './TodayPlan';
+import type { PlannedTask } from '../shared/plan';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -215,6 +217,11 @@ function App() {
   const [page, setPage] = useState<Page>(readPage);
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const pendingLog = useRef<Partial<PracticeSession> | null>(null);
+  const [tasks, setTasks] = useState<PlannedTask[]>([]);
+  const [planLoading, setPlanLoading] = useState(true);
+  const [planError, setPlanError] = useState('');
+  const [planVersion, setPlanVersion] = useState(0);
+  const [startNewTask, setStartNewTask] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [entries, setEntries] = useState<PracticeSession[]>([]);
   const [profile, setProfile] = useState<Profile>({
@@ -241,6 +248,7 @@ function App() {
       setEntries(sessionData.entries);
       setProfile(settingsData.settings);
       setDemo(false);
+      setPlanVersion((version) => version + 1);
       return settingsData.settings;
     }
   };
@@ -249,6 +257,38 @@ function App() {
       .catch((error: Error) => setAppError(error.message))
       .finally(() => setBooting(false));
   }, []);
+  useEffect(() => {
+    if (!user) {
+      setTasks([]);
+      setPlanError('');
+      return;
+    }
+    if (page !== 'overview') return;
+    let cancelled = false;
+    setPlanLoading(true);
+    setPlanError('');
+    api<{ plan: PlannedTask[] }>('/plan')
+      .then(({ plan }) => {
+        if (!cancelled) setTasks(plan);
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setPlanError(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setPlanLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, page, planVersion]);
+  const toggleTask = async (task: PlannedTask) => {
+    const result = await api<{ task: PlannedTask }>(
+      `/plan/${encodeURIComponent(task.id)}`,
+      { task: { ...task, done: !task.done } },
+      'PUT',
+    );
+    setTasks((current) => current.map((item) => (item.id === task.id ? result.task : item)));
+  };
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(''), 5500);
@@ -267,6 +307,7 @@ function App() {
     }
   }, [booting, user, page]);
   const navigate = (next: Page) => {
+    setStartNewTask(false);
     window.location.hash = next;
     setPage(next);
     setMenuOpen(false);
@@ -328,7 +369,7 @@ function App() {
     }
   };
   const navItems: { page: Page; label: string; icon: LucideIcon }[] = [
-    { page: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { page: 'overview', label: user ? 'Today' : 'Overview', icon: LayoutDashboard },
     { page: 'practice', label: 'Practice studio', icon: AudioLines },
     { page: 'logbook', label: 'Practice log', icon: BookOpen },
     { page: 'course', label: 'Academy guide', icon: CalendarDays },
@@ -500,6 +541,34 @@ function App() {
                   demo={!user && demo}
                   navigate={navigate}
                   openLog={openLog}
+                  todayPlan={
+                    user ? (
+                      <TodayPlan
+                        profile={profile}
+                        entries={entries}
+                        tasks={tasks}
+                        loading={planLoading}
+                        error={planError}
+                        onRetry={() => setPlanVersion((version) => version + 1)}
+                        onToggle={toggleTask}
+                        onLog={openLog}
+                        onManagePlan={() => navigate('course')}
+                        onAddTask={() => {
+                          navigate('course');
+                          setStartNewTask(true);
+                        }}
+                        onImport={() => {
+                          navigate('settings');
+                          requestAnimationFrame(() =>
+                            document
+                              .getElementById('training-backups')
+                              ?.scrollIntoView({ behavior: 'smooth' }),
+                          );
+                        }}
+                        onPractice={() => navigate('practice')}
+                      />
+                    ) : undefined
+                  }
                 />
               )}
               {page === 'practice' && (
@@ -524,6 +593,7 @@ function App() {
                   profile={profile}
                   entries={entries}
                   onLog={openLog}
+                  startNewTask={startNewTask}
                   user={user}
                   onSettings={() => (user ? navigate('settings') : setAuthOpen(true))}
                 />
@@ -597,7 +667,9 @@ function Overview({
   demo,
   navigate,
   openLog,
+  todayPlan,
 }: {
+  todayPlan?: React.ReactNode;
   entries: PracticeSession[];
   profile: Profile;
   user: User | null;
@@ -637,12 +709,10 @@ function Overview({
           <div className="eyebrow">
             <span className="small-line" /> YOUR DAILY FREQUENCY
           </div>
-          <h1>
-            {user ? `Welcome back${name ? `, ${name}` : ''}.` : 'A little practice. A better fist.'}
-          </h1>
+          <h1>{user ? 'Your practice for today.' : 'A little practice. A better fist.'}</h1>
           <p>
             {user
-              ? 'Good habits make great operators. Let’s keep yours going.'
+              ? `${prettyDate(today)}${name ? ` · Welcome back, ${name}.` : ''}`
               : 'A thoughtful space for your CW Academy journey.'}
           </p>
         </div>
@@ -651,49 +721,53 @@ function Overview({
         </button>
       </div>
       <div className="overview-top-grid">
-        <section className="hero-card">
-          <div className="hero-content">
-            <div className="hero-overline">
-              <span className="live-dot" /> A LITTLE PRACTICE, EVERY DAY
-            </div>
-            <h2>
-              Find your rhythm.
-              <br />
-              Build your confidence.
-            </h2>
-            <p>
-              Listen a little closer. Send a little smoother.
-              <br />
-              Your next good conversation starts here.
-            </p>
-            <button className="button cream" onClick={() => navigate('practice')}>
-              <Play size={14} fill="currentColor" /> Start a practice session{' '}
-              <ArrowRight size={17} />
-            </button>
-            <span className="hero-caption">A quiet moment. A lasting habit.</span>
-          </div>
-          <div className="radio-illustration" aria-hidden="true">
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="orbit orbit-three" />
-            <div className="radio-disc">
-              <div className="dial-ticks" />
-              <div className="dial-face">
-                <span>LISTEN · LEARN · REPEAT</span>
-                <div className="dial-center">
-                  <AudioLines size={50} strokeWidth={1.05} />
-                </div>
-                <b>CW</b>
+        {user ? (
+          todayPlan
+        ) : (
+          <section className="hero-card">
+            <div className="hero-content">
+              <div className="hero-overline">
+                <span className="live-dot" /> A LITTLE PRACTICE, EVERY DAY
               </div>
-              <div className="dial-marker" />
+              <h2>
+                Find your rhythm.
+                <br />
+                Build your confidence.
+              </h2>
+              <p>
+                Listen a little closer. Send a little smoother.
+                <br />
+                Your next good conversation starts here.
+              </p>
+              <button className="button cream" onClick={() => navigate('practice')}>
+                <Play size={14} fill="currentColor" /> Start a practice session{' '}
+                <ArrowRight size={17} />
+              </button>
+              <span className="hero-caption">A quiet moment. A lasting habit.</span>
             </div>
-            <div className="radio-bottom">
-              14.025 <span>MHz</span>
+            <div className="radio-illustration" aria-hidden="true">
+              <div className="orbit orbit-one" />
+              <div className="orbit orbit-two" />
+              <div className="orbit orbit-three" />
+              <div className="radio-disc">
+                <div className="dial-ticks" />
+                <div className="dial-face">
+                  <span>LISTEN · LEARN · REPEAT</span>
+                  <div className="dial-center">
+                    <AudioLines size={50} strokeWidth={1.05} />
+                  </div>
+                  <b>CW</b>
+                </div>
+                <div className="dial-marker" />
+              </div>
+              <div className="radio-bottom">
+                14.025 <span>MHz</span>
+              </div>
+              <div className="illustration-dot d1" />
+              <div className="illustration-dot d2" />
             </div>
-            <div className="illustration-dot d1" />
-            <div className="illustration-dot d2" />
-          </div>
-        </section>
+          </section>
+        )}
         <section className="daily-card">
           <div className="card-top">
             <span className="eyebrow">TODAY’S INTENTION</span>
@@ -1162,7 +1236,9 @@ function Course({
   onLog,
   user,
   onSettings,
+  startNewTask,
 }: {
+  startNewTask?: boolean;
   profile: Profile;
   entries: PracticeSession[];
   onLog: (initial?: Partial<PracticeSession>) => void;
@@ -1191,7 +1267,9 @@ function Course({
           Visit CW Academy <ExternalLink size={15} />
         </a>
       </div>
-      {user && <Plan profile={profile} entries={entries} onLog={onLog} />}
+      {user && (
+        <Plan profile={profile} entries={entries} onLog={onLog} startNewTask={startNewTask} />
+      )}
       <div className="course-intro">
         <div>
           <span className="eyebrow">YOUR ACADEMY JOURNEY</span>

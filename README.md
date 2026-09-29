@@ -14,8 +14,9 @@ CWops. Official course material stays at the
   Playback preferences stay on your device. Timer sessions are logged explicitly.
 - A private practice journal with goals, course planning, activity summaries,
   and separate practice categories.
-- A personal homework plan with class dates, exercises, completion tracking,
-  and printable practice reports. Class time stays separate from daily goals.
+- A Today view for your own assignments, next-class preparation, and unfinished
+  work, backed by a personal homework plan with printable practice reports.
+  Class time stays separate from daily goals.
 - Passwordless email codes that expire in five minutes, plus passkeys.
 - Readable callsign identity, optional Gravatar images, and a city-based timezone picker.
 - JSON export, validated repeatable import, and a training-data reset.
