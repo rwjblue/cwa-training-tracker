@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { expectAccessible, signIn } from './helpers';
 
 test('public practice is useful without signing in and fits a phone', async ({ page }) => {
@@ -6,10 +7,10 @@ test('public practice is useful without signing in and fits a phone', async ({ p
   page.on('pageerror', (error) => failures.push(error.message));
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: 'A little practice. A better fist.' }),
+    page.getByRole('heading', { name: 'Practice Morse. Keep your progress.' }),
   ).toBeVisible();
   await expectAccessible(page, 'overview');
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await page.getByRole('button', { name: 'Try practice', exact: true }).click();
   await page.getByRole('button', { name: 'Free practice', exact: true }).click();
   await page.getByRole('button', { name: 'Your text', exact: true }).click();
   await page.getByLabel('Practice text', { exact: true }).fill('CQ TEST');

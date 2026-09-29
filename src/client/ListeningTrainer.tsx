@@ -264,7 +264,7 @@ export default forwardRef<
             >
               {[0, 0.5, 1, 2, 3, 4, 5].map((seconds) => (
                 <option key={seconds} value={seconds}>
-                      {seconds} {seconds === 1 ? 'second' : 'seconds'}
+                  {seconds} {seconds === 1 ? 'second' : 'seconds'}
                 </option>
               ))}
             </select>

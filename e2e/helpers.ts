@@ -35,10 +35,12 @@ async function latestLocalCode(after: number): Promise<string> {
   return code;
 }
 
-export async function signIn(page: Page) {
+export async function signIn(page: Page, { dialogAlreadyOpen = false } = {}) {
   const offset = (await readFile('.tmp/e2e-server.log', 'utf8')).length;
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  if (!dialogAlreadyOpen) {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  }
   await page.getByLabel('Email address').fill(`browser-${crypto.randomUUID()}@example.test`);
   await page.getByRole('button', { name: 'Email me a sign-in code', exact: true }).click();
   const code = await latestLocalCode(offset);

@@ -58,6 +58,7 @@ import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
 import type { PlannedTask } from '../shared/plan';
 import type { PracticeLaunch } from './practice-launch';
+import WelcomePanel from './WelcomePanel';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -222,6 +223,7 @@ function App() {
   const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const pendingLog = useRef<Partial<PracticeSession> | null>(null);
+  const pendingDestination = useRef<Page | null>(null);
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
   const [planError, setPlanError] = useState('');
@@ -308,6 +310,7 @@ function App() {
         return;
       }
       currentPage.current = next;
+      if (next !== 'practice') setPracticeLaunch(undefined);
       setPage(next);
     };
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -339,6 +342,7 @@ function App() {
     if (next !== 'practice' && !confirmLeaveStudio()) return false;
     setStartNewTask(false);
     currentPage.current = next;
+    if (next !== 'practice') setPracticeLaunch(undefined);
     window.location.hash = next;
     setPage(next);
     setMenuOpen(false);
@@ -374,7 +378,6 @@ function App() {
   const visibleEntries = user ? entries : demo ? sampleEntries : [];
   const signedIn = async (newUser: User) => {
     setAuthOpen(false);
-    setBooting(true);
     setAppError('');
     try {
       const settings = await load(newUser);
@@ -384,7 +387,10 @@ function App() {
           ...pendingLog.current,
         });
         pendingLog.current = null;
+      } else if (pendingDestination.current) {
+        navigate(pendingDestination.current);
       }
+      pendingDestination.current = null;
       notify('You’re signed in. Make yourself at home.');
     } catch (error) {
       setAppError((error as Error).message);
@@ -557,7 +563,7 @@ function App() {
             </div>
           ) : (
             <>
-              {!user && page !== 'practice' && page !== 'course' && (
+              {!user && page === 'logbook' && (
                 <div className="demo-banner">
                   <span>
                     <span className="demo-badge">TAKE A LOOK</span>{' '}
@@ -570,47 +576,54 @@ function App() {
                   </button>
                 </div>
               )}
-              {page === 'overview' && (
-                <Overview
-                  entries={visibleEntries}
-                  profile={profile}
-                  user={user}
-                  demo={!user && demo}
-                  navigate={navigate}
-                  openLog={openLog}
-                  onPractice={() => openPractice()}
-                  todayPlan={
-                    user ? (
-                      <TodayPlan
-                        profile={profile}
-                        entries={entries}
-                        tasks={tasks}
-                        loading={planLoading}
-                        error={planError}
-                        onRetry={() => setPlanVersion((version) => version + 1)}
-                        onToggle={toggleTask}
-                        onLog={openLog}
-                        onPracticeTask={(task) => openPractice({ task })}
-                        onManagePlan={() => navigate('course')}
-                        onAddTask={() => {
-                          navigate('course');
-                          setStartNewTask(true);
-                        }}
-                        onImport={() => {
-                          navigate('settings');
-                          requestAnimationFrame(() =>
-                            document
-                              .getElementById('training-backups')
-                              ?.scrollIntoView({ behavior: 'smooth' }),
-                          );
-                        }}
-                        onPractice={() => openPractice()}
-                        onSetupCourse={() => navigate('settings')}
-                      />
-                    ) : undefined
-                  }
-                />
-              )}
+              {page === 'overview' &&
+                (user ? (
+                  <Overview
+                    entries={visibleEntries}
+                    profile={profile}
+                    user={user}
+                    demo={!user && demo}
+                    navigate={navigate}
+                    openLog={openLog}
+                    onPractice={() => openPractice()}
+                    todayPlan={
+                      user ? (
+                        <TodayPlan
+                          profile={profile}
+                          entries={entries}
+                          tasks={tasks}
+                          loading={planLoading}
+                          error={planError}
+                          onRetry={() => setPlanVersion((version) => version + 1)}
+                          onToggle={toggleTask}
+                          onLog={openLog}
+                          onPracticeTask={(task) => openPractice({ task })}
+                          onManagePlan={() => navigate('course')}
+                          onAddTask={() => {
+                            navigate('course');
+                            setStartNewTask(true);
+                          }}
+                          onImport={() => {
+                            navigate('settings');
+                            requestAnimationFrame(() =>
+                              document
+                                .getElementById('training-backups')
+                                ?.scrollIntoView({ behavior: 'smooth' }),
+                            );
+                          }}
+                          onPractice={() => openPractice()}
+                          onSetupCourse={() => navigate('settings')}
+                        />
+                      ) : undefined
+                    }
+                  />
+                ) : (
+                  <WelcomePanel
+                    onPractice={(tool) => openPractice({ tool })}
+                    onSignIn={() => setAuthOpen(true)}
+                    onGuide={() => navigate('course')}
+                  />
+                ))}
               {page === 'practice' && (
                 <PracticeStudio
                   onLog={openLog}
@@ -644,7 +657,13 @@ function App() {
                   onPracticeTask={(task) => openPractice({ task })}
                   startNewTask={startNewTask}
                   user={user}
-                  onSettings={() => (user ? navigate('settings') : setAuthOpen(true))}
+                  onSettings={() => {
+                    if (user) navigate('settings');
+                    else {
+                      pendingDestination.current = 'settings';
+                      setAuthOpen(true);
+                    }
+                  }}
                 />
               )}
               {page === 'settings' && user && (
@@ -676,6 +695,7 @@ function App() {
           onClose={() => {
             setAuthOpen(false);
             pendingLog.current = null;
+            pendingDestination.current = null;
           }}
           onSuccess={signedIn}
         />
@@ -1623,7 +1643,11 @@ function AuthModal({
       </div>
       <p className="modal-intro">
         {step === 'email' ? (
-          'Keep your sessions, goals, and course notes together. No password to remember.'
+          <>
+            Keep your sessions, goals, and course notes together. No password to remember.
+            <br />
+            New here? Your first code creates your private account.
+          </>
         ) : (
           <>
             We sent a six-digit sign-in code to <strong>{email}</strong>. It expires in five

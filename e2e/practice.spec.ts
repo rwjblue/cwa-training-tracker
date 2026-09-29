@@ -75,8 +75,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   page,
   context,
 }) => {
-  await signIn(page);
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await page.goto('/#practice');
   await expect(page.getByRole('heading', { name: 'Time your practice.' })).toBeVisible();
   await page.addStyleTag({
     content: '*,*::before,*::after{animation:none!important;transition:none!important}',
@@ -90,8 +89,9 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(
     page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
   ).toBeEnabled();
-  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  expect((await context.request.get('/api/entries')).status()).toBe(401);
   await page.getByRole('button', { name: 'Review & save 01:23', exact: true }).click();
+  await signIn(page, { dialogAlreadyOpen: true });
   expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(83 / 60, 8);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.clock.fastForward(120_000);
