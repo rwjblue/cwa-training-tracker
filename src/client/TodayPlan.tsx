@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ExternalLink,
   Headphones,
+  Play,
   Plus,
   Upload,
 } from 'lucide-react';
@@ -37,7 +38,9 @@ export interface TodayPlanProps {
   onManagePlan: () => void;
   onImport: () => void;
   onPractice?: () => void;
+  onPracticeTask?: (task: PlannedTask) => void;
   onAddTask?: () => void;
+  onSetupCourse?: () => void;
 }
 
 const dayLabel = (date: string) =>
@@ -62,7 +65,9 @@ export default function TodayPlan({
   onManagePlan,
   onImport,
   onPractice,
+  onPracticeTask,
   onAddTask,
+  onSetupCourse,
 }: TodayPlanProps) {
   const titleId = useId();
   const [saving, setSaving] = useState<string[]>([]);
@@ -92,6 +97,7 @@ export default function TodayPlan({
           saving={saving.includes(item.task.id)}
           onToggle={() => void toggle(item.task)}
           onLog={() => onLog(practiceForTask(item.task, today))}
+          onPractice={onPracticeTask ? () => onPracticeTask(item.task) : undefined}
         />
       ))}
     </ul>
@@ -149,8 +155,8 @@ export default function TodayPlan({
           <div>
             <h3>Bring your homework into today.</h3>
             <p>
-              Add the exercises your advisor assigned, or import your personal tracker. Your dated
-              assignments will appear here each day.
+              Add your advisor’s exercises and course dates. Your dated assignments will appear here
+              each day.
             </p>
             <div className="today-plan-empty-actions">
               <button className="button dark small" onClick={onAddTask ?? onManagePlan}>
@@ -159,8 +165,14 @@ export default function TodayPlan({
               </button>
               <button className="text-button" onClick={onImport}>
                 <Upload size={13} />
-                Import assignments
+                Restore backup
               </button>
+              {onSetupCourse && (
+                <button className="text-button" onClick={onSetupCourse}>
+                  <CalendarDays size={13} />
+                  Set course dates
+                </button>
+              )}
             </div>
             {onPractice && (
               <button className="today-plan-studio" onClick={onPractice}>
@@ -285,12 +297,14 @@ function TodayTask({
   saving,
   onToggle,
   onLog,
+  onPractice,
 }: {
   item: DailyPlannedTask;
   today: string;
   saving: boolean;
   onToggle: () => void;
   onLog: () => void;
+  onPractice?: () => void;
 }) {
   const { task, dueDate, status } = item;
   const overdue = dueDate && dueDate < today;
@@ -328,6 +342,11 @@ function TodayTask({
           </details>
         )}
         <div className="today-plan-task-actions">
+          {onPractice && !task.done && (
+            <button className="today-plan-practice" onClick={onPractice}>
+              <Play size={12} /> Practice
+            </button>
+          )}
           {task.link && (
             <a href={task.link} target="_blank" rel="noreferrer">
               Open exercise <ExternalLink size={12} />

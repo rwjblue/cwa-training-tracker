@@ -22,6 +22,7 @@ CWops. Official course material stays at the
   and separate practice categories.
 - A Today view for your own assignments, next-class preparation, and unfinished
   work, backed by a personal homework plan with printable practice reports.
+  Start an assigned exercise in the studio and keep the saved time linked to it.
   Class time stays separate from daily goals.
 - Passwordless email codes that expire in five minutes, plus passkeys.
 - Readable callsign identity, optional Gravatar images, and a city-based timezone picker.

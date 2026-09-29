@@ -185,6 +185,16 @@
   color: #5f6e57;
   font-size: 12px;
 }
+.today-plan-task-actions > .today-plan-practice {
+  padding: 6px 10px;
+  border: 1px solid #c9d7bd;
+  border-radius: 5px;
+  background: #eef3e8;
+}
+.daily-practice-button {
+  width: 100%;
+  margin-top: 17px;
+}
 .today-plan-instructions {
   color: #56694b;
   font-size: 13px;

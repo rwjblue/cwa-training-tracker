@@ -7,6 +7,7 @@ import {
   ExternalLink,
   FileText,
   Pencil,
+  Play,
   Plus,
   Printer,
   Trash2,
@@ -36,6 +37,7 @@ interface Props {
   profile: Profile;
   entries: PracticeSession[];
   onLog: (initial?: Partial<PracticeSession>) => void;
+  onPracticeTask?: (task: PlannedTask) => void;
 }
 
 const dayLabel = (date: string) =>
@@ -46,7 +48,7 @@ const dayLabel = (date: string) =>
     day: 'numeric',
   });
 
-export default function Plan({ profile, entries, onLog, startNewTask }: Props) {
+export default function Plan({ profile, entries, onLog, onPracticeTask, startNewTask }: Props) {
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -217,6 +219,11 @@ export default function Plan({ profile, entries, onLog, startNewTask }: Props) {
                     </details>
                   )}
                   <div className="plan-task-links">
+                    {onPracticeTask && !task.done && (
+                      <button className="plan-task-practice" onClick={() => onPracticeTask(task)}>
+                        <Play size={12} /> Practice
+                      </button>
+                    )}
                     {task.link && (
                       <a href={task.link} target="_blank" rel="noreferrer">
                         Open exercise <ExternalLink size={12} />

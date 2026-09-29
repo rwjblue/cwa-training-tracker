@@ -344,3 +344,9 @@
     padding: 0;
   }
 }
+.plan-task-links > .plan-task-practice {
+  padding: 6px 10px;
+  border: 1px solid #c9d7bd;
+  border-radius: 5px;
+  background: #eef3e8;
+}

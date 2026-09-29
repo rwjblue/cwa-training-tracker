@@ -16,9 +16,8 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await expect(
     panel.getByText('The Academy guide offers original planning prompts.', { exact: false }),
   ).toBeVisible();
-  await expect(
-    panel.getByRole('button', { name: 'Import assignments', exact: true }),
-  ).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Restore backup', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Set course dates', exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Add an exercise', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Add a practice exercise' })).toBeVisible();
   await expect(page.getByLabel('Practice date (optional)', { exact: true })).toHaveValue(today);
@@ -33,6 +32,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
     .fill('Send a familiar exchange with generous word spacing.');
   await page.getByRole('button', { name: 'Save exercise', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Practice', exact: true })).toBeVisible();
   const firstTask = (await (await context.request.get('/api/plan')).json()).plan[0];
   expect(firstTask.dueDate).toBe(today);
 
@@ -67,15 +67,38 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await expectAccessible(page, 'today-desktop');
   await page.screenshot({ path: '.tmp/today-desktop.png', fullPage: true });
 
-  await panel.getByRole('button', { name: 'Log practice', exact: true }).click();
-  await page.getByLabel(/^Time practiced/).fill('7');
+  await panel.getByRole('button', { name: 'Practice', exact: true }).click();
+  await expect(page).toHaveURL(/#practice$/);
+  await page.addStyleTag({
+    content: '*,*::before,*::after{animation:none!important;transition:none!important}',
+  });
+  const now = new Date();
+  await page.clock.install({ time: now });
+  await page.clock.pauseAt(new Date(now.getTime() + 1000));
+  await page.getByRole('button', { name: 'Start timer', exact: true }).click();
+  await page.clock.fastForward(420_000);
+  await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(page).toHaveURL(/#practice$/);
+  await page.getByRole('button', { name: 'Review & save 07:00', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
+    'sending',
+  );
+  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBe(7);
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.clock.resume();
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(panel.getByText('Started', { exact: true })).toBeVisible();
   await expect(panel.getByText('7 min practiced · 7 today', { exact: true })).toBeVisible();
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
-  expect(entries[0]).toMatchObject({ minutes: 7, metadata: { plannedTaskId: firstTask.id } });
+  expect(entries[0]).toMatchObject({
+    minutes: 7,
+    kind: 'sending',
+    metadata: { plannedTaskId: firstTask.id, elapsedSeconds: 420 },
+  });
   expect(
     (await (await context.request.get('/api/plan')).json()).plan.find(
       (task: { id: string }) => task.id === firstTask.id,

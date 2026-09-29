@@ -57,6 +57,7 @@ import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
 import type { PlannedTask } from '../shared/plan';
+import type { PracticeLaunch } from './practice-launch';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -215,6 +216,10 @@ function App() {
       : 'overview';
   };
   const [page, setPage] = useState<Page>(readPage);
+  const currentPage = useRef(page);
+  currentPage.current = page;
+  const studioUnsaved = useRef(false);
+  const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const pendingLog = useRef<Partial<PracticeSession> | null>(null);
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
@@ -296,9 +301,26 @@ function App() {
     }
   }, [toast]);
   useEffect(() => {
-    const changed = () => setPage(readPage());
+    const changed = () => {
+      const next = readPage();
+      if (next !== 'practice' && !confirmLeaveStudio()) {
+        window.history.replaceState(null, '', '#practice');
+        return;
+      }
+      currentPage.current = next;
+      setPage(next);
+    };
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!studioUnsaved.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
     window.addEventListener('hashchange', changed);
-    return () => window.removeEventListener('hashchange', changed);
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      window.removeEventListener('hashchange', changed);
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
   }, []);
   useEffect(() => {
     if (!booting && !user && page === 'settings') {
@@ -306,12 +328,27 @@ function App() {
       window.location.hash = 'overview';
     }
   }, [booting, user, page]);
-  const navigate = (next: Page) => {
+  const confirmLeaveStudio = () => {
+    if (currentPage.current !== 'practice' || !studioUnsaved.current) return true;
+    if (!window.confirm('Leave this practice? Your unsaved practice time will be discarded.'))
+      return false;
+    studioUnsaved.current = false;
+    return true;
+  };
+  const navigate = (next: Page): boolean => {
+    if (next !== 'practice' && !confirmLeaveStudio()) return false;
     setStartNewTask(false);
+    currentPage.current = next;
     window.location.hash = next;
     setPage(next);
     setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return true;
+  };
+  const openPractice = (options: Omit<PracticeLaunch, 'id'> = {}) => {
+    if (currentPage.current === 'practice' && !confirmLeaveStudio()) return;
+    setPracticeLaunch({ id: crypto.randomUUID(), ...options });
+    navigate('practice');
   };
   const openLog = (initial: Partial<PracticeSession> = {}) => {
     if (!user) {
@@ -541,6 +578,7 @@ function App() {
                   demo={!user && demo}
                   navigate={navigate}
                   openLog={openLog}
+                  onPractice={() => openPractice()}
                   todayPlan={
                     user ? (
                       <TodayPlan
@@ -552,6 +590,7 @@ function App() {
                         onRetry={() => setPlanVersion((version) => version + 1)}
                         onToggle={toggleTask}
                         onLog={openLog}
+                        onPracticeTask={(task) => openPractice({ task })}
                         onManagePlan={() => navigate('course')}
                         onAddTask={() => {
                           navigate('course');
@@ -565,14 +604,23 @@ function App() {
                               ?.scrollIntoView({ behavior: 'smooth' }),
                           );
                         }}
-                        onPractice={() => navigate('practice')}
+                        onPractice={() => openPractice()}
+                        onSetupCourse={() => navigate('settings')}
                       />
                     ) : undefined
                   }
                 />
               )}
               {page === 'practice' && (
-                <PracticeStudio onLog={openLog} savedVersion={savedPracticeVersion} />
+                <PracticeStudio
+                  onLog={openLog}
+                  savedVersion={savedPracticeVersion}
+                  launch={practiceLaunch}
+                  onBack={() => navigate('overview')}
+                  onUnsavedChange={(unsaved: boolean) => {
+                    studioUnsaved.current = unsaved;
+                  }}
+                />
               )}
               {page === 'logbook' && (
                 <Logbook
@@ -593,6 +641,7 @@ function App() {
                   profile={profile}
                   entries={entries}
                   onLog={openLog}
+                  onPracticeTask={(task) => openPractice({ task })}
                   startNewTask={startNewTask}
                   user={user}
                   onSettings={() => (user ? navigate('settings') : setAuthOpen(true))}
@@ -667,6 +716,7 @@ function Overview({
   demo,
   navigate,
   openLog,
+  onPractice,
   todayPlan,
 }: {
   todayPlan?: React.ReactNode;
@@ -676,6 +726,7 @@ function Overview({
   demo: boolean;
   navigate: (page: Page) => void;
   openLog: (initial?: Partial<PracticeSession>) => void;
+  onPractice: () => void;
 }) {
   const today = dateInTimezone(new Date(), profile.timezone);
   const practiceEntries = entries.filter(
@@ -801,8 +852,13 @@ function Overview({
               ? 'Goal met. Every minute helps your ear grow.'
               : `${Math.round(Math.max(0, dailyGoal - dayMinutes) * 10) / 10} more minutes toward your daily goal.`}
           </p>
+          {user && (
+            <button className="button dark daily-practice-button" onClick={onPractice}>
+              <Play size={14} /> Practice now
+            </button>
+          )}
           <button className="text-button" onClick={() => (user ? navigate('settings') : openLog())}>
-            Set your own pace <ArrowRight size={14} />
+            {user ? 'Change daily goal' : 'Set your own pace'} <ArrowRight size={14} />
           </button>
         </section>
       </div>
@@ -1234,6 +1290,7 @@ function Course({
   profile,
   entries,
   onLog,
+  onPracticeTask,
   user,
   onSettings,
   startNewTask,
@@ -1242,6 +1299,7 @@ function Course({
   profile: Profile;
   entries: PracticeSession[];
   onLog: (initial?: Partial<PracticeSession>) => void;
+  onPracticeTask: (task: PlannedTask) => void;
   user: User | null;
   onSettings: () => void;
 }) {
@@ -1268,7 +1326,13 @@ function Course({
         </a>
       </div>
       {user && (
-        <Plan profile={profile} entries={entries} onLog={onLog} startNewTask={startNewTask} />
+        <Plan
+          profile={profile}
+          entries={entries}
+          onLog={onLog}
+          onPracticeTask={onPracticeTask}
+          startNewTask={startNewTask}
+        />
       )}
       <div className="course-intro">
         <div>
