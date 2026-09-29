@@ -9,11 +9,13 @@ CWops. Official course material stays at the
 
 ## What it does
 
-- A word trainer with 70 common QSO tokens, 30 common English words, or your own
+- A word trainer with 70 common QSO words, 30 common English words, or your own
   list. Shuffle, repeat, adjust pauses, and optionally hear three Morse repeats
   followed by an answer from a local English voice on your device.
-- Four generated QSO scenarios: first contact, rigs/antennas/weather, POTA,
-  and asking for repeats. Replay the current transmission or generate a new contact.
+- Randomly generated contacts in four QSO scenarios: first contact,
+  rigs/antennas/weather, POTA, and asking for repeats. Each New QSO combines
+  different station details; replay keeps the same contact. Illustrative call-area
+  locations, regional seasonal weather, and radio power choices stay consistent.
 - Public Morse practice with character speed, Farnsworth spacing, tone, adjustable
   group and word lengths, generated callsigns, and custom text; no account required.
   Playback preferences stay on your device. Start practice plays and starts the

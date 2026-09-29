@@ -233,9 +233,15 @@ export default forwardRef<
         <p>
           {isWords
             ? 'Hear each word as a whole sound. Replay the current word or move at your own pace.'
-            : 'Generated two-station contacts. Details are fictional; callsigns may coincide with real operators.'}
+            : 'Choose a scenario, then generate as many contacts as you like. New QSO changes both stations; Play replays this contact.'}
         </p>
       </div>
+      {!isWords && (
+        <p className="field-hint">
+          {qso.season ? `A fictional ${qso.season} contact.` : 'Fictional station details.'}{' '}
+          Callsigns may coincide with real operators.
+        </p>
+      )}
       {isWords && p.wordList === 'custom' && (
         <label className="field">
           Your word list

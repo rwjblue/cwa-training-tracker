@@ -4,6 +4,8 @@ export interface PracticeQso {
   title: string;
   stations: [string, string];
   lines: string[];
+  /** An invented setting shared by both stations, never a live weather report. */
+  season?: QsoSeason;
 }
 /** Illustrative calls only; these profiles do not describe the calls' real owners. */
 export const QSO_CALLSIGNS = [
@@ -60,21 +62,34 @@ export const QSO_NAMES = [
   'KATE',
   'MIGUEL',
 ] as const;
+/**
+ * Districts give these fictional profiles a familiar locality convention. They
+ * are not a rule about callsign portability or a claim about a call's owner.
+ * Area reference: https://www.arrl.org/section-abbreviations
+ */
 export const QSO_LOCATIONS = [
-  { city: 'BOSTON', state: 'MA' },
-  { city: 'ALBANY', state: 'NY' },
-  { city: 'RALEIGH', state: 'NC' },
-  { city: 'BOISE', state: 'ID' },
-  { city: 'AUSTIN', state: 'TX' },
-  { city: 'DAYTON', state: 'OH' },
-  { city: 'PORTLAND', state: 'ME' },
-  { city: 'MADISON', state: 'WI' },
-  { city: 'TUCSON', state: 'AZ' },
-  { city: 'SPOKANE', state: 'WA' },
-  { city: 'DES MOINES', state: 'IA' },
-  { city: 'SANTA FE', state: 'NM' },
-  { city: 'PROVIDENCE', state: 'RI' },
-  { city: 'LANCASTER', state: 'PA' },
+  { city: 'BOSTON', state: 'MA', district: 1, climate: 'northern' },
+  { city: 'ALBANY', state: 'NY', district: 2, climate: 'northern' },
+  { city: 'RALEIGH', state: 'NC', district: 4, climate: 'southern' },
+  { city: 'BOISE', state: 'ID', district: 7, climate: 'northern' },
+  { city: 'AUSTIN', state: 'TX', district: 5, climate: 'warm' },
+  { city: 'DAYTON', state: 'OH', district: 8, climate: 'northern' },
+  { city: 'PORTLAND', state: 'ME', district: 1, climate: 'northern' },
+  { city: 'MADISON', state: 'WI', district: 9, climate: 'northern' },
+  { city: 'TUCSON', state: 'AZ', district: 7, climate: 'desert' },
+  { city: 'SPOKANE', state: 'WA', district: 7, climate: 'northern' },
+  { city: 'DES MOINES', state: 'IA', district: 0, climate: 'northern' },
+  { city: 'SANTA FE', state: 'NM', district: 5, climate: 'highland' },
+  { city: 'PROVIDENCE', state: 'RI', district: 1, climate: 'northern' },
+  { city: 'LANCASTER', state: 'PA', district: 3, climate: 'northern' },
+  { city: 'TRENTON', state: 'NJ', district: 2, climate: 'northern' },
+  { city: 'BALTIMORE', state: 'MD', district: 3, climate: 'southern' },
+  { city: 'TAMPA', state: 'FL', district: 4, climate: 'warm' },
+  { city: 'SACRAMENTO', state: 'CA', district: 6, climate: 'pacific' },
+  { city: 'SAN DIEGO', state: 'CA', district: 6, climate: 'pacific' },
+  { city: 'LANSING', state: 'MI', district: 8, climate: 'northern' },
+  { city: 'CHAMPAIGN', state: 'IL', district: 9, climate: 'northern' },
+  { city: 'DENVER', state: 'CO', district: 0, climate: 'highland' },
 ] as const;
 /** Keep power choices with the rig, rather than assigning arbitrary power to it. */
 export const QSO_RADIOS = [
@@ -93,14 +108,19 @@ export const QSO_ANTENNAS = [
   'LOOP',
   'END FED WIRE',
 ] as const;
-export const QSO_WEATHER = [
-  'SUNNY TEMP 75 F',
-  'CLOUDY TEMP 60 F',
-  'RAIN TEMP 55 F',
-  'CLEAR TEMP 68 F',
-  'WINDY TEMP 50 F',
-  'SNOW TEMP 28 F',
-] as const;
+const QSO_SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
+export type QsoSeason = (typeof QSO_SEASONS)[number];
+type Climate = (typeof QSO_LOCATIONS)[number]['climate'];
+
+/** Broad authored examples in Fahrenheit, not measured normals or forecasts. */
+const SEASONAL_TEMPERATURES: Record<Climate, Record<QsoSeason, readonly [number, number]>> = {
+  northern: { spring: [45, 65], summer: [65, 85], autumn: [40, 65], winter: [15, 35] },
+  southern: { spring: [60, 80], summer: [75, 95], autumn: [55, 80], winter: [40, 60] },
+  warm: { spring: [70, 85], summer: [80, 100], autumn: [70, 90], winter: [55, 75] },
+  desert: { spring: [65, 85], summer: [90, 105], autumn: [65, 90], winter: [50, 70] },
+  highland: { spring: [40, 60], summer: [65, 85], autumn: [40, 65], winter: [20, 40] },
+  pacific: { spring: [55, 70], summer: [65, 85], autumn: [60, 80], winter: [50, 65] },
+};
 export const QSO_REPORTS = ['449', '459', '559', '569', '579', '589', '599'] as const;
 
 export interface QsoStation {
@@ -194,20 +214,38 @@ export function generateQso(
   const pick = <T>(values: readonly T[]): T => values[Math.floor(random() * values.length)];
   const calls = QSO_CALLSIGNS.filter((call) => !previousCalls.includes(call));
   const pool = calls.length >= 2 ? calls : [...QSO_CALLSIGNS];
+  const season = pick(QSO_SEASONS);
+  function weather(climate: Climate): string {
+    const [low, high] = SEASONAL_TEMPERATURES[climate][season];
+    const temperature = low + Math.floor(random() * (high - low + 1));
+    const conditions = ['SUNNY', 'CLEAR', 'CLOUDY', 'WINDY'];
+    if (temperature >= 40 && climate !== 'desert') conditions.push('RAIN');
+    if (season === 'winter' && temperature <= 32) conditions.push('SNOW');
+    return `${pick(conditions)} TEMP ${temperature} F`;
+  }
   function station(call: string, previousName?: string): QsoStation {
+    const district = Number(call.match(/\d/)![0]);
+    const location = pick(QSO_LOCATIONS.filter((item) => item.district === district));
     const radio = pick(QSO_RADIOS);
     return {
       call,
       name: pick(QSO_NAMES.filter((name) => name !== previousName)),
-      ...pick(QSO_LOCATIONS),
+      city: location.city,
+      state: location.state,
       rig: radio.rig,
       watts: pick<number>(radio.watts),
       antenna: pick(QSO_ANTENNAS),
-      weather: pick(QSO_WEATHER),
+      weather: weather(location.climate),
       report: pick(QSO_REPORTS),
     };
   }
   const a = station(pick(pool));
   const b = station(pick(pool.filter((call) => call !== a.call)), a.name);
-  return { id, title: template.title, stations: [a.call, b.call], lines: template.lines(a, b) };
+  return {
+    id,
+    title: template.title,
+    stations: [a.call, b.call],
+    lines: template.lines(a, b),
+    season,
+  };
 }

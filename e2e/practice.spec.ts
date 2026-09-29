@@ -152,6 +152,7 @@ test('word and QSO trainers expose the complete material and remember listening 
 
   await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
   await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('ragchew');
+  await expect(page.getByText(/A fictional (spring|summer|autumn|winter) contact/)).toBeVisible();
   await page.getByText('View full conversation', { exact: true }).click();
   const conversation = page.locator('.trainer-catalog p');
   const first = await conversation.innerText();
