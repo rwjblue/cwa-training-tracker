@@ -85,3 +85,13 @@ Playwright failure artifacts are under `test-results/`. Fix the cause, rerun the
 failing test, then run the affected suite once. Once it passes, repeat only for a
 new change or unresolved concern. Test count and line coverage are not goals;
 confidence in the user's workflow is.
+
+For playback changes, unit-test the shared word timeline, WAV boundaries, and
+player lifecycle; use one browser journey to verify native playback, word
+seeking, pause/resume, and highlighting together. A stubbed media element cannot
+prove audio plays, and browser device emulation cannot prove iOS lock-screen
+behavior. Before claiming a release is verified for locked iOS playback, use a
+physical iPhone: start a Morse-only round in Safari, lock for at least one full
+word/transmission boundary, exercise the lock-screen pause/resume controls, then
+unlock and confirm the transcript follows the actual audio position. Repeat with
+an official recording. Test local spoken answers separately with the page open.

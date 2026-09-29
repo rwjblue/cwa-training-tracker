@@ -10,12 +10,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   const settings = (await (await context.request.get('/api/settings')).json()).settings;
   const today = dateInTimezone(new Date(), settings.timezone);
   const panel = page.getByRole('region', { name: 'What should I do today?' });
-  await expect(
-    panel.getByRole('heading', { name: 'Bring your homework into today.' }),
-  ).toBeVisible();
-  await expect(
-    panel.getByText('The Academy guide offers original planning prompts.', { exact: false }),
-  ).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Set up your course.' })).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Restore backup', exact: true })).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Set course dates', exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Add an exercise', exact: true }).click();
@@ -132,4 +127,101 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.screenshot({ path: '.tmp/today-mobile.png', fullPage: true });
   await page.reload();
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
+});
+
+test('course dates populate Today with playable assignments and preserve linked practice', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  await page.clock.setFixedTime(new Date('2026-10-06T16:00:00Z'));
+  await page.addStyleTag({
+    content: '*,*::before,*::after{animation:none!important;transition:none!important}',
+  });
+  const panel = page.getByRole('region', { name: 'What should I do today?' });
+  await panel.getByRole('button', { name: 'Set course dates', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Your course level', exact: true })
+    .selectOption('intermediate');
+  await page.getByRole('combobox', { name: 'Practice timezone', exact: true }).selectOption('UTC');
+  await page.getByLabel(/^First class date/).fill('2026-10-08');
+  await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
+  await page.getByRole('button', { name: 'View Today', exact: true }).click();
+  await expect(panel.getByRole('heading', { name: /Assigned for today/ })).toBeVisible();
+
+  const plan = (await (await context.request.get('/api/plan')).json()).plan;
+  const assigned = plan.find(
+    (task: { dueDate?: string; exercise?: { type: string; url?: string } }) =>
+      task.dueDate === '2026-10-06' &&
+      task.exercise?.type === 'audio' &&
+      /WD101[-_]10/i.test(task.exercise.url ?? ''),
+  );
+  expect(assigned).toBeTruthy();
+  await page.screenshot({ path: '.tmp/curriculum-today-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: '.tmp/curriculum-today-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  // Exercise browser media playback without relying on the remote recording or
+  // redistributing course audio: this is a one-second synthetic silent WAV.
+  const recording = Buffer.alloc(44 + 16000);
+  recording.write('RIFF', 0);
+  recording.writeUInt32LE(recording.length - 8, 4);
+  recording.write('WAVEfmt ', 8);
+  recording.writeUInt32LE(16, 16);
+  recording.writeUInt16LE(1, 20);
+  recording.writeUInt16LE(1, 22);
+  recording.writeUInt32LE(8000, 24);
+  recording.writeUInt32LE(16000, 28);
+  recording.writeUInt16LE(2, 32);
+  recording.writeUInt16LE(16, 34);
+  recording.write('data', 36);
+  recording.writeUInt32LE(16000, 40);
+  await page.route(assigned.exercise.url, (route) =>
+    route.fulfill({ status: 200, contentType: 'audio/wav', body: recording }),
+  );
+  const row = panel.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: assigned.title, exact: true }),
+  });
+  await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
+  const audio = page.getByLabel('Assigned recording', { exact: true });
+  await expect(audio).toHaveAttribute('src', assigned.exercise.url);
+  await page.screenshot({ path: '.tmp/assigned-recording-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectAccessible(page, 'assigned-recording-mobile');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: '.tmp/assigned-recording-mobile.png', fullPage: true });
+  await page.clock.install({ time: new Date('2026-10-06T16:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-06T16:00:01Z'));
+  await page.getByRole('button', { name: 'Start practice', exact: true }).click();
+  await expect
+    .poll(() => audio.evaluate((element) => !(element as HTMLAudioElement).paused))
+    .toBe(true);
+  await page.clock.fastForward(65_000);
+  await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
+  const entries = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(entries).toHaveLength(1);
+  expect(entries[0].metadata.plannedTaskId).toBe(assigned.id);
+  expect(entries[0].minutes).toBeCloseTo(65 / 60, 8);
+
+  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(row.getByText('Started', { exact: true })).toBeVisible();
+  await row.getByRole('checkbox', { name: `Mark ${assigned.title} complete`, exact: true }).click();
+  await expect(row).toHaveCount(0);
+  await expect(panel.getByText('1/4 done', { exact: true })).toBeVisible();
+  await page.reload();
+  const after = (await (await context.request.get('/api/plan')).json()).plan;
+  expect(after.find((task: { id: string }) => task.id === assigned.id).done).toBe(true);
+  expect(after).toHaveLength(plan.length);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+  await page.clock.resume();
 });

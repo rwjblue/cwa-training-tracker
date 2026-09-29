@@ -31,6 +31,7 @@ import {
 } from '../shared/plan';
 import { api } from './api';
 import './plan.css';
+import { INTERMEDIATE_CURRICULUM } from '../shared/curriculum';
 
 interface Props {
   startNewTask?: boolean;
@@ -38,6 +39,7 @@ interface Props {
   entries: PracticeSession[];
   onLog: (initial?: Partial<PracticeSession>) => void;
   onPracticeTask?: (task: PlannedTask) => void;
+  onSetupCourse?: () => void;
 }
 
 const dayLabel = (date: string) =>
@@ -48,7 +50,14 @@ const dayLabel = (date: string) =>
     day: 'numeric',
   });
 
-export default function Plan({ profile, entries, onLog, onPracticeTask, startNewTask }: Props) {
+export default function Plan({
+  profile,
+  entries,
+  onLog,
+  onPracticeTask,
+  onSetupCourse,
+  startNewTask,
+}: Props) {
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -119,25 +128,48 @@ export default function Plan({ profile, entries, onLog, onPracticeTask, startNew
         a.title.localeCompare(b.title),
     );
   const completed = tasks.filter((task) => task.done).length;
+  const curriculum = tasks.find((task) => task.curriculum)?.curriculum;
 
   return (
     <section className="card plan-card" aria-labelledby="plan-title">
       <div className="plan-heading">
         <div>
           <span className="eyebrow">YOUR PERSONAL COURSE PLAN</span>
-          <h2 id="plan-title">Know what to practice next.</h2>
-          <p>Add your advisor’s homework, keep useful links, and track each exercise.</p>
+          <h2 id="plan-title">
+            {curriculum ? 'Your Intermediate course plan.' : 'Know what to practice next.'}
+          </h2>
+          <p>
+            {curriculum
+              ? 'Your daily assignments follow your class dates. Add personal exercises when you need them.'
+              : 'Set your course dates for built-in Intermediate assignments, or add your advisor’s exercises.'}
+          </p>
+          {curriculum && (
+            <a
+              className="plan-curriculum-source"
+              href={curriculum.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Official Intermediate syllabus v{INTERMEDIATE_CURRICULUM.version}{' '}
+              <ExternalLink size={13} />
+            </a>
+          )}
         </div>
         <div className="plan-heading-actions">
           <button className="button outline small" onClick={() => setReportOpen(true)}>
             <FileText size={15} /> Practice report
           </button>
           <button
-            className="button dark small"
+            className="button outline small"
             onClick={() => setEditing({ lesson: nextLesson, targetMinutes: 15 })}
           >
             <Plus size={15} /> Add exercise
           </button>
+          {onSetupCourse && (
+            <button className="button outline small" onClick={onSetupCourse}>
+              <CalendarDays size={15} /> Course settings
+            </button>
+          )}
         </div>
       </div>
       <div className="plan-status">
@@ -208,6 +240,7 @@ export default function Plan({ profile, entries, onLog, onPracticeTask, startNew
                   </div>
                   <p className="plan-task-meta">
                     {task.lesson ? `Session ${task.lesson} · ` : ''}
+                    {task.curriculum ? `Day ${task.curriculum.day} · ` : ''}
                     {PRACTICE_KINDS.find((kind) => kind.id === task.kind)?.label} ·{' '}
                     {Number(task.targetMinutes.toFixed(1))} min suggested
                     {due ? ` · ${dayLabel(due)}` : ''}
@@ -221,7 +254,8 @@ export default function Plan({ profile, entries, onLog, onPracticeTask, startNew
                   <div className="plan-task-links">
                     {onPracticeTask && !task.done && (
                       <button className="plan-task-practice" onClick={() => onPracticeTask(task)}>
-                        <Play size={12} /> Practice
+                        <Play size={12} />{' '}
+                        {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
                       </button>
                     )}
                     {task.link && (
@@ -242,13 +276,15 @@ export default function Plan({ profile, entries, onLog, onPracticeTask, startNew
                   >
                     <Pencil size={15} />
                   </button>
-                  <button
-                    className="icon-button danger-text"
-                    aria-label={`Delete ${task.title}`}
-                    onClick={() => setDeleting(task)}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {!task.curriculum && (
+                    <button
+                      className="icon-button danger-text"
+                      aria-label={`Delete ${task.title}`}
+                      onClick={() => setDeleting(task)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
               </li>
             );
@@ -257,14 +293,19 @@ export default function Plan({ profile, entries, onLog, onPracticeTask, startNew
       ) : (
         <div className="plan-empty">
           <BookOpen size={27} />
-          <h3>
-            {tasks.length ? 'You have room for your next step.' : 'Make the course your own.'}
-          </h3>
+          <h3>{tasks.length ? 'You have room for your next step.' : 'Set up your course.'}</h3>
           <p>
             {tasks.length
               ? 'No exercises match this view. Look at the whole course or add another exercise.'
-              : 'Add a listening exercise, sending drill, or on-air assignment from your advisor. Your plan is private.'}
+              : profile.level === 'intermediate'
+                ? 'Save your class dates to load Intermediate assignments automatically. No need to enter each exercise.'
+                : 'Intermediate assignments are built in. Other levels use the official student resources and your personal exercises.'}
           </p>
+          {!tasks.length && onSetupCourse && (
+            <button className="button dark small" onClick={onSetupCourse}>
+              Set course dates <CalendarDays size={14} />
+            </button>
+          )}
           <button
             className="button outline small"
             onClick={() => setEditing({ lesson: nextLesson, targetMinutes: 15 })}
@@ -435,6 +476,7 @@ function TaskEditor({
             Activity
             <select
               value={task.kind}
+              disabled={Boolean(task.curriculum)}
               onChange={(event) =>
                 setTask({ ...task, kind: event.target.value as PlannedTask['kind'] })
               }
@@ -464,6 +506,7 @@ function TaskEditor({
             Class session
             <select
               value={task.lesson ?? ''}
+              disabled={Boolean(task.curriculum)}
               onChange={(event) =>
                 setTask({
                   ...task,
@@ -484,12 +527,15 @@ function TaskEditor({
             <input
               type="date"
               value={task.dueDate ?? ''}
+              disabled={Boolean(task.curriculum)}
               onChange={(event) => setTask({ ...task, dueDate: event.target.value || undefined })}
             />
           </label>
         </div>
         <p className="plan-form-hint">
-          A practice date overrides the class date. Leave it blank to follow your course schedule.
+          {task.curriculum
+            ? 'This assignment follows your course dates. Change those in Course settings to move its schedule without losing your progress.'
+            : 'A practice date overrides the class date. Leave it blank to follow your course schedule.'}
         </p>
         <label>
           Exercise link (optional)
@@ -497,6 +543,7 @@ function TaskEditor({
             type="url"
             maxLength={2048}
             value={task.link ?? ''}
+            disabled={Boolean(task.curriculum)}
             placeholder="https://"
             onChange={(event) => setTask({ ...task, link: event.target.value || undefined })}
           />

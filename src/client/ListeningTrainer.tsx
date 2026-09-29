@@ -1,6 +1,7 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
-import { MorsePlayer, morseTimeline } from './audio';
+import { buildMorseTrack, MorsePlayer, morseTimeline, type MorseTrack } from './audio';
+import MorseTranscript from './MorseTranscript';
 import type { PracticePreferences } from './practice-preferences';
 import { WORD_LISTS, wordPracticeRound, type WordList } from './word-content';
 import { generateQso, QSO_TEMPLATES } from './qso-content';
@@ -10,7 +11,7 @@ export interface ListeningTrainerHandle {
   stop: () => void;
 }
 
-/** One word or transmission at a time, with a bounded audio schedule and resumable position. */
+/** One native media track keeps words, seeking, and background playback in sync. */
 export default forwardRef<
   ListeningTrainerHandle,
   {
@@ -19,15 +20,27 @@ export default forwardRef<
     onPlaying: (playing: boolean) => void;
     onError: (message: string) => void;
   }
->(function ListeningTrainer({ preferences: p, onChange, onPlaying, onError }, ref) {
+>(function ListeningTrainer(
+  { preferences: p, onChange, onPlaying: onPlayingChange, onError: onErrorMessage },
+  ref,
+) {
+  const callbacks = useRef({ onPlaying: onPlayingChange, onError: onErrorMessage });
+  callbacks.current = { onPlaying: onPlayingChange, onError: onErrorMessage };
+  const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
+  const onError = (message: string) => callbacks.current.onError(message);
   const [custom, setCustom] = useState('');
   const [qso, setQso] = useState(() => generateQso(p.qsoScenario));
   const [words, setWords] = useState<string[]>([]);
+  const [roundError, setRoundError] = useState('');
   const [position, setPosition] = useState(0);
   const [answer, setAnswer] = useState(false);
   const [active, setActive] = useState(false);
   const [complete, setComplete] = useState(false);
   const player = useRef(new MorsePlayer());
+  const audio = useRef<HTMLAudioElement>(null);
+  const prepared = useRef<MorseTrack | null>(null);
+  const [mediaReady, setMediaReady] = useState(false);
+  const [activeWord, setActiveWord] = useState(-1);
   const generation = useRef(0);
   const waiting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const index = useRef(0);
@@ -38,7 +51,7 @@ export default forwardRef<
   const stop = () => {
     generation.current++;
     clearTimeout(waiting.current);
-    player.current.stop();
+    player.current.pause();
     if (speaking.current) {
       window.speechSynthesis?.cancel();
       speaking.current = false;
@@ -48,10 +61,21 @@ export default forwardRef<
   };
   const reset = () => {
     stop();
-    round.current = [];
+    prepared.current = null;
+    setMediaReady(false);
+    player.current.clear();
+    try {
+      round.current = isWords ? wordPracticeRound(p.wordList, custom, p.shuffleWords) : [];
+      setRoundError('');
+    } catch (error) {
+      // An empty or partially typed custom list is an ordinary editing state.
+      round.current = [];
+      setRoundError((error as Error).message);
+    }
     index.current = 0;
     setPosition(0);
-    setWords([]);
+    setWords(round.current);
+    setActiveWord(-1);
     setAnswer(false);
     setComplete(false);
   };
@@ -59,6 +83,9 @@ export default forwardRef<
     reset();
     if (!isWords) setQso(generateQso(p.qsoScenario));
   }, [p.tool, p.wordList, p.qsoScenario, p.shuffleWords, custom]);
+  useEffect(() => {
+    if (audio.current) player.current.attach(audio.current);
+  }, []);
   useEffect(
     () => () => {
       generation.current++;
@@ -69,7 +96,7 @@ export default forwardRef<
     [],
   );
 
-  const play = async () => {
+  const playSpoken = async () => {
     stop();
     const token = generation.current;
     const valid = () => generation.current === token;
@@ -165,14 +192,24 @@ export default forwardRef<
       };
       // Alternating station pitches help distinguish turns while keeping your preferred sidetone.
       const pitch = !isWords && index.current % 2 ? Math.min(1000, p.tone + 50) : p.tone;
-      await player.current.play(
-        word,
-        p.characterWpm,
-        p.effectiveWpm,
-        pitch,
-        p.volume / 100,
-        finish,
+      player.current.prepare(
+        buildMorseTrack([{ text: word }], {
+          characterWpm: p.characterWpm,
+          effectiveWpm: p.effectiveWpm,
+          frequency: pitch,
+          volume: p.volume / 100,
+        }),
+        {
+          title: listTitle,
+          onFinish: finish,
+          // Native/lock-screen pause must cancel the foreground speech sequence too.
+          onState: (state) => {
+            if (state === 'paused' && valid()) stop();
+          },
+          onError: (message) => fail(new Error(message)),
+        },
       );
+      await player.current.resume();
     };
     try {
       await send();
@@ -181,6 +218,106 @@ export default forwardRef<
       throw error;
     }
   };
+  const trackResult = useMemo(() => {
+    const items = isWords ? words : qso.lines;
+    if (!items.length) return { track: null, error: '' };
+    try {
+      const track = buildMorseTrack(
+        items.map((text, i) => ({
+          text,
+          frequency: !isWords && i % 2 ? Math.min(1000, p.tone + 50) : p.tone,
+          gapAfter: isWords
+            ? morseTimeline(text, p.characterWpm, p.effectiveWpm).wordGap + p.wordGap
+            : 2,
+        })),
+        {
+          characterWpm: p.characterWpm,
+          effectiveWpm: p.effectiveWpm,
+          frequency: p.tone,
+          volume: p.volume / 100,
+        },
+      );
+      return { track, error: '' };
+    } catch (error) {
+      return { track: null, error: (error as Error).message };
+    }
+  }, [words, qso, isWords, p.characterWpm, p.effectiveWpm, p.tone, p.volume, p.wordGap]);
+  const { track } = trackResult;
+  const prepare = () => {
+    if (!track) throw new Error(roundError || trackResult.error || 'Add some words to play.');
+    if (prepared.current === track) return;
+    // Preparing reports position zero synchronously; preserve the requested item first.
+    const start = track.items[index.current]?.start ?? 0;
+    player.current.prepare(track, {
+      title: isWords ? listTitle : qso.title,
+      loop: isWords && p.repeatList,
+      onProgress: (progress) => {
+        setActiveWord(progress.wordIndex);
+        if (progress.itemIndex >= 0) {
+          index.current = progress.itemIndex;
+          setPosition(progress.itemIndex);
+        }
+      },
+      onState: (state) => {
+        const playing = state === 'playing';
+        setActive(playing);
+        onPlaying(playing);
+        if (playing) setComplete(false);
+      },
+      onFinish: () => {
+        setComplete(true);
+        setActiveWord(-1);
+      },
+      onError,
+    });
+    prepared.current = track;
+    setMediaReady(true);
+    player.current.seek(start);
+  };
+  const play = async () => {
+    if (isWords && p.spokenAnswers) {
+      prepared.current = null;
+      setMediaReady(false);
+      return playSpoken();
+    }
+    prepare();
+    setAnswer(false);
+    await player.current.resume();
+  };
+  const seekWord = (word: number) => {
+    if (isWords && p.spokenAnswers) {
+      stop();
+      index.current = track?.words[word]?.itemIndex ?? 0;
+      setPosition(index.current);
+      void playSpoken().catch((error: Error) => onError(error.message));
+      return;
+    }
+    try {
+      prepare();
+      player.current.seekWord(word);
+      void player.current.resume().catch((error: Error) => onError(error.message));
+    } catch (error) {
+      onError((error as Error).message);
+    }
+  };
+  // Never leave a native source with settings/text different from the visible transcript.
+  useEffect(() => {
+    stop();
+    prepared.current = null;
+    setMediaReady(false);
+    player.current.clear();
+    setActiveWord(-1);
+    setAnswer(false);
+    setComplete(false);
+  }, [track, p.repeatList, p.spokenAnswers]);
+  useEffect(() => {
+    if (!(isWords && p.spokenAnswers)) return;
+    const visibility = () => {
+      if (document.hidden) stop();
+    };
+    document.addEventListener('visibilitychange', visibility);
+    return () => document.removeEventListener('visibilitychange', visibility);
+  }, [isWords, p.spokenAnswers]);
   useImperativeHandle(ref, () => ({ play, stop }));
   const step = (delta: number) => {
     stop();
@@ -189,6 +326,8 @@ export default forwardRef<
     setPosition(index.current);
     setComplete(false);
     setAnswer(false);
+    if (prepared.current === track && track)
+      player.current.seek(track.items[index.current]?.start ?? 0);
   };
   const total = isWords
     ? words.length ||
@@ -250,7 +389,7 @@ export default forwardRef<
             maxLength={8200}
             value={custom}
             onChange={(e) => {
-              reset();
+              stop();
               setCustom(e.target.value);
             }}
             placeholder="Add words separated by spaces…"
@@ -305,7 +444,8 @@ export default forwardRef<
       {isWords && p.spokenAnswers && (
         <p className="field-hint">
           Uses a local English voice on your device when available. Each word plays three times
-          before the answer.
+          before the answer. Keep this page open for spoken answers; Morse-only rounds use the
+          native audio player for background listening.
         </p>
       )}
       <div className="transmission-panel trainer-transmission">
@@ -323,6 +463,13 @@ export default forwardRef<
         <div className="trainer-current" aria-live="off">
           {p.hideTrainerText && !answer ? (
             <p>Listen first. Reveal when you’re ready.</p>
+          ) : track && !(isWords && p.spokenAnswers) ? (
+            <MorseTranscript
+              track={track}
+              activeWord={activeWord}
+              onSeek={seekWord}
+              itemIndex={position}
+            />
           ) : (
             <p className="trainer-morse-text">{current ?? 'Press Play to begin.'}</p>
           )}
@@ -354,18 +501,25 @@ export default forwardRef<
         <span className="field-hint">
           {complete
             ? 'Round complete. Play to listen again.'
-            : 'Stop and Play replays the current item.'}
+            : 'Pause keeps your place. Select any word to listen from there.'}
         </span>
+      </div>
+      <div className="native-morse-player" hidden={!mediaReady || (isWords && p.spokenAnswers)}>
+        <audio
+          ref={audio}
+          controls
+          hidden={isWords && p.spokenAnswers}
+          preload="metadata"
+          aria-label="Practice audio"
+        />
       </div>
       <details className="trainer-catalog">
         <summary>{isWords ? 'View word list' : 'View full conversation'}</summary>
-        <p className="trainer-morse-text" tabIndex={0}>
-          {isWords
-            ? p.wordList === 'custom'
-              ? custom
-              : WORD_LISTS[p.wordList].words.join(' ')
-            : qso.lines.join('\n\n')}
-        </p>
+        {track ? (
+          <MorseTranscript track={track} activeWord={activeWord} onSeek={seekWord} />
+        ) : (
+          <p>{roundError || trackResult.error || 'Add words to begin.'}</p>
+        )}
       </details>
     </div>
   );

@@ -458,3 +458,32 @@
 .today-plan-empty-actions .button.small {
   font-size: 13px;
 }
+.today-plan-curriculum {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 16px;
+  margin: 0 28px 16px;
+  color: #596650;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.today-plan-curriculum a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.today-plan-resource-note {
+  margin-top: 7px;
+  color: #875531;
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (max-width: 640px) {
+  .today-plan-curriculum {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+}

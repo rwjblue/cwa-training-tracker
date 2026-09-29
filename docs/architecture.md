@@ -103,6 +103,24 @@ the original personal site.
 
 ## Operations and verification
 
+The Intermediate curriculum catalog contains factual assignment identifiers,
+session/day mappings, requirements, and official resource URLs. The API derives
+dates from the account's course schedule and merges private completion and note
+overrides by stable exercise ID. It stores only those overrides, not a copy of
+the entire generated plan per account. Exports preserve overrides and the
+profile; reset clears both. Matching legacy assignments retain their private
+instructions and history without duplicating the generated assignment.
+
+Generated Morse audio is bounded to 20 minutes per rendered round, using mono
+16-bit PCM in a Blob URL. A native HTML audio element plays the entire round,
+including gaps. The same word timeline provides highlighting and seeking;
+animation frames update only the visible interface. Native looping and Media
+Session controls do not depend on foreground JavaScript. Blob URLs and media
+listeners are released when tracks change or the player unmounts. Optional
+spoken answers still use the device's local speech engine and require the page
+to remain open. Official recordings stream directly from CWops through native
+audio, with only the CWops media origins added to the Content Security Policy.
+
 Bindings and environment types come from `wrangler types`; do not hand-maintain
 an alternate Env interface. Apply migrations before deployment. Production
 observability logs contain event names and exception classes, not request

@@ -25,6 +25,7 @@ import {
   type PlannedTask,
 } from '../shared/plan';
 import './today-plan.css';
+import { INTERMEDIATE_CURRICULUM } from '../shared/curriculum';
 
 export interface TodayPlanProps {
   profile: Profile;
@@ -74,6 +75,8 @@ export default function TodayPlan({
   const [saveError, setSaveError] = useState('');
   const today = dateInTimezone(new Date(), profile.timezone);
   const plan = dailyPlanSummary(tasks, courseMeetings(profile), entries, today);
+  const curriculum = tasks.find((task) => task.curriculum)?.curriculum;
+  const needsCourseDates = !profile.firstClassDate;
   async function toggle(task: PlannedTask) {
     setSaving((current) => [...current, task.id]);
     setSaveError('');
@@ -117,6 +120,14 @@ export default function TodayPlan({
           Your full plan <ArrowRight size={14} />
         </button>
       </header>
+      {!loading && curriculum && (
+        <p className="today-plan-curriculum">
+          Intermediate · syllabus v{INTERMEDIATE_CURRICULUM.version}
+          <a href={curriculum.sourceUrl} target="_blank" rel="noreferrer">
+            Official syllabus <ExternalLink size={12} />
+          </a>
+        </p>
+      )}
       {!loading && plan.nextMeeting && (
         <div className="today-plan-next-class">
           <CalendarDays size={15} />
@@ -153,26 +164,26 @@ export default function TodayPlan({
             <BookOpen size={21} />
           </span>
           <div>
-            <h3>Bring your homework into today.</h3>
+            <h3>{needsCourseDates ? 'Set up your course.' : 'Make your daily practice plan.'}</h3>
             <p>
-              Add your advisor’s exercises and course dates. Your dated assignments will appear here
-              each day.
+              {profile.level === 'intermediate'
+                ? 'Your Intermediate assignments appear automatically when you save your course dates. Each day has its own listening and sending exercises.'
+                : 'Intermediate assignments are built in. For other levels, follow the official student resources and add your advisor’s exercises.'}
             </p>
             <div className="today-plan-empty-actions">
-              <button className="button dark small" onClick={onAddTask ?? onManagePlan}>
-                <Plus size={14} />
-                {onAddTask ? 'Add an exercise' : 'Plan today’s practice'}
+              {onSetupCourse && (
+                <button className="button dark small" onClick={onSetupCourse}>
+                  <CalendarDays size={14} />
+                  {needsCourseDates ? 'Set course dates' : 'Course settings'}
+                </button>
+              )}
+              <button className="text-button" onClick={onAddTask ?? onManagePlan}>
+                <Plus size={13} /> Add an exercise
               </button>
               <button className="text-button" onClick={onImport}>
                 <Upload size={13} />
                 Restore backup
               </button>
-              {onSetupCourse && (
-                <button className="text-button" onClick={onSetupCourse}>
-                  <CalendarDays size={13} />
-                  Set course dates
-                </button>
-              )}
             </div>
             {onPractice && (
               <button className="today-plan-studio" onClick={onPractice}>
@@ -284,7 +295,7 @@ export default function TodayPlan({
         <footer className="today-plan-footnote">
           {tasks.length
             ? 'Log the time you practiced. Mark an exercise complete when you are ready; checking it adds no minutes.'
-            : 'The Academy guide offers original planning prompts. Your advisor’s curriculum becomes your private plan when you add or import it.'}
+            : 'Choose your level and class dates once. Your daily plan stays private; you can add your own exercises at any time.'}
         </footer>
       )}
     </section>
@@ -327,6 +338,7 @@ function TodayTask({
           {PRACTICE_KINDS.find((kind) => kind.id === task.kind)?.label} ·{' '}
           {minuteLabel(task.targetMinutes)} min suggested
           {task.lesson ? ` · Session ${task.lesson}` : ''}
+          {task.curriculum ? ` · Day ${task.curriculum.day}` : ''}
           {overdue ? ` · ${dayLabel(dueDate)}` : ''}
         </p>
         {item.loggedMinutes > 0 && (
@@ -341,10 +353,16 @@ function TodayTask({
             <p>{task.notes}</p>
           </details>
         )}
+        {task.exercise?.type === 'audio' && task.exercise.unresolved && (
+          <p className="today-plan-resource-note">
+            Recording unavailable · see official instructions
+          </p>
+        )}
         <div className="today-plan-task-actions">
           {onPractice && !task.done && (
             <button className="today-plan-practice" onClick={onPractice}>
-              <Play size={12} /> Practice
+              <Play size={12} />{' '}
+              {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
             </button>
           )}
           {task.link && (

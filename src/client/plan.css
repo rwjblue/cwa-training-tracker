@@ -2,6 +2,27 @@
   margin-bottom: 28px;
   overflow: hidden;
 }
+.plan-curriculum-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  font-size: 12px;
+  color: #3b623e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.account-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.course-material-note {
+  margin: 0 0 18px;
+  color: #596650;
+  font-size: 13px;
+  line-height: 1.65;
+}
 .plan-heading {
   display: flex;
   justify-content: space-between;

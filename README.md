@@ -11,11 +11,15 @@ CWops. Official course material stays at the
 
 - A word trainer with 70 common QSO words, 30 common English words, or your own
   list. Shuffle, repeat, adjust pauses, and optionally hear three Morse repeats
-  followed by an answer from a local English voice on your device.
+  followed by an answer from a local English voice on your device (keep the page
+  open for spoken answers).
 - Randomly generated contacts in four QSO scenarios: first contact,
   rigs/antennas/weather, POTA, and asking for repeats. Each New QSO combines
   different station details; replay keeps the same contact. Illustrative call-area
   locations, regional seasonal weather, and radio power choices stay consistent.
+- Continuous native audio playback with pause/resume, a seek bar, current-word
+  highlighting, and clickable words. Morse rounds include their silence in one
+  audio file so playback does not depend on background JavaScript timers.
 - Public Morse practice with character speed, Farnsworth spacing, tone, adjustable
   group and word lengths, generated callsigns, and custom text; no account required.
   Playback preferences stay on your device. Start practice plays and starts the
@@ -24,8 +28,11 @@ CWops. Official course material stays at the
   and separate practice categories.
 - A Today view for your own assignments, next-class preparation, and unfinished
   work, backed by a personal homework plan with printable practice reports.
-  Start an assigned exercise in the studio and keep the saved time linked to it.
-  Class time stays separate from daily goals.
+  Choosing Intermediate and setting class dates automatically schedules the
+  v2.3 curriculum's 213 required exercises over 48 practice days. Recordings
+  play from CWops; sending and external exercises open their assigned material.
+  Saved time stays linked to the exercise. Class time stays separate from daily
+  goals. Other levels currently support personal and imported assignments.
 - Passwordless email codes that expire in five minutes, plus passkeys.
 - Readable callsign identity, optional Gravatar images, and a city-based timezone picker.
 - JSON export, validated repeatable import, and a training-data reset.

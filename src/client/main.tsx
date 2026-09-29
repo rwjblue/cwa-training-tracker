@@ -57,7 +57,7 @@ import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
 import type { PlannedTask } from '../shared/plan';
-import type { PracticeLaunch } from './practice-launch';
+import { practiceLaunchForTask, type PracticeLaunch } from './practice-launch';
 import WelcomePanel from './WelcomePanel';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
@@ -287,7 +287,14 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, page, planVersion]);
+  }, [
+    user?.id,
+    page,
+    planVersion,
+    profile.level,
+    profile.firstClassDate,
+    profile.classDays.join(','),
+  ]);
   const toggleTask = async (task: PlannedTask) => {
     const result = await api<{ task: PlannedTask }>(
       `/plan/${encodeURIComponent(task.id)}`,
@@ -597,7 +604,7 @@ function App() {
                           onRetry={() => setPlanVersion((version) => version + 1)}
                           onToggle={toggleTask}
                           onLog={openLog}
-                          onPracticeTask={(task) => openPractice({ task })}
+                          onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
                           onManagePlan={() => navigate('course')}
                           onAddTask={() => {
                             navigate('course');
@@ -654,7 +661,7 @@ function App() {
                   profile={profile}
                   entries={entries}
                   onLog={openLog}
-                  onPracticeTask={(task) => openPractice({ task })}
+                  onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
                   startNewTask={startNewTask}
                   user={user}
                   onSettings={() => {
@@ -675,6 +682,7 @@ function App() {
                   logout={logout}
                   reload={load}
                   onReauth={() => setAuthOpen(true)}
+                  onToday={() => navigate('overview')}
                 />
               )}
             </>
@@ -711,7 +719,9 @@ function App() {
               ),
             );
             setSessionEditor(null);
-            if (entry.source === 'morse') setSavedPracticeVersion((v) => v + 1);
+            if (entry.source === 'morse' || entry.source === 'timer') {
+              setSavedPracticeVersion((v) => v + 1);
+            }
             notify('Practice logged. A little progress adds up.');
           }}
         />
@@ -1334,7 +1344,7 @@ function Course({
             <span className="small-line" /> A JOURNEY BEST TAKEN TOGETHER
           </div>
           <h1>A guide for the road ahead.</h1>
-          <p>Find your level, build a routine, and keep your advisor’s guidance close.</p>
+          <p>Intermediate assignments, official resources, and your personal practice plan.</p>
         </div>
         <a
           className="button outline"
@@ -1351,6 +1361,7 @@ function Course({
           entries={entries}
           onLog={onLog}
           onPracticeTask={onPracticeTask}
+          onSetupCourse={onSettings}
           startNewTask={startNewTask}
         />
       )}
@@ -1363,16 +1374,17 @@ function Course({
             The same love of CW.
           </h2>
           <p>
-            CW Academy brings operators together to learn Morse code. This independent companion
-            helps you track the practice between classes.
+            Intermediate assignments appear automatically after you choose that level and save your
+            course dates. For other levels, follow the official resources and add your advisor’s
+            exercises to your plan.
           </p>
         </div>
         <div className="course-intro-note">
           <BookOpen size={25} />
           <h3>Follow your advisor.</h3>
           <p>
-            The official curriculum and your advisor’s assignments come first. The prompts below are
-            here to help you reflect and build a habit.
+            Open the official curriculum for full instructions. The built-in plan organizes daily
+            practice and links to the original resources; your advisor’s guidance comes first.
           </p>
           <a
             href="https://cwops.org/cw-academy/cw-academy-student-resources/"
@@ -1950,6 +1962,7 @@ function Account({
   logout,
   reload,
   onReauth,
+  onToday,
 }: {
   user: User;
   profile: Profile;
@@ -1958,6 +1971,7 @@ function Account({
   logout: () => void;
   reload: () => Promise<unknown>;
   onReauth: () => void;
+  onToday: () => void;
 }) {
   const [form, setForm] = useState(profile);
   const [saving, setSaving] = useState(false);
@@ -2229,10 +2243,22 @@ function Account({
                 Used to plan your 16 class dates. Confirm your actual schedule with your advisor.
               </p>
             </fieldset>
-            <button className="button dark" type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Save preferences'}
-              <Check size={16} />
-            </button>
+            <p className="course-material-note">
+              {form.level === 'intermediate'
+                ? 'Save your first class date and meeting days to populate daily Intermediate assignments automatically. Changing dates keeps recorded practice and completion.'
+                : 'Built-in daily assignments are currently available for Intermediate. Other levels can use personal exercises and the official student resources.'}
+            </p>
+            <div className="account-form-actions">
+              <button className="button dark" type="submit" disabled={saving}>
+                {saving ? 'Saving…' : 'Save preferences'}
+                <Check size={16} />
+              </button>
+              {profile.firstClassDate && (
+                <button className="button outline" type="button" onClick={onToday}>
+                  View Today <ArrowRight size={16} />
+                </button>
+              )}
+            </div>
           </form>
         </section>
         <div className="account-side">

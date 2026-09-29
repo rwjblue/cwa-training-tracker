@@ -405,3 +405,62 @@
   white-space: pre-wrap;
   margin-top: 10px;
 }
+
+.native-morse-player {
+  margin-block: 18px;
+}
+.native-morse-player audio,
+.assigned-recording audio {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.native-morse-player .field-hint {
+  margin-top: 8px;
+}
+.morse-transcript button {
+  display: inline;
+  padding: 3px 4px;
+  margin: 0 -1px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  line-height: inherit;
+  overflow-wrap: anywhere;
+}
+.morse-transcript button:hover {
+  background: var(--sage-light, #e8edde);
+}
+.morse-transcript button.is-playing-word {
+  color: #fff;
+  background: #285041;
+  box-shadow: 0 0 0 1px #285041;
+}
+.morse-transcript button:focus-visible {
+  outline: 2px solid #285041;
+  outline-offset: 2px;
+}
+.assigned-recording,
+.assigned-offline {
+  display: grid;
+  gap: 16px;
+}
+.assigned-recording select {
+  max-width: 100%;
+}
+.assigned-recording p,
+.assigned-offline p {
+  color: var(--text-muted, #687360);
+  line-height: 1.6;
+}
+
+.native-morse-player[hidden],
+.native-morse-player audio[hidden] {
+  display: none;
+}
+.practice-layout.is-assigned .studio-card {
+  align-self: start;
+}

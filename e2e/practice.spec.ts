@@ -132,7 +132,7 @@ test('word and QSO trainers expose the complete material and remember listening 
   await expect(list).toHaveValue('common-qso');
   await page.getByText('View word list', { exact: true }).click();
   const vocabulary = page.locator('.trainer-catalog p');
-  expect((await vocabulary.innerText()).split(' ')).toHaveLength(70);
+  expect((await vocabulary.innerText()).trim().split(/\s+/)).toHaveLength(70);
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
   await page.getByRole('button', { name: 'Reveal text', exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
@@ -141,7 +141,7 @@ test('word and QSO trainers expose the complete material and remember listening 
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toBeVisible();
   await list.selectOption('common-30');
-  expect((await vocabulary.innerText()).split(' ')).toHaveLength(30);
+  expect((await vocabulary.innerText()).trim().split(/\s+/)).toHaveLength(30);
   await page.getByRole('combobox', { name: 'Extra word pause', exact: true }).selectOption('2');
   await page.reload();
   await expect(list).toHaveValue('common-30');
@@ -149,6 +149,11 @@ test('word and QSO trainers expose the complete material and remember listening 
     '2',
   );
   await expect(page.getByRole('checkbox', { name: 'Shuffle list', exact: true })).not.toBeChecked();
+
+  await list.selectOption('custom');
+  await expect(page.getByRole('textbox', { name: /^Your word list/ })).toBeVisible();
+  await page.getByRole('textbox', { name: /^Your word list/ }).fill('E T');
+  await expect(vocabulary).toContainText('E T');
 
   await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
   await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('ragchew');
@@ -161,6 +166,26 @@ test('word and QSO trainers expose the complete material and remember listening 
   expect(first).toContain('<SK>');
   await page.getByRole('button', { name: 'New QSO', exact: true }).click();
   await expect(conversation).not.toHaveText(first);
+  await page.getByRole('button', { name: 'Play Morse', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Stop playback', exact: true })).toBeVisible();
+  const media = page.getByLabel('Practice audio', { exact: true });
+  await expect(media).toHaveAttribute('src', /^blob:/);
+  await expect
+    .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
+    .toBeGreaterThan(0);
+  const laterWord = conversation.getByRole('button', { name: /^Play from word 12:/ });
+  await laterWord.click();
+  await expect(laterWord).toHaveAttribute('aria-current', 'true');
+  await expect
+    .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
+    .toBeGreaterThan(10);
+  await conversation.getByRole('button', { name: 'Play from word 1: CQ', exact: true }).click();
+  await expect
+    .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
+    .toBeLessThan(2);
+  // Native controls and the app controls share one playback state and resume position.
+  await media.evaluate((element: HTMLAudioElement) => element.pause());
+  await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Play Morse', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stop playback', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Stop playback', exact: true }).click();
