@@ -100,7 +100,8 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   );
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Run saved', exact: true })).toBeDisabled();
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(row.getByText('Started', { exact: true })).toBeVisible();
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0]).toMatchObject({
@@ -116,6 +117,4 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
     summary: { qsoCount: 0, score: 0 },
   });
   expect(entries[0].metadata.elapsedSeconds).toBeCloseTo(entries[0].minutes * 60, 8);
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
-  await expect(row.getByText('Started', { exact: true })).toBeVisible();
 });

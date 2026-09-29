@@ -94,6 +94,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await signIn(page, { dialogAlreadyOpen: true });
   expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(83 / 60, 8);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page).toHaveURL(/#practice$/);
   await page.clock.fastForward(120_000);
   await expect(
     page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
@@ -102,12 +103,25 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.clock.fastForward(42_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
   await page.getByRole('button', { name: 'Review & save 02:05', exact: true }).click();
+  await page.route(
+    '**/api/entries',
+    (route) =>
+      route.fulfill({ status: 503, json: { error: 'Please retry saving your practice.' } }),
+    { times: 1 },
+  );
+  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Please retry saving your practice.');
+  await expect(page).toHaveURL(/#practice$/);
+  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(125 / 60, 8);
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(page.getByRole('region', { name: 'What should I do today?' })).toBeVisible();
   const timed = (await (await context.request.get('/api/entries')).json()).entries[0];
   expect(timed.minutes).toBeCloseTo(125 / 60, 10);
   expect(timed.metadata.elapsedSeconds).toBe(125);
   expect(timed.source).toBe('morse');
+  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Review & save session', exact: true }),
   ).toBeDisabled();
@@ -117,6 +131,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByLabel(/^Time practiced/).fill('7');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#practice$/);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(2);
   expect(entries.find((entry: { source: string }) => entry.source === 'manual').minutes).toBe(7);

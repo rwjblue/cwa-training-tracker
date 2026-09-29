@@ -83,10 +83,11 @@ test('Today brings personal assignments forward and keeps logging separate from 
   expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBe(7);
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
   await page.clock.resume();
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(panel.getByText('Started', { exact: true })).toBeVisible();
   await expect(panel.getByText('7 min practiced · 7 today', { exact: true })).toBeVisible();
+  await page.screenshot({ path: '.tmp/practice-saved-today-desktop.png', fullPage: true });
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0]).toMatchObject({
@@ -276,6 +277,13 @@ test('course dates populate Today with playable assignments and preserve linked 
     .fill('Copied ALICE in OH. Replayed the final sentence.');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(row.getByText('Started', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: '.tmp/practice-saved-today-mobile.png', fullPage: true });
+  await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
   const entries = (await (await context.request.get('/api/entries')).json()).entries;

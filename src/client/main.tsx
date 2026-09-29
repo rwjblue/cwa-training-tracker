@@ -730,6 +730,10 @@ function App() {
             setSessionEditor(null);
             if (entry.source === 'morse' || entry.source === 'timer') {
               setSavedPracticeVersion((v) => v + 1);
+              if (currentPage.current === 'practice' && !sessionEditor.id) {
+                studioUnsaved.current = false;
+                navigate('overview');
+              }
             }
             notify('Practice logged. A little progress adds up.');
           }}
