@@ -2,9 +2,10 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { buildMorseTrack, MorsePlayer, morseTimeline, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
+import QsoCopy from './QsoCopy';
 import type { PracticePreferences } from './practice-preferences';
 import { WORD_LISTS, wordPracticeRound, type WordList } from './word-content';
-import { generateQso, QSO_TEMPLATES } from './qso-content';
+import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
 
 export interface ListeningTrainerHandle {
   play: () => Promise<void>;
@@ -30,6 +31,8 @@ export default forwardRef<
   const onError = (message: string) => callbacks.current.onError(message);
   const [custom, setCustom] = useState('');
   const [qso, setQso] = useState(() => generateQso(p.qsoScenario));
+  const [copyMode, setCopyMode] = useState(false);
+  const [revealedQso, setRevealedQso] = useState<PracticeQso | null>(null);
   const [words, setWords] = useState<string[]>([]);
   const [roundError, setRoundError] = useState('');
   const [position, setPosition] = useState(0);
@@ -47,6 +50,10 @@ export default forwardRef<
   const round = useRef<string[]>([]);
   const speaking = useRef(false);
   const isWords = p.tool === 'words';
+  const checkingCopy = !isWords && copyMode;
+  // Object identity prevents a newly generated contact revealing old answers for one frame.
+  const copyRevealed = revealedQso === qso;
+  const hideTranscript = checkingCopy ? !copyRevealed : p.hideTrainerText && !answer;
   const listTitle = p.wordList === 'custom' ? 'Your word list' : WORD_LISTS[p.wordList].title;
   const stop = () => {
     generation.current++;
@@ -284,6 +291,19 @@ export default forwardRef<
     setAnswer(false);
     await player.current.resume();
   };
+  const replayQso = async () => {
+    try {
+      stop();
+      prepare();
+      player.current.seek(0);
+      index.current = 0;
+      setPosition(0);
+      setComplete(false);
+      await player.current.resume();
+    } catch (error) {
+      onError((error as Error).message);
+    }
+  };
   const seekWord = (word: number) => {
     if (isWords && p.spokenAnswers) {
       stop();
@@ -376,8 +396,27 @@ export default forwardRef<
         </p>
       </div>
       {!isWords && (
+        <div className="qso-practice-mode" role="group" aria-label="QSO practice mode">
+          <button type="button" aria-pressed={!copyMode} onClick={() => setCopyMode(false)}>
+            Listen
+          </button>
+          <button
+            type="button"
+            aria-pressed={copyMode}
+            onClick={() => {
+              if (!copyMode) setRevealedQso(null);
+              setCopyMode(true);
+            }}
+          >
+            Check your copy
+          </button>
+        </div>
+      )}
+      {!isWords && (
         <p className="field-hint">
-          {qso.season ? `A fictional ${qso.season} contact.` : 'Fictional station details.'}{' '}
+          {!checkingCopy && qso.season
+            ? `A fictional ${qso.season} contact.`
+            : 'Fictional station details.'}{' '}
           Callsigns may coincide with real operators.
         </p>
       )}
@@ -456,13 +495,19 @@ export default forwardRef<
               : `${isWords ? 'WORD' : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
             {active ? ' · LISTENING' : ''}
           </span>
-          <button onClick={() => onChange({ hideTrainerText: !p.hideTrainerText })}>
-            {p.hideTrainerText ? 'Reveal text' : 'Hide text'}
-          </button>
+          {!checkingCopy && (
+            <button onClick={() => onChange({ hideTrainerText: !p.hideTrainerText })}>
+              {p.hideTrainerText ? 'Reveal text' : 'Hide text'}
+            </button>
+          )}
         </div>
         <div className="trainer-current" aria-live="off">
-          {p.hideTrainerText && !answer ? (
-            <p>Listen first. Reveal when you’re ready.</p>
+          {hideTranscript ? (
+            <p>
+              {checkingCopy
+                ? 'Listen, then fill in the station details below. Answers stay hidden until you choose Show answers.'
+                : 'Listen first. Reveal when you’re ready.'}
+            </p>
           ) : track && !(isWords && p.spokenAnswers) ? (
             <MorseTranscript
               track={track}
@@ -501,7 +546,9 @@ export default forwardRef<
         <span className="field-hint">
           {complete
             ? 'Round complete. Play to listen again.'
-            : 'Pause keeps your place. Select any word to listen from there.'}
+            : checkingCopy && !copyRevealed
+              ? 'Replay as often as you need. Your copy stays here.'
+              : 'Pause keeps your place. Select any word to listen from there.'}
         </span>
       </div>
       <div className="native-morse-player" hidden={!mediaReady || (isWords && p.spokenAnswers)}>
@@ -513,14 +560,32 @@ export default forwardRef<
           aria-label="Practice audio"
         />
       </div>
-      <details className="trainer-catalog">
-        <summary>{isWords ? 'View word list' : 'View full conversation'}</summary>
-        {track ? (
-          <MorseTranscript track={track} activeWord={activeWord} onSeek={seekWord} />
-        ) : (
-          <p>{roundError || trackResult.error || 'Add words to begin.'}</p>
-        )}
-      </details>
+      {!isWords && (
+        <section
+          className="qso-copy-region"
+          aria-label="Check your QSO copy"
+          hidden={!checkingCopy}
+        >
+          <QsoCopy
+            key={qso.lines.join('\n')}
+            fields={qso.copyFields}
+            revealed={copyRevealed}
+            onReveal={(reveal) => setRevealedQso(reveal ? qso : null)}
+            onCheck={stop}
+            onReplay={() => void replayQso()}
+          />
+        </section>
+      )}
+      {(!checkingCopy || copyRevealed) && (
+        <details className="trainer-catalog">
+          <summary>{isWords ? 'View word list' : 'View full conversation'}</summary>
+          {track ? (
+            <MorseTranscript track={track} activeWord={activeWord} onSeek={seekWord} />
+          ) : (
+            <p>{roundError || trackResult.error || 'Add words to begin.'}</p>
+          )}
+        </details>
+      )}
     </div>
   );
 });

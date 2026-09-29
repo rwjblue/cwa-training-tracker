@@ -17,6 +17,10 @@ CWops. Official course material stays at the
   rigs/antennas/weather, POTA, and asking for repeats. Each New QSO combines
   different station details; replay keeps the same contact. Illustrative call-area
   locations, regional seasonal weather, and radio power choices stay consistent.
+- QSO copy checks let you enter the station details you heard, replay the same
+  contact, and check each answer. The form follows the chosen scenario; answers
+  stay hidden until you reveal them. Copy feedback stays in the current studio
+  visit and does not automatically create a practice-log entry.
 - Continuous native audio playback with pause/resume, a seek bar, current-word
   highlighting, and clickable words. Morse rounds include their silence in one
   audio file so playback does not depend on background JavaScript timers.

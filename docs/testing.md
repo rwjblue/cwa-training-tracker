@@ -96,6 +96,13 @@ word/transmission boundary, exercise the lock-screen pause/resume controls, then
 unlock and confirm the transcript follows the actual audio position. Repeat with
 an official recording. Test local spoken answers separately with the page open.
 
+For QSO copy checks, test scenario-specific answer keys and accepted formatting
+at the pure-logic layer. Missing substantive details, wrong station attribution,
+and near-match callsigns must not pass. Keep one browser journey for hidden
+answers, check/retry/reveal, draft retention during replay, and a fresh form when
+the contact changes. Copy feedback is self-assessment, not a saved proficiency
+score; revealing answers should remain explicit.
+
 For embedded Morse Runner, keep protocol and result validation in pure tests.
 One browser journey should start the actual vendored AudioWorklet, stop a short
 run, and save its measured time and score against the assignment. Do not fake

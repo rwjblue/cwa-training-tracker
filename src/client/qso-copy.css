@@ -1,0 +1,173 @@
+.qso-practice-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.qso-practice-mode button {
+  border: 1px solid #bfcbb5;
+  border-radius: 6px;
+  background: #fffefa;
+  padding: 10px 16px;
+  color: #415836;
+  font-size: 13px;
+}
+.qso-practice-mode button[aria-pressed='true'] {
+  background: #38513b;
+  border-color: #38513b;
+  color: #fff;
+}
+.qso-copy-region[hidden] {
+  display: none;
+}
+.qso-copy-form {
+  margin: 24px 0 16px;
+  padding-top: 24px;
+  border-top: 1px solid #d8e0d0;
+}
+.qso-copy-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.qso-copy-heading h3 {
+  color: #36523a;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  font-weight: 500;
+}
+.qso-copy-heading p,
+.qso-copy-instructions,
+.qso-copy-actions p {
+  color: #526449;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.qso-copy-heading p {
+  margin-top: 7px;
+}
+.qso-copy-heading > button {
+  flex-shrink: 0;
+  padding-block: 8px;
+}
+.qso-copy-instructions {
+  margin: 13px 0 20px;
+}
+.qso-copy-stations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.qso-copy-stations fieldset {
+  min-width: 0;
+  border: 1px solid #d1dcc7;
+  border-radius: 7px;
+  margin: 0;
+  padding: 15px;
+}
+.qso-copy-stations legend {
+  padding-inline: 6px;
+  color: #3c5735;
+  font-size: 13px;
+  font-weight: 600;
+}
+.qso-copy-field + .qso-copy-field {
+  margin-top: 15px;
+}
+.qso-copy-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #4a6040;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.qso-copy-field input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 10px;
+  border: 1px solid #becbb2;
+  border-radius: 5px;
+  background: #fffefa;
+  color: #334e2c;
+  font:
+    14px ui-monospace,
+    monospace;
+}
+.qso-copy-field input[aria-invalid='true'] {
+  border-color: #9b6232;
+}
+.qso-copy-feedback {
+  display: grid;
+  gap: 4px;
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.qso-copy-status {
+  color: #536449;
+}
+.qso-copy-status.is-correct {
+  color: #28553b;
+  font-weight: 600;
+}
+.qso-copy-status.is-incorrect {
+  color: #865026;
+  font-weight: 600;
+}
+.qso-copy-expected {
+  color: #3f5736;
+}
+.qso-copy-expected strong {
+  font-family: ui-monospace, monospace;
+  font-weight: 500;
+}
+.qso-copy-extras {
+  margin-top: 20px;
+}
+.qso-copy-extras summary {
+  cursor: pointer;
+  color: #42593a;
+  font-size: 13px;
+  padding-block: 8px;
+}
+.qso-copy-extras[open] summary {
+  margin-bottom: 14px;
+}
+.qso-copy-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 22px;
+}
+.qso-copy-actions p {
+  flex-basis: 100%;
+}
+.qso-copy-result:not(:empty) {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: #eef2e7;
+  border-radius: 6px;
+  color: #3c5634;
+  font-size: 13px;
+  line-height: 1.8;
+}
+@media (max-width: 640px) {
+  .qso-copy-heading {
+    flex-wrap: wrap;
+  }
+  .qso-copy-stations {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .qso-copy-field input {
+    font-size: 16px;
+  }
+  .qso-copy-heading p,
+  .qso-copy-instructions,
+  .qso-copy-actions p {
+    font-size: 13px;
+  }
+}
