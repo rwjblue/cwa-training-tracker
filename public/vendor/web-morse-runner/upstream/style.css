@@ -1,0 +1,576 @@
+/* css reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+p {
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+}
+
+body {
+  background: black;
+  font-family: 'Open Sans', sans-serif;
+  color: #ccc;
+  margin: 5px;
+}
+
+h1 {
+  color: rgb(28, 161, 202);
+  text-decoration: none;
+  margin-bottom: 0.2em;
+}
+
+h2 {
+  color: rgb(229, 241, 245);
+  text-decoration: none;
+}
+
+#chars button[data-active="true"] {
+  background-color: rgb(28, 161, 202);
+}
+
+.nodisplay {
+  display: none;
+}
+
+
+button {
+  background-color: gray;
+  border: none;
+  color: white;
+  padding: 3px 3px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  /* font-size: 1.1em;*/
+  border-radius: 3px;
+}
+
+.left {
+  float: left;
+  margin-right: 10px;
+}
+
+.block {
+  margin: 10px;
+}
+
+input,
+label {
+  display: block;
+}
+
+.setclear {
+  clear: both;
+  margin-bottom: 1em;
+}
+
+#log {
+  font-family: 'Courier New', monospace;
+  height: 350px;
+  overflow-y: auto;
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+.send button {
+  /*  font-family: 'Courier New', monospace;  */
+  width: 6em;
+  font-size: 11pt;
+  display: inline;
+  /* margin-right: 0px;*/
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: black;
+}
+
+#container {
+  position: relative;
+  z-index: 1;
+}
+
+#container * {
+  scrollbar-gutter: stable;
+}
+
+#title {
+  z-index: 9;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: auto;
+
+  background-color: black;
+  text-align: center;
+  position: absolute;
+  padding: 70px 0;
+  vertical-align: middle;
+
+  text-decoration: none;
+  margin-bottom: 0.2em;
+
+}
+
+.large {
+  font-size: 25pt;
+  font-weight: bold;
+  color: rgb(28, 161, 202);
+}
+
+#clock {
+  vertical-align: bottom;
+  /*margin: 30px;*/
+  text-align: center;
+  font-size: 18pt;
+  color: rgb(28, 161, 202);
+  /* display: inline-block;*/
+  border-style: solid;
+  border-color: gray;
+  /* padding: 50px 0 50px;*/
+}
+
+#send_button {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#input {
+  display: flex;
+  gap: 7px;
+}
+
+#low_row {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+#low_row>* {
+  flex-grow: 0;
+}
+
+.flex {
+  display: flex;
+}
+
+
+legend {
+  padding: 3px 6px;
+}
+
+fieldset {
+  padding: 6px;
+}
+
+.small_width {
+  width: 1em;
+}
+
+.grid {
+  display: grid;
+  gap: 7px;
+}
+
+.condx_grid {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.grid_form {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 1fr 0fr 0fr;
+}
+
+.flex_form {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+}
+
+#run {
+  width: 8em;
+  height: 30px;
+  background-color: darkgreen;
+}
+
+#record {
+  height: 30px;
+  padding: 0 10px;
+  background-color: darkgreen;
+}
+
+#time {
+  width: 2.8em;
+}
+
+.stop {
+  background-color: darkred !important;
+}
+
+
+.grid_result {
+  display: grid;
+  gap: 3px;
+  font-size: 10pt;
+  grid-template-columns: 0fr 0fr 0fr;
+}
+
+.table_result {
+  font-size: 11pt;
+  border-spacing: 8px 0px;
+  gap: 30px;
+}
+
+.table_result tr td:nth-child(n+1) {
+  text-align: right;
+}
+
+.box {
+  padding: 10px;
+}
+
+.slider {
+  width: 100%;
+}
+
+#title a {
+  color: rgb(28, 161, 202);
+}
+
+#pileup {
+  text-align: center;
+}
+
+
+a {
+  color: rgb(28, 161, 202);
+}
+
+.pileup_green {
+  color: rgb(4, 161, 4);
+}
+
+
+.red {
+  color: red;
+}
+
+.green {
+  color: rgb(4, 161, 4);
+}
+
+/*
+.pileup_only {
+  
+}*/
+
+.hidden {
+  display: none;
+}
+
+.pileup_hidden {
+  display: none;
+}
+
+
+
+
+
+#input input {
+  font-size: 14pt;
+}
+
+#input input.NR {
+  width: 3.5em;
+  box-sizing: border-box;
+}
+
+
+.led-indicator {
+  width: 20px;
+  height: 20px;
+  background-color: #444;
+  /* Dark gray when off */
+  border-radius: 50%;
+  /* Makes it a circle */
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  /* Subtle shadow when off */
+  display: inline-block;
+  margin-right: 10px;
+  /* Spacing next to input field */
+  vertical-align: middle;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  /* Smooth transition */
+}
+
+/* Style for the TX Active state (RED ON) */
+.tx-active {
+  background-color: #ff0000;
+  /* Bright red center */
+  /* This creates the glow effect */
+  box-shadow: 0 0 10px #ff0000,
+    /* Inner glow */
+    0 0 20px #ff0000,
+    /* Outer glow */
+    0 0 30px #ff0000;
+  /* Wider glow */
+}
+
+/* Recording button states */
+button#record.rec-armed {
+  background-color: #990000;
+}
+
+button#record.recording {
+  background-color: #990000;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes rec-pulse {
+  0%   { opacity: 1.0; }
+  50%  { opacity: 0.45; }
+  100% { opacity: 1.0; }
+}
+
+
+#main {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  grid-template-rows: max-content max-content max-content;
+}
+
+#transcript {
+  grid-column: 1 / span 2;
+  grid-row: 3;
+}
+
+#transcript_content {
+  font-family: 'Courier New', monospace;
+  height: 120px;
+  width: 100%;
+  overflow-y: auto;
+  padding: 5px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  resize: vertical;
+  background-color: black;
+  color: #ccc;
+  border: 1px solid #444;
+}
+
+#toggle_transcript {
+  background: transparent;
+  border: none;
+  font-size: 16pt;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+#footer {
+  grid-column-start: span 2;
+  /*  width: 100%; */
+  flex-basis: 100%;
+}
+
+#stat {
+  flex-grow: 1;
+  border-width: 2px;
+  border-style: groove;
+  border-color: gray;
+  margin-top: 10px;
+  margin-bottom: 10px;  
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: max-content 1fr;
+}
+
+
+#qso_per_h {
+  font-size: 10pt;
+  min-height: 1.2em;
+
+  display: flex;
+  justify-content: center;
+  /* Horizontal zentrieren */
+  align-items: center;
+  border-left: rgb(66, 65, 65) solid;
+  border-width: 1px;
+}
+
+#qso_info {
+  font-size: 10pt;
+    
+  border-right: rgb(66, 65, 65) solid;
+  border-width: 1px;
+  place-self: center;
+  align-self: center;
+  text-align: center;
+  padding: 3px;
+  width: 100%
+}
+
+#qso_chart {
+  background-color: rgb(66, 65, 65);
+  grid-column-start: span 2;
+}
+
+.bar {
+  flex: 1;
+  background-color:  rgb(28, 161, 202);
+  position: relative;
+}
+
+#qso_chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 2px;
+}
+
+#result {
+  padding-right:  0px;
+}
+
+#log_hdr {
+  color:  rgb(28, 161, 202);
+}
+
+/* Expert Config Button */
+#expert_config {
+  background: transparent;
+  border: none;
+  font-size: 16pt;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+/* Expert Config Button - stays visible but grayed out when contest is running */
+#expert_config.contest-hidden {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+#expert_config {
+  transition: opacity 0.2s;
+}
+
+/* Modal Content Box */
+.modal-content {
+  position: relative;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 0;
+  min-width: 350px;
+  max-width: 450px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #333;
+  border-bottom: 1px solid #444;
+  border-radius: 6px 6px 0 0;
+}
+
+.modal-header span {
+  font-weight: bold;
+  color: rgb(28, 161, 202);
+}
+
+.modal-body {
+  padding: 15px;
+}
+
+.modal-body .flex_form {
+  margin-bottom: 0;
+}
+
+.modal-body > * + * {
+  margin-top: 10px;
+}
+
+/* Close Button */
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #888;
+  cursor: pointer;
+  padding: 0 5px;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+/* Modal footer bar */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 15px;
+  border-top: 1px solid #444;
+  border-radius: 0 0 6px 6px;
+}
+
+/* Confirm button in modal footer */
+.confirm-btn {
+  font-size: 28px;
+}
+
+/* Expert Config form grid for aligned dropdowns */
+.expert-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.expert-form-grid label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.expert-form-grid select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Disabled inputs in expert config */
+#expert_modal input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

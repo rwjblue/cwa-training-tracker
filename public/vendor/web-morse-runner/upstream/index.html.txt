@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
+  <title>Web Morse Runner by DJ1TF - Thomas Fritzsche</title>
+</head>
+
+<body>
+  <!-- <h1 class="block">WebMorseRunner</h1> -->
+  <div id="main">
+
+    <div id="container">
+      <div class="block" id="log">
+        <table>
+          <tr id="log_hdr">
+            <th>UTC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>Call&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>Recv&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>Send&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>Pref&nbsp;</th>
+            <th>Chk&nbsp;</th>
+          </tr>
+        </table>
+      </div>
+      <div id="title">
+        <div class="large"> Web Morse Runner 0.19.1&beta;</div>
+        <div> by DJ1TF - Thomas Fritzsche</div>
+        <div> <a href="https://github.com/fritzsche/WebMorseRunner">GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="grid">
+        <fieldset class="grid">
+          <legend>Station</legend>
+          <div class="flex_form">
+            <label for="my_call">Call</label>
+            <input class="watch no_run" autocomplete="off" id="my_call" size="8" name="my_call" value="DJ1TF" />
+            <div class="small_width"></div>
+            <input class="watch" type="checkbox" id="qsk" name="qsk" value="K" />
+            <label for="qsk">QSK</label>
+
+          </div>
+          <div class="grid_form">
+            <label for="wpm">CW Speed</label>
+            <input class="watch" autocomplete="off" type="number" step="1" min="10" max="60" id="wpm" size="4"
+              name="wpm" value="20" />
+            <div>WPM</div>
+            <label for="pitch">Pitch</label>
+            <select class="watch" autocomplete="off" id="pitch" name="pitch" selected="500">
+              <option value="300">300Hz</option>
+              <option value="350">350Hz</option>
+              <option value="400">400Hz</option>
+              <option value="450">450Hz</option>
+              <option value="500" selected>500Hz</option>
+              <option value="550">550Hz</option>
+              <option value="600">600Hz</option>
+              <option value="650">650Hz</option>
+              <option value="700">700Hz</option>
+              <option value="750">750Hz</option>
+              <option value="800">800Hz</option>
+              <option value="850">850Hz</option>
+              <option value="900">900Hz</option>
+            </select>
+            <div></div>
+            <label for="bandwidth">RX Bandwidth</label>
+            <select class="watch" autocomplete="off" id="bandwidth" name="bandwidth">
+              <option value="100">100Hz</option>
+              <option value="150">150Hz</option>
+              <option value="200">200Hz</option>
+              <option value="250">250Hz</option>
+              <option value="300" selected>300Hz</option>
+              <option value="350">350Hz</option>
+              <option value="400">400Hz</option>
+              <option value="450">450Hz</option>
+              <option value="500">500Hz</option>
+              <option value="550">550Hz</option>
+              <option value="600">600Hz</option>
+            </select>
+          </div>
+          <div class="flex_form">
+            <label for="volume">Mon. Level</label>
+            <input class="watch" type="range" id="volume" name="volume" step="0.05" value="0.75" min="0" max="1" />
+          </div>
+          <div class="flex_form">
+            <label for="rit">RIT</label>
+
+            <input class="slider watch" list=ticks class="watch" type="range" id="rit" name="rit" step="50" value="0"
+              min="-500" max="500" />
+            <!--  <datalist id=ticks>
+              <option value="-500" label="-500"></option>
+              <option value="0" label="0"></option>
+              <option value="500" label="500"></option>
+            </datalist>  -->
+
+          </div>
+        </fieldset>
+        <fieldset class="grid">
+          <legend>Band Conditions</legend>
+          <div class="condx_grid grid">
+            <div class="flex_form">
+              <input class="watch" type="checkbox" id="qrn" name="qrn" value=" " />
+              <label for="qrn">QRN</label>
+            </div>
+            <div class="flex_form">
+              <input class="watch" type="checkbox" id="qrm" name="qrm" value=" " />
+              <label for="qrm">QRM</label>
+            </div>
+
+            <div class="flex_form">
+              <input class="watch" type="checkbox" id="qsb" name="qsm" value=" " />
+              <label for="qsb">QSB</label>
+            </div>
+            <div class="flex_form">
+              <input class="watch" type="checkbox" id="flutter" name="flutter" value=" " />
+              <label for="flutter">Flutter</label>
+            </div>
+            <div class="flex_form">
+              <input class="watch" type="checkbox" id="lids" name="lids" value=" " />
+              <label for="lids">LID's</label>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="grid">
+          <legend>Contest</legend>
+          <div class="flex_form">
+            # Calls: <span id="no_of_calls"></span> /
+            <input type="file" single id="fileElem" style="display:none" />
+            <a href="#" id="fileSelect">Upload</a> /
+            <a href="#" id="reset">Reset</a>
+            <div id="fileList">
+            </div>
+          </div>
+          <div class="flex_form">
+            <button id="record" title="Record audio to WAV">&#9210; Rec</button>
+            <button id="expert_config" title="Expert Configuration">⚙</button>
+            <button id="toggle_transcript" title="Toggle Transcript">📄</button>
+          </div>
+          <div class="flex_form">
+            <label for="mode">Mode</label>
+            <select class="watch no_run" autocomplete="off" id="mode" name="mode">
+            </select>
+            <label class="pileup_only" for="activity">Activity</label>
+            <input class="watch no_run pileup_only" autocomplete="off" type="number" step="1" min="1" max="9"
+              id="activity" size="1" name="activity" value="2" />
+          </div>
+          <div id='myexchange1' class="flex_form hidden">
+            <label for="my_exchange1">Exchange1</label>
+            <input class="watch no_run" autocomplete="off" id="my_exchange1" size="8" name="my_exchange1" value="" />
+          </div>
+          <div id='myexchange2' class="flex_form hidden">
+            <label for="my_exchange2">Exchange2</label>
+            <input class="watch no_run" autocomplete="off" id="my_exchange2" size="8" name="my_exchange2" value="" />
+          </div>
+          <div class="flex_form">
+            <button id="run">&#9654; Run</button>
+            <div>for</div>
+            <input class="watch no_run" type="number" min="1" max="100" step="1" autocomplete="off" id="time" size="4"
+              name="time" value="10" />
+            <label for="time">min.</label>
+          </div>
+        </fieldset>
+
+      </div>
+
+    </div>
+
+    <fieldset id="transcript" class="grid hidden">
+      <legend>Transcript</legend>
+      <textarea id="transcript_content" rows="5" readonly></textarea>
+    </fieldset>
+
+    <div id="footer" class="flex">
+      <div id="low_row" class="">
+        <div class="flex_form block" id="input">
+          <div>
+            <label for="call">Call</label>
+            <input autocomplete="off" enterkeyhint="enter" inputmode="text" id="call" class="cont_input" type="text"
+              value="" name="call" maxlength="15" size="15" style="text-transform: uppercase">
+          </div>
+          <div class="flex_form" id="exchange">
+            <div>
+              <label for="rst">RST</label>
+              <input autocomplete="off" enterkeyhint="enter" inputmode="text" id="rst" class="NR" maxlength="3" size="3"
+                type="text" value="" name="rst">
+            </div>
+            <div>
+              <label for="nr" id="exchange1">Nr.</label>
+              <input autocomplete="off" enterkeyhint="enter" inputmode="text" id="nr" class="NR" maxlength="3" size="3"
+                type="text" value="" name="nr">
+            </div>
+          </div>
+          <div>
+            <div> TX<wbr></div>
+            <div id="tx-indicator" class="led-indicator"></div>
+          </div>
+        </div>
+
+        <div class="block send" id="send_button">
+          <button id="F1">F1 CQ</button>
+          <button id="F2">F2 &lt;#&gt;</button>
+          <button id="F3">F3 TU</button>
+          <button id="F4">F4 &lt;my&gt;</button>
+          <button id="F5">F5 &lt;his&gt;</button>
+          <button id="F6">F6 B4</button>
+          <button id="F7">F7 &quest;</button>
+          <button id="F8">F8 NIL</button>
+        </div>
+      </div>
+      <div id="stat">
+        <div id="qso_info">&nbsp;</div>
+        <div id="qso_per_h">0 qso/hr.</div>
+        <div id="qso_chart">
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div> <!-- 10 -->
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div> <!-- 20 -->
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div> <!-- 24 -->
+        </div>
+      </div>
+      <div id="result" class="box">
+        <!--        <div class="pileup_only" id="pileup">Pileup: 0</div> -->
+        <div id="clock">00:00:00</div>
+        <table class="table_result">
+          <tr>
+            <th></th>
+            <th>Raw</th>
+            <th>Verified</th>
+          </tr>
+          <tr>
+            <td>Pts</td>
+            <td>0</td>
+            <td>0</td>
+          </tr>
+          <tr>
+            <td>Mult</td>
+            <td>0</td>
+            <td>0</td>
+          </tr>
+          <tr>
+            <td>Score</td>
+            <td>0</td>
+            <td>0</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div id="debug"></div>
+
+  <!-- Expert Configuration Modal -->
+  <div id="expert_modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Expert Configuration</span>
+      </div>
+      <div class="modal-body">
+        <div class="expert-form-grid">
+          <label for="min_dx">Min DX Station</label>
+          <select id="min_dx" name="min_dx">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+          <label for="max_dx">Max DX Station</label>
+          <select id="max_dx" name="max_dx">
+            <option value="0">Unlimited</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+          <label for="dx_wpm_type">DX-Station WPM</label>
+          <select id="dx_wpm_type" name="dx_wpm_type">
+            <option value="standard">Standard</option>
+            <option value="individual">Individual</option>
+          </select>
+        </div>
+        <div class="flex_form">
+          <label for="dx_min_wpm">Min WPM</label>
+          <input type="number" id="dx_min_wpm" min="10" max="60" value="15" disabled />
+          <label for="dx_max_wpm">Max WPM</label>
+          <input type="number" id="dx_max_wpm" min="10" max="60" value="20" disabled />
+        </div>
+        <div class="expert-form-grid">
+          <label for="farnsworth_enabled">Farnsworth</label>
+          <select id="farnsworth_enabled" name="farnsworth_enabled">
+            <option value="false">Off</option>
+            <option value="true">On</option>
+          </select>
+        </div>
+        <div class="flex_form">
+          <label for="farnsworth_eff_wpm">Eff. WPM</label>
+          <input type="number" id="farnsworth_eff_wpm" min="5" max="40" value="15" disabled />
+        </div>
+        <div class="expert-form-grid">
+          <label for="contest_start_offset">Contest Offset (h)</label>
+          <input type="number" id="contest_start_offset" min="0" max="10" step="0.5" value="0" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close_expert" class="close-btn confirm-btn">&#10003;</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+
+</html>

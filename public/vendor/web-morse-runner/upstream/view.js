@@ -1,0 +1,787 @@
+import { Calls } from "./call.js"
+import { AudioMessage, DEFAULT, RunMode, StationMessage } from "./defaults.js"
+import { Log } from "./log.js"
+import { Config } from "./config.js"
+import { Transcript } from "./transcript.js"
+import { ExpertConfig } from "./expert.js"
+import { float32ToInt16, buildWavBuffer, recFilename } from "./recording.js"
+
+import { ContestDefinition } from "./contest-definition.js"
+
+export class View {
+    constructor() {
+        this.running = false
+        this.recording = false
+        this._recArmed = false
+        this._recChunks = []
+        this._recTotalSamples = 0
+        this._recMaxSamples = 11025 * 60 * 90
+        this.ContestNode = null
+        this.calls = new Calls()
+        this.calls.fetch_calls()
+        this.MustAdvance = false
+        this.call = document.getElementById("call")
+        this.clock = document.getElementById("clock")
+        this.qso_per_h = document.getElementById("qso_per_h")
+        this.qso_chart_bars = document.querySelectorAll(".bar")
+
+
+        this.txIndicator = document.getElementById('tx-indicator')
+        this._pileupStations = 0
+        this.prev_call = ""
+        this.CallSend = false
+        this.NrSend = false
+        this.TX = false
+
+        this.log = new Log()
+        this._expertConfig = null  // Will be initialized in onLoad after config
+
+    }
+
+
+
+    setFocus(id) {
+        document.getElementById(id).focus()
+    }
+
+    set pileupStations(number) {
+        this._pileupStations = number
+        this._updatePileUp()
+    }
+
+    get pileupStations() {
+        return this._pileupStations
+    }
+
+    _updatePileUp() {
+/*        if (this._config._config.runmode === RunMode.Pileup) {
+            const element = document.getElementById("pileup")
+            const txt = `Pileup: ${this._pileupStations}`
+            element.innerText = txt
+            if (this._pileupStations > 0) element.classList.add('pileup_green'); else element.classList.remove('pileup_green')
+        }
+*/
+        if (this._config._config.contest_id === 'pileup') {
+            const element = document.getElementById("qso_info")
+            const txt = `Pileup: ${this._pileupStations}`
+            element.innerText = txt
+            if (this._pileupStations > 0) element.classList.add('pileup_green'); else element.classList.remove('pileup_green')
+        }
+
+
+    }
+
+    _update_info(){
+        const dom = document.getElementById("qso_info")
+        dom.classList.remove('pileup_green')
+        dom.classList.remove('green')
+        dom.classList.remove('red')
+        switch(this._config._config.contest_id ) {
+            case 'pileup': 
+               dom.innerText = `Pileup: ${this._pileupStations}`
+               if (this._pileupStations > 0) dom.classList.add('pileup_green'); else dom.classList.remove('pileup_green')
+               break
+            case 'single':   
+              dom.innerText = 'Single Calls'
+              break
+            case 'hst':  
+              dom.innerText = 'H S T'
+              dom.classList.add('red');
+              break
+            default:
+              dom.innerText = 'COMPETITION'  
+              dom.classList.add('red');
+              break
+        }
+    }
+
+    wipeFields() {
+        document.getElementById("call").value = ""
+        this._ContestDefinition.wipeExchangeFields()
+        this.setFocus("call")
+
+        this.CallSend = false
+        this.NrSend = false
+    }
+
+    sendMessage(data) {
+        if (this.ContestNode) this.ContestNode.port.postMessage(data)
+    }
+
+
+    saveQSO() {
+        const contestDef = new ContestDefinition()
+        const RecvExchange = contestDef.getExchange()
+
+        const call = this.Call
+        const recNr = String(this.Nr).padStart(this.Nr > 999 ? 4 : 3, "0")
+        const recRST = String(this.Rst)
+
+        if (call && recNr !== '000'  && recRST && RecvExchange) { //&& this.Nr !== -1
+            this.log.addQso(
+                {
+                    UTC: this.getClock(),
+                    Clock: this.ctx.currentTime - this.start_time,
+                    Call: call,
+                    RecvNr: recNr,
+                    RecvRST: recRST,
+                    RecvExchange: RecvExchange,
+                },
+            )
+            this.sendMessage({
+                type: AudioMessage.update_nr,
+                data: this.log.NR,
+            })
+            this.wipeFields()
+        }
+    }
+
+    processSpace() {
+        this.MustAdvance = false
+        const active = document.activeElement
+        const RST = document.getElementById('rst')
+        let rst_value = ''
+        if (RST) rst_value = RST.value
+        if (!active) return
+        switch (active.id) {
+            case 'call':
+            case 'RST':
+                if (rst_value === '' && RST) RST.value = '599'
+                let next_id = this._ContestDefinition.getNextField(active.id)
+                if (next_id === 'rst') next_id = this._ContestDefinition.getNextField(next_id)
+                this.setFocus(next_id)
+                break
+            default:
+                const default_next_id = this._ContestDefinition.getNextField(active.id)
+                this.setFocus(default_next_id)
+                break
+        }
+    }
+
+    processEnter() {
+        let new_call = this.call.value.toUpperCase()
+        this.MustAdvance = false
+
+        // send CQ if call is empty
+        if (this.call.value === "") {
+            this.sendMessage({
+                type: AudioMessage.send_msg,
+                data: StationMessage.CQ
+            })
+            return
+        }
+        // access member variable
+        // these are reset when qso finished
+        let callSend = this.CallSend
+        let numberSend = this.NrSend
+
+
+        // content in the NR/exchange field
+        const dxNrLogged = this._ContestDefinition.isExchangeEdited()
+
+        // Call has not yet send, so we send the call
+        if (!callSend || (!numberSend && !dxNrLogged)) {
+            // remember we have send the call
+            this.CallSend = true
+            // we remember the call to check if we changes it.
+            // we can resend all changed 
+            this.prev_call = new_call
+            // send <his>
+            this.sendMessage({
+                type: AudioMessage.send_his,
+                data: new_call,
+            })
+        }
+        if (!numberSend) {
+            this.NrSend = true
+            this.sendMessage({
+                type: AudioMessage.send_msg,
+                data: StationMessage.NR
+            })
+        }
+        // send ?
+        if (numberSend && !dxNrLogged) {
+            this.sendMessage({
+                type: AudioMessage.send_msg,
+                data: StationMessage.Qm,
+            })
+        }
+        // qso finished:
+        // we have NR and call
+        // now send TU and log QSO and reset the fields.
+                if (dxNrLogged && (callSend || numberSend)) {
+            this.sendMessage({
+                type: AudioMessage.send_msg,
+                data: StationMessage.TU
+            })
+
+            this.saveQSO()
+
+
+        } else {
+        this.MustAdvance = true
+    }
+    }
+
+
+
+    // My outgoing messages
+    sendMyMessage(message) {
+        switch (message) {
+            // we need to send the text of his call
+            case StationMessage.HisCall:
+                this.CallSend = true
+                this.sendMessage({
+                    type: AudioMessage.send_his,
+                    data: this.Call,
+                })
+                break
+            case StationMessage.Exchange1:
+                const exchange = this._ContestDefinition.composeExchange()
+                this.sendMessage({
+                    type: AudioMessage.send_exchange,
+                    data: exchange
+                })
+                break
+            case StationMessage.NR:
+                this.NrSend = true
+                this.sendMessage({
+                    type: AudioMessage.send_msg,
+                    data: message
+                })                
+                break;    
+            default:
+                this.sendMessage({
+                    type: AudioMessage.send_msg,
+                    data: message
+                })
+                break
+        }
+    }
+
+    // process function key
+    processFunctionKey(key) {
+        const Constest_FKey = this._ContestDefinition._contest.key
+        if (Constest_FKey) {
+            if (!Constest_FKey[key]) return false            
+            const msg = Constest_FKey[key].send
+            this.sendMyMessage(msg)
+        } else {
+            //debugger;
+        }
+        return true
+    }
+
+    hideTitle() {
+        document.querySelector("#title").style.display = "none"
+    }
+
+    sendButton() {
+        const send_buttons = document.querySelectorAll(".send button")
+        send_buttons.forEach((button) => {
+            button.addEventListener("mousedown", (e) => {
+                this.startContest()
+                // avoid loosing focus of input fields
+                this.processFunctionKey(e.target.id)
+                e.preventDefault()
+            })
+        })
+
+        //        document.getElementById("input").addEventListener("keydown", (e) => {
+        document.addEventListener("keydown", (e) => {
+            if (!this.running) return
+            //this.startContest()
+            if (this.call.value.toUpperCase() !== this.prev_call) {
+                this.prev_call = ""
+                this.CallSend = false
+            }
+            let key_value = e.key
+            if (e.ctrlKey || e.altKey || e.metaKey)   {
+                const regex = /Digit(\d)/
+                const digit_match = e.code.match(regex)
+                if (digit_match) key_value = ''
+            }
+
+            switch (key_value) {
+                case "Escape":
+                    e.preventDefault()
+                    this.MustAdvance = true
+                    this.ContestNode.port.postMessage({
+                        type: AudioMessage.abort_sending,
+                        data: "",
+                    })
+                    break
+                /*  case "\\":
+                      his.processFunctionKey('F1')
+                      e.preventDefault()
+                      break    */
+                case "PageDown":
+                    e.preventDefault()
+                    this._config.updateWPM(-5)
+                    break
+                case "PageUp":
+                    e.preventDefault()
+                    this._config.updateWPM(5)
+                    break
+                case "Space":
+                case " ":
+                    this.processSpace()
+                    e.preventDefault()
+                    break
+                case "Enter":
+                    const modifier = (e.ctrlKey || e.altKey || e.metaKey)
+                    if (modifier) {
+                        this.saveQSO()
+                        e.preventDefault()
+                    } else {
+                        this.processEnter()
+                        e.preventDefault()
+                    }
+                    break
+                case "ArrowDown":
+                    if (e.ctrlKey || e.altKey || e.metaKey) {
+                        this._config.updateBW(-50)
+                    } else {
+                        this._config.updateRIT(-50)
+                    }
+                    e.preventDefault()
+                    break
+                case "ArrowUp":
+                    if (e.ctrlKey || e.altKey || e.metaKey) {
+                        this._config.updateBW(50)
+                    } else {
+                        this._config.updateRIT(50)
+                    }
+                    e.preventDefault()
+                    break
+                case "Tab":
+                    const last_id = this._ContestDefinition.getLastExchangeField().id
+                    if (!e.shiftKey && e.target.id === last_id) {
+                        document.getElementById("call").focus()
+                        e.preventDefault()
+                    }
+                    if (e.shiftKey && e.target.id === "call") {
+                        document.getElementById(last_id).focus()
+                        e.preventDefault()
+                    }
+
+                    break
+                case "+":
+                case ",":
+                case "[":
+                case ".":
+                    e.preventDefault()
+                    if (this.call.value.toUpperCase() !== this.prev_call.toUpperCase()) {
+                        this.processFunctionKey('F5')
+                    }
+                    this.processFunctionKey('F3') // TU                    
+
+                    this.saveQSO()
+                    break
+                case 'Insert':
+                case ";":
+                    e.preventDefault()
+                    this.processFunctionKey('F5') // <his>
+                    this.prev_call = this.call.value.toUpperCase()
+                    this.processFunctionKey('F2') // <#> 
+                    break
+                default:
+                    const regex = /Digit(\d)/
+                    const digit_match = e.code.match(regex)
+
+                    let key = e.key
+                    const modifier_pressed = (e.ctrlKey || e.altKey || e.metaKey ||
+                        e.location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) // e.shiftKey ||
+                    // if a modifier key is pressed we also accept numbers as function key
+                    if (modifier_pressed && digit_match) key = `F${digit_match[1]}`
+
+                    // wipe fields on ALT-W / CTRL-W / META-W
+                    if (modifier_pressed && e.key == 'w') {
+                        e.preventDefault()
+                        this.wipeFields()
+                        return
+                    }
+                    if (this.processFunctionKey(key)) e.preventDefault()
+                    break
+            }
+        })
+    }
+
+    get Call() {
+        return this.call.value.toUpperCase().trim()
+    }
+
+    get Nr() {
+        const nr_dom = document.getElementById("nr")
+        if (!nr_dom) return -1
+        let nr = nr_dom.value
+        if (nr === "") return -1
+        return parseInt(nr)
+    }
+    get Rst() {
+        const rst_dom = document.getElementById("rst")
+        if (!rst_dom) return 999
+        const rst = rst_dom.value
+        if (rst === "") return 599
+        return parseInt(rst)
+    }
+
+
+
+    advance() {
+        if (!this.MustAdvance) return
+        const rst = document.getElementById("rst")
+        if (rst && rst.value === "") rst.value = 599
+
+        if (this.call.value.indexOf("?") === -1) {
+            if (rst) {
+                const next_field = this._ContestDefinition.getNextField("rst")
+                this.setFocus(next_field)
+            } else {
+                const next_field = this._ContestDefinition.getNextField("call")
+                this.setFocus(next_field)
+            }
+        }
+        this.MustAdvance = false
+    }
+
+    formatTimer(sec) {
+        let hours = Math.floor(sec / 3600)
+        let minutes = Math.floor((sec - (hours * 3600)) / 60)
+        let seconds = Math.floor(sec - (hours * 3600) - (minutes * 60))
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")
+            }:${String(seconds).padStart(2, "0")}`
+    }
+
+
+    update_qso_per_h(t) {
+        const five_minutes = 5 * 60
+        this.draw_chart()
+        const sel_time = Math.min(five_minutes, t)
+        const count = this.log.count_qso(this.ctx.currentTime - this.start_time - sel_time)
+        const sec_per_h = 3600
+
+        const qso_rate = sel_time === 0 ? 0 : Math.round((count / sel_time) * sec_per_h)
+
+//        let text = '0 qso/hr.'
+//        if (qso_rate > 0) 
+        const text = `${qso_rate} qso/hr.`
+
+        this.qso_per_h.innerText = text
+    }
+
+    update_chart(data) {
+        const no_bars = this.qso_chart_bars.length;
+
+        const standard_max_qso = ( 150 / 60 ) * 5
+        const max_value = Math.max(standard_max_qso,Math.max(...data))
+        const factor = 100/(1.1*max_value)
+//        console.log(factor)
+//        console.log(this.qso_chart_bars.length)
+        for(let i = 0;i< no_bars;i++) 
+        for (let i = 0; i < no_bars; i++) {
+            let number = 0
+            if (data[i] && data[i] > 0) number = data[i]
+            this.qso_chart_bars[i].style.height = `${number * factor}%`
+        }
+
+
+    }
+
+    draw_chart() {
+        const now = this.ctx.currentTime - this.start_time
+        const bins = this.log.qso_bins(now)
+        this.update_chart(bins)
+
+    }
+
+    updateTimer() {
+        if (!this.running === true) return
+        let t = this.ctx.currentTime - this.start_time
+
+        this.update_qso_per_h(t)
+
+        if (t > this._config._config.time * 60) {
+            this.clock.innerText = this.formatTimer(
+                this._config._config.time * 60,
+            )
+            this.stopContest()
+        }
+        this.clock.innerText = this.getClock()
+    }
+
+    getClock() {
+        let t = this.ctx.currentTime - this.start_time
+        return this.formatTimer(t)
+    }
+
+    toggleNoRunFields() {
+        document.querySelectorAll(".no_run").forEach(
+            (f) => f.disabled = !f.disabled,
+        )
+    }
+
+    async startContest() {
+        if (this.running === true) return
+        this._config.read_dom()
+        this.hideTitle()
+        this.running = true
+        if (this._expertConfig) this._expertConfig.hide()
+        this.wipeFields()
+        this.stopTX()
+        this.pileupStations = 0
+
+        this.log.wipe()
+        new Transcript().clear()
+        this.toggleRunButton()
+        this._update_info()
+
+        //if (!this.ctx)
+        document.getElementById("debug").innerText = ""
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)({
+            sampleRate: DEFAULT.RATE,
+        })
+        if (this.ctx.state === "suspended") {
+            await this.ctx.resume()
+        }
+
+        await this.ctx.audioWorklet.addModule("contest-processor.js")
+        this.ContestNode = new AudioWorkletNode(
+            this.ctx,
+            "contest-processor",
+        )
+
+        this.start_time = this.ctx.currentTime
+        this.updateTimer()
+        this.timer_id = window.setInterval(() => {
+            this.updateTimer()
+        }, 500)
+        this.ContestNode.port.onmessage = (e) => {
+            let type = e.data.type
+            let data = e.data.data
+            switch (type) {
+                case AudioMessage.request_dx:
+                    let calls = new Array()
+                    for (let i = 0; i < data; i++) calls.push(this.calls.get_random())
+                    this.ContestNode.port.postMessage({
+                        type: AudioMessage.create_dx,
+                        data: calls,
+                    })
+                    break
+                case AudioMessage.request_qrm:
+                    const call = this.calls.get_random()
+                    this.ContestNode.port.postMessage({
+                        type: AudioMessage.create_qrm,
+                        data: call,
+                    })
+                    break
+                case AudioMessage.abort_sending:
+                    const abort = data
+                    if (abort.sendHis) {
+                        this.CallSend = false
+                    }
+                    if (abort.sendNr) {
+                        this.NrSend = false
+                    }
+                    break
+                case AudioMessage.start_tx:
+                    this.startTX()
+                    break
+                case AudioMessage.stop_tx:
+                    this.stopTX()
+                    break
+                case AudioMessage.advance:
+                    this.advance()
+                    break
+                case AudioMessage.check_log:
+                    this.log.checkQSO(data)
+                    break
+                case AudioMessage.update_pileup:
+                    this.pileupStations = data
+                    break
+                case AudioMessage.update_call:
+                    if (!data) {
+                        this.CallSend = false
+                    } else this.prev_call = this.Call.toUpperCase()
+                    break
+                case AudioMessage.transcript:
+                    new Transcript().log(`${this.getClock()} ${data}`)
+                    break
+                case AudioMessage.audio_chunk:
+                    this._onAudioChunk(e.data.data)
+                    break
+                default:
+                    console.log("ERROR: Unsupported message")
+                    debugger
+            }
+        }
+        this.ContestNode.connect(this.ctx.destination)
+        let conf = this._config._config
+        //        conf['active_contest'] = this._ContestDefinition._contest
+        this._ContestDefinition.updateConfig(this._config._config)
+        this.sendMessage({
+            type: AudioMessage.start_contest,
+            data: conf,
+        })
+        if (this._recArmed) this._startCapture()
+    }
+
+    updateCall(e) {
+        const call = this.Call
+        this.ContestNode.port.postMessage({
+            type: AudioMessage.update_call,
+            data: call,
+        })
+    }
+
+    stopTX() {
+        this.TX = false
+        this.txIndicator.classList.remove('tx-active')
+        this.call.removeEventListener('input', this.updateCall)
+    }
+
+    startTX() {
+        this.TX = false
+        this.updateCall = this.updateCall.bind(this)
+        this.call.addEventListener('input', this.updateCall)
+        this.txIndicator.classList.add('tx-active')
+    }
+
+    stopContest() {
+        if (this.recording) this._stopCapture()
+        this.running = false
+        this.toggleRunButton()
+        if (this._expertConfig) this._expertConfig.show()
+        this.sendMessage({
+            type: AudioMessage.stop_contest,
+        })
+
+        this.ContestNode.disconnect()
+        this.ctx.close()
+        if (this.timer_id) window.clearInterval(this.timer_id)
+        this.stopTX()
+    }
+
+    toggleRunButton() {
+        this.toggleNoRunFields()
+        if (this.running) {
+            this.run.classList.add("stop")
+            this.run.innerHTML = "&#9724; Stop"
+        } else {
+            this.run.classList.remove("stop")
+            this.run.innerHTML = "&#9654; Run"
+        }
+    }
+
+    initRunButton() {
+        this.run = document.getElementById("run")
+        this.run.addEventListener("click", (e) => {
+            if (this.running) this.stopContest()
+            else this.startContest()
+        })
+    }
+
+    initRecordButton() {
+        this.recordBtn = document.getElementById('record')
+        this.recordBtn.addEventListener('click', () => {
+            if (this._recArmed) this._disarmRecording()
+            else this._armRecording()
+        })
+    }
+
+    _armRecording() {
+        this._recArmed = true
+        this._recChunks = []
+        this._recTotalSamples = 0
+        this.recordBtn.classList.add('rec-armed')
+        if (this.running) this._startCapture()
+    }
+
+    _disarmRecording() {
+        if (this.recording) this._stopCapture()
+        this._recArmed = false
+        this.recordBtn.classList.remove('rec-armed')
+        setTimeout(() => this._finalizeRecording(), 200)
+    }
+
+    _startCapture() {
+        this.recording = true
+        this.recordBtn.classList.add('recording')
+        this.sendMessage({ type: AudioMessage.start_recording })
+    }
+
+    _stopCapture() {
+        this.recording = false
+        this.recordBtn.classList.remove('recording')
+        this.sendMessage({ type: AudioMessage.stop_recording })
+    }
+
+    _onAudioChunk(buffer) {
+        const i16 = float32ToInt16(new Float32Array(buffer))
+        this._recChunks.push(i16)
+        this._recTotalSamples += i16.length
+        if (this._recTotalSamples >= this._recMaxSamples) {
+            this._stopCapture()
+        }
+    }
+
+    _finalizeRecording() {
+        if (this._recChunks.length === 0) return
+        const buf = buildWavBuffer(this._recChunks, this._recTotalSamples)
+        this._recChunks = []
+        const blob = new Blob([buf], { type: 'audio/wav' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = recFilename(this._config._config.my_call)
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 10000)
+    }
+
+    initToggleTranscript() {
+        this.transcriptToggle = document.getElementById("toggle_transcript")
+        this.transcriptToggle.addEventListener("click", (e) => {
+            const transcript = document.getElementById("transcript")
+            if (transcript.classList.contains("hidden")) {
+                transcript.classList.remove("hidden")
+            } else {
+                transcript.classList.add("hidden")
+            }
+        })
+    }
+
+    updateConf(conf) {
+        if (this.running) {
+            this.sendMessage({
+                type: AudioMessage.config,
+                data: conf,
+            })
+        }
+    }
+
+    initConfig() {
+        this._config = new Config((conf) => {
+            this.updateConf(conf)
+            this._ContestDefinition.updateConfig(conf)
+        })
+        this._config.update_dom()
+    }
+
+
+
+    onLoad() {
+        this._ContestDefinition = new ContestDefinition()
+        // initConfig must come first so Config._instance is set
+        this.initConfig()
+        this.initRunButton()
+        this.initRecordButton()
+        this.initToggleTranscript()
+        // Now create ExpertConfig - Config singleton is ready
+        this._expertConfig = new ExpertConfig()
+        if (this._expertConfig) {
+            this._expertConfig.setDefaultWpmValues()
+        }
+        this.sendButton()
+        this.wipeFields()
+    }
+}

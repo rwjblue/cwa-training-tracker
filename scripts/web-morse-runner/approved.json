@@ -1,0 +1,33 @@
+{
+  "revision": "847e9089ef379a065d1cf6807c09f0724bbe072e",
+  "sha256": {
+    "LICENSE": "6b0382b16279f26ff69014300541967a356a666eb0b91b422f6862f6b7dad17e",
+    "call.js": "ba7fecee30dee9c356980570c671f7719e33177a3f84c3b73c393d2fe9e65c7f",
+    "config.js": "3afde52d162da94f6f42dc3397ec18f3a436d4a9a05df3a1270bf3dcdd74f07f",
+    "contest-definition.js": "a7d46602e2d7197f474a8bff93e5a16e914e96bd8e878027abd1ac82e8cb34cc",
+    "contest-processor.js": "acb1fad1373d86b1a0967383ba164d55f8897dadf78335d3709dbd66b2e3e9f1",
+    "contest.js": "c745a3f4546110d6257edfe10da9b94538068c8d2890c15a035a3831cfc451db",
+    "defaults.js": "c3b95feab1afe873c98b0bee801ec796c9f2a1e8b333ada670d80616a001661d",
+    "dxoperator.js": "ca4b7f88c9c8856cad4583e42486019b730896743a3ab82a9a4a112893313a74",
+    "dxstation.js": "9020e667c0ab76a7dac58418187f551aca51721a221c39477ffc9afbe225a986",
+    "expert.js": "b1c48a262390f9ae53d9513642cc63920b40d33bc835e0ef7d6401e46bd153ad",
+    "index.html": "0d681a0181c6cb5f8ae1365af51c0a8eb8ffe44ef9fb903bdd77d9998e6402f5",
+    "keyer.js": "77b5f610d1d69544b3fbd69de7df24b64e3206a44e840040e7999abd0269c97c",
+    "log.js": "d78fad35f100eae9c77e4146c7a1db5fc4d941fc5d7ad88aaf046a73ee5b701e",
+    "main.js": "d00231a0ad2e7c64e88415decb1369e5a13be659ae1a67ebcff1c4d4420af52d",
+    "modulator.js": "55a3c5a907484e20d453e5ed44f3745bfeb94be6c69ea3dc7c177074c2ec0a12",
+    "movavg.js": "0b38cedb2ffb37c66dac95859c6ef0546764dd2029b3da12e524a97332574b23",
+    "mystation.js": "c659f49b804243d340a41234935bc275518a900f2c616896fdf69ecaa168e1fa",
+    "qrmstation.js": "8c1c1c8599f924437bde551ab0d0d5c9707c247cdaa7ee732a74e460a373bc48",
+    "qrnstation.js": "dc223cf48dc95b94a2fb57cab6769fd4eeb769ee155945a76b7d5e01913e4dad",
+    "qsb.js": "79f1a5fec6f459f6d39776d08fca4862b947d3e55ca35d747771cad89d025b69",
+    "quickavg.js": "f113958fbf8bc4cbbcdada460dc868b43bba5a5c3f33d968540de9c5b9ed310e",
+    "random.js": "002aa63acac4609bc9455c6f9f5b0990c0c2fd2d5f7a7ca862c598b797ff03af",
+    "recording.js": "4a9d43c8c5e73f2d2687e4c40fabd8cf04bc383544ded981b457f4e7d159cf25",
+    "station.js": "aec3e2c0b299930a1b2ddfb473477728c51c19f312d268fb55785c9b2cdd1482",
+    "style.css": "00f07734b9fa4a93862a9f5ed39833a96b0d17fd132f62bc0f2bee87a4f5a5f1",
+    "transcript.js": "01c30f0944d82c6ea884eac907d89fb19df14606a2536449990b3b71124dcfa2",
+    "view.js": "121111bbf3e6f8025e0f977dc11f01aadc68b4a865cb61b0126685fab387bef5",
+    "volume.js": "bddcc92d3027699c9514f397e85df8e206926a69b2c4c324144cd10a21463895"
+  }
+}

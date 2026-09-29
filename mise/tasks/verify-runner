@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Verify pinned Web Morse Runner source and generated assets offline"
+set -euo pipefail
+node scripts/web-morse-runner/update.mjs --check

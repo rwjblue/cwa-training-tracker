@@ -8,4 +8,4 @@ worker-configuration.d.ts
 package-lock.json
 test-results
 playwright-report
-
+public/vendor/web-morse-runner
