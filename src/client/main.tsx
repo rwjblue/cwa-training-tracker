@@ -56,6 +56,8 @@ import { api, getEntries, getSettings, type Passkey, type User } from './api';
 import { cleanMorseText, generatePractice, MorsePlayer } from './audio';
 import './styles.css';
 import Plan from './Plan';
+import TimeZoneSelect from './TimeZoneSelect';
+import { AccountIdentity } from './AccountIdentity';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -351,12 +353,12 @@ function App() {
           onClick={() => navigate('overview')}
           aria-label="CW Academy Companion home"
         >
-          <span className="brand-mark">
-            <i />
-            <b />
-            <i />
-            <b />
-          </span>
+          <img
+            className="brand-mark"
+            src="/favicon.svg"
+            alt=""
+            title="CWA in Morse code: −·−· ·−− ·−"
+          />
           <span>
             CW Academy<small>COMPANION</small>
           </span>
@@ -412,6 +414,8 @@ function App() {
             <button
               className="icon-button mobile-menu"
               aria-label="Open navigation"
+              aria-expanded={menuOpen}
+              aria-controls="workspace-navigation"
               onClick={() => setMenuOpen(true)}
             >
               <Menu size={22} />
@@ -429,8 +433,18 @@ function App() {
               <i /> {user ? 'Your private workspace' : 'Open to every operator'}
             </span>
             {user ? (
-              <button className="avatar" onClick={() => navigate('settings')} title={user.email}>
-                {(profile.callsign || profile.displayName || user.email).slice(0, 2).toUpperCase()}
+              <button
+                className="account-identity-button"
+                onClick={() => navigate('settings')}
+                aria-label="Open your account"
+                title={user.email}
+              >
+                <AccountIdentity
+                  email={user.email}
+                  callsign={profile.callsign}
+                  displayName={profile.displayName}
+                  useGravatar={profile.useGravatar}
+                />
               </button>
             ) : (
               <button className="button small outline" onClick={() => setAuthOpen(true)}>
@@ -2146,7 +2160,7 @@ function Account({
   setProfile: (profile: Profile) => void;
   notify: (message: string) => void;
   logout: () => void;
-  reload: () => Promise<void>;
+  reload: () => Promise<unknown>;
   onReauth: () => void;
 }) {
   const [form, setForm] = useState(profile);
@@ -2247,7 +2261,7 @@ function Account({
         data.sessions?.length ?? data.snapshot?.attempts?.length ?? data.attempts?.length;
       if (!Number.isInteger(count))
         throw new Error(
-          'This file is not a recognized Companion backup or n1rwj.com training export.',
+          'This file is not a recognized training backup. Choose a JSON file exported by a supported tracker.',
         );
       setImportData({ data, name: file.name, count });
       setImportMode('merge');
@@ -2294,29 +2308,6 @@ function Account({
       setDataBusy(false);
     }
   };
-  const timezones = Array.from(
-    new Set([
-      profile.timezone,
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-      'UTC',
-      'America/New_York',
-      'America/Chicago',
-      'America/Denver',
-      'America/Los_Angeles',
-      'America/Anchorage',
-      'Pacific/Honolulu',
-      'America/Toronto',
-      'America/Vancouver',
-      'America/Sao_Paulo',
-      'Europe/London',
-      'Europe/Paris',
-      'Europe/Berlin',
-      'Asia/Tokyo',
-      'Asia/Kolkata',
-      'Australia/Sydney',
-      'Pacific/Auckland',
-    ]),
-  );
   return (
     <>
       <div className="page-heading">
@@ -2397,21 +2388,26 @@ function Account({
                   onChange={(e) => setForm({ ...form, firstClassDate: e.target.value })}
                 />
               </label>
-              <label className="field">
-                Practice timezone
-                <input
-                  list="timezones"
-                  value={form.timezone}
-                  required
-                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                />
-                <datalist id="timezones">
-                  {timezones.map((timezone) => (
-                    <option value={timezone} key={timezone} />
-                  ))}
-                </datalist>
-              </label>
+              <TimeZoneSelect
+                value={form.timezone}
+                onChange={(timezone) => setForm({ ...form, timezone })}
+              />
             </div>
+            <label className="avatar-preference">
+              <input
+                type="checkbox"
+                checked={form.useGravatar === true}
+                onChange={(event) => setForm({ ...form, useGravatar: event.target.checked })}
+                aria-label="Use my Gravatar image"
+              />
+              <span>
+                <strong>Use my Gravatar image</strong>
+                <span className="field-hint">
+                  Optional. Uses the image linked to your sign-in email. This contacts Gravatar and
+                  shares an email hash and your IP address. Your full callsign stays visible.
+                </span>
+              </span>
+            </label>
             <fieldset className="weekday-field">
               <legend>Class meeting days</legend>
               <div>
@@ -2515,7 +2511,7 @@ function Account({
           </section>
         </div>
       </div>
-      <section className="card data-card">
+      <section id="training-backups" className="card data-card">
         <div className="section-heading">
           <div>
             <h2>Your progress is portable.</h2>
@@ -2528,8 +2524,12 @@ function Account({
             <span className="activity-icon green">
               <Download size={20} />
             </span>
-            <h3>Take a copy</h3>
-            <p>Download your sessions, preferences, and preserved import data as a JSON backup.</p>
+            <h3>Back up your data</h3>
+            <p>
+              Download your practice log, homework plan, account preferences, and any preserved
+              import data as a JSON file. It contains only your account’s training data, never your
+              passkeys.
+            </p>
             <button className="button outline" onClick={exportData} disabled={dataBusy}>
               <Download size={15} /> Export backup
             </button>
@@ -2540,8 +2540,8 @@ function Account({
             </span>
             <h3>Bring your practice along</h3>
             <p>
-              Import a Companion backup or your n1rwj.com training export. Reimports can skip
-              duplicates.
+              Restore a training backup. Merge it with your current log and skip duplicates, or
+              replace your training data after reviewing the import.
             </p>
             <input
               ref={fileInput}

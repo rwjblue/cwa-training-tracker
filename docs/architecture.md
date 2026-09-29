@@ -40,6 +40,19 @@ deleting their rows if an operational incident requires universal sign-out.
 
 ## Request boundaries
 
+Account identity uses the full callsign, falling back to “Me.” The optional
+`useGravatar` profile preference defaults to false, including in older imported
+profiles. Only an explicit opt-in loads an external avatar. The browser computes
+SHA-256 of the trimmed, lowercased sign-in email and requests a G-rated image
+from `https://gravatar.com`, with `d=404` so missing images retain the local
+identity. Requests omit credentials and referrers. This still shares an email
+hash, IP address, and browser information with Gravatar; the privacy page
+explains that choice. No profile API key, upload storage, or Gravatar JavaScript
+is used. The image origin alone is allowed in the static Content Security Policy.
+
+References: [Gravatar avatar requests](https://docs.gravatar.com/sdk/images/) and
+[Gravatar email hashing](https://docs.gravatar.com/rest/hash/).
+
 Every modifying API request must carry an exact matching `Origin` and cannot
 come from a cross-site fetch context. Requests containing JSON require the JSON
 content type and are read with a byte limit, including chunked requests. API

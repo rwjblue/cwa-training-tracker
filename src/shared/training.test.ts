@@ -132,6 +132,35 @@ describe('practice input validation', () => {
       'Daily goal',
     );
   });
+
+  it('defaults older profiles to no Gravatar requests and accepts only explicit booleans', () => {
+    const { useGravatar: _omitted, ...olderProfile } = DEFAULT_PROFILE;
+    expect(validateProfile(olderProfile).useGravatar).toBe(false);
+    expect(validateProfile({ ...olderProfile, useGravatar: true }).useGravatar).toBe(true);
+    expect(validateProfile({ ...olderProfile, useGravatar: false }).useGravatar).toBe(false);
+    for (const invalid of ['true', 'false', 1, 0, null]) {
+      expect(() => validateProfile({ ...olderProfile, useGravatar: invalid })).toThrow('Gravatar');
+    }
+  });
+
+  it('imports old profile backups safely and preserves an explicit Gravatar preference', () => {
+    const { useGravatar: _omitted, ...olderProfile } = DEFAULT_PROFILE;
+    const backup = {
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: '2026-09-29T12:00:00Z',
+      sessions: [],
+      profile: olderProfile,
+    };
+    expect(validateTrainingExport(backup).profile?.useGravatar).toBe(false);
+    const optedIn = validateTrainingExport({
+      ...backup,
+      profile: { ...olderProfile, useGravatar: true },
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(optedIn))).profile?.useGravatar).toBe(
+      true,
+    );
+  });
 });
 
 describe('calendar planning', () => {

@@ -1,1 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#19382f"/><g fill="#faf8f1"><rect x="13" y="22" width="19" height="7" rx="3.5"/><circle cx="42" cy="25.5" r="3.5"/><rect x="13" y="36" width="19" height="7" rx="3.5"/><circle cx="42" cy="39.5" r="3.5"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>CWA in Morse code</title>
+  <rect width="64" height="64" rx="14" fill="#234d3c"/>
+  <g fill="#faf8f1">
+    <rect x="10" y="16" width="12" height="4" rx="2"/>
+    <circle cx="28" cy="18" r="2"/>
+    <rect x="34" y="16" width="12" height="4" rx="2"/>
+    <circle cx="52" cy="18" r="2"/>
+    <circle cx="16" cy="32" r="2"/>
+    <rect x="22" y="30" width="12" height="4" rx="2"/>
+    <rect x="38" y="30" width="12" height="4" rx="2"/>
+    <circle cx="24" cy="46" r="2"/>
+    <rect x="30" y="44" width="12" height="4" rx="2"/>
+  </g>
+</svg>

@@ -1,0 +1,27 @@
+.account-identity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.account-identity-image {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.account-identity-image[hidden] {
+  display: none;
+}
+
+.account-identity-label {
+  min-width: 0;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}

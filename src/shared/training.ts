@@ -8,6 +8,8 @@ export type PracticeKind =
 export interface Profile {
   displayName: string;
   callsign: string;
+  /** Loading a Gravatar contacts its external provider; missing means no consent. */
+  useGravatar?: boolean;
   level: CourseLevel;
   timezone: string;
   dailyGoalMinutes: number;
@@ -50,6 +52,7 @@ export interface TrainingExport {
 export const DEFAULT_PROFILE: Profile = {
   displayName: '',
   callsign: '',
+  useGravatar: false,
   level: 'beginner',
   timezone: 'UTC',
   dailyGoalMinutes: 60,
@@ -293,9 +296,12 @@ export function validateProfile(value: unknown): Profile {
     throw new Error('Choose at least one class day.');
   classDays.forEach((day) => number(day, 'Class day', 0, 6, true));
   if (new Set(classDays).size !== classDays.length) throw new Error('Class days must be unique.');
+  if (input.useGravatar !== undefined && typeof input.useGravatar !== 'boolean')
+    throw new Error('The Gravatar preference must be true or false.');
   return {
     displayName: text(input.displayName, 'Display name', 100, '').trim(),
     callsign: text(input.callsign, 'Callsign', 30, '').trim().toUpperCase(),
+    useGravatar: input.useGravatar === true,
     level: level as CourseLevel,
     timezone,
     dailyGoalMinutes: number(

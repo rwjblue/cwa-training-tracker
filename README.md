@@ -16,6 +16,7 @@ CWops. Official course material stays at the
 - A personal homework plan with class dates, exercises, completion tracking,
   and printable practice reports. Class time stays separate from daily goals.
 - Passwordless email codes that expire in five minutes, plus passkeys.
+- Readable callsign identity, optional Gravatar images, and a city-based timezone picker.
 - JSON export, validated repeatable import, and a training-data reset.
 - A converter for the original n1rwj.com tracker export. Personal data is never
   included in this repository or fetched automatically from the source site.

@@ -82,6 +82,21 @@
         stores account data, and delivers sign-in emails. Operational logs help diagnose errors and
         prevent abuse.
       </p>
+      <h2>Optional Gravatar image</h2>
+      <p>
+        Gravatar is off by default. If you enable it in your account preferences, your browser
+        requests the image associated with your sign-in email from Gravatar, a service operated by
+        Automattic. The request includes a SHA-256 hash of your normalized email address, rather
+        than the address itself, and exposes your IP address and browser information to Gravatar. An
+        email hash is a persistent identifier, not anonymous data.
+      </p>
+      <p>
+        These image requests omit cookies and the referring page. Your practice records, callsign,
+        and display name are not sent to Gravatar. You can turn the feature off at any time; we then
+        stop requesting the image and use your callsign, or “Me,” as your account label. See
+        <a href="https://automattic.com/privacy/">Automattic’s privacy policy</a> for how Gravatar
+        handles requests. A backup includes your Gravatar preference.
+      </p>
       <h2>Export, reset, or request deletion</h2>
       <p>
         Your account page lets you download a JSON backup, import your records, and reset your
