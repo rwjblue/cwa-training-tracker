@@ -6,6 +6,8 @@ export interface PracticeQso {
   lines: string[];
   /** An invented setting shared by both stations, never a live weather report. */
   season?: QsoSeason;
+  /** Answers from this exact generated exchange, restricted to details it sends. */
+  copyFields: QsoCopyField[];
 }
 /** Illustrative calls only; these profiles do not describe the calls' real owners. */
 export const QSO_CALLSIGNS = [
@@ -132,6 +134,8 @@ export interface QsoStation {
   watts: number;
   antenna: string;
   weather: string;
+  weatherCondition: string;
+  temperatureF: number;
   /** The report this station sends about the other station. */
   report: string;
 }
@@ -139,16 +143,27 @@ export interface QsoTemplate {
   id: string;
   kind: 'qso';
   title: string;
+  copy: QsoCopySelection;
   lines: (a: QsoStation, b: QsoStation) => string[];
 }
 const qth = (s: QsoStation) => `${s.city} ${s.state}`;
 const turn = (sender: QsoStation, receiver: QsoStation) => `${receiver.call} DE ${sender.call}`;
+const contactFields = ['callsign', 'name', 'qth', 'rst'] as const;
+const ragchewFields = [
+  ...contactFields,
+  'rig',
+  'power',
+  'antenna',
+  'weather',
+  'temperature',
+] as const;
 
 export const QSO_TEMPLATES: readonly QsoTemplate[] = [
   {
     id: 'short-contact',
     kind: 'qso',
     title: 'A first contact',
+    copy: { caller: contactFields, answering: contactFields },
     lines: (a, b) => [
       `CQ CQ CQ DE ${a.call} ${a.call} K`,
       `${turn(b, a)} ${b.call} <KN>`,
@@ -162,6 +177,7 @@ export const QSO_TEMPLATES: readonly QsoTemplate[] = [
     id: 'ragchew',
     kind: 'qso',
     title: 'Rigs, antennas, and weather',
+    copy: { caller: ragchewFields, answering: ragchewFields },
     lines: (a, b) => [
       `CQ CQ DE ${a.call} ${a.call} K`,
       `${turn(b, a)} ${b.call} <KN>`,
@@ -177,6 +193,7 @@ export const QSO_TEMPLATES: readonly QsoTemplate[] = [
     id: 'pota',
     kind: 'qso',
     title: 'A POTA contact',
+    copy: { caller: ['callsign', 'rst'], answering: ['callsign', 'rst', 'state'] },
     lines: (a, b) => [
       `CQ POTA CQ POTA DE ${a.call} ${a.call} K`,
       `${b.call} ${b.call}`,
@@ -190,6 +207,7 @@ export const QSO_TEMPLATES: readonly QsoTemplate[] = [
     id: 'repeat',
     kind: 'qso',
     title: 'Asking for a repeat',
+    copy: { caller: contactFields, answering: contactFields },
     lines: (a, b) => [
       `CQ CQ DE ${a.call} ${a.call} K`,
       `${turn(b, a)} ${b.call} <KN>`,
@@ -215,13 +233,20 @@ export function generateQso(
   const calls = QSO_CALLSIGNS.filter((call) => !previousCalls.includes(call));
   const pool = calls.length >= 2 ? calls : [...QSO_CALLSIGNS];
   const season = pick(QSO_SEASONS);
-  function weather(climate: Climate): string {
+  function weather(
+    climate: Climate,
+  ): Pick<QsoStation, 'weather' | 'weatherCondition' | 'temperatureF'> {
     const [low, high] = SEASONAL_TEMPERATURES[climate][season];
     const temperature = low + Math.floor(random() * (high - low + 1));
     const conditions = ['SUNNY', 'CLEAR', 'CLOUDY', 'WINDY'];
     if (temperature >= 40 && climate !== 'desert') conditions.push('RAIN');
     if (season === 'winter' && temperature <= 32) conditions.push('SNOW');
-    return `${pick(conditions)} TEMP ${temperature} F`;
+    const weatherCondition = pick(conditions);
+    return {
+      weather: `${weatherCondition} TEMP ${temperature} F`,
+      weatherCondition,
+      temperatureF: temperature,
+    };
   }
   function station(call: string, previousName?: string): QsoStation {
     const district = Number(call.match(/\d/)![0]);
@@ -235,7 +260,7 @@ export function generateQso(
       rig: radio.rig,
       watts: pick<number>(radio.watts),
       antenna: pick(QSO_ANTENNAS),
-      weather: weather(location.climate),
+      ...weather(location.climate),
       report: pick(QSO_REPORTS),
     };
   }
@@ -247,5 +272,7 @@ export function generateQso(
     stations: [a.call, b.call],
     lines: template.lines(a, b),
     season,
+    copyFields: createQsoCopyFields(a, b, template.copy),
   };
 }
+import { createQsoCopyFields, type QsoCopyField, type QsoCopySelection } from './qso-copy';
