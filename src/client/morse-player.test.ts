@@ -53,6 +53,41 @@ afterEach(() => {
 });
 
 describe('native media playback boundary', () => {
+  it('replays a completed word without replacing its source or reporting a pause', async () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    const onState = vi.fn();
+    const onFinish = vi.fn();
+    const load = vi.spyOn(audio, 'load');
+    const recording = track();
+    attach(player, audio);
+    player.prepare(recording, { onState, onFinish });
+    const source = audio.src;
+    // Metadata delivery must not rewind media that has already started moving.
+    audio.currentTime = 0.05;
+    audio.metadata();
+    expect(audio.currentTime).toBe(0.05);
+    await player.resume();
+    for (let repeat = 0; repeat < 3; repeat++) {
+      if (repeat > 0) {
+        await player.resume();
+        expect(audio.currentTime).toBe(0);
+        audio.ended = false;
+      }
+      audio.currentTime = recording.duration;
+      audio.ended = true;
+      audio.paused = true;
+      audio.dispatchEvent(new Event('ended'));
+    }
+    expect(onFinish).toHaveBeenCalledTimes(3);
+    expect(onState).not.toHaveBeenCalledWith('paused');
+    expect(audio.src).toBe(source);
+    expect(load).toHaveBeenCalledOnce();
+    player.pause();
+    expect(onState).toHaveBeenLastCalledWith('paused');
+    player.dispose();
+  });
+
   it('preserves a word seek before metadata, follows native time, and resumes without replacing audio', async () => {
     const player = new MorsePlayer();
     const audio = new MediaElement();

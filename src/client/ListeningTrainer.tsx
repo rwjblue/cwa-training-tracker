@@ -128,8 +128,9 @@ export default forwardRef<
           if (valid()) fn();
         }, seconds * 1000);
     };
-    const send = async (repeat = 0): Promise<void> => {
+    const send = async (): Promise<void> => {
       if (!valid()) return;
+      let repeat = 0;
       const word = round.current[index.current];
       setPosition(index.current);
       setAnswer(false);
@@ -156,8 +157,11 @@ export default forwardRef<
       const finish = () => {
         if (!valid()) return;
         if (isWords && p.spokenAnswers && repeat < 2) {
+          repeat++;
           later(() => {
-            void send(repeat + 1).catch(fail);
+            // Reuse the loaded word; replacing its source between repetitions can
+            // interrupt native playback even though the sequence is still active.
+            void player.current.resume().catch(fail);
           }, gap);
           return;
         }
@@ -320,6 +324,9 @@ export default forwardRef<
       onError((error as Error).message);
     }
   };
+  // Spoken rounds update words when they loop. That changes the transcript track,
+  // but must not clear the short recording that the new round has just started.
+  const nativeTrack = isWords && p.spokenAnswers ? null : track;
   // Never leave a native source with settings/text different from the visible transcript.
   useEffect(() => {
     stop();
@@ -329,7 +336,16 @@ export default forwardRef<
     setActiveWord(-1);
     setAnswer(false);
     setComplete(false);
-  }, [track, p.repeatList, p.spokenAnswers]);
+  }, [
+    nativeTrack,
+    p.characterWpm,
+    p.effectiveWpm,
+    p.tone,
+    p.volume,
+    p.wordGap,
+    p.repeatList,
+    p.spokenAnswers,
+  ]);
   useEffect(() => {
     if (!(isWords && p.spokenAnswers)) return;
     const visibility = () => {

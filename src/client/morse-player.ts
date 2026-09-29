@@ -114,7 +114,9 @@ export class MorsePlayer {
     this.objectUrl = url;
     this.recording = track;
     this.options = options;
-    this.pendingSeek = 0;
+    // Loading a new source already starts at zero. Only defer an explicit seek;
+    // seeking again during loadedmetadata can disrupt a pending native play.
+    this.pendingSeek = undefined;
     this.audio!.loop = options.loop === true;
     this.audio!.playbackRate = 1;
     this.audio!.src = url;
@@ -126,7 +128,12 @@ export class MorsePlayer {
   /** Call directly from a click or media-session action to retain browser playback permission. */
   async resume(): Promise<void> {
     if (this.disposed || !this.audio || !this.recording) return;
-    if (this.position >= this.recording.duration || this.audio.ended) this.seek(0);
+    if (this.position >= this.recording.duration || this.audio.ended) {
+      // Replaying an ended recording is a new start, not a user pause. In
+      // particular, foreground spoken sequences must survive this rewind.
+      if (this.status === 'ended') this.setState('ready');
+      this.seek(0);
+    }
     const run = ++this.generation;
     try {
       // No await, async render, context.resume(), or timer before this native play call.
