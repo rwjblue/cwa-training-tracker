@@ -14,14 +14,17 @@ export async function api<T>(
   path: string,
   body?: unknown,
   method = body === undefined ? 'GET' : 'POST',
+  signal?: AbortSignal,
 ): Promise<T> {
   const response = await fetch(`/api${path}`, {
     method,
     credentials: 'same-origin',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
   });
   const result = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  signal?.throwIfAborted();
   if (!response.ok)
     throw new Error(
       typeof result.error === 'string'

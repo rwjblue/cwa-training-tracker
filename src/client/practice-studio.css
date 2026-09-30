@@ -280,6 +280,18 @@
 .studio-sound-settings[open] summary {
   margin-bottom: 22px;
 }
+.listening-trainer > .studio-sound-settings {
+  margin: 0 0 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid #dde4d6;
+}
+
+.studio-session-controls {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
 .word-options {
   display: flex;
   flex-wrap: wrap;

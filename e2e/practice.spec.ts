@@ -153,9 +153,11 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill('Unsaved copy notes');
   await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText(
-    'current session before opening Morse Runner',
+  await expect(page.getByRole('button', { name: 'Morse Runner', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
   );
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Unsaved copy notes',
   );

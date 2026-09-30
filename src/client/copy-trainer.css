@@ -122,6 +122,45 @@
   line-height: 24px;
   color: #354331;
 }
+.copy-round-progress {
+  display: grid;
+  grid-template-columns: repeat(25, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 820px;
+  margin: 6px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.copy-progress-item {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-height: 28px;
+  border: 1px solid #c8d0c2;
+  border-radius: 4px;
+  color: #596151;
+  font: 600 12px var(--font-mono, monospace);
+}
+.copy-progress-item.is-correct {
+  color: #2d5530;
+  background: #e7f0e3;
+  border-color: #729264;
+}
+.copy-progress-item.is-incorrect {
+  color: #8b2e1d;
+  background: #ffebe4;
+  border-color: #c58975;
+}
+.copy-progress-item.is-skipped,
+.copy-progress-item.is-recorded {
+  color: #5b6054;
+  background: #f0f0e9;
+}
+.copy-progress-item.is-current {
+  color: #23371d;
+  background: #f0f6eb;
+  border: 2px solid #374e2f;
+}
 .copy-trainer .copy-answer-field {
   margin: 0;
   gap: 6px;
@@ -138,10 +177,23 @@
   padding: 10px 12px;
   font-size: 16px;
 }
-.copy-answer-field textarea:read-only {
+.copy-trainer .copy-answer-discrete {
+  width: min(100%, 24rem);
+}
+.copy-trainer .copy-answer-discrete input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.copy-answer-field textarea:read-only,
+.copy-answer-field input:read-only {
   background: #f8f9f5;
 }
-.copy-answer-field textarea::placeholder {
+.copy-answer-field textarea::placeholder,
+.copy-answer-field input::placeholder {
   color: #717969;
   font-family: var(--font-body, sans-serif);
   font-size: 14px;
@@ -188,6 +240,10 @@
   text-decoration: underline;
 }
 @media (max-width: 600px) {
+  .copy-round-progress {
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+    gap: 3px;
+  }
   .copy-trainer {
     padding: 16px;
   }

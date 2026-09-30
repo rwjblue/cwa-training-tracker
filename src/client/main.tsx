@@ -63,6 +63,15 @@ import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './Imp
 import CopyResult, { CopyAttemptDetails } from './CopyResult';
 import { savedCopyAttempt } from '../shared/copy-report';
 import { clearCopyDraft } from './copy-storage';
+import { clearSavedStudioNotes } from './studio-session';
+import {
+  autoSavePractice,
+  flushPracticeSaves,
+  loadLocalPractice,
+  removeLocalPractice,
+  PRACTICE_SAVED_EVENT,
+  PRACTICE_UPLOADED_EVENT,
+} from './practice-autosave';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -224,6 +233,7 @@ function App() {
   const currentPage = useRef(page);
   currentPage.current = page;
   const studioUnsaved = useRef(false);
+  const beforeLeaveStudio = useRef<(() => Promise<boolean>) | undefined>(undefined);
   const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const [savedPracticeEntry, setSavedPracticeEntry] = useState<PracticeSession>();
@@ -235,6 +245,13 @@ function App() {
   const [planVersion, setPlanVersion] = useState(0);
   const [startNewTask, setStartNewTask] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const activeAccount = useRef(user?.id);
+  activeAccount.current = user?.id;
+  const [localHistory, setLocalHistory] = useState(() => ({
+    scope: 'guest',
+    entries: loadLocalPractice('guest'),
+  }));
+  const localEntries = localHistory.scope === (user?.id ?? 'guest') ? localHistory.entries : [];
   const [entries, setEntries] = useState<PracticeSession[]>([]);
   const [profile, setProfile] = useState<Profile>({
     ...DEFAULT_PROFILE,
@@ -250,6 +267,7 @@ function App() {
   const notify = (message: string) => setToast(message);
   const load = async (signedInUser?: User) => {
     const current = signedInUser ?? (await api<{ user: User | null }>('/me')).user;
+    activeAccount.current = current?.id;
     if (current?.id !== user?.id) {
       setEntries([]);
       setProfile(DEFAULT_PROFILE);
@@ -315,9 +333,9 @@ function App() {
     }
   }, [toast]);
   useEffect(() => {
-    const changed = () => {
+    const changed = async () => {
       const next = readPage();
-      if (next !== 'practice' && !confirmLeaveStudio()) {
+      if (next !== 'practice' && !(await confirmLeaveStudio())) {
         window.history.replaceState(null, '', '#practice');
         return;
       }
@@ -343,8 +361,9 @@ function App() {
       window.location.hash = 'overview';
     }
   }, [booting, user, page]);
-  const confirmLeaveStudio = () => {
+  const confirmLeaveStudio = async () => {
     if (currentPage.current !== 'practice' || !studioUnsaved.current) return true;
+    if (beforeLeaveStudio.current) return beforeLeaveStudio.current();
     if (
       !window.confirm(
         'Leave this practice? Copy practice can be recovered on this device. Unsaved time and notes from other tools will be discarded.',
@@ -354,8 +373,8 @@ function App() {
     studioUnsaved.current = false;
     return true;
   };
-  const navigate = (next: Page): boolean => {
-    if (next !== 'practice' && !confirmLeaveStudio()) return false;
+  const navigate = async (next: Page): Promise<boolean> => {
+    if (next !== 'practice' && !(await confirmLeaveStudio())) return false;
     setStartNewTask(false);
     currentPage.current = next;
     if (next !== 'practice') setPracticeLaunch(undefined);
@@ -365,8 +384,8 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return true;
   };
-  const openPractice = (options: Omit<PracticeLaunch, 'id'> = {}) => {
-    if (currentPage.current === 'practice' && !confirmLeaveStudio()) return;
+  const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
+    if (currentPage.current === 'practice' && !(await confirmLeaveStudio())) return;
     setPracticeLaunch({ id: crypto.randomUUID(), ...options });
     navigate('practice');
   };
@@ -376,9 +395,11 @@ function App() {
       setAuthOpen(true);
       return;
     }
-    setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial });
+    const latest = initial.id ? entries.find((entry) => entry.id === initial.id) : undefined;
+    setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
   const acceptSavedPractice = (entry: PracticeSession) => {
+    removeLocalPractice('guest', entry.id);
     setSavedPracticeEntry(entry);
     setEntries((current) =>
       [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
@@ -394,6 +415,55 @@ function App() {
       if (user) clearCopyDraft(user.id, attempt.id);
     }
   };
+  const mergeSavedEntry = (entry: PracticeSession) => {
+    setEntries((current) =>
+      [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
+        b.date.localeCompare(a.date),
+      ),
+    );
+  };
+  const autoSave = async (entry: PracticeSession) => {
+    const scope = user?.id ?? 'guest';
+    const result = await autoSavePractice(scope, entry);
+    if ((activeAccount.current ?? 'guest') !== scope) return;
+    if (result.destination === 'history') mergeSavedEntry(result.entry);
+    notify(
+      result.destination === 'history'
+        ? 'Practice saved to history.'
+        : scope === 'guest'
+          ? 'Practice saved on this device. Find it in your logbook.'
+          : 'Practice saved on this device. Upload will retry when you reconnect.',
+    );
+  };
+  useEffect(() => {
+    const scope = user?.id ?? 'guest';
+    const refresh = () => setLocalHistory({ scope, entries: loadLocalPractice(scope) });
+    const uploaded = (event: Event) => {
+      const detail = (event as CustomEvent<{ scope: string; entry: PracticeSession }>).detail;
+      if (detail.scope === scope && (activeAccount.current ?? 'guest') === scope)
+        mergeSavedEntry(detail.entry);
+    };
+    const retry = () =>
+      void flushPracticeSaves(
+        scope,
+        mergeSavedEntry,
+        () => (activeAccount.current ?? 'guest') === scope,
+      );
+    refresh();
+    retry();
+    window.addEventListener(PRACTICE_SAVED_EVENT, refresh);
+    window.addEventListener(PRACTICE_UPLOADED_EVENT, uploaded);
+    window.addEventListener('storage', refresh);
+    window.addEventListener('online', retry);
+    const retryTimer = window.setInterval(retry, 30_000);
+    return () => {
+      window.clearInterval(retryTimer);
+      window.removeEventListener(PRACTICE_SAVED_EVENT, refresh);
+      window.removeEventListener(PRACTICE_UPLOADED_EVENT, uploaded);
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('online', retry);
+    };
+  }, [user?.id]);
   useEffect(() => {
     if (!menuOpen) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -407,7 +477,16 @@ function App() {
     document.addEventListener('keydown', dismiss);
     return () => document.removeEventListener('keydown', dismiss);
   }, [menuOpen]);
-  const visibleEntries = user ? entries : demo ? sampleEntries : [];
+  const visibleEntries = user
+    ? [
+        ...entries,
+        ...localEntries.filter((local) => !entries.some((entry) => entry.id === local.id)),
+      ]
+    : localEntries.length
+      ? localEntries
+      : demo
+        ? sampleEntries
+        : [];
   const signedIn = async (newUser: User) => {
     setAuthOpen(false);
     setAppError('');
@@ -432,6 +511,7 @@ function App() {
   };
   const logout = async () => {
     try {
+      activeAccount.current = undefined;
       await api('/auth/logout', {});
       setUser(null);
       setEntries([]);
@@ -598,10 +678,14 @@ function App() {
               {!user && page === 'logbook' && (
                 <div className="demo-banner">
                   <span>
-                    <span className="demo-badge">TAKE A LOOK</span>{' '}
-                    {demo
-                      ? 'You’re exploring a sample practice log. Your journey starts here.'
-                      : 'Your own quiet corner for making progress in CW.'}
+                    <span className="demo-badge">
+                      {localEntries.length ? 'ON THIS DEVICE' : 'TAKE A LOOK'}
+                    </span>{' '}
+                    {localEntries.length
+                      ? 'Your practice is saved in this browser. Open an entry to sign in and keep it in your private history.'
+                      : demo
+                        ? 'You’re exploring a sample practice log. Your journey starts here.'
+                        : 'Your own quiet corner for making progress in CW.'}
                   </span>
                   <button onClick={() => setAuthOpen(true)}>
                     Make it yours <ArrowRight size={14} />
@@ -631,9 +715,8 @@ function App() {
                           onLog={openLog}
                           onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
                           onManagePlan={() => navigate('course')}
-                          onAddTask={() => {
-                            navigate('course');
-                            setStartNewTask(true);
+                          onAddTask={async () => {
+                            if (await navigate('course')) setStartNewTask(true);
                           }}
                           onImport={() => {
                             navigate('settings');
@@ -660,6 +743,10 @@ function App() {
                 <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                   <PracticeStudio
                     onLog={openLog}
+                    onAutoSave={autoSave}
+                    onBeforeLeaveChange={(handler: (() => Promise<boolean>) | undefined) => {
+                      beforeLeaveStudio.current = handler;
+                    }}
                     accountId={user?.id}
                     timezone={profile.timezone}
                     onSaved={(entry: PracticeSession) => {
@@ -681,10 +768,16 @@ function App() {
                 <Logbook
                   entries={visibleEntries}
                   profile={profile}
-                  demo={!user}
+                  demo={!user && localEntries.length === 0}
+                  pendingIds={user ? localEntries.map((entry) => entry.id) : []}
                   openLog={openLog}
-                  onEdit={(entry) => (user ? setSessionEditor(entry) : setAuthOpen(true))}
+                  onEdit={(entry) => openLog(entry)}
                   onDelete={async (id) => {
+                    if (!user) {
+                      removeLocalPractice('guest', id);
+                      notify('Local practice entry deleted.');
+                      return;
+                    }
                     await api(`/entries/${id}`, {}, 'DELETE');
                     setEntries(entries.filter((entry) => entry.id !== id));
                     notify('Practice entry deleted.');
@@ -751,10 +844,12 @@ function App() {
           onClose={() => setSessionEditor(null)}
           onSaved={(entry) => {
             const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
+            if (!wasExisting && user) clearSavedStudioNotes(user.id, entry);
             acceptSavedPractice(entry);
             setSessionEditor(null);
             if (
               !wasExisting &&
+              !(entry.metadata?.practiceTool === 'copy' && currentPage.current === 'practice') &&
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
             ) {
               studioUnsaved.current = false;
@@ -1202,6 +1297,7 @@ function Logbook({
   openLog,
   onEdit,
   onDelete,
+  pendingIds = [],
 }: {
   entries: PracticeSession[];
   profile: Profile;
@@ -1209,6 +1305,7 @@ function Logbook({
   openLog: () => void;
   onEdit: (entry: PracticeSession) => void;
   onDelete: (id: string) => Promise<void>;
+  pendingIds?: string[];
 }) {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
@@ -1291,10 +1388,12 @@ function Logbook({
                 entry={entry}
                 actions={
                   <div className="row-actions">
+                    {pendingIds.includes(entry.id) && <small>Waiting to upload</small>}
                     <button
                       className="icon-button"
                       aria-label={`Edit ${kindInfo(entry.kind).label} on ${entry.date}`}
                       onClick={() => onEdit(entry)}
+                      disabled={pendingIds.includes(entry.id)}
                     >
                       <Pencil size={15} />
                     </button>
@@ -1303,6 +1402,7 @@ function Logbook({
                         className="icon-button danger-text"
                         aria-label={`Delete ${kindInfo(entry.kind).label} on ${entry.date}`}
                         onClick={() => setDeleting(entry.id)}
+                        disabled={pendingIds.includes(entry.id)}
                       >
                         <Trash2 size={15} />
                       </button>

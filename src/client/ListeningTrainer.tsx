@@ -1,4 +1,12 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { buildMorseTrack, MorsePlayer, morseTimeline, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
@@ -18,11 +26,12 @@ export default forwardRef<
   {
     preferences: PracticePreferences;
     onChange: (changes: Partial<PracticePreferences>) => void;
+    soundSettings?: ReactNode;
     onPlaying: (playing: boolean) => void;
     onError: (message: string) => void;
   }
 >(function ListeningTrainer(
-  { preferences: p, onChange, onPlaying: onPlayingChange, onError: onErrorMessage },
+  { preferences: p, onChange, soundSettings, onPlaying: onPlayingChange, onError: onErrorMessage },
   ref,
 ) {
   const callbacks = useRef({ onPlaying: onPlayingChange, onError: onErrorMessage });
@@ -503,6 +512,7 @@ export default forwardRef<
           native audio player for background listening.
         </p>
       )}
+      {soundSettings}
       <div className="transmission-panel trainer-transmission">
         <div className="transmission-label">
           <span>

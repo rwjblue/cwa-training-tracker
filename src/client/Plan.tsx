@@ -66,6 +66,12 @@ export default function Plan({
   const [editing, setEditing] = useState<Partial<PlannedTask> | null>(
     startNewTask ? { dueDate: dateInTimezone(new Date(), profile.timezone) } : null,
   );
+  const previousNewTask = useRef(startNewTask);
+  useEffect(() => {
+    if (startNewTask && !previousNewTask.current)
+      setEditing({ dueDate: dateInTimezone(new Date(), profile.timezone) });
+    previousNewTask.current = startNewTask;
+  }, [startNewTask, profile.timezone]);
   const [deleting, setDeleting] = useState<PlannedTask | null>(null);
   const [busy, setBusy] = useState('');
   const [reportOpen, setReportOpen] = useState(false);

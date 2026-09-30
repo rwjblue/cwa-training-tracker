@@ -40,6 +40,15 @@ changed record. [History](../src/client/CopyResult.tsx),
 export/import retain the evidence. General audio and Runner recovery remain
 separate parity work.
 
+Grading now saves the round automatically and keeps the feedback visible, with
+an immediate next-round action. Word/call entry is a single line with per-trial
+progress; typing `.` replays the current word. Notes stay optional. Guest results
+remain in the device's logbook, and signed-in uploads use an account-scoped queue
+for unchanged retries. Post-grade replay does not change the already-saved timing.
+Listening navigation likewise saves sessions with at least 30 credited seconds;
+shorter sessions keep notes without creating a log entry. Closing/reloading an
+unfinished non-copy session still uses the existing warning, not full recovery.
+
 [Published curriculum catalogs](curriculum.md) now cover Beginner v4.8,
 Fundamental v2.0, Intermediate v2.3 and Advanced v2.1. All 20 Intermediate ICR
 assignments launch native group/word choices with corrected speed semantics;

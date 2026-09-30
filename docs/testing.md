@@ -140,3 +140,12 @@ changing timing. Preserve legacy fixed-tone/count recipes and pending-save JSON.
 Never infer listening credit from a mocked timer. Corpus/generator versions are
 part of saved-result validation: a future revision must preserve validation of
 already-saved versions rather than silently regenerating different targets.
+
+For automatic practice saves, test the queue below the browser: successive guest
+rounds, immutable retries after lost responses, storage/network failure, and
+stopping a flush when the authenticated account changes. Browser journeys prove
+automatic grading saves, immediate next-round focus, word progress and period
+replay, and listening navigation above/below the 30-second threshold with actual
+media movement. Guest local history must survive reload and support explicitly
+saving a selected result after sign-in; background upload acknowledgements must
+not reset a newly started session. Keep notes and report checks in those journeys.
