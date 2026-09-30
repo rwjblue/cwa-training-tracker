@@ -1,11 +1,64 @@
 # Native copy trainers: LCWO research and proposal
 
-Research date: **September 29, 2026**. Status: **proposal, not implemented**.
+Research date: **September 29, 2026**. Status: **core implementation in this
+checkout with Chromium browser acceptance complete; not deployed**. The research
+and original delivery estimates below explain the design, not unfinished scope.
+
+## Implementation status
+
+The four native modes are implemented in [CopyTrainer](../src/client/CopyTrainer.tsx)
+and the shared [copy domain](../src/shared/copy-practice.ts). Groups support
+letters, figures, mixed/custom pools, fixed/random group lengths, duration or
+count, both speeds, extra spacing, tone and countdown. Word and callsign rounds
+have 25 trials, fixed/adaptive speed, replay, optional skip, and per-trial results;
+callsigns add filtering, speed ceiling, stop-on-error and blind feedback. Plain
+text uses short authored sentences. These are native equivalents with versioned
+scoring, timing and content, not identical LCWO corpora or scores.
+
+Attempts save exact targets, answers, settings, per-trial speeds, replay/reveal
+flags, and audio/answer/review time. [Local drafts](../src/client/copy-storage.ts)
+restore paused, isolate accounts from guests, coordinate tabs, and retain a
+pending save for retry. Answer/review timing pauses after 30 seconds without
+interaction; the current copy UI also pauses audio when hidden. Private saves
+are validated and equivalent retries are acknowledged without overwriting a
+changed record. [History](../src/client/CopyResult.tsx),
+[whole-attempt report details](../src/shared/copy-report.ts), and account
+export/import retain the evidence. General audio and Runner recovery remain
+separate parity work.
+
+[Published curriculum catalogs](curriculum.md) now cover Beginner v4.8,
+Fundamental v2.0, Intermediate v2.3 and Advanced v2.1. All 20 Intermediate ICR
+assignments launch native group/word choices with corrected speed semantics;
+98 Fundamental blocks use all four modes. Beginner and Advanced keep their
+published non-LCWO activities, official links and recording metadata. No prototype
+is selected silently. Generic historical ICR links and supported LCWO trainer
+links adapt at launch without rewriting source records; unrelated LCWO tools
+remain external. No LCWO account connection, fetch, or live synchronization is
+needed for this workflow.
+
+Generation/scoring, clocks, curriculum, report selection and API validation pass
+140 unit/API tests. An independent agent reviewed guest and signed-in flows at
+1280px and 390px, using real Chromium media playback and local Wrangler/D1.
+The three [native browser journeys](../e2e/copy-practice.spec.ts) cover all modes,
+paused reload recovery, mobile sign-in, history/report evidence, an uncertain
+save retry, downloads including notes, and Fundamental preset/character selection.
+Inspected states pass accessibility checks. All 17 browser regression journeys
+passed across the full run and a focused rerun after a test-only correction.
+Physical iPhone, Safari and lock-screen behavior have not been verified.
+
+Remaining differences include LCWO's broader/multilingual dictionaries, real
+callsign database and proverb collections, Koch/MorseMachine/QTC/TX modes, REAL
+timing, cut numbers/framing/random tone, long 30-minute runs, exact legacy scoring,
+automatic curriculum progression and the configurable advisor-form workflow.
+Current native groups allow 10–600-second targets. Repetition and advancement
+instructions are visible guidance; completing a round does not automatically
+complete an assignment. The original planning sections below remain useful for
+those boundaries and for acceptance review.
 
 ## Recommendation
 
-Implement native **Code Groups** and **Word Copy** first, connected to the
-Intermediate assignments, then add **Callsign Copy** and **Plain Text Copy**.
+The implemented scope includes native **Code Groups**, **Word Copy**,
+**Callsign Copy** and **Plain Text Copy**, connected to the course assignments.
 Those four modes cover the LCWO activities found across the currently published
 CW Academy curricula. Keep the existing unscored word-listening tool available.
 
@@ -15,7 +68,7 @@ answers, typed copy, grading, adaptive speed, meaningful time accounting, recove
 individual results, and correct assignment presets. A second audio service or a
 hosted copy of the whole LCWO application is unnecessary for this design.
 
-This would make the assigned LCWO practice possible inside the companion. It would
+This makes the assigned LCWO practice possible inside the companion. It does
 not, by itself, implement every CW Academy activity: official recordings, sending,
 MorseCode.World exercises, contest simulators, class meetings, and on-air work
 have their own workflows.
@@ -205,12 +258,12 @@ character entry. Difficulty tracking should be separate for letters, figures,
 custom groups, and words. The guide does not establish a universal averaging
 window, so an app recommendation based on recent runs must identify its own rule.
 
-### Fix the Intermediate recipe model before launching native ICR
+### Corrected Intermediate recipe model
 
-The current catalog puts ICR's requested starting speed into `characterWpm`, but
-those assignments refer to **starting effective speed**. Native playback must
-separate it from the intended 25 WPM character speed. Otherwise a nominal
-10 WPM assignment would be launched with the wrong character formation.
+The previous catalog put ICR's requested starting speed into `characterWpm`, but
+those assignments refer to **starting effective speed**. The native recipes now
+separate it from the intended 25 WPM character speed. This prevents a nominal
+10 WPM assignment from using the wrong character formation.
 
 | Starting effective WPM | Intermediate session/day occurrences       |
 | ---------------------- | ------------------------------------------ |
@@ -314,8 +367,8 @@ for the default native scorer or current timing engine.
 
 ### Time accounting and recovery
 
-The current external LCWO path already has a manual elapsed timer, but cannot
-observe what happened in the other site. A native attempt can distinguish:
+The previous external LCWO path had a manual elapsed timer, but could not
+observe what happened in the other site. The native design distinguishes:
 
 | Measurement                   | Rule                                                                                                                                                         |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -327,8 +380,9 @@ observe what happened in the other site. A native attempt can distinguish:
 
 The inactivity policy is a product choice, not proof of cognitive effort. A
 visible response timer with an idle-pause/resume prompt is preferable to silently
-counting an open answer screen. Background audio can keep counting when actual
-media advances; background response time cannot. Preserve fractional seconds and
+counting an open answer screen. Background audio could count when actual media
+advances; the current copy UI instead pauses when hidden. Background response
+time cannot count. Preserve fractional seconds and
 aggregate before minute rounding so many short runs do not lose or inflate time.
 
 Persist the target, answer, trial index, settings, audio position, timer state,
@@ -372,8 +426,8 @@ immediate new D1 table. Worker validation should bound item counts/text lengths,
 validate arithmetic or recompute deterministic scores, and retain existing
 ownership rules. Current limits include 200 KB metadata per record and 6 MiB per
 account; full audio and verbose event streams do not belong there. The current
-save API's duplicate-ID 409 behavior needs an equivalent-result acknowledgement
-path for safe retries. [Architecture](architecture.md)
+save API now acknowledges an equivalent retry for the same authenticated account
+while retaining 409 for a conflicting record. [Architecture](architecture.md)
 
 Current generated audio is capped at 20 minutes and uses a full PCM WAV in
 memory. Do not raise that limit merely to match LCWO's 30-minute dropdown; ship
@@ -412,10 +466,11 @@ prosign tokens. Reject unsupported targets before playback; the existing
 `cleanMorseText` silently removes unsupported characters. Additional alphabets
 need encoding support and validated content before being offered.
 
-## Delivery plan and acceptance criteria
+## Original delivery plan and acceptance criteria
 
-These are planning estimates for an engineer familiar with this repo, not measured
-commitments. Dependencies and content review can change them.
+These were planning estimates for an engineer familiar with this repo, not measured
+commitments or remaining effort. Core four-mode implementation and published
+catalog integration have landed in this checkout; broader parity stays separate.
 
 | Milestone                                  | Deliverable                                                                                        | Acceptance gate                                                                                                                    | Rough effort        |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------- |

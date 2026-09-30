@@ -2,7 +2,7 @@ import { ArrowRight, BookOpen, Headphones, Radio, ShieldCheck, Signal } from 'lu
 import './welcome-panel.css';
 
 interface WelcomePanelProps {
-  onPractice: (tool?: 'words' | 'qso' | 'free') => void;
+  onPractice: (tool?: 'words' | 'qso' | 'free' | 'copy') => void;
   onSignIn: () => void;
   onGuide: () => void;
 }
@@ -17,7 +17,10 @@ export default function WelcomePanel({ onPractice, onSignIn, onGuide }: WelcomeP
           <br />
           Keep your progress.
         </h1>
-        <p>Word drills, QSO practice, and a daily training log for CW Academy students.</p>
+        <p>
+          Copy drills, word listening, QSO practice, and a daily training log for CW Academy
+          students.
+        </p>
         <div className="welcome-actions">
           <button className="button cream" onClick={() => onPractice()}>
             <Headphones size={17} /> Try practice <ArrowRight size={16} />
@@ -35,14 +38,27 @@ export default function WelcomePanel({ onPractice, onSignIn, onGuide }: WelcomeP
           <span>No sign-in needed</span>
         </div>
         <div className="welcome-tool-grid">
+          <button className="welcome-tool" onClick={() => onPractice('copy')}>
+            <span className="welcome-tool-icon">
+              <Signal size={23} />
+            </span>
+            <h3>Copy practice</h3>
+            <p>
+              Hear code groups, words, callsigns, or plain text. Type your copy and review the
+              result.
+            </p>
+            <span className="welcome-tool-action">
+              Start copy practice <ArrowRight size={15} />
+            </span>
+          </button>
           <button className="welcome-tool" onClick={() => onPractice('words')}>
             <span className="welcome-tool-icon">
               <Signal size={23} />
             </span>
-            <h3>Word trainer</h3>
+            <h3>Word listening</h3>
             <p>Build recognition with common QSO words, one word at a time.</p>
             <span className="welcome-tool-action">
-              Train words <ArrowRight size={15} />
+              Listen to words <ArrowRight size={15} />
             </span>
           </button>
           <button className="welcome-tool" onClick={() => onPractice('qso')}>

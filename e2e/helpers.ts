@@ -49,5 +49,5 @@ export async function signIn(page: Page, { dialogAlreadyOpen = false } = {}) {
     .getByRole('button', { name: /verify|continue|sign in/i })
     .last()
     .click();
-  await expect(page.getByText('Your private workspace', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open your account', exact: true })).toBeVisible();
 }

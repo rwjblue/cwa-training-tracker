@@ -1,0 +1,141 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
+import { copyAttemptSessionFields } from '../shared/copy-report';
+import { validatePracticeSession } from '../shared/training';
+import {
+  claimCopyLease,
+  clearCopyDraft,
+  copyStorageKey,
+  loadCopyDraft,
+  loadCopyPreferences,
+  ownsCopyLease,
+  releaseCopyLease,
+  saveCopyDraft,
+  saveCopyPreferences,
+  type CopyDraft,
+} from './copy-storage';
+
+function draft(id = 'recovery'): CopyDraft {
+  const attempt = createCopyAttempt(
+    { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 1 },
+    { id, seed: 'recovery-fixture', now: '2026-09-29T12:00:00.000Z' },
+  );
+  return {
+    attempt: {
+      ...attempt,
+      updatedAt: '2026-09-29T12:01:00.000Z',
+      audioSeconds: 12.5,
+      answerSeconds: 3,
+    },
+    answer: 'partial answer',
+    position: 12.5,
+    replayCount: 1,
+    trialAnswerStartedAt: 0,
+    heard: true,
+    notes: 'Continue tomorrow',
+    autoSkipAt: 5,
+  };
+}
+
+beforeEach(() => {
+  const values = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  });
+});
+afterEach(() => vi.unstubAllGlobals());
+
+describe('native copy recovery', () => {
+  it('keeps recovery, preferences, and clearing scoped to the account and attempt', () => {
+    const guest = draft();
+    const account = draft('private');
+    saveCopyDraft('guest', guest);
+    saveCopyDraft('account', account);
+    expect(loadCopyDraft('guest')).toMatchObject(guest);
+    expect(loadCopyDraft('account')).toMatchObject(account);
+    clearCopyDraft('guest', 'private');
+    expect(loadCopyDraft('guest')).toBeDefined();
+    clearCopyDraft('account', 'private');
+    expect(loadCopyDraft('account')).toBeUndefined();
+    expect(loadCopyDraft('guest')?.autoSkipAt).toBe(5);
+    saveCopyPreferences('account', defaultCopyRecipe('words'));
+    expect(loadCopyPreferences('guest', 'words')).toBeUndefined();
+    expect(loadCopyPreferences('account', 'words')?.mode).toBe('words');
+  });
+
+  it('validates frozen retries and refuses pending evidence from a different result', () => {
+    const current = draft();
+    current.attempt = submitCopyAnswer(current.attempt, current.attempt.targets[0], {
+      now: current.attempt.updatedAt,
+    });
+    current.pending = validatePracticeSession({
+      ...copyAttemptSessionFields(current.attempt),
+      date: '2026-09-29',
+      kind: 'icr',
+      notes: current.notes,
+    });
+    saveCopyDraft('account', current);
+    expect(loadCopyDraft('account')?.pending).toEqual(current.pending);
+    current.attempt = { ...current.attempt, reviewSeconds: 1 };
+    saveCopyDraft('account', current);
+    expect(loadCopyDraft('account')).toBeUndefined();
+    localStorage.setItem(
+      copyStorageKey('account'),
+      JSON.stringify({
+        ...current,
+        pending: { id: 'copy:recovery', metadata: { copyAttempt: current.attempt } },
+      }),
+    );
+    expect(loadCopyDraft('account')).toBeUndefined();
+  });
+
+  it('rejects malformed recovery, impossible answer origins, and settings for another mode', () => {
+    for (const bad of [
+      { ...draft(), trialAnswerStartedAt: 4 },
+      { ...draft(), replayCount: 1.5 },
+      { ...draft(), autoSkipAt: -1 },
+      { ...draft(), answer: 'A'.repeat(2001) },
+    ]) {
+      localStorage.setItem(copyStorageKey('guest'), JSON.stringify(bad));
+      expect(loadCopyDraft('guest')).toBeUndefined();
+    }
+    localStorage.setItem(
+      `${copyStorageKey('guest')}:settings:groups`,
+      JSON.stringify(defaultCopyRecipe('words')),
+    );
+    expect(loadCopyPreferences('guest', 'groups')).toBeUndefined();
+  });
+
+  it('requires explicit takeover while a lease is live, and releasing permits immediate reload', () => {
+    expect(claimCopyLease('guest', 'tab-one')).toBe(true);
+    expect(claimCopyLease('guest', 'tab-two')).toBe(false);
+    expect(ownsCopyLease('guest', 'tab-two')).toBe(false);
+    releaseCopyLease('guest', 'tab-two');
+    expect(ownsCopyLease('guest', 'tab-one')).toBe(true);
+    releaseCopyLease('guest', 'tab-one');
+    expect(claimCopyLease('guest', 'reloaded-tab')).toBe(true);
+    expect(claimCopyLease('guest', 'tab-two', true)).toBe(true);
+    expect(ownsCopyLease('guest', 'reloaded-tab')).toBe(false);
+    expect(claimCopyLease('another-account', 'reloaded-tab')).toBe(true);
+  });
+
+  it('keeps practice usable when storage is unavailable', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('unavailable');
+      },
+      setItem: () => {
+        throw new Error('quota');
+      },
+      removeItem: () => {
+        throw new Error('unavailable');
+      },
+    });
+    expect(loadCopyDraft('guest')).toBeUndefined();
+    expect(saveCopyDraft('guest', draft())).toBe(false);
+    expect(claimCopyLease('guest', 'tab')).toBe(true);
+    expect(() => clearCopyDraft('guest', 'recovery')).not.toThrow();
+  });
+});

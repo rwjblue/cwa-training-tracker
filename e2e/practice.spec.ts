@@ -168,7 +168,7 @@ test('word and QSO trainers expose the complete material and remember listening 
   page,
 }) => {
   await page.goto('/#practice');
-  await page.getByRole('button', { name: 'Word trainer', exact: true }).click();
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   const list = page.getByRole('combobox', { name: 'Word list', exact: true });
   await expect(list).toHaveValue('common-qso');
   await page.getByText('View word list', { exact: true }).click();

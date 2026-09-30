@@ -305,9 +305,9 @@ export default function Plan({
           <p>
             {tasks.length
               ? 'No exercises match this view. Look at the whole course or add another exercise.'
-              : profile.level === 'intermediate'
-                ? 'Save your class dates to load Intermediate assignments automatically. No need to enter each exercise.'
-                : 'Intermediate assignments are built in. Other levels use the official student resources and your personal exercises.'}
+              : course
+                ? `Save your class dates to load ${course.title.replace('CW Academy ', '')} assignments automatically. No need to enter each exercise.`
+                : 'Choose a course and save your class dates, or add your own practice exercises.'}
           </p>
           {!tasks.length && onSetupCourse && (
             <button className="button dark small" onClick={onSetupCourse}>

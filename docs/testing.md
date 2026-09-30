@@ -124,3 +124,13 @@ postMessage results in that journey or fast-forward its JavaScript clock: only
 the audio engine establishes credited practice time. Check the iframe's narrow
 security headers and desktop/mobile fit in the same journey. Verify pinned
 vendor hashes when updating the bundle; do not duplicate upstream engine tests.
+
+For native copy, keep generation, full-text alignment, adaptive scoring, and
+evidence validation in the shared domain tests. Clock tests cover non-overlap,
+countdown exclusion, replay and inactivity; recovery tests cover account scope,
+tab ownership and immutable pending saves. Browser journeys use real short audio
+to cover guest recovery/sign-in, a complete 25-word round, uncertain-save retry,
+callsign controls, punctuation, downloads, curriculum presets and report evidence.
+Never infer listening credit from a mocked timer. Corpus/generator versions are
+part of saved-result validation: a future revision must preserve validation of
+already-saved versions rather than silently regenerating different targets.

@@ -60,6 +60,9 @@ import type { PlannedTask } from '../shared/plan';
 import { practiceLaunchForTask, type PracticeLaunch } from './practice-launch';
 import WelcomePanel from './WelcomePanel';
 import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './ImportedHistory';
+import CopyResult, { CopyAttemptDetails } from './CopyResult';
+import { savedCopyAttempt } from '../shared/copy-report';
+import { clearCopyDraft } from './copy-storage';
 
 type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
@@ -344,7 +347,7 @@ function App() {
     if (currentPage.current !== 'practice' || !studioUnsaved.current) return true;
     if (
       !window.confirm(
-        'Leave this practice? Your unsaved practice time and notes will be discarded.',
+        'Leave this practice? Copy practice can be recovered on this device. Unsaved time and notes from other tools will be discarded.',
       )
     )
       return false;
@@ -374,6 +377,22 @@ function App() {
       return;
     }
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial });
+  };
+  const acceptSavedPractice = (entry: PracticeSession) => {
+    setSavedPracticeEntry(entry);
+    setEntries((current) =>
+      [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
+        b.date.localeCompare(a.date),
+      ),
+    );
+    if (entry.source === 'morse' || entry.source === 'timer') {
+      setSavedPracticeVersion((version) => version + 1);
+    }
+    const attempt = savedCopyAttempt(entry);
+    if (attempt) {
+      clearCopyDraft('guest', attempt.id);
+      if (user) clearCopyDraft(user.id, attempt.id);
+    }
   };
   useEffect(() => {
     if (!menuOpen) return;
@@ -641,6 +660,13 @@ function App() {
                 <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                   <PracticeStudio
                     onLog={openLog}
+                    accountId={user?.id}
+                    timezone={profile.timezone}
+                    onSaved={(entry: PracticeSession) => {
+                      acceptSavedPractice(entry);
+                      studioUnsaved.current = false;
+                      notify('Copy result saved.');
+                    }}
                     savedVersion={savedPracticeVersion}
                     savedEntry={savedPracticeEntry}
                     launch={practiceLaunch}
@@ -721,20 +747,14 @@ function App() {
       {sessionEditor && (
         <SessionModal
           initial={sessionEditor}
+          isExisting={entries.some((entry) => entry.id === sessionEditor.id)}
           onClose={() => setSessionEditor(null)}
           onSaved={(entry) => {
-            setSavedPracticeEntry(entry);
-            setEntries((current) =>
-              [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
-                b.date.localeCompare(a.date),
-              ),
-            );
+            const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
+            acceptSavedPractice(entry);
             setSessionEditor(null);
-            if (entry.source === 'morse' || entry.source === 'timer') {
-              setSavedPracticeVersion((v) => v + 1);
-            }
             if (
-              !sessionEditor.id &&
+              !wasExisting &&
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
             ) {
               studioUnsaved.current = false;
@@ -1139,6 +1159,7 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
           </details>
         )}
         <LegacyAttemptDetails entry={entry} />
+        <CopyAttemptDetails entry={entry} />
       </div>
       <span className="session-date">
         {entry.date === dateString() ? 'Today' : prettyDate(entry.date, true)}
@@ -1370,7 +1391,7 @@ function Course({
             <span className="small-line" /> A JOURNEY BEST TAKEN TOGETHER
           </div>
           <h1>A guide for the road ahead.</h1>
-          <p>Intermediate assignments, official resources, and your personal practice plan.</p>
+          <p>Academy assignments, official resources, and your personal practice plan.</p>
         </div>
         <a
           className="button outline"
@@ -1400,9 +1421,8 @@ function Course({
             The same love of CW.
           </h2>
           <p>
-            Intermediate assignments appear automatically after you choose that level and save your
-            course dates. For other levels, follow the official resources and add your advisor’s
-            exercises to your plan.
+            Daily assignments appear automatically after you choose your level and save your course
+            dates. Follow the official resources and add your advisor’s exercises to your plan.
           </p>
         </div>
         <div className="course-intro-note">
@@ -1791,14 +1811,17 @@ function AuthModal({
 
 function SessionModal({
   initial,
+  isExisting,
   onClose,
   onSaved,
 }: {
   initial: Partial<PracticeSession>;
+  isExisting: boolean;
   onClose: () => void;
   onSaved: (entry: PracticeSession) => void;
 }) {
   const saveButton = useRef<HTMLButtonElement>(null);
+  const copyAttempt = savedCopyAttempt(initial);
   const [form, setForm] = useState({
     date: initial.date ?? dateString(),
     kind: initial.kind ?? 'listening',
@@ -1836,9 +1859,9 @@ function SessionModal({
     }
     try {
       const result = await api<{ entry: PracticeSession }>(
-        initial.id ? `/entries/${initial.id}` : '/entries',
+        isExisting ? `/entries/${initial.id}` : '/entries',
         data,
-        initial.id ? 'PUT' : 'POST',
+        isExisting ? 'PUT' : 'POST',
       );
       onSaved(result.entry);
     } catch (err) {
@@ -1849,14 +1872,17 @@ function SessionModal({
   };
   return (
     <Modal
-      title={initial.id ? 'A closer look at your practice.' : 'A little progress, worth recording.'}
+      title={isExisting ? 'A closer look at your practice.' : 'A little progress, worth recording.'}
       onClose={onClose}
       wide
       initialFocus={saveButton}
     >
       <p className="modal-intro">
-        Capture what you practiced and how it felt. The details are up to you.
+        {copyAttempt
+          ? 'Your measured time and results stay with this attempt. Add notes and choose where to record it.'
+          : 'Capture what you practiced and how it felt. The details are up to you.'}
       </p>
+      {copyAttempt && <CopyResult attempt={copyAttempt} />}
       <form onSubmit={save}>
         <div className="form-grid">
           <label className="field">
@@ -1887,6 +1913,7 @@ function SessionModal({
               step="any"
               required
               value={form.minutes}
+              readOnly={Boolean(copyAttempt)}
               onChange={(e) => update('minutes', e.target.value)}
             />
           </label>
@@ -1910,8 +1937,9 @@ function SessionModal({
               min="1"
               max="150"
               step="0.1"
-              placeholder="Optional"
+              placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
               value={form.characterWpm}
+              readOnly={Boolean(copyAttempt)}
               onChange={(e) => update('characterWpm', e.target.value)}
             />
           </label>
@@ -1922,8 +1950,9 @@ function SessionModal({
               min="1"
               max={form.characterWpm || 150}
               step="0.1"
-              placeholder="Optional"
+              placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
               value={form.effectiveWpm}
+              readOnly={Boolean(copyAttempt)}
               onChange={(e) => update('effectiveWpm', e.target.value)}
             />
           </label>
@@ -1934,8 +1963,9 @@ function SessionModal({
               min="0"
               max="100"
               step="0.1"
-              placeholder="Optional"
+              placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
               value={form.accuracy}
+              readOnly={Boolean(copyAttempt)}
               onChange={(e) => update('accuracy', e.target.value)}
             />
           </label>
@@ -1991,7 +2021,7 @@ function SessionModal({
             Cancel
           </button>
           <button ref={saveButton} className="button dark" disabled={busy} type="submit">
-            {busy ? 'Saving…' : initial.id ? 'Save changes' : 'Save practice'}
+            {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
             <Check size={16} />
           </button>
         </div>
@@ -2293,9 +2323,8 @@ function Account({
               </p>
             </fieldset>
             <p className="course-material-note">
-              {form.level === 'intermediate'
-                ? 'Save your first class date and meeting days to populate daily Intermediate assignments automatically. Changing dates keeps recorded practice and completion.'
-                : 'Built-in daily assignments are currently available for Intermediate. Other levels can use personal exercises and the official student resources.'}
+              Save your first class date and meeting days to populate daily assignments for your
+              Academy level. Changing dates keeps recorded practice and completion.
             </p>
             <div className="account-form-actions">
               <button className="button dark" type="submit" disabled={saving}>

@@ -30,6 +30,8 @@ import {
 import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTrainer';
 import MorseTranscript from './MorseTranscript';
 import MorseRunnerStudio, { DEFAULT_RUNNER_SETTINGS } from './MorseRunnerStudio';
+import CopyTrainer from './CopyTrainer';
+import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
 import { preferredRecording } from './recording-variants';
@@ -49,6 +51,9 @@ export default function PracticeStudio({
   launch,
   onBack,
   onUnsavedChange,
+  accountId,
+  timezone,
+  onSaved,
 }: {
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
@@ -56,6 +61,9 @@ export default function PracticeStudio({
   launch?: PracticeLaunch;
   onBack?: () => void;
   onUnsavedChange?: (unsaved: boolean) => void;
+  accountId?: string;
+  timezone?: string;
+  onSaved?: (entry: PracticeSession) => void;
 }) {
   const activity = launch?.activity;
   const assigned = Boolean(activity);
@@ -70,6 +78,12 @@ export default function PracticeStudio({
     activity?.type === 'audio' ? (selectedRecording?.speedWpm ?? activity.characterWpm) : undefined;
   const [publicRunner, setPublicRunner] = useState(false);
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
+  const [publicCopy, setPublicCopy] = useState(
+    () =>
+      launch?.tool === 'copy' || (!launch?.tool && Boolean(loadCopyDraft(accountId ?? 'guest'))),
+  );
+  const [copyUnsaved, setCopyUnsaved] = useState(false);
+  const isCopy = activity?.type === 'copy' || (!assigned && publicCopy);
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
   const recording = useRef<HTMLAudioElement>(null);
   const recordingSession = useRef(new MediaSessionController());
@@ -107,7 +121,7 @@ export default function PracticeStudio({
   const preparedFree = useRef('');
   const [preferences, setPreferences] = useState(() => ({
     ...loadPracticePreferences(),
-    ...(launch?.tool ? { tool: launch.tool } : {}),
+    ...(launch?.tool && launch.tool !== 'copy' ? { tool: launch.tool } : {}),
   }));
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
@@ -149,8 +163,10 @@ export default function PracticeStudio({
   }, [savedVersion]);
   useEffect(() => () => player.current.dispose(), []);
   useEffect(() => {
-    onUnsavedChange?.(runnerUnsaved || running || seconds > 0 || scratchpad.length > 0);
-  }, [runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
+    onUnsavedChange?.(
+      copyUnsaved || runnerUnsaved || running || seconds > 0 || scratchpad.length > 0,
+    );
+  }, [copyUnsaved, runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
@@ -162,8 +178,14 @@ export default function PracticeStudio({
     );
     setPublicRunner(false);
     setRunnerUnsaved(false);
+    setPublicCopy(
+      launch.tool === 'copy' || (!launch.tool && Boolean(loadCopyDraft(accountId ?? 'guest'))),
+    );
+    setCopyUnsaved(false);
     setTimerMinutes(launch.task?.targetMinutes ?? 15);
-    if (launch.tool) setPreferences((current) => ({ ...current, tool: launch.tool! }));
+    const nextTool = launch.tool;
+    if (nextTool && nextTool !== 'copy')
+      setPreferences((current) => ({ ...current, tool: nextTool }));
   }, [launch?.id]);
   const stopPlayback = () => {
     timer.pauseMedia();
@@ -178,7 +200,7 @@ export default function PracticeStudio({
     return Math.floor(elapsed.seconds);
   };
   const startTimer = () => {
-    if (isRunner || running) return;
+    if (isRunner || isCopy || running) return;
     setConfirmReset(false);
     timer.startManual(activity?.type === 'audio');
   };
@@ -351,6 +373,7 @@ export default function PracticeStudio({
       return;
     setPublicRunner(false);
     setRunnerUnsaved(false);
+    setPublicCopy(false);
     changePreferences({ tool: nextTool });
   };
   const chooseRunner = () => {
@@ -363,6 +386,26 @@ export default function PracticeStudio({
     stopPlayback();
     setError('');
     setPublicRunner(true);
+    setPublicCopy(false);
+  };
+  const chooseCopy = () => {
+    if (publicCopy) return;
+    if (
+      publicRunner &&
+      runnerUnsaved &&
+      !window.confirm('Leave Morse Runner? Your unsaved run and results will be discarded.')
+    )
+      return;
+    if (running || seconds > 0 || scratchpad.length > 0) {
+      pauseTimer();
+      setError('Review and save, or discard, your current session before opening Copy practice.');
+      return;
+    }
+    stopPlayback();
+    setError('');
+    setPublicRunner(false);
+    setRunnerUnsaved(false);
+    setPublicCopy(true);
   };
   return (
     <>
@@ -377,7 +420,7 @@ export default function PracticeStudio({
               ? isRunner
                 ? 'Your assigned simulator settings and engine results, together.'
                 : 'Your course material and practice timer, together.'
-              : 'Word recognition, QSO conversations, and simulator practice. No account required to practice.'}
+              : 'Copy practice, word listening, QSO conversations, and simulator practice. No account required to practice.'}
           </p>
         </div>
         <span className="chip">
@@ -410,6 +453,22 @@ export default function PracticeStudio({
               <p>{launch.task.notes}</p>
             </details>
           )}
+          {activity?.type === 'copy' &&
+            (activity.repetitions || activity.targetAccuracy || activity.maximumAttempts) && (
+              <p className="studio-task-notes">
+                Course target:{' '}
+                {[
+                  activity.repetitions ? `${activity.repetitions} rounds` : undefined,
+                  activity.targetAccuracy ? `${activity.targetAccuracy}% accuracy` : undefined,
+                  activity.maximumAttempts
+                    ? `up to ${activity.maximumAttempts} attempts`
+                    : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                . Each saved round keeps its own result.
+              </p>
+            )}
           {onBack && (
             <button className="text-button" onClick={onBack}>
               Back to Today <ArrowRight size={14} />
@@ -419,17 +478,24 @@ export default function PracticeStudio({
       )}
       {!assigned && (
         <div className="studio-tool-tabs" role="group" aria-label="Studio tools">
+          <button
+            className={publicCopy ? 'selected' : ''}
+            aria-pressed={publicCopy}
+            onClick={chooseCopy}
+          >
+            Copy practice
+          </button>
           {(
             [
-              ['words', 'Word trainer'],
+              ['words', 'Word listening'],
               ['qso', 'QSO practice'],
               ['free', 'Free practice'],
             ] as const
           ).map(([value, label]) => (
             <button
               key={value}
-              className={!publicRunner && tool === value ? 'selected' : ''}
-              aria-pressed={!publicRunner && tool === value}
+              className={!publicRunner && !publicCopy && tool === value ? 'selected' : ''}
+              aria-pressed={!publicRunner && !publicCopy && tool === value}
               onClick={() => chooseListeningTool(value)}
             >
               {label}
@@ -444,7 +510,22 @@ export default function PracticeStudio({
           </button>
         </div>
       )}
-      {isRunner ? (
+      {isCopy ? (
+        <CopyTrainer
+          key={`${accountId ?? 'guest'}:${launch?.id ?? 'public-copy'}`}
+          accountId={accountId}
+          timezone={timezone}
+          task={launch?.task}
+          recipe={activity?.type === 'copy' ? activity.recipe : undefined}
+          alternatives={activity?.type === 'copy' ? activity.alternatives : undefined}
+          requiresCharacterSelection={
+            activity?.type === 'copy' ? activity.requiresCharacterSelection : undefined
+          }
+          onLog={onLog}
+          onSaved={onSaved}
+          onUnsavedChange={setCopyUnsaved}
+        />
+      ) : isRunner ? (
         <MorseRunnerStudio
           key={launch?.id ?? 'public-runner'}
           settings={activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS}

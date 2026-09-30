@@ -1,0 +1,264 @@
+.copy-trainer {
+  background: var(--paper, #fff);
+  border: 1px solid var(--line, #dcdedb);
+  border-radius: 12px;
+  padding: clamp(16px, 3vw, 32px);
+  max-width: 1080px;
+  margin: 20px auto;
+}
+.copy-heading,
+.copy-round-status,
+.copy-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.copy-heading,
+.copy-round-status {
+  justify-content: space-between;
+}
+.copy-heading h2 {
+  margin: 8px 0;
+}
+.copy-time {
+  font: 600 24px var(--font-mono, monospace);
+}
+.copy-time small {
+  display: block;
+  font: 12px var(--font-body, sans-serif);
+  text-align: right;
+}
+.copy-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0;
+}
+.copy-mode-tabs button {
+  padding: 10px 16px;
+  border: 1px solid #b7bdb4;
+  border-radius: 6px;
+  background: transparent;
+  color: #354331;
+  cursor: pointer;
+}
+.copy-mode-tabs button.selected {
+  background: #32412f;
+  border-color: #32412f;
+  color: white;
+}
+.copy-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.copy-options {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+.copy-trainer .checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.copy-trainer .checkbox-label input {
+  margin-top: 5px;
+  flex: 0 0 auto;
+}
+.copy-character-set {
+  border: 1px solid #c5cbc1;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 20px 0;
+}
+.copy-character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.copy-character-grid label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+.copy-character-grid input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.copy-character-grid span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  border: 1px solid #a9b2a3;
+  border-radius: 5px;
+  font-family: monospace;
+}
+.copy-character-grid input:checked + span {
+  color: white;
+  background: #405d35;
+}
+.copy-character-grid input:focus-visible + span {
+  outline: 3px solid #ae6a16;
+  outline-offset: 2px;
+}
+.copy-inline-actions {
+  margin: 16px 0;
+}
+.copy-help,
+.copy-feedback {
+  padding: 12px 16px;
+  background: #f0f3ed;
+  border-radius: 6px;
+  line-height: 1.6;
+}
+.copy-round-status {
+  padding: 18px 0;
+  border-top: 1px solid #d4d9d0;
+  margin-top: 20px;
+}
+.copy-trainer textarea {
+  font-family: var(--font-mono, monospace);
+  line-height: 1.6;
+  width: 100%;
+  resize: vertical;
+}
+.copy-revealed,
+.copy-transcript {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  background: #f3f3ef;
+  padding: 12px;
+  border-radius: 6px;
+}
+.copy-revealed small {
+  display: block;
+  font-family: sans-serif;
+  margin-top: 8px;
+}
+.copy-credit {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #d9ddd5;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #596151;
+}
+.copy-credit a {
+  color: inherit;
+  text-decoration: underline;
+}
+.copy-result-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.copy-result-stats > div {
+  background: #f0f3ed;
+  border: 1px solid #d5ddcf;
+  border-radius: 8px;
+  padding: 16px;
+}
+.copy-result-stats strong {
+  display: block;
+  font-size: 24px;
+}
+.copy-result-stats span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.copy-result pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.copy-answer-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.copy-alignment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 12px 0;
+  font: 15px monospace;
+}
+.copy-alignment span {
+  padding: 3px;
+  border-radius: 3px;
+}
+.copy-alignment .substitution,
+.copy-alignment .deletion {
+  color: #782d1d;
+  background: #ffe3d8;
+}
+.copy-alignment .insertion {
+  color: #553c13;
+  background: #ffedbe;
+}
+.copy-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.copy-scroll-hint {
+  display: none;
+}
+.copy-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.copy-table-scroll th,
+.copy-table-scroll td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #d6dcd0;
+  text-align: left;
+}
+.session-copy-result {
+  margin-top: 12px;
+  width: 100%;
+}
+.session-copy-result > summary {
+  cursor: pointer;
+  color: #3d5134;
+}
+.session-copy-result .copy-result {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .copy-scroll-hint {
+    display: block;
+    font-size: 12px;
+    color: #596151;
+  }
+  .copy-trainer {
+    padding: 16px;
+  }
+  .copy-answer-comparison {
+    grid-template-columns: 1fr;
+  }
+  .copy-mode-tabs button {
+    flex: 1 1 40%;
+  }
+  .copy-inline-actions > .button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+  .copy-round-status span {
+    font-size: 13px;
+  }
+}

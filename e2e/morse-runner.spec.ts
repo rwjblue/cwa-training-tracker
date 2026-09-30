@@ -26,7 +26,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await expect(page.getByRole('button', { name: 'Review & save run', exact: true })).toBeEnabled();
   expect((await context.request.get('/api/entries')).status()).toBe(401);
   page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Word trainer', exact: true }).click();
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await signIn(page);
   await page.clock.setFixedTime(new Date('2026-10-07T16:00:00Z'));
   const settings = (await (await context.request.get('/api/settings')).json()).settings;
