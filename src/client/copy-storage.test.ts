@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
-import { validatePracticeSession } from '../shared/training';
+import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
+import { rememberAccount } from './account-outbox';
+import { autoSavePractice, loadPracticeSaveOrigin } from './practice-autosave';
+import { captureDeviceBackup } from './device-backup';
 import {
   claimCopyLease,
   clearCopyDraft,
@@ -41,6 +44,25 @@ function draft(id = 'recovery'): CopyDraft {
     autoSkipAt: 5,
   };
 }
+
+function finishedDraft(id: string): CopyDraft {
+  const current = draft(id);
+  current.attempt = submitCopyAnswer(current.attempt, current.attempt.targets[0], {
+    now: current.attempt.updatedAt,
+  });
+  current.pending = validatePracticeSession({
+    ...copyAttemptSessionFields(current.attempt),
+    date: '2026-09-29',
+    kind: 'icr',
+    notes: current.notes,
+  });
+  return current;
+}
+const account = (scope: string, generation: number) =>
+  rememberAccount(
+    { id: scope, email: 'synthetic@example.test' },
+    { accountId: scope, generation, revision: 0, settings: DEFAULT_PROFILE, plan: [] },
+  );
 
 beforeEach(() => {
   const values = new Map<string, string>();
@@ -128,6 +150,59 @@ describe('native copy recovery', () => {
     saveCopyDraft('account', current);
     expect(loadCopyDraft('account')?.pending).toEqual(current.pending);
     expect(loadCopyDraft('account')?.attempt.recipe).not.toHaveProperty('toneMode');
+  });
+
+  it('freezes a new pending result’s original generation before its draft and preserves it in device export', () => {
+    const scope = 'new-copy-origin';
+    account(scope, 4);
+    const current = finishedDraft('new-copy');
+    expect(saveCopyDraft(scope, current)).toBe(true);
+    expect(loadPracticeSaveOrigin(scope, current.pending!.id).generation).toBe(4);
+    expect(loadCopyDraft(scope)?.pending).toEqual(current.pending);
+    // Draft-only recovery synthesizes its body but uses the existing immutable origin.
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(backup.stores.practice[0].origin).toMatchObject({
+      id: current.pending!.id,
+      accountId: scope,
+      generation: 4,
+    });
+    expect(saveCopyDraft(scope, { ...current, notes: 'Later review notes' })).toBe(true);
+    expect(loadPracticeSaveOrigin(scope, current.pending!.id).generation).toBe(4);
+  });
+
+  it('never gives a loaded generation-less pending draft the current account generation', async () => {
+    const scope = 'legacy-copy-origin';
+    account(scope, 5);
+    const current = finishedDraft('legacy-copy');
+    localStorage.setItem(copyStorageKey(scope), JSON.stringify(current));
+    expect(loadCopyDraft(scope)?.pending).toEqual(current.pending);
+    expect(loadPracticeSaveOrigin(scope, current.pending!.id).generation).toBeUndefined();
+    saveCopyDraft(scope, current);
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    expect((await autoSavePractice(scope, current.pending!)).destination).toBe('device');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(
+      captureDeviceBackup(scope, 'Synthetic learner').stores.practice[0].origin,
+    ).not.toHaveProperty('generation');
+  });
+
+  it('keeps a legacy pending origin unknown even when neither origin nor result can persist', async () => {
+    const scope = 'unwritable-legacy-copy-origin';
+    account(scope, 6);
+    const current = finishedDraft('unwritable-legacy');
+    localStorage.setItem(copyStorageKey(scope), JSON.stringify(current));
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('Quota');
+    });
+    expect(loadCopyDraft(scope)?.pending).toEqual(current.pending);
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    await expect(autoSavePractice(scope, current.pending!)).rejects.toThrow(
+      'unknown original dataset',
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(loadCopyDraft(scope)?.pending).toEqual(current.pending);
   });
 
   it('rejects malformed recovery, impossible answer origins, and settings for another mode', () => {

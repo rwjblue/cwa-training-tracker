@@ -210,9 +210,45 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 
 ## Remaining queue
 
-Issues #1–#3 are complete. Issues #4–#46 remain pending; #4 is next.
+### Issue #4 — implementation validated; independent review pending
+
+- Rechecked the current issue, comments and dependencies after closing #3:
+  unchanged approved finding 45, no comments, #2/#3 closed, no native blockers.
+  Rechecked pinned original device pause/export/clear and Companion queue/reset
+  source as read-only evidence. No original-site writes or personal data used.
+- Reset/replacement now use immutable owner/revision/generation/file identities,
+  reserved safe cancellation, atomic SQL guards and retained outcome receipts.
+  The client fences producers and both queues, captures complete durable/volatile
+  recovery, preserves uncertainty across reload and provides exact retry, safe
+  stop and local-only finalization. Another account's work stays separate.
+- The review provides real server/device downloads and explicit keep/discard.
+  Failed replacement restores exact waiting work after authoritative cancellation.
+  Applied replay preserves newer practice; unknown outcomes remain paused. A
+  remote change requires a recovery disposition before reopening the current log.
+- Full-quota SQL proof exposed a cancellation allocation deadlock before delivery.
+  Preparation now reserves a bounded control slot before destructive admission;
+  canceled receipts move to ordinary quota when space allows. Both-budget capacity
+  refusal happens before mutation and existing reservations remain stoppable.
+- Root browser validation caught and corrected an overly broad ready refresh that
+  repopulated locally cleared cache/history. Only account lifecycle completion
+  now reloads server history. Advanced-generation cancellation also describes
+  the changed log truthfully, with a second open page regression proving refresh.
+- Validation: `mise run check`, `mise run test` (441 tests / 35 files) and
+  `mise run build` passed. All 45 serialized browser journeys passed in 5.5
+  minutes, including five lifecycle journeys, desktop 1440/mobile 390, keyboard/
+  touch, actual file downloads/choice, failure/cancel/retry, held acknowledgement,
+  compact reload recovery and Guest isolation. Eight affected review/ready states
+  passed axe/overflow checks and their screenshots were inspected. Focused Worker/
+  shared checks passed 107 tests and client checks passed 112. Existing native
+  listening, Runner, Copy, offline and spoken-answer workflows pass unchanged.
+- No binding/config change required generated types. No physical-device or active
+  elapsed-time reload recovery is claimed. Independent review, signed publication
+  and production deployment remain pending. The two user-owned documentation
+  files remain untouched.
+
+Issues #1–#3 are complete. Issue #4 is in progress; #5–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
-queue notes; no future issue implementation has begun.
+queue notes; no issue after #4 has been implemented.
 
 ## Concurrent work to preserve
 

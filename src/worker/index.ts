@@ -20,12 +20,19 @@ import {
 } from './training';
 import { deletePlan, listPlan, savePlan, updatePlanStatus } from './plan';
 import { applyAccountOperation, getAccountState } from './account-sync';
+import { cancelLifecycle, getLifecycleOutcome, prepareLifecycle } from './account-lifecycle';
 
 async function api(request: Request, env: Env, path: string): Promise<Response> {
   const method = request.method;
   if (!['GET', 'HEAD'].includes(method)) requireSameOrigin(request, env);
   if (method === 'GET' && path === '/api/health') return json({ ok: true });
   if (method === 'GET' && path === '/api/account-state') return getAccountState(request, env);
+  if (method === 'POST' && path === '/api/account-lifecycle/outcome')
+    return getLifecycleOutcome(request, env);
+  if (method === 'POST' && path === '/api/account-lifecycle/prepare')
+    return prepareLifecycle(request, env);
+  if (method === 'POST' && path === '/api/account-lifecycle/cancel')
+    return cancelLifecycle(request, env);
   if (method === 'POST' && path === '/api/account-operations')
     return applyAccountOperation(request, env);
   if (method === 'GET' && path === '/api/me')

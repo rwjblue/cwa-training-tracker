@@ -16,12 +16,17 @@ import { mergeCurriculumPlan } from '../shared/curriculum';
 import { sessionEvidence } from '../shared/practice-evidence';
 import {
   conditionalAccountWrite,
+  accountSnapshotStatements,
+  assertAccountGeneration,
   getAccountSnapshot,
   isAccountRevisionConflict,
   mutateAccount,
   requireAccountRevision,
+  requireRequestGeneration,
   retiredTaskIds,
+  snapshotFromResults,
 } from './account-sync';
+import { applyLifecycle, validateLifecycleRequest } from './account-lifecycle';
 
 const MAX_ENTRIES = 20_000;
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
@@ -84,12 +89,17 @@ async function storedEntry(
   env: Env,
   userId: string,
   id: string,
+  generation: number,
 ): Promise<PracticeSession | undefined> {
-  const row = await env.DB.prepare(
-    'SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?',
-  )
-    .bind(userId, id)
-    .first<{ entry_json: string }>();
+  const results = await env.DB.batch([
+    ...accountSnapshotStatements(env, userId),
+    env.DB.prepare('SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?').bind(
+      userId,
+      id,
+    ),
+  ]);
+  assertAccountGeneration(snapshotFromResults(userId, results.slice(0, 2)), generation);
+  const row = results[2].results[0] as { entry_json: string } | undefined;
   return row
     ? validated(
         (value) => validatePracticeSession(value, { preserveHistoricalDuration: true }),
@@ -117,17 +127,19 @@ async function saveNewLinkedEntry(
   frozen: PracticeSession,
   taskId: string,
   omittedCreatedAt: boolean,
+  generation: number,
 ): Promise<Response> {
   for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
     if (attempt) {
-      const saved = await storedEntry(env, userId, frozen.id);
+      const saved = await storedEntry(env, userId, frozen.id, generation);
       if (saved) {
         if (equivalentRetry(saved, frozen, omittedCreatedAt))
-          return json({ entry: saved, duplicate: true });
+          return json({ entry: saved, duplicate: true, accountId: userId, generation });
         throw new HttpError(409, 'A different practice entry already uses this session ID.');
       }
     }
     const state = await getAccountSnapshot(env, userId);
+    assertAccountGeneration(state, generation);
     let entry = frozen;
     if (!state.plan.some((task) => task.id === taskId)) {
       const retired = await env.DB.prepare(
@@ -147,14 +159,17 @@ async function saveNewLinkedEntry(
       const [inserted] = await conditionalAccountWrite(env, state, [
         insertEntryStatement(env, userId, entry),
       ]);
-      if (inserted.results.length) return json({ entry }, 201);
+      if (inserted.results.length) return json({ entry, accountId: userId, generation }, 201);
     } catch (error) {
-      if (isAccountRevisionConflict(error)) continue;
+      if (isAccountRevisionConflict(error)) {
+        assertAccountGeneration(await getAccountSnapshot(env, userId), generation);
+        continue;
+      }
       throw error;
     }
-    const saved = await storedEntry(env, userId, frozen.id);
+    const saved = await storedEntry(env, userId, frozen.id, generation);
     if (saved && equivalentRetry(saved, frozen, omittedCreatedAt))
-      return json({ entry: saved, duplicate: true });
+      return json({ entry: saved, duplicate: true, accountId: userId, generation });
     throw new HttpError(
       409,
       'This entry already exists, or your log has reached its 20,000-entry limit.',
@@ -166,28 +181,33 @@ async function saveNewLinkedEntry(
   );
 }
 
-async function entries(env: Env, userId: string): Promise<PracticeSession[]> {
-  const result = await env.DB.prepare(
-    'SELECT entry_json FROM practice_entries WHERE user_id = ? ORDER BY date DESC, id DESC',
-  )
-    .bind(userId)
-    .all<{ entry_json: string }>();
-  return result.results.map((row) =>
-    validatePracticeSession(JSON.parse(row.entry_json), {
-      preserveHistoricalDuration: true,
-    }),
-  );
-}
-
 export async function listEntries(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
-  return json({ entries: await entries(env, auth.user.id) });
+  const [authority, entries] = await env.DB.batch([
+    env.DB.prepare('SELECT account_revision, dataset_generation FROM users WHERE id = ?').bind(
+      auth.user.id,
+    ),
+    env.DB.prepare(
+      'SELECT entry_json FROM practice_entries WHERE user_id = ? ORDER BY date DESC, id DESC',
+    ).bind(auth.user.id),
+  ]);
+  const row = authority.results[0] as { account_revision: number; dataset_generation: number };
+  return json({
+    accountId: auth.user.id,
+    revision: row.account_revision,
+    generation: row.dataset_generation,
+    entries: entries.results.map((row) =>
+      validatePracticeSession(JSON.parse((row as { entry_json: string }).entry_json), {
+        preserveHistoricalDuration: true,
+      }),
+    ),
+  });
 }
 
 export async function saveEntry(request: Request, env: Env, id?: string): Promise<Response> {
   const auth = await requireAuth(request, env);
-  if (!id && !request.headers.has('X-CWA-Account'))
-    throw new HttpError(428, 'Send the account that owns this practice result with X-CWA-Account.');
+  const state = await getAccountSnapshot(env, auth.user.id);
+  const generation = requireRequestGeneration(request, state);
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   const body = await readJson(request, 250_000);
   const input = isRecord(body.entry) ? body.entry : body;
@@ -196,21 +216,11 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     id: id ?? input.id ?? crypto.randomUUID(),
     createdAt: input.createdAt ?? new Date().toISOString(),
   });
-  const original = await env.DB.prepare(
-    'SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?',
-  )
-    .bind(auth.user.id, entry.id)
-    .first<{ entry_json: string }>();
-  if (id && !original) throw new HttpError(404, 'This practice entry was not found.');
-  const previous = original
-    ? validated(
-        (value) => validatePracticeSession(value, { preserveHistoricalDuration: true }),
-        JSON.parse(original.entry_json),
-      )
-    : undefined;
+  const previous = await storedEntry(env, auth.user.id, entry.id, generation);
+  if (id && !previous) throw new HttpError(404, 'This practice entry was not found.');
   if (!id && previous) {
     if (equivalentRetry(previous, entry, input.createdAt === undefined))
-      return json({ entry: previous, duplicate: true });
+      return json({ entry: previous, duplicate: true, accountId: auth.user.id, generation });
     throw new HttpError(409, 'A different practice entry already uses this session ID.');
   }
   if (!id && typeof entry.metadata?.plannedTaskId === 'string')
@@ -220,6 +230,7 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       entry,
       entry.metadata.plannedTaskId,
       input.createdAt === undefined,
+      generation,
     );
   const previousEvidence = sessionEvidence(previous?.metadata);
   const nextEvidence = sessionEvidence(entry.metadata);
@@ -269,26 +280,54 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     entry = historicalPlacement(entry, taskId);
   }
   if (id) {
-    const updated = await env.DB.prepare(
-      'UPDATE practice_entries SET date = ?, entry_json = ? WHERE user_id = ? AND id = ? RETURNING id',
-    )
-      .bind(entry.date, JSON.stringify(entry), auth.user.id, id)
-      .first<{ id: string }>();
-    if (!updated) throw new HttpError(404, 'This practice entry was not found.');
+    let results;
+    try {
+      results = await conditionalAccountWrite(env, state, [
+        env.DB.prepare(
+          'UPDATE practice_entries SET date = ?, entry_json = ? WHERE user_id = ? AND id = ? RETURNING id',
+        ).bind(entry.date, JSON.stringify(entry), auth.user.id, id),
+      ]);
+    } catch (error) {
+      if (isAccountRevisionConflict(error)) {
+        const current = await getAccountSnapshot(env, auth.user.id);
+        assertAccountGeneration(current, generation);
+        throw new HttpError(
+          409,
+          'Your account changed while this entry was editing. Review the current history.',
+          { state: current },
+        );
+      }
+      throw error;
+    }
+    if (!results[0].results.length) throw new HttpError(404, 'This practice entry was not found.');
   } else {
-    const inserted = await insertEntryStatement(env, auth.user.id, entry).first<{ id: string }>();
+    let writeState = state;
+    let inserted = false;
+    for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
+      try {
+        const [result] = await conditionalAccountWrite(env, writeState, [
+          insertEntryStatement(env, auth.user.id, entry),
+        ]);
+        inserted = !!result.results.length;
+        break;
+      } catch (error) {
+        if (!isAccountRevisionConflict(error)) throw error;
+        writeState = await getAccountSnapshot(env, auth.user.id);
+        assertAccountGeneration(writeState, generation);
+        if (attempt === MAX_PLACEMENT_ATTEMPTS - 1)
+          throw new HttpError(
+            503,
+            'Your account changed while this result was uploading. Your result can be retried.',
+          );
+      }
+    }
     if (!inserted) {
       // The insert resolves races. A retry after a lost response acknowledges only
       // an equivalent record owned by this account; it never overwrites edits.
-      const row = await env.DB.prepare(
-        'SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?',
-      )
-        .bind(auth.user.id, entry.id)
-        .first<{ entry_json: string }>();
-      if (row) {
-        const saved = validated(validatePracticeSession, JSON.parse(row.entry_json));
+      const saved = await storedEntry(env, auth.user.id, entry.id, generation);
+      if (saved) {
         if (equivalentRetry(saved, entry, input.createdAt === undefined))
-          return json({ entry: saved, duplicate: true });
+          return json({ entry: saved, duplicate: true, accountId: auth.user.id, generation });
       }
       throw new HttpError(
         409,
@@ -296,15 +335,33 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       );
     }
   }
-  return json({ entry }, id ? 200 : 201);
+  return json({ entry, accountId: auth.user.id, generation }, id ? 200 : 201);
 }
 
 export async function deleteEntry(request: Request, env: Env, id: string): Promise<Response> {
   const auth = await requireAuth(request, env);
-  await env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ? AND id = ?')
-    .bind(auth.user.id, id)
-    .run();
-  return json({ ok: true });
+  const state = await getAccountSnapshot(env, auth.user.id);
+  const generation = requireRequestGeneration(request, state);
+  try {
+    await conditionalAccountWrite(env, state, [
+      env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ? AND id = ?').bind(
+        auth.user.id,
+        id,
+      ),
+    ]);
+  } catch (error) {
+    if (isAccountRevisionConflict(error)) {
+      const current = await getAccountSnapshot(env, auth.user.id);
+      assertAccountGeneration(current, generation);
+      throw new HttpError(
+        409,
+        'Your account changed while this entry was deleting. Review the current history.',
+        { state: current },
+      );
+    }
+    throw error;
+  }
+  return json({ ok: true, accountId: auth.user.id, generation });
 }
 
 export async function getSettings(request: Request, env: Env): Promise<Response> {
@@ -392,10 +449,25 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
 export async function importData(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
   const state = await getAccountSnapshot(env, auth.user.id);
-  await rateLimit(env, `import:${auth.user.id}`, 10, 60 * 60);
   const input = await readJson(request, MAX_IMPORT_BYTES);
   if (input.mode !== 'merge' && input.mode !== 'replace')
     throw new HttpError(400, 'Choose merge or replace for this import.');
+  if (
+    Object.keys(input).some(
+      (key) => !['mode', 'data', ...(input.mode === 'replace' ? ['lifecycle'] : [])].includes(key),
+    )
+  )
+    throw new HttpError(400, 'Unsupported import request field.');
+  const lifecycle =
+    input.mode === 'replace'
+      ? await validateLifecycleRequest(env, auth.user.id, input.lifecycle, 'replace', {
+          mode: 'replace',
+          data: input.data,
+        })
+      : undefined;
+  if (lifecycle && lifecycle.prior.outcome !== 'unknown') return json(lifecycle.prior);
+  if (!lifecycle) requireRequestGeneration(request, state);
+  await rateLimit(env, `import:${auth.user.id}`, 10, 60 * 60);
   const data = validated(
     isRecord(input.data) && input.data.format === 'cwa-training-tracker'
       ? validateTrainingExport
@@ -517,6 +589,15 @@ export async function importData(request: Request, env: Env): Promise<Response> 
       offset = end;
     }
   }
+  if (lifecycle) {
+    return json(
+      await applyLifecycle(env, state, lifecycle.identity, statements, {
+        imported: uniqueEntries.size,
+        skipped: data.sessions.length - uniqueEntries.size,
+        ...(historicalLinkIds.size ? { historicalLinks: historicalLinkIds.size } : {}),
+      }),
+    );
+  }
   const applied = await mutateAccount(
     env,
     state,
@@ -549,17 +630,25 @@ export async function importData(request: Request, env: Env): Promise<Response> 
 export async function resetData(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
   const state = await getAccountSnapshot(env, auth.user.id);
-  const input = await readJson(request);
+  const input = await readJson(request, 2000);
+  if (Object.keys(input).some((key) => !['confirmation', 'lifecycle'].includes(key)))
+    throw new HttpError(400, 'Unsupported reset request field.');
   if (input.confirmation !== 'RESET')
     throw new HttpError(400, 'Type RESET to confirm clearing your practice data.');
-  await mutateAccount(env, state, [
-    env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
-    env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
-    deletePlanStatement(env, auth.user.id),
-    env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
-      JSON.stringify(DEFAULT_PROFILE),
-      auth.user.id,
-    ),
-  ]);
-  return json({ ok: true });
+  const lifecycle = await validateLifecycleRequest(env, auth.user.id, input.lifecycle, 'reset', {
+    confirmation: 'RESET',
+  });
+  if (lifecycle.prior.outcome !== 'unknown') return json(lifecycle.prior);
+  await rateLimit(env, `write:${auth.user.id}`, 120, 60);
+  return json(
+    await applyLifecycle(env, state, lifecycle.identity, [
+      env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
+      env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
+      deletePlanStatement(env, auth.user.id),
+      env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
+        JSON.stringify(DEFAULT_PROFILE),
+        auth.user.id,
+      ),
+    ]),
+  );
 }

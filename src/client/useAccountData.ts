@@ -5,6 +5,7 @@ import {
   type AccountSnapshot,
 } from '../shared/account-sync';
 import { api, type User } from './api';
+import { observeAccountGeneration } from './account-lifecycle';
 import {
   ACCOUNT_DATA_EVENT,
   flushAccountOperations,
@@ -102,6 +103,7 @@ export function useAccountData(user: User | null) {
         const state = validateAccountSnapshot(result.state);
         if (state.accountId !== target.id)
           throw new Error('The returned state belongs to another account.');
+        if (ownsResponse() && !observeAccountGeneration(target, state)) return state;
         if (ownsResponse()) {
           rememberAccount(target, state);
           publish(state, token);
@@ -135,6 +137,9 @@ export function useAccountData(user: User | null) {
     setError('');
     setCached(Boolean(scope && loadCachedAccount(scope)));
     if (!scope || !user) return;
+    const retained = loadCachedAccount(scope)?.state;
+    if (retained && isDeviceScopeCurrent(scope, getDeviceScopeToken(scope)))
+      observeAccountGeneration(user, retained);
     resumeAccountUploads(scope);
     void refresh(user).catch(() => {});
     const interval = setInterval(() => {
@@ -152,7 +157,14 @@ export function useAccountData(user: User | null) {
     const update = () => {
       setVersion((value) => value + 1);
       const state = scope ? loadCachedAccount(scope)?.state : undefined;
-      if (state && scope) publish(state, getDeviceScopeToken(scope));
+      if (
+        state &&
+        scope &&
+        user &&
+        isDeviceScopeCurrent(scope, getDeviceScopeToken(scope)) &&
+        observeAccountGeneration(user, state)
+      )
+        publish(state, getDeviceScopeToken(scope));
     };
     const online = () => {
       if (user) void refresh(user).catch(() => {});

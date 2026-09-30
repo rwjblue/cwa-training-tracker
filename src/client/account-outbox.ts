@@ -8,6 +8,7 @@ import {
   type AccountSnapshot,
 } from '../shared/account-sync';
 import { api, ApiError, type User } from './api';
+import { observeAccountGeneration } from './account-lifecycle';
 import {
   getDeviceScopeToken,
   isDeviceScopeCurrent,
@@ -37,6 +38,8 @@ export interface CachedAccount {
   user: User;
   state: AccountSnapshot;
 }
+const confirmedMemory = new Map<string, { cache: CachedAccount; deviceToken: string }>();
+const confirmedGenerations = new Map<string, { generation: number; deviceToken: string }>();
 export interface QueuedAccountOperation {
   operation: AccountOperation;
   /** Original queue position; resolving one edit cannot move it behind its dependents. */
@@ -85,11 +88,15 @@ function validateQueued(value: unknown): QueuedAccountOperation {
 
 /** The cache contains public identity and private data, never authentication credentials. */
 export function loadCachedAccount(accountId?: string): CachedAccount | null {
+  const scope = accountId ?? getSelectedAccountId();
+  if (!scope) return null;
+  const retained = () => {
+    const memory = confirmedMemory.get(scope);
+    return memory?.deviceToken === getDeviceScopeToken(scope) ? memory.cache : null;
+  };
   try {
-    const scope = accountId ?? getSelectedAccountId();
-    if (!scope) return null;
     const raw = localStorage.getItem(cacheKey(scope));
-    if (!raw || raw.length > CACHE_LIMIT) return null;
+    if (!raw || raw.length > CACHE_LIMIT) return retained();
     const input = JSON.parse(raw) as CachedAccount;
     if (
       input.user?.id !== scope ||
@@ -101,8 +108,16 @@ export function loadCachedAccount(accountId?: string): CachedAccount | null {
     if (state.accountId !== scope) return null;
     return { user: { id: scope, email: input.user.email }, state };
   } catch {
-    return null;
+    return retained();
   }
+}
+
+/** Fresh server-confirmed authority can survive optional cache/storage failure in this page. */
+export function getConfirmedAccountGeneration(scope: string): number | undefined {
+  const cached = loadCachedAccount(scope);
+  if (cached) return cached.state.generation;
+  const memory = confirmedGenerations.get(scope);
+  return memory?.deviceToken === getDeviceScopeToken(scope) ? memory.generation : undefined;
 }
 
 function retainAccountIdentity(user: User): void {
@@ -143,11 +158,12 @@ export function loadSelectedAccountIdentity(): User | null {
 }
 
 export function rememberAccount(user: User, input: AccountSnapshot, select = true): void {
-  if (!isDeviceScopeCurrent(user.id, getDeviceScopeToken(user.id))) return;
   const state = validateAccountSnapshot(input);
   if (state.accountId !== user.id) throw new Error('The account state belongs to another account.');
   if (select) selectAccountIdentity(user);
   else retainAccountIdentity(user);
+  if (!isDeviceScopeCurrent(user.id, getDeviceScopeToken(user.id))) return;
+  if (!observeAccountGeneration(user, state)) return;
   const previous = loadCachedAccount(user.id);
   // A slower GET or acknowledgement must not replace a newer confirmed snapshot.
   if (
@@ -158,7 +174,15 @@ export function rememberAccount(user: User, input: AccountSnapshot, select = tru
     return;
   }
   const raw = JSON.stringify({ user: { id: user.id, email: user.email }, state });
+  confirmedGenerations.set(user.id, {
+    generation: state.generation,
+    deviceToken: getDeviceScopeToken(user.id),
+  });
   if (raw.length > CACHE_LIMIT) return;
+  confirmedMemory.set(user.id, {
+    cache: { user: { id: user.id, email: user.email }, state },
+    deviceToken: getDeviceScopeToken(user.id),
+  });
   try {
     localStorage.setItem(cacheKey(user.id), raw);
     changed();
@@ -567,7 +591,23 @@ export async function flushAccountOperations(
   const upload: Upload = { controller, epoch, deviceToken, promise: Promise.resolve(acknowledged) };
   upload.promise = (async () => {
     while (true) {
-      const item = loadAccountOperations(scope)[0];
+      const generation = getConfirmedAccountGeneration(scope);
+      const items = loadAccountOperations(scope);
+      for (const retired of items.filter(
+        (item) => generation !== undefined && item.operation.generation < generation,
+      )) {
+        if (retired.status !== 'conflict')
+          writeStatus({
+            ...retired,
+            status: 'conflict',
+            failure: 'permanent',
+            error:
+              'This edit belongs to history that was reset or replaced. Keep a recovery file or discard the waiting edit.',
+          });
+      }
+      const item = items.find(
+        (item) => generation === undefined || item.operation.generation === generation,
+      );
       if (!item) return acknowledged;
       if (!isCurrentAccount() || suspended.has(scope) || epoch !== (epochs.get(scope) ?? 0))
         return acknowledged;
@@ -583,7 +623,7 @@ export async function flushAccountOperations(
           item.operation,
           'POST',
           controller.signal,
-          { accountId: scope },
+          { accountId: scope, generation: item.operation.generation },
         );
         const state = validateAccountSnapshot(response.state);
         if (
@@ -617,6 +657,7 @@ export async function flushAccountOperations(
             const state = validateAccountSnapshot(error.state);
             if (state.accountId === scope) {
               const cached = loadCachedAccount(scope);
+              if (cached && !observeAccountGeneration(cached.user, state)) return acknowledged;
               if (cached) rememberAccount(cached.user, state, false);
               onState(state);
             }
@@ -665,6 +706,10 @@ export function resolveAccountConflict(
     changed();
     return;
   }
+  if (item.operation.generation !== state.generation)
+    throw new Error(
+      'This edit belongs to a retired dataset. Keep a recovery file or discard it; review a new edit against current account data.',
+    );
   // Explicit reapplication is a new semantic operation against the displayed server state.
   const operation = validateAccountOperation({
     ...item.operation,

@@ -79,6 +79,9 @@ test('email login, private records, backup controls, and passkeys work together'
     createdAt: savedEntry.createdAt,
   });
   expect(planned.ok()).toBe(true);
+  // A fixture written outside this page advances the account revision.
+  // Refresh its confirmed state before reviewing a destructive operation.
+  await page.reload();
   await page.getByRole('button', { name: 'Your account', exact: true }).click();
   const downloadEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export backup', exact: true }).click();
@@ -102,6 +105,7 @@ test('email login, private records, backup controls, and passkeys work together'
     resetDialog.getByRole('button', { name: 'Reset practice data', exact: true }),
   ).toBeDisabled();
   await resetDialog.getByLabel('Type RESET to continue', { exact: true }).fill('RESET');
+  await resetDialog.getByRole('radio', { name: /^Discard old waiting work/ }).check();
   const resetResult = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === '/api/reset' && response.request().method() === 'POST',
@@ -126,6 +130,12 @@ test('email login, private records, backup controls, and passkeys work together'
       new URL(response.url()).pathname === '/api/import' && response.request().method() === 'POST',
   );
   await importDialog.getByRole('button', { name: 'Replace and import', exact: true }).click();
+  const replacementDialog = page.getByRole('dialog', {
+    name: 'Replace your practice data?',
+    exact: true,
+  });
+  await replacementDialog.getByRole('radio', { name: /^Discard old waiting work/ }).check();
+  await replacementDialog.getByRole('button', { name: 'Replace and import', exact: true }).click();
   const restored = await restoredResult;
   expect(restored.ok()).toBe(true);
   expect(restored.request().postDataJSON().mode).toBe('replace');

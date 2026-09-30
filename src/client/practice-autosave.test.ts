@@ -31,6 +31,12 @@ const entry = (id = 'round-one') =>
     notes: 'A complete round',
   });
 const fetchMock = vi.fn();
+function knownAccount(scope: string, generation = 0) {
+  rememberAccount(
+    { id: scope, email: 'synthetic@example.test' },
+    { accountId: scope, revision: 0, generation, settings: DEFAULT_PROFILE, plan: [] },
+  );
+}
 beforeEach(() => {
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', {
@@ -52,6 +58,7 @@ afterEach(() => {
 });
 
 it('retains the local result unless the server acknowledges that exact entry', async () => {
+  knownAccount('account');
   for (const response of [{}, { entry: entry('another-round') }]) {
     fetchMock.mockResolvedValueOnce(Response.json(response));
     expect((await autoSavePractice('account', entry())).destination).toBe('device');
@@ -62,6 +69,7 @@ it('retains the local result unless the server acknowledges that exact entry', a
 it('suppresses a delayed device receipt and old acknowledgement across clear and exact-ID restore', async () => {
   vi.useFakeTimers();
   const scope = 'cleared-result-owner';
+  knownAccount(scope);
   const original = entry('cleared-result');
   const token = getDeviceScopeToken(scope);
   const acknowledge: ((response: Response) => void)[] = [];
@@ -101,6 +109,7 @@ it('suppresses a delayed device receipt and old acknowledgement across clear and
 });
 
 it('returns a durable device receipt promptly, shares the background upload, and publishes its late acknowledgement', async () => {
+  knownAccount('late-account');
   vi.useFakeTimers();
   let acknowledge!: (response: Response) => void;
   fetchMock.mockImplementationOnce(
@@ -139,6 +148,7 @@ it('returns a durable device receipt promptly, shares the background upload, and
 });
 
 it('aborts a stalled response body after ten seconds and leaves its immutable local body retryable', async () => {
+  knownAccount('hung-account');
   vi.useFakeTimers();
   let signal!: AbortSignal;
   fetchMock.mockImplementationOnce(async (_url, options: RequestInit) => {
@@ -218,6 +228,7 @@ it('retains successive guest rounds without uploading or touching another scope'
 });
 
 it('freezes uncertain uploads, then retries the same body and removes only acknowledged entries', async () => {
+  knownAccount('account');
   fetchMock.mockRejectedValueOnce(new Error('Lost acknowledgement'));
   expect((await autoSavePractice('account', entry())).destination).toBe('device');
   expect(loadLocalPractice('account')).toEqual([entry()]);
@@ -233,6 +244,7 @@ it('freezes uncertain uploads, then retries the same body and removes only ackno
 });
 
 it('stops queued uploads when the account changes during a request', async () => {
+  knownAccount('account-a');
   fetchMock.mockRejectedValue(new Error('Offline'));
   await autoSavePractice('account-a', entry());
   await autoSavePractice('account-a', entry('round-two'));
@@ -265,6 +277,7 @@ it('reports failure if neither the browser nor the server retained the result', 
 });
 
 it('uses the frozen result owner and retains an expired-authentication failure for that account', async () => {
+  knownAccount('expired-account');
   fetchMock.mockResolvedValueOnce(Response.json({ error: 'Sign in again.' }, { status: 401 }));
   await autoSavePractice('expired-account', entry('expired-result'));
   expect(fetchMock.mock.calls[0][1].headers['X-CWA-Account']).toBe('expired-account');
@@ -292,6 +305,7 @@ it('keeps a result local until its queued plan edits have been acknowledged', as
 });
 
 it('aborts a real upload and fences its late acknowledgement after its account is suspended', async () => {
+  knownAccount('suspended-account');
   vi.useFakeTimers();
   let signal!: AbortSignal;
   let acknowledge!: (response: Response) => void;
@@ -316,6 +330,7 @@ it('aborts a real upload and fences its late acknowledgement after its account i
 });
 
 it('does not clear or publish an older acknowledgement when the durable result was replaced', async () => {
+  knownAccount('replace-account');
   vi.useFakeTimers();
   let acknowledge!: (response: Response) => void;
   fetchMock.mockImplementationOnce(
@@ -343,6 +358,7 @@ it('does not clear or publish an older acknowledgement when the durable result w
 });
 
 it('does not endlessly retry permanent result failures during automatic flushing', async () => {
+  knownAccount('invalid-account');
   fetchMock.mockResolvedValueOnce(
     Response.json({ error: 'The linked exercise no longer exists.' }, { status: 400 }),
   );
@@ -355,6 +371,7 @@ it('does not endlessly retry permanent result failures during automatic flushing
 });
 
 it('exposes an upload failure even if result storage leaves no room for its error status', async () => {
+  knownAccount('full-device-account');
   const originalStorage = localStorage;
   vi.stubGlobal('localStorage', {
     ...originalStorage,
@@ -391,7 +408,7 @@ it('captures a result’s known dataset generation once and retains it through e
     accountId: user.id,
     generation: 7,
   });
-  rememberAccount(user, { ...snapshot, generation: 8 });
+  rememberAccount(user, { ...snapshot, revision: 1 });
   fetchMock.mockResolvedValueOnce(Response.json({ entry: original }));
   await autoSavePractice(user.id, {
     ...original,
@@ -419,12 +436,13 @@ it('does not stamp a historical queue with the current dataset generation', asyn
     plan: [],
   });
   fetchMock.mockRejectedValueOnce(new Error('Offline'));
-  await autoSavePractice(user.id, original);
+  await expect(autoSavePractice(user.id, original)).rejects.toThrow('device work changed');
   expect(loadPracticeSaveOrigin(user.id, original.id)).toEqual({
     id: original.id,
     accountId: user.id,
   });
-  expect(fetchMock.mock.calls[0][1].headers['X-CWA-Generation']).toBeUndefined();
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(loadLocalPractice(user.id)).toEqual([original]);
 });
 
 it('treats a changed cookie account as retained authentication work rather than a permanent result failure', async () => {

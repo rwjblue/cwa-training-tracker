@@ -4512,3 +4512,25 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.lifecycle-policy {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  margin: 18px 0;
+}
+.lifecycle-policy legend {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.lifecycle-status p {
+  overflow-wrap: anywhere;
+}
+.lifecycle-request-id {
+  font-family: monospace;
+}

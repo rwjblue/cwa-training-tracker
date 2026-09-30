@@ -293,3 +293,38 @@ Correction validation and the independent recheck remain in the execution journa
 The recheck closed those six findings and reproduced notification overlap with
 mobile device file controls. The shared dialog layer now sits above page notices;
 actual Download/Choose gestures remain usable while a notice is present.
+
+### Issue #4 — reset and replacement lifecycle
+
+P32/P33/P36 now share an account lifecycle boundary for destructive server changes.
+The original read-only device clear remains evidence for pausing owners and
+retaining a recovery export; the Companion regression was established with
+synthetic delayed writes rather than destructive production data.
+
+Frozen reset/replacement identities, canonical file hashes, durable outcome
+receipts and atomic generation guards prevent old queued or delayed SQL from
+repopulating new history. Exact destructive retries acknowledge the same outcome;
+safe cancellation races application on its reserved identity. Portable files do
+not carry runtime authority. A bounded cancellation reservation is established
+before destructive admission so a full payload quota cannot strand an admitted
+request without space to stop it.
+
+The review identifies the owner, pending counts and exact replacement file, and
+offers server plus complete device downloads with explicit recovery/discard
+policy. Unknown outcomes remain paused across navigation/reopen with reachable
+check, exact retry and safe-stop controls. Applied cleanup failures retry local
+finalization; canceled requests recover original bodies/order and volatile state.
+Cancellation after a remote dataset change retires old work and describes the
+current log. A second open page reloads current history after the account boundary;
+ordinary local device clear does not repopulate its cleared cache/history.
+Changed remote generations fence owners before cache/history publication and
+require a deliberate device recovery disposition. Other accounts, Guest work and
+shared defaults remain separate. Existing public practice and evidence stay intact.
+
+See [protocol](../../src/shared/account-lifecycle.ts),
+[Worker](../../src/worker/account-lifecycle.ts),
+[coordinator](../../src/client/account-lifecycle.ts), and
+[actual UI verification](../../e2e/account-lifecycle.spec.ts). Validation and the
+required fresh independent gate are in the execution journal. All 441 fast checks
+and 45 serialized browser journeys pass locally; this issue remains
+in progress until those gates, signed publication and deployment are complete.

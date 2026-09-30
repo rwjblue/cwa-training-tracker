@@ -2,6 +2,24 @@
 export const DEVICE_SCOPE_EVENT = 'cwa:device-scope';
 export const DEVICE_CAPTURE_EVENT = 'cwa:device-capture';
 export const deviceScopeKey = (scope: string) => `cwa:device:scope:v1:${encodeURIComponent(scope)}`;
+export const accountLifecycleKey = (scope: string) =>
+  `cwa:account:lifecycle:v1:${encodeURIComponent(scope)}`;
+const knownAccountBoundaries = new Set<string>();
+export function rememberAccountLifecycleBoundary(scope: string, present: boolean): void {
+  if (present) knownAccountBoundaries.add(scope);
+  else knownAccountBoundaries.delete(scope);
+}
+
+/** A local-only recovery action cannot release an unresolved server boundary. */
+export function hasAccountLifecycleBoundary(scope: string): boolean {
+  try {
+    const present = localStorage.getItem(accountLifecycleKey(scope)) !== null;
+    rememberAccountLifecycleBoundary(scope, present);
+    return present;
+  } catch {
+    return knownAccountBoundaries.has(scope);
+  }
+}
 
 export interface DeviceScopeState {
   scope: string;
@@ -15,9 +33,9 @@ export function getDeviceScopeState(scope: string): DeviceScopeState {
     raw = localStorage.getItem(deviceScopeKey(scope));
   } catch {
     // Ordinary practice still works without storage; lifecycle actions require readback.
-    return { scope, token: 'unavailable', mutating: false };
+    return { scope, token: 'unavailable', mutating: hasAccountLifecycleBoundary(scope) };
   }
-  if (!raw) return { scope, token: 'initial', mutating: false };
+  if (!raw) return { scope, token: 'initial', mutating: hasAccountLifecycleBoundary(scope) };
   try {
     const input = JSON.parse(raw) as { version?: unknown; token?: unknown; mutating?: unknown };
     if (
@@ -27,7 +45,11 @@ export function getDeviceScopeState(scope: string): DeviceScopeState {
       /^[a-zA-Z0-9-]{1,100}$/.test(input.token) &&
       typeof input.mutating === 'boolean'
     )
-      return { scope, token: input.token, mutating: input.mutating };
+      return {
+        scope,
+        token: input.token,
+        mutating: input.mutating || hasAccountLifecycleBoundary(scope),
+      };
   } catch {
     /* An unreadable lifecycle record cannot authorize a stale owner to write. */
   }
@@ -56,7 +78,11 @@ function persist(state: DeviceScopeState): void {
       'This browser could not safely update device work. Free device storage or enable browser storage, then try again.',
     );
   }
-  window.dispatchEvent(new CustomEvent(DEVICE_SCOPE_EVENT, { detail: state }));
+  notifyDeviceScope(state.scope);
+}
+
+export function notifyDeviceScope(scope: string): void {
+  window.dispatchEvent(new CustomEvent(DEVICE_SCOPE_EVENT, { detail: getDeviceScopeState(scope) }));
 }
 
 /** Persist before removing work: another mounted tab must lose permission to write. */
@@ -64,6 +90,10 @@ export function invalidateDeviceScope(
   scope: string,
   options: { recoverInterrupted?: boolean } = {},
 ): string {
+  if (hasAccountLifecycleBoundary(scope))
+    throw new Error(
+      'Finish the account reset or replacement recovery before changing device work.',
+    );
   if (isDeviceScopeMutating(scope) && !options.recoverInterrupted)
     throw new Error(
       'Device work is already being updated. Finish its recovery before trying again.',
@@ -74,7 +104,28 @@ export function invalidateDeviceScope(
 }
 
 /** Only a coherent completed apply or rollback may make the new scope usable. */
-export function completeDeviceScopeMutation(scope: string, token: string): void {
+export function completeDeviceScopeMutation(
+  scope: string,
+  token: string,
+  lifecycleId?: string,
+): void {
+  if (hasAccountLifecycleBoundary(scope)) {
+    const record = JSON.parse(localStorage.getItem(accountLifecycleKey(scope))!) as {
+      identity?: { id?: string; accountId?: string };
+      token?: string;
+      phase?: string;
+    };
+    if (
+      !lifecycleId ||
+      record.identity?.id !== lifecycleId ||
+      record.identity.accountId !== scope ||
+      record.token !== token ||
+      !['applied', 'canceled', 'remote'].includes(record.phase ?? '')
+    )
+      throw new Error(
+        'Finish the account reset or replacement recovery before releasing device work.',
+      );
+  }
   if (getDeviceScopeToken(scope) !== token)
     throw new Error('Another tab changed this device work. Reopen it before continuing.');
   persist({ scope, token, mutating: false });

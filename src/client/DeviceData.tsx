@@ -12,7 +12,11 @@ import {
   validateDeviceBackup,
   type DeviceBackup,
 } from './device-backup';
-import { getDeviceScopeState, subscribeDeviceScope } from './device-scope';
+import {
+  getDeviceScopeState,
+  hasAccountLifecycleBoundary,
+  subscribeDeviceScope,
+} from './device-scope';
 
 function downloadBackup(backup: DeviceBackup) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(backup)], { type: 'application/json' }));
@@ -102,6 +106,7 @@ export default function DeviceData({
   const [retryRecovery, setRetryRecovery] = useState<(() => void) | undefined>();
   const busyRef = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const accountRecovery = hasAccountLifecycleBoundary(scope);
   const close = () => {
     if (!busyRef.current) onClose();
   };
@@ -178,7 +183,7 @@ export default function DeviceData({
     }
   }
   const mutate = (action: 'restore' | 'clear') => {
-    if (busyRef.current || (interrupted && !closedOtherPages)) return;
+    if (busyRef.current || accountRecovery || (interrupted && !closedOtherPages)) return;
     busyRef.current = true;
     setBusy(true);
     setError('');
@@ -261,7 +266,14 @@ export default function DeviceData({
             {message}
           </p>
         )}
-        {interrupted && (
+        {accountRecovery && (
+          <p className="alert" role="status">
+            An account reset or replacement needs recovery. Keep a device download, then use the
+            account recovery controls to check its outcome or finish recovery before restoring or
+            clearing device work.
+          </p>
+        )}
+        {interrupted && !accountRecovery && (
           <section className="alert" aria-label="Interrupted device update">
             <p>
               An earlier device update has not finished. Practice and uploads remain paused. Try
@@ -355,6 +367,7 @@ export default function DeviceData({
                 className="button dark"
                 disabled={
                   busy ||
+                  accountRecovery ||
                   (interrupted && !closedOtherPages) ||
                   !inspection ||
                   !!inspection.conflicts.length ||
@@ -396,7 +409,7 @@ export default function DeviceData({
               </button>
               <button
                 className="button outline danger-text"
-                disabled={busy || (interrupted && !closedOtherPages)}
+                disabled={busy || accountRecovery || (interrupted && !closedOtherPages)}
                 onClick={() => mutate('clear')}
               >
                 Clear device work

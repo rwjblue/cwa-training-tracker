@@ -23,11 +23,13 @@ import {
   captureSupportedDeviceWork,
   completeDeviceScopeMutation,
   getDeviceScopeToken,
+  hasAccountLifecycleBoundary,
   invalidateDeviceScope,
   isDeviceScopeMutating,
 } from './device-scope';
 import {
   invalidatePracticeMemory,
+  captureInFlightPractice,
   listInFlightPracticeIds,
   loadPracticeSaveStates,
   restorePracticeMemory,
@@ -590,7 +592,7 @@ export function captureDeviceBackup(
   captureSupportedDeviceWork(scope);
   const all = names(storage);
   const practiceStates = new Map(loadPracticeSaveStates(scope).map((state) => [state.id, state]));
-  const practice = all
+  const practice: RetainedPractice[] = all
     .filter((name) => name.startsWith(`cwa:practice:pending:v1:${encoded(scope)}:`))
     .map((name) => {
       const body = storage.getItem(name)!;
@@ -617,6 +619,15 @@ export function captureDeviceBackup(
         ...(state ? { state } : {}),
       };
     });
+  for (const item of captureInFlightPractice(scope)) {
+    if (practice.some((result) => result.id === item.entry.id)) continue;
+    practice.push({
+      id: item.entry.id,
+      body: JSON.stringify(item.entry),
+      origin: { version: 1, ...item.origin },
+      state: { id: item.entry.id, status: 'pending' },
+    });
+  }
   const operationStates = new Map(
     loadAccountOperations(scope).map((item) => [item.operation.id, item]),
   );
@@ -854,6 +865,10 @@ function applyChanges(
   recovery?: DeviceBackup,
   recoverInterrupted = false,
 ): DeviceMutationResult {
+  if (hasAccountLifecycleBoundary(scope))
+    throw new Error(
+      'Finish the account reset or replacement recovery before changing device work.',
+    );
   // Runtime memory remains recoverable even when a damaged registered record
   // prevents a complete, valid user export. Persistent originals stay opaque.
   const rollbackMemory = {
@@ -1100,6 +1115,138 @@ function isScopedStore(name: string, scope: string): boolean {
     }
   }
   return false;
+}
+
+export interface AccountLifecycleDeviceWork {
+  scope: string;
+  backup: DeviceBackup;
+  memory: {
+    scratchpads: { context: string; text: string }[];
+    practiceStates: PracticeSaveState[];
+    accountOperations: QueuedAccountOperation[];
+  };
+}
+
+/** Capture remains useful when optional status/note storage cannot be rewritten. */
+export function captureAccountLifecycleDeviceWork(
+  scope: string,
+  label: string,
+): AccountLifecycleDeviceWork {
+  const backup = captureDeviceBackup(scope, label);
+  const memory = {
+    scratchpads: captureScratchpadMemory(scope),
+    practiceStates: loadPracticeSaveStates(scope),
+    accountOperations: loadAccountOperations(scope),
+  };
+  return { scope, backup, memory };
+}
+
+/** Preserve optional volatile state before changing its owning token or dispatching a request. */
+export function prepareAccountLifecycleDeviceWork(
+  scope: string,
+  label: string,
+): AccountLifecycleDeviceWork {
+  const captured = captureAccountLifecycleDeviceWork(scope, label);
+  const { backup, memory } = captured;
+  const changes = new Map<string, string | null>();
+  for (const result of backup.stores.practice) {
+    if (localStorage.getItem(practiceKey(scope, 'origin', result.id)) === null)
+      changes.set(practiceKey(scope, 'origin', result.id), JSON.stringify(result.origin));
+    if (localStorage.getItem(practiceKey(scope, 'pending', result.id)) === null) {
+      if (result.state)
+        changes.set(practiceKey(scope, 'status', result.id), JSON.stringify(result.state));
+      changes.set(practiceKey(scope, 'pending', result.id), result.body);
+    }
+  }
+  for (const note of memory.scratchpads)
+    changes.set(notesKey(scope, note.context), note.text || null);
+  for (const state of memory.practiceStates)
+    changes.set(practiceKey(scope, 'status', state.id), JSON.stringify(state));
+  for (const item of memory.accountOperations) {
+    const body = localStorage.getItem(operationKey(scope, item.operation.id));
+    if (body === null) continue;
+    changes.set(
+      operationStatusKey(scope, item.operation.id),
+      JSON.stringify({
+        identity: JSON.stringify(validateOperationBody(body, scope, item.operation.id)),
+        status: item.status,
+        ...(item.error === undefined ? {} : { error: item.error }),
+        ...(item.failure === undefined ? {} : { failure: item.failure }),
+      }),
+    );
+  }
+  const originals = new Map([...changes.keys()].map((name) => [name, localStorage.getItem(name)]));
+  try {
+    for (const [name, value] of changes) {
+      if (value === null) localStorage.removeItem(name);
+      else localStorage.setItem(name, value);
+      if (localStorage.getItem(name) !== value)
+        throw new Error('The waiting work was not retained.');
+    }
+  } catch (error) {
+    for (const [name, value] of originals) {
+      try {
+        if (value === null) localStorage.removeItem(name);
+        else localStorage.setItem(name, value);
+      } catch {
+        // The original current-token memory remains available for recovery/export.
+      }
+    }
+    throw error;
+  }
+  return captured;
+}
+
+/** The token belongs to the coordinator; this function never rotates or releases it. */
+export function retireAccountLifecycleDeviceWork(scope: string, token: string): void {
+  const assertOwner = () => {
+    if (getDeviceScopeToken(scope) !== token || !hasAccountLifecycleBoundary(scope))
+      throw new Error('Another page owns this account recovery. Reopen its current status.');
+  };
+  assertOwner();
+  for (const name of names(localStorage).filter((name) => isScopedStore(name, scope))) {
+    assertOwner();
+    localStorage.removeItem(name);
+    if (localStorage.getItem(name) !== null)
+      throw new Error('Old device work could not be fully retired.');
+  }
+  invalidateMemory(scope);
+}
+
+/** Not-applied recovery keeps exact durable bodies/order and restores current-token optional state. */
+export function recoverAccountLifecycleDeviceWork(
+  scope: string,
+  token: string,
+  captured?: AccountLifecycleDeviceWork,
+): void {
+  if (getDeviceScopeToken(scope) !== token || !hasAccountLifecycleBoundary(scope))
+    throw new Error('Another page owns this account recovery. Reopen its current status.');
+  const lease = `${copyStorageKey(scope)}:lease`;
+  localStorage.removeItem(lease);
+  if (localStorage.getItem(lease) !== null)
+    throw new Error('The old copy owner could not be retired.');
+  if (captured) {
+    restoreScratchpadMemory(scope, captured.memory.scratchpads);
+    restorePracticeMemory(scope, captured.memory.practiceStates);
+    restoreAccountMemory(scope, captured.memory.accountOperations);
+  }
+}
+
+/** Preparation failed before any request could be sent; no server authority needs releasing. */
+export function rollbackAccountLifecycleDevicePreparation(
+  scope: string,
+  token: string,
+  captured: AccountLifecycleDeviceWork,
+): void {
+  if (getDeviceScopeToken(scope) !== token || hasAccountLifecycleBoundary(scope))
+    throw new Error('Another page owns this account recovery. Reopen its current status.');
+  const lease = `${copyStorageKey(scope)}:lease`;
+  localStorage.removeItem(lease);
+  if (localStorage.getItem(lease) !== null)
+    throw new Error('The old copy owner could not be retired.');
+  restoreScratchpadMemory(scope, captured.memory.scratchpads);
+  restorePracticeMemory(scope, captured.memory.practiceStates);
+  restoreAccountMemory(scope, captured.memory.accountOperations);
 }
 export function clearDeviceWork(
   scope: string,

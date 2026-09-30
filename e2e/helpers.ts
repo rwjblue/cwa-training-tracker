@@ -16,6 +16,7 @@ async function accountHeaders(context: FixtureContext) {
       Origin: 'http://localhost:8791',
       'X-CWA-Account': state.accountId as string,
       'If-Match': `"${state.revision}"`,
+      'X-CWA-Generation': String(state.generation),
     },
   };
 }
@@ -41,7 +42,11 @@ export async function scopedRequest(
   const { request, headers } = await accountHeaders(context);
   return request.fetch(path, {
     method,
-    headers: { Origin: headers.Origin, 'X-CWA-Account': headers['X-CWA-Account'] },
+    headers: {
+      Origin: headers.Origin,
+      'X-CWA-Account': headers['X-CWA-Account'],
+      'X-CWA-Generation': headers['X-CWA-Generation'],
+    },
     data,
   });
 }
@@ -79,13 +84,16 @@ async function latestLocalCode(after: number): Promise<string> {
   return code;
 }
 
-export async function signIn(page: Page, { dialogAlreadyOpen = false } = {}) {
+export async function signIn(
+  page: Page,
+  { dialogAlreadyOpen = false, email = `browser-${crypto.randomUUID()}@example.test` } = {},
+) {
   const offset = (await readFile('.tmp/e2e-server.log', 'utf8')).length;
   if (!dialogAlreadyOpen) {
     await page.goto('/');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   }
-  await page.getByLabel('Email address').fill(`browser-${crypto.randomUUID()}@example.test`);
+  await page.getByLabel('Email address').fill(email);
   await page.getByRole('button', { name: 'Email me a sign-in code', exact: true }).click();
   const code = await latestLocalCode(offset);
   await page.getByLabel('One-time code', { exact: true }).fill(code);

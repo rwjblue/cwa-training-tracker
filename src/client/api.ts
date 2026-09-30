@@ -1,5 +1,8 @@
 import type { Profile, PracticeSession } from '../shared/training';
 import type { AccountSnapshot } from '../shared/account-sync';
+import { validateAccountSnapshot } from '../shared/account-sync';
+import type { LifecycleIdentity, LifecycleResult } from '../shared/account-lifecycle';
+import type { AccountLifecycleTransports } from './account-lifecycle';
 
 export interface User {
   id: string;
@@ -73,5 +76,46 @@ export async function api<T>(
     );
   return result as T;
 }
-export const getEntries = () => api<{ entries: PracticeSession[] }>('/entries');
+export interface EntriesSnapshot {
+  entries: PracticeSession[];
+  accountId: string;
+  generation: number;
+  revision: number;
+}
+export const getEntries = (options: ApiOptions = {}, signal?: AbortSignal) =>
+  api<EntriesSnapshot>('/entries', undefined, 'GET', signal, options);
 export const getSettings = () => api<{ settings: Profile }>('/settings');
+
+/** Every retry retains the reviewed account; current selection cannot redirect it. */
+export function accountLifecycleTransports(user: User): AccountLifecycleTransports {
+  const request = (path: string, identity: LifecycleIdentity) =>
+    api<LifecycleResult>(path, identity, 'POST', AbortSignal.timeout(10_000), {
+      accountId: user.id,
+    });
+  return {
+    prepare: (identity) => request('/account-lifecycle/prepare', identity),
+    lookup: (identity) => request('/account-lifecycle/outcome', identity),
+    cancel: (identity) => request('/account-lifecycle/cancel', identity),
+    apply: (identity, payload) =>
+      api<LifecycleResult>(
+        identity.kind === 'reset' ? '/reset' : '/import',
+        { ...(payload as Record<string, unknown>), lifecycle: identity },
+        'POST',
+        AbortSignal.timeout(10_000),
+        { accountId: user.id, revision: identity.baseRevision, generation: identity.generation },
+      ),
+    refresh: async () => {
+      const response = await api<{ state: AccountSnapshot }>(
+        '/account-state',
+        undefined,
+        'GET',
+        AbortSignal.timeout(10_000),
+        { accountId: user.id },
+      );
+      const state = validateAccountSnapshot(response.state);
+      if (state.accountId !== user.id)
+        throw new Error('The returned account does not match this request.');
+      return state;
+    },
+  };
+}

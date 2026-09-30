@@ -23,7 +23,7 @@ export function accountSnapshotStatements(env: Env, accountId: string): D1Prepar
   ];
 }
 
-function snapshotFromResults(accountId: string, results: D1Result[]): AccountSnapshot {
+export function snapshotFromResults(accountId: string, results: D1Result[]): AccountSnapshot {
   const row = results[0].results[0] as AccountRow;
   const settings = { ...DEFAULT_PROFILE, ...JSON.parse(row.profile_json) };
   return {
@@ -100,6 +100,7 @@ export async function requireAccountRevision(
   accountId: string,
 ): Promise<AccountSnapshot> {
   const state = await getAccountSnapshot(env, accountId);
+  requireRequestGeneration(request, state);
   const value = request.headers.get('If-Match');
   if (
     !value ||
@@ -118,6 +119,33 @@ export async function requireAccountRevision(
       { state },
     );
   return state;
+}
+
+export function assertAccountGeneration(state: AccountSnapshot, generation: number): void {
+  if (state.generation !== generation)
+    throw new HttpError(
+      409,
+      'This work belongs to history that has been reset or replaced. Keep a recovery export before discarding it.',
+      {
+        state,
+        retired: true,
+        code: 'dataset_retired',
+      },
+    );
+}
+
+/** Unknown legacy origins cannot acquire the current dataset on an automatic retry. */
+export function requireRequestGeneration(request: Request, state: AccountSnapshot): number {
+  if (!request.headers.has('X-CWA-Account'))
+    throw new HttpError(428, 'Send the account that owns this work with X-CWA-Account.', { state });
+  const value = request.headers.get('X-CWA-Generation');
+  if (!value || !/^(?:0|[1-9]\d*)$/.test(value) || !Number.isSafeInteger(Number(value)))
+    throw new HttpError(428, 'Send the original dataset generation with X-CWA-Generation.', {
+      state,
+    });
+  const generation = Number(value);
+  assertAccountGeneration(state, generation);
+  return generation;
 }
 
 export function isAccountRevisionConflict(error: unknown): boolean {
@@ -170,12 +198,15 @@ export async function mutateAccount(
       results: results.slice(0, statements.length),
     };
   } catch (error) {
-    if (isAccountRevisionConflict(error))
+    if (isAccountRevisionConflict(error)) {
+      const current = await getAccountSnapshot(env, state.accountId);
+      assertAccountGeneration(current, state.generation);
       throw new HttpError(
         409,
         'Your account changed in another tab. Review the newer state before applying this change.',
-        { state: await getAccountSnapshot(env, state.accountId) },
+        { state: current },
       );
+    }
     throw error;
   }
 }
@@ -205,19 +236,22 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
   const payloadHash = await hash(canonical(body));
   const acknowledged = async () => {
     const receipt = await env.DB.prepare(
-      'SELECT payload_hash FROM account_operation_receipts WHERE user_id = ? AND operation_id = ?',
+      'SELECT payload_hash, generation FROM account_operation_receipts WHERE user_id = ? AND operation_id = ?',
     )
       .bind(auth.user.id, operation.id)
-      .first<{ payload_hash: string }>();
+      .first<{ payload_hash: string; generation: number }>();
     if (!receipt) return null;
     if (receipt.payload_hash !== payloadHash)
       throw new HttpError(409, 'A different operation already uses this operation ID.');
-    return json({ state: await getAccountSnapshot(env, auth.user.id), operationId: operation.id });
+    const state = await getAccountSnapshot(env, auth.user.id);
+    assertAccountGeneration(state, receipt.generation);
+    return json({ state, operationId: operation.id });
   };
   const prior = await acknowledged();
   if (prior) return prior;
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   const state = await getAccountSnapshot(env, auth.user.id);
+  assertAccountGeneration(state, operation.generation);
   if (operation.baseRevision !== state.revision || operation.generation !== state.generation) {
     // The operation can have committed between the receipt read and this snapshot.
     const prior = await acknowledged();

@@ -3,6 +3,8 @@ import type { PlannedTask } from '../shared/plan';
 import type { PracticeSession } from '../shared/training';
 import { validateCopyDraft } from './copy-draft-validator';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
+import { getConfirmedAccountGeneration } from './account-outbox';
+import { freezePracticeSaveOrigin } from './practice-autosave';
 
 export interface CopyDraft {
   attempt: CopyAttempt;
@@ -24,7 +26,9 @@ export function loadCopyDraft(scope: string): CopyDraft | undefined {
   try {
     const raw = localStorage.getItem(copyStorageKey(scope));
     if (!raw || raw.length > 300000) return;
-    return validateCopyDraft(JSON.parse(raw));
+    const draft = validateCopyDraft(JSON.parse(raw));
+    if (draft.pending) freezePracticeSaveOrigin(scope, draft.pending.id, undefined);
+    return draft;
   } catch {
     return;
   }
@@ -37,6 +41,18 @@ export function saveCopyDraft(
 ): boolean {
   if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
   try {
+    if (draft.pending) {
+      const previous = localStorage.getItem(copyStorageKey(scope));
+      const retained = previous
+        ? (JSON.parse(previous) as CopyDraft).pending?.id === draft.pending.id
+        : false;
+      freezePracticeSaveOrigin(
+        scope,
+        draft.pending.id,
+        scope === 'guest' || retained ? undefined : getConfirmedAccountGeneration(scope),
+        deviceToken,
+      );
+    }
     const raw = JSON.stringify(draft);
     localStorage.setItem(copyStorageKey(scope), raw);
     return localStorage.getItem(copyStorageKey(scope)) === raw;

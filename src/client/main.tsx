@@ -62,19 +62,24 @@ import {
   getSelectedAccountId,
   loadSelectedAccountIdentity,
   getAccountStorageStatus,
+  getConfirmedAccountGeneration,
 } from './account-outbox';
 import { useAccountData } from './useAccountData';
 import AccountSyncStatus from './AccountSyncStatus';
 import Modal from './Modal';
 import DeviceData from './DeviceData';
+import AccountLifecyclePanel, { type LifecycleReview } from './AccountLifecyclePanel';
+import { loadAccountLifecycle } from './account-lifecycle';
 import {
   DEVICE_SCOPE_EVENT,
+  accountLifecycleKey,
   deviceScopeKey,
   getDeviceScopeToken,
+  hasAccountLifecycleBoundary,
   isDeviceScopeCurrent,
   isDeviceScopeMutating,
 } from './device-scope';
-import type { AccountChange } from '../shared/account-sync';
+import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
 import { MORSE } from './audio';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
 import './styles.css';
@@ -262,6 +267,9 @@ function App() {
   const [deviceRevision, setDeviceRevision] = useState(0);
   const [deviceMutating, setDeviceMutating] = useState(() => isDeviceScopeMutating('guest'));
   const [deviceOpen, setDeviceOpen] = useState(false);
+  const [lifecycleReview, setLifecycleReview] = useState<LifecycleReview | null>(null);
+  const historyGeneration = useRef<{ accountId: string; generation: number } | null>(null);
+  const lifecycleRefreshScope = useRef<string | null>(null);
   const activeAccount = useRef(user?.id);
   activeAccount.current = user?.id;
   const [localHistory, setLocalHistory] = useState(() => ({
@@ -300,11 +308,15 @@ function App() {
   const notify = (message: string) => setToast(message);
   useEffect(() => {
     setDeviceOpen(false);
+    setLifecycleReview(null);
     setDeviceMutating(isDeviceScopeMutating(scope));
+    lifecycleRefreshScope.current = hasAccountLifecycleBoundary(scope) ? scope : null;
     const changed = (event: Event) => {
       if (event instanceof StorageEvent) {
-        if (event.key !== deviceScopeKey(scope)) return;
+        if (event.key === accountLifecycleKey(scope)) lifecycleRefreshScope.current = scope;
+        else if (event.key !== deviceScopeKey(scope)) return;
       } else if ((event as CustomEvent<{ scope: string }>).detail?.scope !== scope) return;
+      if (hasAccountLifecycleBoundary(scope)) lifecycleRefreshScope.current = scope;
       // Disposing cleared work must not run ordinary navigation autosave.
       beforeLeaveStudio.current = undefined;
       studioUnsaved.current = false;
@@ -317,6 +329,8 @@ function App() {
       setDemo(false);
       setLocalHistory({ scope, entries: loadLocalPractice(scope) });
       setPracticeStates(loadPracticeSaveStates(scope));
+      setEntries([]);
+      historyGeneration.current = null;
       setDeviceMutating(isDeviceScopeMutating(scope));
       setDeviceRevision((revision) => revision + 1);
     };
@@ -349,6 +363,7 @@ function App() {
     setApiAccount(current?.id);
     if (current?.id !== user?.id) {
       setEntries([]);
+      historyGeneration.current = null;
       setSessionEditor(null);
       setPracticeLaunch(undefined);
       setSavedPracticeEntry(undefined);
@@ -360,9 +375,31 @@ function App() {
     }
     setDemo(false);
     const cached = loadCachedAccount(current.id);
+    // A pending destructive request owns this scope until its authoritative
+    // outcome and local finalization are known. The persistent panel stays usable.
+    if (isDeviceScopeMutating(current.id) || loadAccountLifecycle(current.id))
+      return cached?.state.settings;
     try {
-      const [sessionData, state] = await Promise.all([getEntries(), account.refresh(current)]);
-      if (activeAccount.current !== current.id) return;
+      const state = await account.refresh(current);
+      const token = getDeviceScopeToken(current.id);
+      if (!isDeviceScopeCurrent(current.id, token) || loadAccountLifecycle(current.id)) return;
+      const sessionData = await getEntries({ accountId: current.id });
+      if (
+        activeAccount.current !== current.id ||
+        identityLoad.current !== requestVersion ||
+        !isDeviceScopeCurrent(current.id, token) ||
+        loadAccountLifecycle(current.id)
+      )
+        return;
+      if (sessionData.accountId !== current.id || sessionData.generation !== state.generation) {
+        // History and account state can straddle a remote boundary. Never paint
+        // an old dataset; another refresh discovers and fences the new generation.
+        setEntries([]);
+        historyGeneration.current = null;
+        await account.refresh(current);
+        return;
+      }
+      historyGeneration.current = { accountId: current.id, generation: sessionData.generation };
       setEntries(sessionData.entries);
       return state.settings;
     } catch (error) {
@@ -377,6 +414,15 @@ function App() {
       .catch((error: Error) => setAppError(error.message))
       .finally(() => setBooting(false));
   }, []);
+  useEffect(() => {
+    if (deviceRevision && !deviceMutating && user && lifecycleRefreshScope.current === user.id) {
+      lifecycleRefreshScope.current = null;
+      void load(user).catch((failure: Error) => setAppError(failure.message));
+    }
+    // Only a server lifecycle boundary refreshes history. Local device clear
+    // must leave its selected cache and device work cleared until a later load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceRevision, deviceMutating]);
   const updateTaskStatus = async (
     selected: PlannedTask[],
     changes: { done?: boolean; dismissedFromToday?: boolean },
@@ -526,6 +572,9 @@ function App() {
   };
   const acceptSavedPractice = (entry: PracticeSession) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
+    const generation = user ? getConfirmedAccountGeneration(user.id) : undefined;
+    if (user && generation !== undefined)
+      historyGeneration.current = { accountId: user.id, generation };
     removeLocalPractice('guest', entry.id);
     setSavedPracticeEntry(entry);
     setEntries((current) =>
@@ -544,6 +593,9 @@ function App() {
   };
   const mergeSavedEntry = (entry: PracticeSession) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
+    const generation = user ? getConfirmedAccountGeneration(user.id) : undefined;
+    if (user && generation !== undefined)
+      historyGeneration.current = { accountId: user.id, generation };
     setEntries((current) =>
       [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
         b.date.localeCompare(a.date),
@@ -835,6 +887,18 @@ function App() {
               </button>
             </div>
           )}
+          {user && (
+            <AccountLifecyclePanel
+              key={user.id}
+              user={user}
+              state={account.confirmed}
+              review={lifecycleReview}
+              onReview={setLifecycleReview}
+              notify={notify}
+              onComplete={() => load(user)}
+              onSignIn={() => setAuthOpen(true)}
+            />
+          )}
           {deviceMutating ? (
             <p className="alert" role="status">
               Updating device work. Practice and uploads are paused until storage is ready.
@@ -865,7 +929,9 @@ function App() {
                       {localEntries.length} practice{' '}
                       {localEntries.length === 1 ? 'result' : 'results'} saved on this device.
                     </strong>{' '}
-                    Waiting to upload to this account.
+                    {practiceStates.some((state) => state.failure === 'permanent')
+                      ? 'Some retained results need recovery review. Keep a device backup before changing them.'
+                      : 'Waiting to upload to this account.'}
                   </p>
                   {practiceStates
                     .filter((state) => state.status === 'failed')
@@ -885,6 +951,11 @@ function App() {
                   >
                     Retry practice uploads
                   </button>
+                  {practiceStates.some((state) => state.failure === 'permanent') && (
+                    <button className="button outline small" onClick={() => setDeviceOpen(true)}>
+                      Back up retained results
+                    </button>
+                  )}
                   {practiceStates.some((state) => state.failure === 'auth') && (
                     <button className="button outline small" onClick={() => setAuthOpen(true)}>
                       Sign in to upload
@@ -1003,8 +1074,18 @@ function App() {
                       notify('Local practice entry deleted.');
                       return;
                     }
-                    await api(`/entries/${id}`, {}, 'DELETE');
-                    setEntries(entries.filter((entry) => entry.id !== id));
+                    const owner = user.id;
+                    const token = deviceToken;
+                    const authority = historyGeneration.current;
+                    if (!authority || authority.accountId !== owner)
+                      throw new Error('Refresh this practice log before deleting a record.');
+                    await api(`/entries/${id}`, {}, 'DELETE', AbortSignal.timeout(10_000), {
+                      accountId: owner,
+                      generation: authority.generation,
+                    });
+                    if (activeAccount.current !== owner || !isDeviceScopeCurrent(owner, token))
+                      return;
+                    setEntries((current) => current.filter((entry) => entry.id !== id));
                     notify('Practice entry deleted.');
                   }}
                 />
@@ -1041,6 +1122,7 @@ function App() {
                   user={user}
                   profile={profile}
                   revision={account.state?.revision ?? 0}
+                  confirmed={account.confirmed}
                   onChange={account.mutate}
                   notify={notify}
                   logout={logout}
@@ -1048,6 +1130,17 @@ function App() {
                   onReauth={() => setAuthOpen(true)}
                   onToday={() => navigate('overview')}
                   onDeviceData={() => setDeviceOpen(true)}
+                  onReset={() =>
+                    setLifecycleReview({ kind: 'reset', payload: { confirmation: 'RESET' } })
+                  }
+                  onReplace={(file) =>
+                    setLifecycleReview({
+                      kind: 'replace',
+                      payload: { mode: 'replace', data: file.data },
+                      name: file.name,
+                      count: file.count,
+                    })
+                  }
                 />
               )}
             </React.Fragment>
@@ -1092,6 +1185,11 @@ function App() {
           initial={sessionEditor}
           isExisting={entries.some((entry) => entry.id === sessionEditor.id)}
           scope={user?.id ?? 'guest'}
+          generation={
+            historyGeneration.current && historyGeneration.current.accountId === user?.id
+              ? historyGeneration.current.generation
+              : undefined
+          }
           onClose={() => setSessionEditor(null)}
           onSaved={(entry, destination) => {
             if (!isDeviceScopeCurrent(scope, deviceToken)) return;
@@ -2127,12 +2225,14 @@ function SessionModal({
   initial,
   isExisting,
   scope,
+  generation,
   onClose,
   onSaved,
 }: {
   initial: Partial<PracticeSession>;
   isExisting: boolean;
   scope: string;
+  generation?: number;
   onClose: () => void;
   onSaved: (entry: PracticeSession, destination: 'history' | 'device') => void;
 }) {
@@ -2141,6 +2241,7 @@ function SessionModal({
   const mounted = useRef(true);
   const saveController = useRef<AbortController | undefined>(undefined);
   const [capturedDeviceToken] = useState(() => getDeviceScopeToken(scope));
+  const [capturedGeneration] = useState(generation);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -2263,6 +2364,8 @@ function SessionModal({
         throw new Error('This device work changed. Reopen the current work before saving again.');
       if (!isExisting) frozenEntry.current = validated;
       if (isExisting) {
+        if (capturedGeneration === undefined)
+          throw new Error('Refresh this practice log before editing a saved record.');
         const controller = new AbortController();
         saveController.current = controller;
         const result = await api<{ entry: PracticeSession }>(
@@ -2270,7 +2373,7 @@ function SessionModal({
           validated,
           'PUT',
           AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]),
-          { accountId: scope },
+          { accountId: scope, generation: capturedGeneration },
         );
         if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
           onSaved(result.entry, 'history');
@@ -2510,6 +2613,7 @@ function Account({
   user,
   profile,
   revision,
+  confirmed,
   onChange,
   notify,
   logout,
@@ -2517,10 +2621,13 @@ function Account({
   onReauth,
   onToday,
   onDeviceData,
+  onReset,
+  onReplace,
 }: {
   user: User;
   profile: Profile;
   revision: number;
+  confirmed: AccountSnapshot | null;
   onChange: (
     change: AccountChange,
     baseRevision?: number,
@@ -2531,7 +2638,16 @@ function Account({
   onReauth: () => void;
   onToday: () => void;
   onDeviceData: () => void;
+  onReset: () => void;
+  onReplace: (file: { data: unknown; name: string; count: number }) => void;
 }) {
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [form, setForm] = useState(profile);
   const baseline = useRef({ profile, revision });
   const dirty = useRef(false);
@@ -2555,8 +2671,6 @@ function Account({
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [dataBusy, setDataBusy] = useState(false);
   const [archiveVersion, setArchiveVersion] = useState(0);
-  const [resetOpen, setResetOpen] = useState(false);
-  const [resetText, setResetText] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const loadPasskeys = async () => {
     const data = await api<{ passkeys: Passkey[] }>('/auth/passkeys');
@@ -2672,44 +2786,43 @@ function Account({
   };
   const doImport = async () => {
     if (!importData) return;
+    if (importMode === 'replace') {
+      onReplace(importData);
+      setImportData(null);
+      return;
+    }
     setDataBusy(true);
     setError('');
+    const token = getDeviceScopeToken(user.id);
     try {
+      if (!confirmed || confirmed.accountId !== user.id)
+        throw new Error('Refresh your account before importing a backup.');
       const result = await api<{ imported: number; skipped: number; historicalLinks?: number }>(
         '/import',
         {
           data: importData.data,
           mode: importMode,
         },
+        'POST',
+        AbortSignal.timeout(10_000),
+        { accountId: user.id, revision: confirmed.revision, generation: confirmed.generation },
       );
+      if (!mounted.current || !isDeviceScopeCurrent(user.id, token)) return;
       setArchiveVersion((value) => value + 1);
-      await reload();
       setImportData(null);
       notify(
         `Imported ${result.imported} sessions${result.skipped ? `; ${result.skipped} duplicates skipped` : ''}.${result.historicalLinks ? ` Retained ${result.historicalLinks} old exercise links as history without current assignment credit.` : ''}`,
       );
+      try {
+        await reload();
+      } catch (failure) {
+        if (mounted.current && isDeviceScopeCurrent(user.id, token))
+          setError(`Import succeeded. Refresh could not finish: ${(failure as Error).message}`);
+      }
     } catch (err) {
-      setError((err as Error).message);
-      setImportData(null);
+      if (mounted.current && isDeviceScopeCurrent(user.id, token)) setError((err as Error).message);
     } finally {
-      setDataBusy(false);
-    }
-  };
-  const doReset = async () => {
-    setDataBusy(true);
-    setError('');
-    try {
-      await api('/reset', { confirmation: resetText });
-      setArchiveVersion((value) => value + 1);
-      await reload();
-      setResetOpen(false);
-      setResetText('');
-      notify('Practice data reset. You can import a fresh backup whenever you’re ready.');
-    } catch (err) {
-      setError((err as Error).message);
-      setResetOpen(false);
-    } finally {
-      setDataBusy(false);
+      if (mounted.current) setDataBusy(false);
     }
   };
   return (
@@ -3004,11 +3117,7 @@ function Account({
               Clear your sessions, private plan, and course preferences, then reimport whenever
               you’re ready. Your sign-in stays.
             </p>
-            <button
-              className="button outline danger-text"
-              onClick={() => setResetOpen(true)}
-              disabled={dataBusy}
-            >
+            <button className="button outline danger-text" onClick={onReset} disabled={dataBusy}>
               Reset practice data
             </button>
           </div>
@@ -3054,6 +3163,11 @@ function Account({
       )}
       {importData && (
         <Modal title="Bring your practice along." onClose={() => setImportData(null)}>
+          {error && (
+            <p className="alert error" role="alert">
+              {error}
+            </p>
+          )}
           <p className="modal-intro">
             <strong>{importData.name}</strong>
             <br />
@@ -3102,36 +3216,6 @@ function Account({
                   ? 'Replace and import'
                   : 'Import sessions'}
               <Upload size={15} />
-            </button>
-          </div>
-        </Modal>
-      )}
-      {resetOpen && (
-        <Modal title="Start with a fresh page?" onClose={() => setResetOpen(false)}>
-          <p className="modal-intro">
-            This deletes your practice sessions, private plan, imported archive, and course
-            preferences. Your account and passkeys stay active. Export a backup first if you want to
-            recover this data.
-          </p>
-          <label className="field">
-            Type RESET to continue
-            <input
-              autoComplete="off"
-              value={resetText}
-              onChange={(e) => setResetText(e.target.value)}
-              placeholder="RESET"
-            />
-          </label>
-          <div className="modal-actions">
-            <button className="button outline" onClick={() => setResetOpen(false)}>
-              Keep my data
-            </button>
-            <button
-              className="button danger"
-              disabled={resetText !== 'RESET' || dataBusy}
-              onClick={doReset}
-            >
-              {dataBusy ? 'Resetting…' : 'Reset practice data'}
             </button>
           </div>
         </Modal>

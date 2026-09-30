@@ -8,6 +8,11 @@ import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../share
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { getAuth } from './auth';
 import type { AccountChange, AccountOperation, AccountSnapshot } from '../shared/account-sync';
+import {
+  hashLifecyclePayload,
+  type LifecycleIdentity,
+  type LifecycleResult,
+} from '../shared/account-lifecycle';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -112,6 +117,7 @@ async function request(
   body?: unknown,
   cookies = '',
   headers: Record<string, string> = {},
+  autoPrepare = true,
 ) {
   // Arrange legacy endpoint fixtures against an explicitly current snapshot.
   // Boundary tests override these headers to exercise missing/stale authority.
@@ -120,11 +126,57 @@ async function request(
     : null;
   if (
     auth &&
-    path === '/api/entries' &&
-    method === 'POST' &&
+    (path.startsWith('/api/entries') ||
+      path.startsWith('/api/plan') ||
+      path === '/api/settings' ||
+      path === '/api/import') &&
+    method !== 'GET' &&
     !Object.hasOwn(headers, 'X-CWA-Account')
   )
     headers['X-CWA-Account'] = auth.user.id;
+  if (auth && method !== 'GET' && !Object.hasOwn(headers, 'X-CWA-Generation'))
+    headers['X-CWA-Generation'] = String(
+      db.sqlite.prepare('SELECT dataset_generation FROM users WHERE id = ?').get(auth.user.id)
+        ?.dataset_generation,
+    );
+  if (
+    auth &&
+    body &&
+    typeof body === 'object' &&
+    (path === '/api/reset' ||
+      (path === '/api/import' && (body as { mode?: string }).mode === 'replace')) &&
+    !Object.hasOwn(body, 'lifecycle')
+  ) {
+    const payload =
+      path === '/api/reset'
+        ? { confirmation: (body as { confirmation?: unknown }).confirmation }
+        : { mode: 'replace', data: (body as { data?: unknown }).data };
+    body = {
+      ...body,
+      lifecycle: await lifecycleIdentity(
+        auth.user.id,
+        path === '/api/reset' ? 'reset' : 'replace',
+        payload,
+      ),
+    };
+  }
+  if (
+    autoPrepare &&
+    auth &&
+    body &&
+    typeof body === 'object' &&
+    (path === '/api/reset' ||
+      (path === '/api/import' && (body as { mode?: string }).mode === 'replace')) &&
+    typeof (body as { lifecycle?: LifecycleIdentity }).lifecycle?.id === 'string'
+  )
+    await request(
+      '/api/account-lifecycle/prepare',
+      'POST',
+      (body as { lifecycle: LifecycleIdentity }).lifecycle,
+      cookies,
+      {},
+      false,
+    );
   if (
     auth &&
     ((path === '/api/settings' && method === 'PUT') ||
@@ -141,6 +193,26 @@ async function request(
     }),
     env,
   );
+}
+
+async function lifecycleIdentity(
+  accountId: string,
+  kind: 'reset' | 'replace',
+  payload: unknown,
+  id: string = crypto.randomUUID(),
+): Promise<LifecycleIdentity> {
+  const row = db.sqlite
+    .prepare('SELECT account_revision, dataset_generation FROM users WHERE id = ?')
+    .get(accountId)!;
+  return {
+    version: 1,
+    id,
+    accountId,
+    kind,
+    baseRevision: Number(row.account_revision),
+    generation: Number(row.dataset_generation),
+    payloadHash: await hashLifecyclePayload(kind, payload),
+  };
 }
 function cookiesFrom(response: Response) {
   return response.headers
@@ -572,7 +644,7 @@ describe('private training data', () => {
     const a = await signIn('a@example.com');
     const b = await signIn('b@example.com');
     expect((await request('/api/entries', 'POST', entry(), a.cookie)).status).toBe(201);
-    expect(await (await request('/api/entries', 'GET', undefined, b.cookie)).json()).toEqual({
+    expect(await (await request('/api/entries', 'GET', undefined, b.cookie)).json()).toMatchObject({
       entries: [],
     });
     expect(
@@ -590,7 +662,7 @@ describe('private training data', () => {
       400,
     );
     await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie);
-    expect(await (await request('/api/entries', 'GET', undefined, a.cookie)).json()).toEqual({
+    expect(await (await request('/api/entries', 'GET', undefined, a.cookie)).json()).toMatchObject({
       entries: [],
     });
     expect(
@@ -832,14 +904,14 @@ describe('private training data', () => {
     expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
       plan: [],
       revision: 3,
-      generation: 0,
+      generation: 2,
     });
     await request('/api/plan', 'POST', task, a.cookie);
     await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie);
     expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
       plan: [],
       revision: 5,
-      generation: 0,
+      generation: 3,
     });
   });
 
@@ -1045,7 +1117,9 @@ describe('private training data', () => {
           .prepare('SELECT count(*) AS count FROM training_plan WHERE user_id = ?')
           .get(auth.user.id)?.count,
       ).toBe(3);
-      expect(await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()).toEqual({
+      expect(
+        await (await request('/api/entries', 'GET', undefined, auth.cookie)).json(),
+      ).toMatchObject({
         entries: [],
       });
       expect((await plan(other.cookie)).filter((item) => ids.includes(item.id))).toEqual(generated);
@@ -1103,7 +1177,7 @@ describe('private training data', () => {
       expect(await reopened.json()).toEqual({
         tasks: [{ ...generated, done: false, dismissedFromToday: true }],
         revision: 2,
-        generation: 0,
+        generation: 1,
       });
       const restored = await request(
         '/api/plan/status',
@@ -1117,13 +1191,15 @@ describe('private training data', () => {
       expect(await restored.json()).toEqual({
         tasks: [{ ...generated, done: false, dismissedFromToday: false }],
         revision: 3,
-        generation: 0,
+        generation: 1,
       });
       expect((await plan(auth.cookie)).find((item) => item.id === generated.id)).toMatchObject({
         done: true,
         dismissedFromToday: true,
       });
-      expect(await (await request('/api/entries', 'GET', undefined, other.cookie)).json()).toEqual({
+      expect(
+        await (await request('/api/entries', 'GET', undefined, other.cookie)).json(),
+      ).toMatchObject({
         entries: [],
       });
     });
@@ -1171,7 +1247,9 @@ describe('private training data', () => {
       db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
         ?.storage_bytes,
     ).toBe(0);
-    expect(await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()).toEqual({
+    expect(
+      await (await request('/api/entries', 'GET', undefined, auth.cookie)).json(),
+    ).toMatchObject({
       entries: [],
     });
     await request('/api/entries', 'POST', entry(), auth.cookie);
@@ -1456,8 +1534,7 @@ describe('account operation revisions and receipts', () => {
     await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie);
     expect((await snapshot(auth.cookie)).revision).toBe(2);
     expect((await send(auth.cookie, afterImport)).status).toBe(409);
-    // Full dataset generation advancement and stale-result fencing belong to #4.
-    expect((await snapshot(auth.cookie)).generation).toBe(0);
+    expect((await snapshot(auth.cookie)).generation).toBe(1);
     const beforeUpload = (await snapshot(auth.cookie)).revision;
     await request('/api/entries', 'POST', entry(), auth.cookie);
     await request(
@@ -1807,7 +1884,12 @@ describe('account operation revisions and receipts', () => {
     expect(task.status).toBe('started');
     const retried = await request('/api/entries', 'POST', frozen, auth.cookie);
     expect(retried.status).toBe(200);
-    expect(await retried.json()).toEqual({ entry: historical, duplicate: true });
+    expect(await retried.json()).toEqual({
+      entry: historical,
+      duplicate: true,
+      accountId: auth.user.id,
+      generation: 0,
+    });
     expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
       2,
     );
@@ -1944,7 +2026,12 @@ describe('account operation revisions and receipts', () => {
       expect(JSON.stringify(frozen)).toBe(originalBody);
       const retry = await request('/api/entries', 'POST', frozen, auth.cookie);
       expect(retry.status).toBe(200);
-      expect(await retry.json()).toEqual({ entry: saved, duplicate: true });
+      expect(await retry.json()).toEqual({
+        entry: saved,
+        duplicate: true,
+        accountId: auth.user.id,
+        generation: 0,
+      });
       for (const changed of [
         { ...frozen, notes: 'Changed retry notes' },
         { ...frozen, metadata: { ...frozen.metadata, elapsedSeconds: 100 } },
@@ -2054,7 +2141,12 @@ describe('account operation revisions and receipts', () => {
       expect((await update({ level: 'beginner', firstClassDate: '2026-10-05' })).status).toBe(200);
       const retried = await request('/api/entries', 'POST', frozen, auth.cookie);
       expect(retried.status).toBe(200);
-      expect(await retried.json()).toEqual({ entry: historical, duplicate: true });
+      expect(await retried.json()).toEqual({
+        entry: historical,
+        duplicate: true,
+        accountId: auth.user.id,
+        generation: 0,
+      });
     },
   );
 
@@ -2343,7 +2435,11 @@ describe('validated non-copy evidence', () => {
         auth.cookie,
       );
       expect(response.status).toBe(200);
-      expect(await response.json()).toMatchObject({ imported: 1, historicalLinks: 1 });
+      expect(await response.json()).toMatchObject(
+        mode === 'replace'
+          ? { outcome: 'applied', applied: { imported: 1, historicalLinks: 1 } }
+          : { imported: 1, historicalLinks: 1 },
+      );
       const exported = (await (
         await request('/api/export', 'GET', undefined, auth.cookie)
       ).json()) as TrainingExport;
@@ -2584,5 +2680,803 @@ describe('validated non-copy evidence', () => {
         )
       ).status,
     ).toBe(400);
+  });
+});
+
+describe('account dataset lifecycle authority', () => {
+  const task = (): PlannedTask => ({
+    id: 'same-task',
+    title: 'Practice',
+    kind: 'sending',
+    done: false,
+    notes: '',
+    source: 'manual',
+    createdAt: '2026-09-30T12:00:00.000Z',
+  });
+  const state = async (cookie: string): Promise<AccountSnapshot> =>
+    (
+      (await (await request('/api/account-state', 'GET', undefined, cookie)).json()) as {
+        state: AccountSnapshot;
+      }
+    ).state;
+  const history = async (cookie: string) =>
+    (await (await request('/api/entries', 'GET', undefined, cookie)).json()) as {
+      entries: PracticeSession[];
+      accountId: string;
+      revision: number;
+      generation: number;
+    };
+  function pauseBatch(match: (sql: string) => boolean, afterCommit = false) {
+    let reached!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const actual = db.batch.bind(db);
+    let held = false;
+    vi.spyOn(db, 'batch').mockImplementation(async (statements) => {
+      if (!held && statements.some((statement) => match(statement.sql))) {
+        held = true;
+        const results = afterCommit ? await actual(statements) : undefined;
+        reached();
+        await released;
+        return results ?? actual(statements);
+      }
+      return actual(statements);
+    });
+    return { entered, release };
+  }
+  async function replace(
+    cookie: string,
+    accountId: string,
+    data = { ...backup([entry('same-entry')]), plan: [task()] },
+  ) {
+    const payload = { mode: 'replace', data };
+    const lifecycle = await lifecycleIdentity(accountId, 'replace', payload);
+    return {
+      payload,
+      lifecycle,
+      response: await request('/api/import', 'POST', { ...payload, lifecycle }, cookie),
+    };
+  }
+
+  it.each(['reset', 'replace'] as const)(
+    'replays a lost %s acknowledgement without deleting later work or incrementing authority twice',
+    async (kind) => {
+      const auth = await signIn(`lost-${kind}@example.test`);
+      await request('/api/entries', 'POST', entry('before'), auth.cookie);
+      const payload =
+        kind === 'reset'
+          ? { confirmation: 'RESET' }
+          : { mode: 'replace', data: backup([entry('replacement')]) };
+      const lifecycle = await lifecycleIdentity(auth.user.id, kind, payload);
+      const path = kind === 'reset' ? '/api/reset' : '/api/import';
+      const applied = await request(path, 'POST', { ...payload, lifecycle }, auth.cookie);
+      expect(applied.status).toBe(200);
+      expect(await applied.json()).toMatchObject({
+        outcome: 'applied',
+        applied: { revision: 1, generation: 1 },
+      });
+      await request('/api/entries', 'POST', entry('fresh'), auth.cookie);
+      await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, callsign: 'N1NEW' }, auth.cookie);
+      const retry = await request(path, 'POST', { ...payload, lifecycle }, auth.cookie);
+      expect(await retry.json()).toMatchObject({
+        outcome: 'applied',
+        applied: { revision: 1, generation: 1 },
+        state: { revision: 2, generation: 1, settings: { callsign: 'N1NEW' } },
+      });
+      expect((await history(auth.cookie)).entries.map((item) => item.id)).toContain('fresh');
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_receipts').get()?.count,
+      ).toBe(1);
+    },
+  );
+
+  it('serializes concurrent exact replacement retries and rejects any changed identity or payload', async () => {
+    const auth = await signIn('concurrent-lifecycle@example.test');
+    const payload = { mode: 'replace', data: backup() };
+    const lifecycle = await lifecycleIdentity(auth.user.id, 'replace', payload);
+    const responses = await Promise.all([
+      request('/api/import', 'POST', { ...payload, lifecycle }, auth.cookie),
+      request('/api/import', 'POST', { ...payload, lifecycle }, auth.cookie),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    expect(await state(auth.cookie)).toMatchObject({ generation: 1, revision: 1 });
+    expect((await history(auth.cookie)).entries).toHaveLength(1);
+    const reordered = {
+      data: {
+        sessions: payload.data.sessions,
+        exportedAt: payload.data.exportedAt,
+        version: 1,
+        format: payload.data.format,
+      },
+      mode: 'replace',
+    };
+    expect(
+      (await request('/api/import', 'POST', { ...reordered, lifecycle }, auth.cookie)).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { ...payload, data: backup([entry('changed')]), lifecycle },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await request(
+          '/api/account-lifecycle/outcome',
+          'POST',
+          { ...lifecycle, generation: 1 },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    expect(
+      (await request('/api/import', 'POST', { ...payload, lifecycle: null }, auth.cookie)).status,
+    ).toBe(400);
+  });
+
+  it.each(['cancel-first', 'apply-first'] as const)(
+    'safely resolves the %s race at the actual lifecycle batch',
+    async (order) => {
+      const auth = await signIn(`${order}@example.test`);
+      await request('/api/entries', 'POST', entry('original'), auth.cookie);
+      const payload = { confirmation: 'RESET' };
+      const lifecycle = await lifecycleIdentity(auth.user.id, 'reset', payload);
+      expect(
+        await (
+          await request('/api/account-lifecycle/outcome', 'POST', lifecycle, auth.cookie)
+        ).json(),
+      ).toMatchObject({ outcome: 'unknown' });
+      const boundary = pauseBatch(
+        (sql) => sql.includes("UPDATE account_lifecycle_receipts SET outcome = 'applied'"),
+        order === 'apply-first',
+      );
+      const applying = request('/api/reset', 'POST', { ...payload, lifecycle }, auth.cookie);
+      await boundary.entered;
+      const cancel = await request('/api/account-lifecycle/cancel', 'POST', lifecycle, auth.cookie);
+      expect(cancel.status).toBe(200);
+      expect(await cancel.json()).toMatchObject({
+        outcome: order === 'cancel-first' ? 'canceled' : 'applied',
+      });
+      boundary.release();
+      const result = (await (await applying).json()) as LifecycleResult;
+      expect(result.outcome).toBe(order === 'cancel-first' ? 'canceled' : 'applied');
+      expect(await state(auth.cookie)).toMatchObject({
+        generation: order === 'cancel-first' ? 0 : 1,
+        revision: order === 'cancel-first' ? 0 : 1,
+      });
+      expect((await history(auth.cookie)).entries).toHaveLength(order === 'cancel-first' ? 1 : 0);
+      expect(
+        (await (
+          await request('/api/reset', 'POST', { ...payload, lifecycle }, auth.cookie)
+        ).json()) as LifecycleResult,
+      ).toMatchObject({ outcome: result.outcome });
+    },
+  );
+
+  const oldWrites = ['post', 'linked-post', 'put', 'delete', 'merge', 'account-operation'] as const;
+  it.each(['reset', 'replace'].flatMap((kind) => oldWrites.map((write) => [kind, write] as const)))(
+    'rejects old %s/%s work held before its guarded SQL executes',
+    async (kind, write) => {
+      const auth = await signIn(`race-${kind}-${write}@example.test`);
+      await request('/api/plan', 'POST', task(), auth.cookie);
+      await request('/api/entries', 'POST', entry('same-entry'), auth.cookie);
+      const before = await state(auth.cookie);
+      const operation: AccountOperation = {
+        version: 1,
+        id: 'old-edit',
+        accountId: auth.user.id,
+        generation: before.generation,
+        baseRevision: before.revision,
+        createdAt: '2026-09-30T12:00:00.000Z',
+        change: { type: 'settings', changes: { callsign: 'N1OLD' } },
+      };
+      const match =
+        write === 'put'
+          ? 'UPDATE practice_entries'
+          : write === 'delete'
+            ? 'DELETE FROM practice_entries'
+            : write === 'account-operation'
+              ? 'INSERT INTO account_operation_receipts'
+              : 'INSERT INTO practice_entries';
+      const boundary = pauseBatch((sql) => sql.includes(match));
+      const pending =
+        write === 'post'
+          ? request('/api/entries', 'POST', entry('old-pending'), auth.cookie)
+          : write === 'linked-post'
+            ? request(
+                '/api/entries',
+                'POST',
+                { ...entry('old-pending'), metadata: { plannedTaskId: task().id } },
+                auth.cookie,
+              )
+            : write === 'put'
+              ? request(
+                  '/api/entries/same-entry',
+                  'PUT',
+                  { ...entry('same-entry'), notes: 'Old edit' },
+                  auth.cookie,
+                )
+              : write === 'delete'
+                ? request('/api/entries/same-entry', 'DELETE', undefined, auth.cookie)
+                : write === 'merge'
+                  ? request(
+                      '/api/import',
+                      'POST',
+                      { mode: 'merge', data: backup([entry('old-pending')]) },
+                      auth.cookie,
+                    )
+                  : request('/api/account-operations', 'POST', operation, auth.cookie);
+      await boundary.entered;
+      if (kind === 'reset')
+        expect(
+          (await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie)).status,
+        ).toBe(200);
+      else
+        expect(
+          (
+            await replace(auth.cookie, auth.user.id, {
+              ...backup([{ ...entry('same-entry'), notes: 'Replacement record' }]),
+              plan: [task()],
+            })
+          ).response.status,
+        ).toBe(200);
+      boundary.release();
+      const rejected = await pending;
+      expect(rejected.status).toBe(409);
+      expect(await rejected.json()).toMatchObject({
+        retired: true,
+        code: 'dataset_retired',
+        state: { generation: 1 },
+      });
+      const saved = await history(auth.cookie);
+      expect(saved.entries.map((item) => item.id)).not.toContain('old-pending');
+      if (kind === 'replace') expect(saved.entries[0].notes).toBe('Replacement record');
+      else expect(saved.entries).toHaveLength(0);
+      expect((await state(auth.cookie)).settings.callsign).toBe('');
+    },
+  );
+
+  it('keeps a saved-before-reset late acknowledgement tied to its retired generation and rejects identical duplicate retries', async () => {
+    const auth = await signIn('late-practice-ack@example.test');
+    const boundary = pauseBatch((sql) => sql.includes('INSERT INTO practice_entries'), true);
+    const pending = request('/api/entries', 'POST', entry('same-entry'), auth.cookie);
+    await boundary.entered;
+    await replace(auth.cookie, auth.user.id);
+    boundary.release();
+    expect(await (await pending).json()).toMatchObject({ accountId: auth.user.id, generation: 0 });
+    const retry = await request('/api/entries', 'POST', entry('same-entry'), auth.cookie, {
+      'X-CWA-Generation': '0',
+    });
+    expect(retry.status).toBe(409);
+    expect(await retry.json()).toMatchObject({ code: 'dataset_retired' });
+    expect((await history(auth.cookie)).entries).toHaveLength(1);
+  });
+
+  it('retires account-operation receipts without reviving their old edits and keeps lifecycle receipts through subsequent resets', async () => {
+    const auth = await signIn('retired-receipts@example.test');
+    const before = await state(auth.cookie);
+    const operation: AccountOperation = {
+      version: 1,
+      id: 'old-settings',
+      accountId: auth.user.id,
+      generation: 0,
+      baseRevision: 0,
+      createdAt: '2026-09-30T12:00:00.000Z',
+      change: { type: 'settings', changes: { callsign: 'N1OLD' } },
+    };
+    expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(
+      200,
+    );
+    const replaced = await replace(auth.cookie, auth.user.id);
+    expect(replaced.response.status).toBe(200);
+    const retry = await request('/api/account-operations', 'POST', operation, auth.cookie);
+    expect(retry.status).toBe(409);
+    expect(await retry.json()).toMatchObject({ retired: true });
+    await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie);
+    expect(
+      await (
+        await request('/api/account-lifecycle/outcome', 'POST', replaced.lifecycle, auth.cookie)
+      ).json(),
+    ).toMatchObject({
+      outcome: 'applied',
+      applied: { generation: before.generation + 1 },
+      state: { generation: 2 },
+    });
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(1);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_receipts').get()?.count,
+    ).toBe(2);
+  });
+
+  it.each(['entry', 'plan', 'archive', 'receipt', 'quota'] as const)(
+    'rolls back replacement data, counters, receipts and byte accounting when %s fails',
+    async (boundary) => {
+      const auth = await signIn(`lifecycle-rollback-${boundary}@example.test`);
+      await request('/api/entries', 'POST', entry('original'), auth.cookie);
+      await request('/api/plan', 'POST', task(), auth.cookie);
+      const before = await state(auth.cookie);
+      const payload = {
+        mode: 'replace',
+        data: {
+          ...backup([entry('replacement')]),
+          plan: [{ ...task(), notes: 'new' }],
+          legacy: { source: 'rwjblue.com', data: { note: 'Synthetic archived input' } },
+        },
+      };
+      const lifecycle = await lifecycleIdentity(auth.user.id, 'replace', payload);
+      expect(
+        (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+      ).toBe(200);
+      const bytes = db.sqlite
+        .prepare('SELECT storage_bytes FROM users WHERE id = ?')
+        .get(auth.user.id)?.storage_bytes;
+      const table =
+        boundary === 'entry'
+          ? 'practice_entries'
+          : boundary === 'plan'
+            ? 'training_plan'
+            : boundary === 'archive'
+              ? 'import_sources'
+              : 'account_lifecycle_receipts';
+      db.sqlite.exec(
+        `CREATE TRIGGER reject_lifecycle BEFORE ${table === 'account_lifecycle_receipts' ? 'UPDATE' : 'INSERT'} ON ${table} BEGIN SELECT RAISE(ABORT, '${boundary === 'quota' ? 'account_storage_limit' : 'synthetic_lifecycle_failure'}'); END;`,
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const response = await request('/api/import', 'POST', { ...payload, lifecycle }, auth.cookie);
+      expect(response.status).toBe(boundary === 'quota' ? 400 : 500);
+      expect(await state(auth.cookie)).toEqual(before);
+      expect((await history(auth.cookie)).entries.map((item) => item.id)).toEqual(['original']);
+      expect(
+        db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+          ?.storage_bytes,
+      ).toBe(bytes);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_receipts').get()?.count,
+      ).toBe(1);
+      expect(
+        await (
+          await request('/api/account-lifecycle/outcome', 'POST', lifecycle, auth.cookie)
+        ).json(),
+      ).toMatchObject({ outcome: 'unknown', reserved: true });
+      expect(db.sqlite.prepare('SELECT count(*) AS count FROM import_sources').get()?.count).toBe(
+        0,
+      );
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+      ).toBe(0);
+      db.sqlite.exec('DROP TRIGGER reject_lifecycle');
+      expect(
+        (await request('/api/import', 'POST', { ...payload, lifecycle }, auth.cookie)).status,
+      ).toBe(200);
+    },
+  );
+
+  it('requires strict generation and ownership for every entry mutation, direct plan/settings edit and merge import', async () => {
+    const a = await signIn('strict-authority-a@example.test');
+    const b = await signIn('strict-authority-b@example.test');
+    await request('/api/entries', 'POST', entry(), a.cookie);
+    for (const [path, method, body] of [
+      ['/api/entries', 'POST', entry('new')],
+      ['/api/entries/test-entry', 'PUT', entry()],
+      ['/api/entries/test-entry', 'DELETE', undefined],
+      ['/api/settings', 'PUT', DEFAULT_PROFILE],
+      ['/api/plan', 'POST', task()],
+      ['/api/import', 'POST', { mode: 'merge', data: backup() }],
+    ] as const) {
+      for (const generation of ['', '-1', '01', 'NaN', '9007199254740992'])
+        expect(
+          (await request(path, method, body, a.cookie, { 'X-CWA-Generation': generation })).status,
+        ).toBe(428);
+      expect(
+        (await request(path, method, body, b.cookie, { 'X-CWA-Account': a.user.id })).status,
+      ).toBe(409);
+    }
+    const identity = await lifecycleIdentity(a.user.id, 'reset', { confirmation: 'RESET' });
+    expect(
+      (await request('/api/account-lifecycle/outcome', 'POST', identity, b.cookie)).status,
+    ).toBe(409);
+    expect(
+      (await request('/api/account-lifecycle/cancel', 'POST', identity, b.cookie)).status,
+    ).toBe(409);
+    expect(
+      (
+        await request(
+          '/api/reset',
+          'POST',
+          { confirmation: 'RESET', lifecycle: identity },
+          b.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    expect((await history(a.cookie)).entries).toHaveLength(1);
+    expect(await state(b.cookie)).toMatchObject({ generation: 0, revision: 0 });
+  });
+
+  it('accounts for retained terminal receipt bytes and coherent history metadata without exporting runtime authority', async () => {
+    const auth = await signIn('lifecycle-budget@example.test');
+    const identity = await lifecycleIdentity(auth.user.id, 'reset', { confirmation: 'RESET' });
+    await request('/api/account-lifecycle/cancel', 'POST', identity, auth.cookie);
+    const before = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    expect(before).toBeGreaterThan(64);
+    const reset = await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie);
+    expect(reset.status).toBe(200);
+    expect(
+      Number(
+        db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+          ?.storage_bytes,
+      ),
+    ).toBeGreaterThan(before);
+    expect(await history(auth.cookie)).toEqual({
+      entries: [],
+      accountId: auth.user.id,
+      generation: 1,
+      revision: 1,
+    });
+    const exported = await (await request('/api/export', 'GET', undefined, auth.cookie)).json();
+    expect(JSON.stringify(exported)).not.toContain('payloadHash');
+    expect(exported).not.toHaveProperty('generation');
+    expect(exported).not.toHaveProperty('accountId');
+  });
+
+  it('uses the real receipt quota trigger to roll back a full replacement at its final receipt write', async () => {
+    const auth = await signIn('real-lifecycle-quota@example.test');
+    await request('/api/entries', 'POST', entry('original'), auth.cookie);
+    await request('/api/plan', 'POST', task(), auth.cookie);
+    const before = await state(auth.cookie);
+    const initialBytes = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    const target = 6 * 1024 * 1024 - 100;
+    const receiptCount = Math.floor((target - initialBytes) / 264);
+    // Synthetic compact receipts obey the actual 200-character ID/64-byte hash
+    // contract and consume budget through production accounting triggers.
+    db.sqlite
+      .prepare(
+        `WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM n WHERE value < ?)
+      INSERT INTO account_operation_receipts (user_id,operation_id,payload_hash,revision,generation,created_at)
+      SELECT ?, substr(printf('%0200d',value),1,200), ?, 1, 0, 1 FROM n`,
+      )
+      .run(receiptCount, auth.user.id, 'a'.repeat(64));
+    const remainder = target - initialBytes - receiptCount * 264;
+    if (remainder >= 65)
+      db.sqlite
+        .prepare('INSERT INTO account_operation_receipts VALUES (?,?,?,?,?,?)')
+        .run(auth.user.id, 'q'.repeat(remainder - 64), 'b'.repeat(64), 1, 0, 1);
+    const payloadBytes = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    const payload = {
+      mode: 'replace',
+      data: { ...backup([entry('replacement')]), plan: [task()] },
+    };
+    const lifecycle = await lifecycleIdentity(auth.user.id, 'replace', payload);
+    expect(
+      await (
+        await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)
+      ).json(),
+    ).toMatchObject({ outcome: 'unknown', reserved: true });
+    const bytes = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    expect(bytes).toBeGreaterThan(6 * 1024 * 1024);
+    const response = await request('/api/import', 'POST', { ...payload, lifecycle }, auth.cookie);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: expect.stringContaining('storage limit'),
+    });
+    expect(await state(auth.cookie)).toEqual(before);
+    expect((await history(auth.cookie)).entries.map((item) => item.id)).toEqual(['original']);
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    ).toBe(bytes);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_receipts').get()?.count,
+    ).toBe(1);
+    expect(
+      await (await request('/api/account-lifecycle/cancel', 'POST', lifecycle, auth.cookie)).json(),
+    ).toMatchObject({ outcome: 'canceled', state: before });
+    expect(
+      await (await request('/api/import', 'POST', { ...payload, lifecycle }, auth.cookie)).json(),
+    ).toMatchObject({ outcome: 'canceled' });
+    expect(await state(auth.cookie)).toEqual(before);
+    const row = db.sqlite
+      .prepare(
+        'SELECT storage_bytes, lifecycle_control_bytes, lifecycle_control_slots FROM users WHERE id = ?',
+      )
+      .get(auth.user.id)!;
+    expect(Number(row.storage_bytes) - Number(row.lifecycle_control_bytes)).toBe(payloadBytes);
+    expect(row.lifecycle_control_slots).toBe(1);
+    expect(Number(row.lifecycle_control_bytes)).toBeLessThanOrEqual(512);
+    // The emergency control row does not expand ordinary payload capacity.
+    expect((await request('/api/entries', 'POST', entry('over-budget'), auth.cookie)).status).toBe(
+      400,
+    );
+  });
+
+  it('refuses unprepared destructive requests before any private mutation', async () => {
+    const auth = await signIn('unprepared-lifecycle@example.test');
+    await request('/api/entries', 'POST', entry('original'), auth.cookie);
+    const before = await state(auth.cookie);
+    const payload = { confirmation: 'RESET' };
+    const lifecycle = await lifecycleIdentity(auth.user.id, 'reset', payload);
+    const response = await request(
+      '/api/reset',
+      'POST',
+      { ...payload, lifecycle },
+      auth.cookie,
+      {},
+      false,
+    );
+    expect(response.status).toBe(428);
+    expect(await response.json()).toMatchObject({
+      code: 'lifecycle_not_prepared',
+      reserved: false,
+      state: before,
+    });
+    expect(
+      await (
+        await request('/api/account-lifecycle/outcome', 'POST', lifecycle, auth.cookie)
+      ).json(),
+    ).toMatchObject({ outcome: 'unknown', reserved: false });
+    expect((await history(auth.cookie)).entries).toHaveLength(1);
+    expect(await state(auth.cookie)).toEqual(before);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_receipts').get()?.count,
+    ).toBe(0);
+  });
+
+  it('bounds reservation admission while every admitted request can still cancel at full control capacity', async () => {
+    const a = await signIn('reservation-capacity-a@example.test');
+    const b = await signIn('reservation-capacity-b@example.test');
+    await request('/api/entries', 'POST', entry('original'), a.cookie);
+    const before = await state(a.cookie);
+    const payload = { confirmation: 'RESET' };
+    const operations: LifecycleIdentity[] = [];
+    for (let index = 0; index < 8; index++) {
+      const lifecycle = await lifecycleIdentity(a.user.id, 'reset', payload, `reserve-${index}`);
+      operations.push(lifecycle);
+      expect(
+        await (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, a.cookie)).json(),
+      ).toMatchObject({ outcome: 'unknown', reserved: true, state: before });
+    }
+    const ninth = await lifecycleIdentity(a.user.id, 'reset', payload, 'over-capacity');
+    const denied = await request('/api/account-lifecycle/prepare', 'POST', ninth, a.cookie);
+    expect(denied.status).toBe(409);
+    expect(await denied.json()).toMatchObject({
+      code: 'lifecycle_capacity',
+      reserved: false,
+      state: before,
+    });
+    expect(
+      (await request('/api/reset', 'POST', { ...payload, lifecycle: ninth }, a.cookie, {}, false))
+        .status,
+    ).toBe(428);
+    const absentCancel = await request('/api/account-lifecycle/cancel', 'POST', ninth, a.cookie);
+    expect(absentCancel.status).toBe(409);
+    expect(await absentCancel.json()).toMatchObject({
+      code: 'lifecycle_capacity',
+      reserved: false,
+    });
+    // Updating an existing reserved slot cannot require another allocation.
+    expect(
+      await (
+        await request('/api/account-lifecycle/cancel', 'POST', operations[0], a.cookie)
+      ).json(),
+    ).toMatchObject({ outcome: 'canceled' });
+    expect(
+      await (
+        await request(
+          '/api/reset',
+          'POST',
+          { ...payload, lifecycle: operations[0] },
+          a.cookie,
+          {},
+          false,
+        )
+      ).json(),
+    ).toMatchObject({ outcome: 'canceled' });
+    expect(await state(a.cookie)).toEqual(before);
+    expect((await history(a.cookie)).entries.map((item) => item.id)).toEqual(['original']);
+    const row = db.sqlite
+      .prepare('SELECT lifecycle_control_bytes, lifecycle_control_slots FROM users WHERE id = ?')
+      .get(a.user.id)!;
+    expect(row.lifecycle_control_slots).toBe(7);
+    expect(Number(row.lifecycle_control_bytes)).toBeLessThanOrEqual(4096);
+    const independent = await lifecycleIdentity(b.user.id, 'reset', payload);
+    expect(
+      (await request('/api/account-lifecycle/prepare', 'POST', independent, b.cookie)).status,
+    ).toBe(200);
+  });
+
+  it('transfers an applied reservation into ordinary accounted storage and never cancels a mismatched reserved identity', async () => {
+    const auth = await signIn('reservation-accounting@example.test');
+    const payload = { confirmation: 'RESET' };
+    const lifecycle = await lifecycleIdentity(auth.user.id, 'reset', payload);
+    expect(
+      (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+    ).toBe(200);
+    const before = db.sqlite
+      .prepare(
+        'SELECT storage_bytes, lifecycle_control_bytes, lifecycle_control_slots FROM users WHERE id = ?',
+      )
+      .get(auth.user.id)!;
+    expect(before.storage_bytes).toBe(before.lifecycle_control_bytes);
+    expect(before.lifecycle_control_slots).toBe(1);
+    expect(
+      (
+        await request(
+          '/api/account-lifecycle/cancel',
+          'POST',
+          { ...lifecycle, payloadHash: 'a'.repeat(64) },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    expect(
+      await (
+        await request('/api/account-lifecycle/outcome', 'POST', lifecycle, auth.cookie)
+      ).json(),
+    ).toMatchObject({ outcome: 'unknown', reserved: true });
+    expect(
+      (await request('/api/reset', 'POST', { ...payload, lifecycle }, auth.cookie, {}, false))
+        .status,
+    ).toBe(200);
+    const after = db.sqlite
+      .prepare(
+        'SELECT storage_bytes, lifecycle_control_bytes, lifecycle_control_slots FROM users WHERE id = ?',
+      )
+      .get(auth.user.id)!;
+    expect(after.lifecycle_control_bytes).toBe(0);
+    expect(after.lifecycle_control_slots).toBe(0);
+    expect(Number(after.storage_bytes)).toBeGreaterThan(0);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_guards').get()?.count,
+    ).toBe(0);
+  });
+
+  it('preserves more than eight serial cancellations while promoting their storage out of the emergency reserve', async () => {
+    const auth = await signIn('serial-cancellation-promotion@example.test');
+    const payload = { confirmation: 'RESET' };
+    const operations: LifecycleIdentity[] = [];
+    for (let index = 0; index < 12; index++) {
+      const lifecycle = await lifecycleIdentity(auth.user.id, 'reset', payload, `serial-${index}`);
+      operations.push(lifecycle);
+      expect(
+        (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+      ).toBe(200);
+      expect(
+        await (
+          await request('/api/account-lifecycle/cancel', 'POST', lifecycle, auth.cookie)
+        ).json(),
+      ).toMatchObject({ outcome: 'canceled' });
+    }
+    const row = db.sqlite
+      .prepare(
+        'SELECT storage_bytes, lifecycle_control_bytes, lifecycle_control_slots FROM users WHERE id = ?',
+      )
+      .get(auth.user.id)!;
+    expect(row.lifecycle_control_slots).toBe(0);
+    expect(row.lifecycle_control_bytes).toBe(0);
+    expect(Number(row.storage_bytes)).toBeGreaterThan(0);
+    expect(
+      db.sqlite
+        .prepare(
+          'SELECT count(*) AS count FROM account_lifecycle_receipts WHERE outcome = ? AND control_budget = 0',
+        )
+        .get('canceled')?.count,
+    ).toBe(12);
+    for (const lifecycle of operations)
+      expect(
+        await (
+          await request('/api/reset', 'POST', { ...payload, lifecycle }, auth.cookie, {}, false)
+        ).json(),
+      ).toMatchObject({ outcome: 'canceled' });
+    expect(await state(auth.cookie)).toMatchObject({ revision: 0, generation: 0 });
+  });
+
+  it('recovers full control admission after deleting ordinary payload frees room for an immutable canceled receipt', async () => {
+    const auth = await signIn('control-capacity-recovery@example.test');
+    const original = { ...entry('original'), notes: 'Recoverable original work '.repeat(40) };
+    expect((await request('/api/entries', 'POST', original, auth.cookie)).status).toBe(201);
+    const initial = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    const target = 6 * 1024 * 1024;
+    const receiptCount = Math.floor((target - initial) / 264);
+    db.sqlite
+      .prepare(
+        `WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM n WHERE value < ?)
+      INSERT INTO account_operation_receipts (user_id,operation_id,payload_hash,revision,generation,created_at)
+      SELECT ?, substr(printf('%0200d',value),1,200), ?, 1, 0, 1 FROM n`,
+      )
+      .run(receiptCount, auth.user.id, 'a'.repeat(64));
+    const remainder = target - initial - receiptCount * 264;
+    if (remainder >= 65)
+      db.sqlite
+        .prepare('INSERT INTO account_operation_receipts VALUES (?,?,?,?,?,?)')
+        .run(auth.user.id, 'q'.repeat(remainder - 64), 'b'.repeat(64), 1, 0, 1);
+    const payload = { confirmation: 'RESET' };
+    const canceled: LifecycleIdentity[] = [];
+    for (let index = 0; index < 8; index++) {
+      const lifecycle = await lifecycleIdentity(
+        auth.user.id,
+        'reset',
+        payload,
+        `full-${index}-`.padEnd(200, 'x'),
+      );
+      canceled.push(lifecycle);
+      expect(
+        (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+      ).toBe(200);
+      expect(
+        await (
+          await request('/api/account-lifecycle/cancel', 'POST', lifecycle, auth.cookie)
+        ).json(),
+      ).toMatchObject({ outcome: 'canceled' });
+    }
+    expect(
+      db.sqlite.prepare('SELECT lifecycle_control_slots FROM users WHERE id = ?').get(auth.user.id)
+        ?.lifecycle_control_slots,
+    ).toBe(8);
+    const next = await lifecycleIdentity(auth.user.id, 'reset', payload, 'recovered-admission');
+    expect(
+      (await request('/api/account-lifecycle/prepare', 'POST', next, auth.cookie)).status,
+    ).toBe(409);
+    const bytesBefore = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    // Stop has already returned terminal canceled and permits ordinary deletion.
+    expect((await request('/api/entries/original', 'DELETE', undefined, auth.cookie)).status).toBe(
+      200,
+    );
+    const bytesAfterDelete = Number(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    );
+    expect(bytesAfterDelete).toBeLessThan(bytesBefore);
+    expect(
+      await (await request('/api/account-lifecycle/prepare', 'POST', next, auth.cookie)).json(),
+    ).toMatchObject({ outcome: 'unknown', reserved: true });
+    const promoted = db.sqlite
+      .prepare(
+        'SELECT count(*) AS count FROM account_lifecycle_receipts WHERE user_id = ? AND outcome = ? AND control_budget = 0',
+      )
+      .get(auth.user.id, 'canceled');
+    expect(promoted?.count).toBe(1);
+    const row = db.sqlite
+      .prepare(
+        'SELECT storage_bytes, lifecycle_control_bytes, lifecycle_control_slots FROM users WHERE id = ?',
+      )
+      .get(auth.user.id)!;
+    expect(Number(row.storage_bytes) - Number(row.lifecycle_control_bytes)).toBeLessThanOrEqual(
+      target,
+    );
+    expect(row.lifecycle_control_slots).toBe(8);
+    for (const lifecycle of canceled)
+      expect(
+        await (
+          await request('/api/account-lifecycle/outcome', 'POST', lifecycle, auth.cookie)
+        ).json(),
+      ).toMatchObject({ identity: lifecycle, outcome: 'canceled' });
   });
 });

@@ -329,3 +329,52 @@ The app shell must load; no service-worker shell, new active non-copy elapsed
 reload/crash recovery or physical-device verification is claimed. Later native
 report drafts, lists and sending takes must extend the explicit device inventory
 and its coverage test as their issues land.
+
+## Accepted issue #4 delivery ledger
+
+Reset and replacement import share one scoped client coordinator and a frozen
+request identity. The review names the account and affected work, offers actual
+server and complete device files, and requires a choice to keep recovery files or
+discard old waiting work. Success retires only that account's old active device
+results, edits, Copy drafts and notes; shared defaults and other scopes remain.
+Recovery files preserve their original bodies, origins and evidence rather than
+granting authority to upload old work into a new dataset.
+
+The Worker applies the whole destructive transaction behind the original revision
+and dataset generation, advances both once, and records its terminal outcome.
+Exact retries return that receipt without executing deletion again. Entry create,
+edit, delete, linked-result placement, semantic account operations and merge
+imports keep their original generation at actual SQL execution. Coherent history
+reads include account/generation/revision; the client fences old responses and
+mounted producers before publishing an observed new dataset.
+
+Before admission, a compact pending receipt reserves one of eight 512-byte
+control slots. An admitted request can be canceled even at the 6 MiB payload
+quota. Terminal cancellation records move into ordinary quota when space allows,
+preserving their identity/outcome while freeing control slots. All actual bytes
+remain accounted. If both budgets are full, a new destructive request is refused
+before data mutation; freeing ordinary storage permits admission again.
+
+Lost responses keep a durable, compact account identity and pause its work. The
+persistent controls can check the outcome, retry the same request, stop it safely,
+or download device recovery. A reopened replacement asks for the matching file
+instead of storing a second large private import. Applied-but-unfinished device
+cleanup retries locally; it never replays the destructive server operation.
+Authoritative cancellation restores exact pending work and volatile retry state.
+If another device advanced the dataset, cancellation instead retires the old
+work and identifies the changed server log. Only account lifecycle completion
+refreshes server history; local device clear retains its local-only behavior.
+Remote boundaries require a recovery download or explicit local discard before
+using the changed log. Local-only device restore/clear cannot bypass a pending
+server boundary.
+
+Evidence: [lifecycle protocol](../src/shared/account-lifecycle.ts),
+[Worker authority](../src/worker/account-lifecycle.ts),
+[client coordinator](../src/client/account-lifecycle.ts),
+[review and recovery controls](../src/client/AccountLifecyclePanel.tsx), and
+[synthetic browser journeys](../e2e/account-lifecycle.spec.ts).
+Validation and the independent review gate are recorded in
+[execution progress](parity/execution-progress-2026-09-30.md).
+Local validation passes 441 fast checks and 45 serialized browser journeys.
+Independent acceptance, signed publication and production deployment remain pending.
+It does not add active elapsed-time recovery or physical-device verification.
