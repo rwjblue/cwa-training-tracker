@@ -7,6 +7,12 @@ import {
   wordAtTime,
 } from './morse-track';
 import { morseTimeline } from './audio';
+import {
+  copyTextSeconds,
+  copyTiming,
+  defaultCopyRecipe,
+  generateCopyTargets,
+} from '../shared/copy-practice';
 
 const settings = { characterWpm: 20, effectiveWpm: 10, frequency: 600, volume: 0.5 };
 
@@ -95,5 +101,54 @@ describe('continuous Morse recordings', () => {
     expect(() => renderMorseWav({ ...short, duration: MAX_MORSE_SECONDS + 1 })).toThrow(
       '20 minutes',
     );
+  });
+
+  it('renders generated copy groups with the same duration and spacing used to select them', () => {
+    for (const [characterWpm, effectiveWpm, extraWordSpacing] of [
+      [25, 10, 2],
+      [25, 1, 40],
+      [50, 50, 0],
+    ]) {
+      const recipe = {
+        ...defaultCopyRecipe(),
+        characterWpm,
+        effectiveWpm,
+        extraWordSpacing,
+        lengthMode: 'count' as const,
+        groupCount: 2,
+        groupLength: 2,
+        groupKind: 'custom' as const,
+        customCharacters: 'ET',
+      };
+      const text = generateCopyTargets(recipe, 'duration-equivalence')[0];
+      const plainGap = copyTiming(characterWpm, effectiveWpm).wordGap;
+      const totalGap = copyTiming(characterWpm, effectiveWpm, extraWordSpacing).wordGap;
+      const track = buildMorseTrack([{ text }], {
+        ...settings,
+        characterWpm,
+        effectiveWpm,
+        extraWordGap: totalGap - plainGap,
+      });
+      expect(track.duration).toBeCloseTo(
+        copyTextSeconds(text, characterWpm, effectiveWpm, extraWordSpacing),
+        8,
+      );
+      expect(track.words[1].start - track.words[0].end).toBeCloseTo(totalGap, 8);
+      expect(track.tones.at(-1)!.at + track.tones.at(-1)!.duration).toBeCloseTo(track.duration, 8);
+    }
+  });
+
+  it('allows long finite word gaps while retaining the total WAV limit', () => {
+    const longGap = copyTiming(25, 1, 40).wordGap - copyTiming(25, 1).wordGap;
+    expect(longGap).toBeGreaterThan(30);
+    expect(
+      buildMorseTrack([{ text: 'E E' }], { ...settings, extraWordGap: longGap }).duration,
+    ).toBeLessThan(MAX_MORSE_SECONDS);
+    expect(() =>
+      buildMorseTrack([{ text: 'E E E' }], { ...settings, extraWordGap: longGap }),
+    ).toThrow('20 minutes');
+    expect(() =>
+      buildMorseTrack([{ text: 'E E' }], { ...settings, extraWordGap: Infinity }),
+    ).toThrow('pause');
   });
 });

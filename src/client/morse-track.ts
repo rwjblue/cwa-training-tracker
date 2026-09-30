@@ -51,7 +51,10 @@ export function buildMorseTrack(
   checkRange(options.volume, 0, 1, 'volume');
   const extraGap = options.extraWordGap ?? 0;
   const trailingGap = options.trailingGap ?? 0;
-  checkRange(extraGap, 0, 30, 'word pause');
+  // Copy practice expresses spacing as multiples of a Farnsworth word gap.
+  // At low effective speeds a valid extra gap can exceed 30 seconds. The
+  // complete recording still has the same hard duration/allocation limit.
+  checkRange(extraGap, 0, MAX_MORSE_SECONDS, 'word pause');
   checkRange(trailingGap, 0, 30, 'ending pause');
   if (!items.length) throw new Error('Add some letters or numbers to play.');
   if (items.length > 1000 || items.reduce((sum, item) => sum + item.text.length, 0) > 20000)
