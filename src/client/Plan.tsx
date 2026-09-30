@@ -31,7 +31,7 @@ import {
 } from '../shared/plan';
 import { api } from './api';
 import './plan.css';
-import { INTERMEDIATE_CURRICULUM } from '../shared/curriculum';
+import { curriculumForLevel } from '../shared/curriculum';
 
 interface Props {
   startNewTask?: boolean;
@@ -125,10 +125,16 @@ export default function Plan({
       (a, b) =>
         (taskDueDate(a, meetings) ?? '9999').localeCompare(taskDueDate(b, meetings) ?? '9999') ||
         (a.lesson ?? 99) - (b.lesson ?? 99) ||
+        (a.curriculum?.id === b.curriculum?.id && a.curriculum && b.curriculum
+          ? a.curriculum.exerciseId.localeCompare(b.curriculum.exerciseId, undefined, {
+              numeric: true,
+            })
+          : 0) ||
         a.title.localeCompare(b.title),
     );
   const completed = tasks.filter((task) => task.done).length;
-  const curriculum = tasks.find((task) => task.curriculum)?.curriculum;
+  const course = curriculumForLevel(profile.level);
+  const curriculum = tasks.some((task) => task.curriculum?.id === course?.id) ? course : undefined;
 
   return (
     <section className="card plan-card" aria-labelledby="plan-title">
@@ -136,12 +142,14 @@ export default function Plan({
         <div>
           <span className="eyebrow">YOUR PERSONAL COURSE PLAN</span>
           <h2 id="plan-title">
-            {curriculum ? 'Your Intermediate course plan.' : 'Know what to practice next.'}
+            {curriculum
+              ? `Your ${curriculum.title.replace('CW Academy ', '')} course plan.`
+              : 'Know what to practice next.'}
           </h2>
           <p>
             {curriculum
               ? 'Your daily assignments follow your class dates. Add personal exercises when you need them.'
-              : 'Set your course dates for built-in Intermediate assignments, or add your advisor’s exercises.'}
+              : 'Set your course dates for built-in assignments, or add your advisor’s exercises.'}
           </p>
           {curriculum && (
             <a
@@ -150,7 +158,7 @@ export default function Plan({
               target="_blank"
               rel="noreferrer"
             >
-              Official Intermediate syllabus v{INTERMEDIATE_CURRICULUM.version}{' '}
+              Official {curriculum.title.replace('CW Academy ', '')} syllabus v{curriculum.version}{' '}
               <ExternalLink size={13} />
             </a>
           )}

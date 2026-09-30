@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { curriculumPlan, INTERMEDIATE_CURRICULUM, mergeCurriculumPlan } from './curriculum';
+import {
+  curriculumForLevel,
+  curriculumPlan,
+  INTERMEDIATE_CURRICULUM,
+  mergeCurriculumPlan,
+} from './curriculum';
 import { dailyPlanSummary, validatePlan, validatePlannedTask, type PlannedTask } from './plan';
 import { DEFAULT_PROFILE, courseMeetings, type PracticeSession, type Profile } from './training';
 
@@ -118,12 +123,150 @@ describe('automatic curriculum plan', () => {
       '2026-09-12',
     );
     expect(summary.completed.find((item) => item.task.id === legacy.id)?.loggedMinutes).toBe(5);
-    expect(mergeCurriculumPlan({ ...moved, level: 'beginner' }, [saved, legacy, manual])).toEqual([
-      legacy,
-      manual,
-    ]);
+    const beginner = mergeCurriculumPlan({ ...moved, level: 'beginner' }, [saved, legacy, manual]);
+    expect(beginner.filter((task) => task.source !== 'curriculum')).toEqual([legacy, manual]);
+    expect(
+      beginner.filter((task) => task.source === 'curriculum').every((task) => !task.done),
+    ).toBe(true);
     expect(curriculumPlan({ ...profile, firstClassDate: '' })).toEqual([]);
     expect(initial[0].done).toBe(false);
+  });
+
+  it('launches every Intermediate ICR assignment with separate character and effective speeds', () => {
+    const tasks = curriculumPlan(profile).filter((task) => task.kind === 'icr');
+    expect(tasks).toHaveLength(20);
+    const speeds = tasks.map((task) => {
+      expect(task.exercise?.type).toBe('copy');
+      if (task.exercise?.type !== 'copy') throw new Error('Expected a native copy recipe');
+      const effectiveWpm = task.exercise.recipe.effectiveWpm;
+      expect(task.exercise.recipe).toMatchObject({
+        characterWpm: 25,
+        groupLength: 3,
+        durationSeconds: 60,
+      });
+      expect(
+        task.exercise.alternatives?.map((recipe) => [
+          recipe.mode,
+          recipe.groupKind,
+          recipe.maxWordLength,
+        ]),
+      ).toEqual([
+        ['groups', 'figures', 3],
+        ['groups', 'custom', 3],
+        ['words', 'letters', 3],
+      ]);
+      expect(
+        task.exercise.alternatives?.every((recipe) => recipe.effectiveWpm === effectiveWpm),
+      ).toBe(true);
+      return [task.lesson, task.curriculum!.day, task.exercise.recipe.effectiveWpm];
+    });
+    expect(speeds).toEqual([
+      [1, 1, 10],
+      [1, 3, 10],
+      [2, 2, 10],
+      [3, 1, 13],
+      [3, 3, 13],
+      [4, 2, 13],
+      [5, 1, 13],
+      [5, 3, 13],
+      [6, 2, 13],
+      [7, 1, 15],
+      [7, 3, 15],
+      [8, 2, 15],
+      [9, 1, 15],
+      [9, 3, 15],
+      [10, 2, 15],
+      [11, 1, 18],
+      [11, 2, 18],
+      [13, 1, 18],
+      [13, 3, 15],
+      [15, 3, 20],
+    ]);
+  });
+
+  it('supports published courses without mistaking other-course tasks for legacy Intermediate work', () => {
+    const legacy = {
+      ...curriculumPlan(profile)[0],
+      id: 'legacy-task:s1-d1-t1',
+      source: 'legacy' as const,
+      done: true,
+    };
+    for (const level of ['beginner', 'fundamental', 'advanced'] as const) {
+      const plan = curriculumPlan({ ...profile, level });
+      expect(validatePlan(plan)).toEqual(plan);
+      expect(new Set(plan.map((task) => task.id)).size).toBe(plan.length);
+      expect(new Set(plan.map((task) => task.lesson)).size).toBe(16);
+      expect(curriculumForLevel(level)?.exerciseCount).toBe(plan.length);
+      expect(curriculumForLevel(level)?.id).not.toMatch(/proto/i);
+      const merged = mergeCurriculumPlan({ ...profile, level }, [legacy]);
+      expect(
+        merged.filter((task) => task.source === 'curriculum').every((task) => !task.done),
+      ).toBe(true);
+      expect(merged.find((task) => task.id === legacy.id)).toEqual(legacy);
+    }
+    expect(
+      curriculumPlan({ ...profile, level: 'advanced' }).filter(
+        (task) => task.exercise?.type === 'audio',
+      ),
+    ).toHaveLength(114);
+    expect(
+      curriculumPlan({ ...profile, level: 'beginner' }).some(
+        (task) => task.exercise?.type === 'copy',
+      ),
+    ).toBe(false);
+  });
+
+  it('preserves Fundamental group durations, four trainer modes, weak-character choices and conditional work', () => {
+    const tasks = curriculumPlan({ ...profile, level: 'fundamental' });
+    const native = tasks.filter((task) => task.exercise?.type === 'copy');
+    expect(native).toHaveLength(98);
+    const recipes = native.flatMap((task) =>
+      task.exercise?.type === 'copy' ? [task.exercise.recipe] : [],
+    );
+    expect(new Set(recipes.map((recipe) => recipe.mode))).toEqual(
+      new Set(['groups', 'words', 'callsigns', 'plaintext']),
+    );
+    expect(
+      new Set(
+        recipes
+          .filter((recipe) => recipe.mode === 'groups')
+          .map((recipe) => recipe.durationSeconds),
+      ),
+    ).toEqual(new Set([60, 120, 180]));
+    expect(recipes.every((recipe) => recipe.characterWpm === 25)).toBe(true);
+    const at = (session: number, day: number, title: string) =>
+      tasks.find(
+        (task) =>
+          task.lesson === session && task.curriculum?.day === day && task.title.startsWith(title),
+      )!;
+    expect(at(1, 1, 'Copy 1').exercise).toMatchObject({
+      type: 'copy',
+      recipe: { groupLength: 2, effectiveWpm: 6 },
+      repetitions: 1,
+    });
+    expect(at(1, 2, 'Copy 2').exercise).toMatchObject({
+      type: 'copy',
+      requiresCharacterSelection: true,
+      recipe: { groupKind: 'custom' },
+    });
+    expect(at(8, 3, 'Copy 3').exercise).toMatchObject({
+      type: 'copy',
+      recipe: { groupLength: 5, durationSeconds: 120 },
+    });
+    expect(at(9, 1, 'Copy 1').exercise).toMatchObject({ targetAccuracy: 80, maximumAttempts: 5 });
+    expect(at(9, 1, 'Copy 1').notes).toContain('80% accuracy within 5 attempts');
+    expect(at(10, 1, 'Copy 2').exercise).toMatchObject({
+      recipe: { mode: 'callsigns' },
+      alternatives: [{ mode: 'groups' }],
+    });
+    expect(at(6, 3, 'Copy 3').exercise).toMatchObject({
+      recipe: { wordCollection: 'abbreviations' },
+      alternatives: [{ wordCollection: 'qcodes' }],
+    });
+    expect(at(15, 3, 'Copy 1').exercise).toMatchObject({
+      recipe: { effectiveWpm: 11, extraWordSpacing: 3 },
+    });
+    expect(native.every((task) => !task.exercise?.url?.includes('lcwo.net'))).toBe(true);
   });
 
   it('rejects unsafe or inconsistent exercise recipes from private plan imports', () => {
@@ -135,6 +278,10 @@ describe('automatic curriculum plan', () => {
       { type: 'sending', url: 'https://example.org/scales', sections: ['invented'] },
       { type: 'external', url: 'https://name:secret@example.org/' },
       { type: 'morse-runner', url: 'https://example.org/', settings: { mode: 'SingleCall' } },
+      { type: 'copy', recipe: { mode: 'groups', characterWpm: 10, effectiveWpm: 25 } },
+      { type: 'copy', recipe: { mode: 'groups' }, alternatives: Array(9).fill({ mode: 'groups' }) },
+      { type: 'copy', recipe: { mode: 'groups' }, targetAccuracy: Number.NaN },
+      { type: 'copy', recipe: { mode: 'groups' }, requiresCharacterSelection: 'yes' },
     ])
       expect(() => validatePlannedTask({ ...task, exercise })).toThrow();
     expect(() =>

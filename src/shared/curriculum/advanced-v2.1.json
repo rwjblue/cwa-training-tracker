@@ -1,0 +1,1649 @@
+{
+  "id": "cwa-advanced-v2.1",
+  "version": "2.1",
+  "sourceUrl": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm",
+  "resourcesUrl": "https://cwops.org/advanced-practice-files/",
+  "verifiedAt": "2026-09-29",
+  "sessionLinks": {
+    "1": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc172984025",
+    "2": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333292",
+    "3": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333293",
+    "4": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333294",
+    "5": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333295",
+    "6": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333296",
+    "7": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333297",
+    "8": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333298",
+    "9": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333299",
+    "10": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333300",
+    "11": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333301",
+    "12": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333302",
+    "13": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333303",
+    "14": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333304",
+    "15": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333305",
+    "16": "https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm#_Toc197333306"
+  },
+  "exercises": [
+    {
+      "id": "s1-d1-t1",
+      "session": 1,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s1-d1-t2",
+      "session": 1,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR101-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR101_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s1-d1-t3",
+      "session": 1,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD101-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD101_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s1-d2-t1",
+      "session": 1,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s1-d2-t2",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO101-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_101_20.mp3"
+    },
+    {
+      "id": "s1-d2-t3",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING4_20.mp3"
+    },
+    {
+      "id": "s1-d2-t4",
+      "session": 1,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED4_20.mp3"
+    },
+    {
+      "id": "s1-d3-t1",
+      "session": 1,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s1-d3-t2",
+      "session": 1,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA101-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA101_20.mp3"
+    },
+    {
+      "id": "s1-d3-t3",
+      "session": 1,
+      "day": 3,
+      "kind": "audio",
+      "recording": "ES4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES4_20.mp3"
+    },
+    {
+      "id": "s1-d3-t4",
+      "session": 1,
+      "day": 3,
+      "kind": "audio",
+      "recording": "LY4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY4_20.mp3"
+    },
+    {
+      "id": "s2-d1-t1",
+      "session": 2,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s2-d1-t2",
+      "session": 2,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR102-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR102_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s2-d1-t3",
+      "session": 2,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD102-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD102_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s2-d2-t1",
+      "session": 2,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s2-d2-t2",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO102-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_102_20.mp3"
+    },
+    {
+      "id": "s2-d2-t3",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING5_20.mp3"
+    },
+    {
+      "id": "s2-d2-t4",
+      "session": 2,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED5_20.mp3"
+    },
+    {
+      "id": "s2-d3-t1",
+      "session": 2,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s2-d3-t2",
+      "session": 2,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA102-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA102_20.mp3"
+    },
+    {
+      "id": "s2-d3-t3",
+      "session": 2,
+      "day": 3,
+      "kind": "audio",
+      "recording": "ES5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES5_20.mp3"
+    },
+    {
+      "id": "s2-d3-t4",
+      "session": 2,
+      "day": 3,
+      "kind": "audio",
+      "recording": "LY5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY5_20.mp3"
+    },
+    {
+      "id": "s3-d1-t1",
+      "session": 3,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s3-d1-t2",
+      "session": 3,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR103-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR103_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s3-d1-t3",
+      "session": 3,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD103-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD103_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s3-d2-t1",
+      "session": 3,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s3-d2-t2",
+      "session": 3,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO103-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_103_20.mp3"
+    },
+    {
+      "id": "s3-d2-t3",
+      "session": 3,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING6_20.mp3"
+    },
+    {
+      "id": "s3-d2-t4",
+      "session": 3,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED6_20.mp3"
+    },
+    {
+      "id": "s3-d3-t1",
+      "session": 3,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s3-d3-t2",
+      "session": 3,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA103-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA103_20.mp3"
+    },
+    {
+      "id": "s3-d3-t3",
+      "session": 3,
+      "day": 3,
+      "kind": "audio",
+      "recording": "ES6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES6_20.mp3"
+    },
+    {
+      "id": "s3-d3-t4",
+      "session": 3,
+      "day": 3,
+      "kind": "audio",
+      "recording": "LY6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY6_20.mp3"
+    },
+    {
+      "id": "s4-d1-t1",
+      "session": 4,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s4-d1-t2",
+      "session": 4,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR104-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR104_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s4-d1-t3",
+      "session": 4,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD104-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD104_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s4-d2-t1",
+      "session": 4,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s4-d2-t2",
+      "session": 4,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO104-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_104_20.mp3"
+    },
+    {
+      "id": "s4-d2-t3",
+      "session": 4,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING7-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING7_20.mp3"
+    },
+    {
+      "id": "s4-d2-t4",
+      "session": 4,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED7-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED7_20.mp3"
+    },
+    {
+      "id": "s4-d3-t1",
+      "session": 4,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s4-d3-t2",
+      "session": 4,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA104-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA104_20.mp3"
+    },
+    {
+      "id": "s4-d3-t3",
+      "session": 4,
+      "day": 3,
+      "kind": "audio",
+      "recording": "ES7-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES7_20.mp3"
+    },
+    {
+      "id": "s4-d3-t4",
+      "session": 4,
+      "day": 3,
+      "kind": "audio",
+      "recording": "LY7-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY7_20.mp3"
+    },
+    {
+      "id": "s5-d1-t1",
+      "session": 5,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s5-d1-t2",
+      "session": 5,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR105-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR105_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s5-d1-t3",
+      "session": 5,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD105-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD105_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s5-d2-t1",
+      "session": 5,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s5-d2-t2",
+      "session": 5,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO105-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_105_20.mp3"
+    },
+    {
+      "id": "s5-d2-t3",
+      "session": 5,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ING8-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ING8_20.mp3"
+    },
+    {
+      "id": "s5-d2-t4",
+      "session": 5,
+      "day": 2,
+      "kind": "audio",
+      "recording": "ED8-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ED8_20.mp3"
+    },
+    {
+      "id": "s5-d3-t1",
+      "session": 5,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s5-d3-t2",
+      "session": 5,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA105-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA105_20.mp3"
+    },
+    {
+      "id": "s5-d3-t3",
+      "session": 5,
+      "day": 3,
+      "kind": "audio",
+      "recording": "ES8-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/ES8_20.mp3"
+    },
+    {
+      "id": "s5-d3-t4",
+      "session": 5,
+      "day": 3,
+      "kind": "audio",
+      "recording": "LY8-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/LY8_20.mp3"
+    },
+    {
+      "id": "s6-d1-t1",
+      "session": 6,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s6-d1-t2",
+      "session": 6,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR201-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR201_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s6-d1-t3",
+      "session": 6,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD201-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD201_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s6-d2-t1",
+      "session": 6,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s6-d2-t2",
+      "session": 6,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO106-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_106_20.mp3"
+    },
+    {
+      "id": "s6-d2-t3",
+      "session": 6,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN4_20.mp3"
+    },
+    {
+      "id": "s6-d2-t4",
+      "session": 6,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE4_20.mp3"
+    },
+    {
+      "id": "s6-d3-t1",
+      "session": 6,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s6-d3-t2",
+      "session": 6,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA106-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA106_20.mp3"
+    },
+    {
+      "id": "s6-d3-t3",
+      "session": 6,
+      "day": 3,
+      "kind": "audio",
+      "recording": "IM4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM4_20.mp3"
+    },
+    {
+      "id": "s6-d3-t4",
+      "session": 6,
+      "day": 3,
+      "kind": "audio",
+      "recording": "DIS4-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS4_20.mp3"
+    },
+    {
+      "id": "s7-d1-t1",
+      "session": 7,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s7-d1-t2",
+      "session": 7,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR202-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR202_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s7-d1-t3",
+      "session": 7,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD202-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD202_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s7-d2-t1",
+      "session": 7,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s7-d2-t2",
+      "session": 7,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO107-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_107_20.mp3"
+    },
+    {
+      "id": "s7-d2-t3",
+      "session": 7,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN5_20.mp3"
+    },
+    {
+      "id": "s7-d2-t4",
+      "session": 7,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE5_20.mp3"
+    },
+    {
+      "id": "s7-d3-t1",
+      "session": 7,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s7-d3-t2",
+      "session": 7,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA107-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA107_20.mp3"
+    },
+    {
+      "id": "s7-d3-t3",
+      "session": 7,
+      "day": 3,
+      "kind": "audio",
+      "recording": "IM5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM5_20.mp3"
+    },
+    {
+      "id": "s7-d3-t4",
+      "session": 7,
+      "day": 3,
+      "kind": "audio",
+      "recording": "DIS5-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS5_20.mp3"
+    },
+    {
+      "id": "s8-d1-t1",
+      "session": 8,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s8-d1-t2",
+      "session": 8,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR203-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR203_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s8-d1-t3",
+      "session": 8,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD203-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD203_20.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s8-d2-t1",
+      "session": 8,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s8-d2-t2",
+      "session": 8,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO108-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_108_20.mp3"
+    },
+    {
+      "id": "s8-d2-t3",
+      "session": 8,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN6_20.mp3"
+    },
+    {
+      "id": "s8-d2-t4",
+      "session": 8,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE6_20.mp3"
+    },
+    {
+      "id": "s8-d3-t1",
+      "session": 8,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s8-d3-t2",
+      "session": 8,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA108-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA108_20.mp3"
+    },
+    {
+      "id": "s8-d3-t3",
+      "session": 8,
+      "day": 3,
+      "kind": "audio",
+      "recording": "IM6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM6_20.mp3"
+    },
+    {
+      "id": "s8-d3-t4",
+      "session": 8,
+      "day": 3,
+      "kind": "audio",
+      "recording": "DIS6-20",
+      "characterWpm": 20,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS6_20.mp3"
+    },
+    {
+      "id": "s9-d1-t1",
+      "session": 9,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s9-d1-t2",
+      "session": 9,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR204-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR204_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s9-d1-t3",
+      "session": 9,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD204-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD204_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s9-d2-t1",
+      "session": 9,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s9-d2-t2",
+      "session": 9,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO109-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_109_25.mp3"
+    },
+    {
+      "id": "s9-d2-t3",
+      "session": 9,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN7-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN7_25.mp3"
+    },
+    {
+      "id": "s9-d2-t4",
+      "session": 9,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE7-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE7_25.mp3"
+    },
+    {
+      "id": "s9-d3-t1",
+      "session": 9,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s9-d3-t2",
+      "session": 9,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA109-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA109_25.mp3"
+    },
+    {
+      "id": "s9-d3-t3",
+      "session": 9,
+      "day": 3,
+      "kind": "audio",
+      "recording": "IM7-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM7_25.mp3"
+    },
+    {
+      "id": "s9-d3-t4",
+      "session": 9,
+      "day": 3,
+      "kind": "audio",
+      "recording": "DIS7-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS7_25.mp3"
+    },
+    {
+      "id": "s10-d1-t1",
+      "session": 10,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s10-d1-t2",
+      "session": 10,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR205-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR205_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s10-d1-t3",
+      "session": 10,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD205-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD205_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s10-d2-t1",
+      "session": 10,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s10-d2-t2",
+      "session": 10,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO110-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_110_25.mp3"
+    },
+    {
+      "id": "s10-d2-t3",
+      "session": 10,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IN8-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IN8_25.mp3"
+    },
+    {
+      "id": "s10-d2-t4",
+      "session": 10,
+      "day": 2,
+      "kind": "audio",
+      "recording": "RE8-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/RE8_25.mp3"
+    },
+    {
+      "id": "s10-d3-t1",
+      "session": 10,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s10-d3-t2",
+      "session": 10,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA110-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA110_25.mp3"
+    },
+    {
+      "id": "s10-d3-t3",
+      "session": 10,
+      "day": 3,
+      "kind": "audio",
+      "recording": "IM8-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IM8_25.mp3"
+    },
+    {
+      "id": "s10-d3-t4",
+      "session": 10,
+      "day": 3,
+      "kind": "audio",
+      "recording": "DIS8-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/DIS8_25.mp3"
+    },
+    {
+      "id": "s11-d1-t1",
+      "session": 11,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s11-d1-t2",
+      "session": 11,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR301-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR301_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s11-d1-t3",
+      "session": 11,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD301-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD301_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s11-d2-t1",
+      "session": 11,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s11-d2-t2",
+      "session": 11,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO201-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_201_25.mp3"
+    },
+    {
+      "id": "s11-d2-t3",
+      "session": 11,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR4-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR4_25.mp3"
+    },
+    {
+      "id": "s11-d3-t1",
+      "session": 11,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s11-d3-t2",
+      "session": 11,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA201-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA201_25.mp3"
+    },
+    {
+      "id": "s11-d3-t3",
+      "session": 11,
+      "day": 3,
+      "kind": "audio",
+      "recording": "UN4-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN4_25.mp3"
+    },
+    {
+      "id": "s12-d1-t1",
+      "session": 12,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s12-d1-t2",
+      "session": 12,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR302-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR302_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s12-d1-t3",
+      "session": 12,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD302-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD302_25.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s12-d2-t1",
+      "session": 12,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s12-d2-t2",
+      "session": 12,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO202-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_202_25.mp3"
+    },
+    {
+      "id": "s12-d2-t3",
+      "session": 12,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR5-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR5_25.mp3"
+    },
+    {
+      "id": "s12-d3-t1",
+      "session": 12,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s12-d3-t2",
+      "session": 12,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA202-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA202_25.mp3"
+    },
+    {
+      "id": "s12-d3-t3",
+      "session": 12,
+      "day": 3,
+      "kind": "audio",
+      "recording": "UN5-25",
+      "characterWpm": 25,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN5_25.mp3"
+    },
+    {
+      "id": "s13-d1-t1",
+      "session": 13,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s13-d1-t2",
+      "session": 13,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR303-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR303_30.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s13-d1-t3",
+      "session": 13,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD303-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD303_30.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s13-d2-t1",
+      "session": 13,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s13-d2-t2",
+      "session": 13,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO203-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_203_30.mp3"
+    },
+    {
+      "id": "s13-d2-t3",
+      "session": 13,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR6-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR6_30.mp3"
+    },
+    {
+      "id": "s13-d3-t1",
+      "session": 13,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s13-d3-t2",
+      "session": 13,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA203-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA203_30.mp3"
+    },
+    {
+      "id": "s13-d3-t3",
+      "session": 13,
+      "day": 3,
+      "kind": "audio",
+      "recording": "UN6-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN6_30.mp3"
+    },
+    {
+      "id": "s14-d1-t1",
+      "session": 14,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s14-d1-t2",
+      "session": 14,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR304-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR304_30.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s14-d1-t3",
+      "session": 14,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD304-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD304_30.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s14-d2-t1",
+      "session": 14,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s14-d2-t2",
+      "session": 14,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO204-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_204_30.mp3"
+    },
+    {
+      "id": "s14-d2-t3",
+      "session": 14,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR7-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR7_30.mp3"
+    },
+    {
+      "id": "s14-d3-t1",
+      "session": 14,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s14-d3-t2",
+      "session": 14,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA204-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA204_30.mp3"
+    },
+    {
+      "id": "s14-d3-t3",
+      "session": 14,
+      "day": 3,
+      "kind": "audio",
+      "recording": "UN7-30",
+      "characterWpm": 30,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN7_30.mp3"
+    },
+    {
+      "id": "s15-d1-t1",
+      "session": 15,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s15-d1-t2",
+      "session": 15,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR305-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR305_35.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s15-d1-t3",
+      "session": 15,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD305-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD305_35.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s15-d2-t1",
+      "session": 15,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s15-d2-t2",
+      "session": 15,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO205-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_205_35.mp3"
+    },
+    {
+      "id": "s15-d2-t3",
+      "session": 15,
+      "day": 2,
+      "kind": "audio",
+      "recording": "IR8-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/IR8_35.mp3"
+    },
+    {
+      "id": "s15-d3-t1",
+      "session": 15,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s15-d3-t2",
+      "session": 15,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA205-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA205_35.mp3"
+    },
+    {
+      "id": "s15-d3-t3",
+      "session": 15,
+      "day": 3,
+      "kind": "audio",
+      "recording": "UN8-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/UN8_35.mp3"
+    },
+    {
+      "id": "s16-d1-t1",
+      "session": 16,
+      "day": 1,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s16-d1-t2",
+      "session": 16,
+      "day": 1,
+      "kind": "audio",
+      "recording": "PR401-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/PR401_35.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s16-d1-t3",
+      "session": 16,
+      "day": 1,
+      "kind": "audio",
+      "recording": "WD401-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/WD401_35.mp3",
+      "minimumPasses": 2
+    },
+    {
+      "id": "s16-d2-t1",
+      "session": 16,
+      "day": 2,
+      "kind": "sending",
+      "sections": ["warm-up"]
+    },
+    {
+      "id": "s16-d2-t2",
+      "session": 16,
+      "day": 2,
+      "kind": "audio",
+      "recording": "QSO206-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/QSO_206_35.mp3"
+    },
+    {
+      "id": "s16-d3-t1",
+      "session": 16,
+      "day": 3,
+      "kind": "sending",
+      "sections": ["warm-up", "exercise"]
+    },
+    {
+      "id": "s16-d3-t2",
+      "session": 16,
+      "day": 3,
+      "kind": "audio",
+      "recording": "POTA206-35",
+      "characterWpm": 35,
+      "practiceKind": "head-copy",
+      "notes": "Use the official recording for head-copy practice. Refer to the linked curriculum for the listening objective.",
+      "url": "https://cwa.cwops.org/wp-content/uploads/POTA206_35.mp3"
+    }
+  ]
+}

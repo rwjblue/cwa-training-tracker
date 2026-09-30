@@ -1,5 +1,7 @@
 import type { PracticeKind, PracticeSession, Profile } from './training';
 import { isRunnerSettings, type RunnerSettings } from './runner.ts';
+import { defaultCopyRecipe, validateCopyRecipe, type CopyRecipe } from './copy-practice.ts';
+import { copyAttemptReportDetails, savedCopyAttempt } from './copy-report.ts';
 
 export type SendingSection = 'warm-up' | 'drill' | 'exercise';
 export type PracticeExercise =
@@ -13,6 +15,16 @@ export type PracticeExercise =
     }
   | { type: 'sending'; url: string; sections: SendingSection[] }
   | { type: 'morse-runner'; url: string; settings: RunnerSettings }
+  | {
+      type: 'copy';
+      url?: string;
+      recipe: CopyRecipe;
+      alternatives?: CopyRecipe[];
+      repetitions?: number;
+      targetAccuracy?: number;
+      maximumAttempts?: number;
+      requiresCharacterSelection?: boolean;
+    }
   | { type: 'external'; url: string; characterWpm?: number };
 
 /** Private homework and progress, with links to optional curriculum metadata. */
@@ -33,6 +45,58 @@ export interface PlannedTask {
 }
 
 export const MAX_PLAN_TASKS = 2000;
+
+/** A launch adapter; the private source link and original imported evidence stay intact. */
+export function nativeCopyTask(task: PlannedTask): PlannedTask {
+  if (task.exercise && task.exercise.type !== 'external') return task;
+  const link = task.exercise?.type === 'external' ? task.exercise.url : task.link;
+  if (!link) return task;
+  let url: URL;
+  try {
+    url = new URL(link);
+  } catch {
+    return task;
+  }
+  if (
+    !['lcwo.net', 'www.lcwo.net'].includes(url.hostname) ||
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password
+  )
+    return task;
+  const path = url.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+  const route = path === '' || path === 'index.php' ? (url.searchParams.get('p') ?? '') : path;
+  const modes = {
+    groups: 'groups',
+    wordtraining: 'words',
+    callsigns: 'callsigns',
+    plaintext: 'plaintext',
+  } as const;
+  const namedMode = modes[route as keyof typeof modes];
+  // A generic ICR assignment historically linked to the LCWO home page. Other
+  // LCWO tools (Koch, MorseMachine, QTC, etc.) are not equivalent to Code Groups.
+  if (!namedMode && (route !== '' || task.kind !== 'icr')) return task;
+  const mode =
+    namedMode ??
+    (/callsign|call[ -]?sign/i.test(task.title)
+      ? 'callsigns'
+      : /plain.?text|proverb/i.test(task.title)
+        ? 'plaintext'
+        : /word/i.test(task.title)
+          ? 'words'
+          : 'groups');
+  const recipe = defaultCopyRecipe(mode);
+  return {
+    ...task,
+    exercise: {
+      type: 'copy',
+      url: link,
+      recipe,
+      ...(mode === 'groups' ? { alternatives: [defaultCopyRecipe('words')] } : {}),
+    },
+  };
+}
+
 const kinds: PracticeKind[] = [
   'listening',
   'sending',
@@ -67,8 +131,42 @@ function exerciseResource(value: unknown): PracticeExercise {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid exercise resource.');
   const input = value as Record<string, unknown>;
-  if (!['audio', 'sending', 'external', 'morse-runner'].includes(String(input.type)))
+  if (!['audio', 'sending', 'external', 'morse-runner', 'copy'].includes(String(input.type)))
     throw new Error('Choose a valid exercise resource type.');
+  if (input.type === 'copy') {
+    const result: Extract<PracticeExercise, { type: 'copy' }> = {
+      type: 'copy',
+      recipe: validateCopyRecipe(input.recipe),
+    };
+    if (input.url !== undefined) result.url = exerciseUrl(input.url);
+    if (input.alternatives !== undefined) {
+      if (!Array.isArray(input.alternatives) || input.alternatives.length > 8)
+        throw new Error('Choose up to eight alternative copy recipes.');
+      result.alternatives = input.alternatives.map(validateCopyRecipe);
+    }
+    for (const field of ['repetitions', 'maximumAttempts'] as const) {
+      if (input[field] === undefined) continue;
+      if (!Number.isInteger(input[field]) || Number(input[field]) < 1 || Number(input[field]) > 100)
+        throw new Error('Copy repetitions must be between 1 and 100.');
+      result[field] = input[field] as number;
+    }
+    if (input.targetAccuracy !== undefined) {
+      if (
+        typeof input.targetAccuracy !== 'number' ||
+        !Number.isFinite(input.targetAccuracy) ||
+        input.targetAccuracy < 0 ||
+        input.targetAccuracy > 100
+      )
+        throw new Error('Copy accuracy target must be between 0 and 100.');
+      result.targetAccuracy = input.targetAccuracy;
+    }
+    if (input.requiresCharacterSelection !== undefined) {
+      if (typeof input.requiresCharacterSelection !== 'boolean')
+        throw new Error('Invalid custom character selection requirement.');
+      result.requiresCharacterSelection = input.requiresCharacterSelection;
+    }
+    return result;
+  }
   if (input.type === 'morse-runner') {
     if (!isRunnerSettings(input.settings)) throw new Error('Choose valid Morse Runner settings.');
     return {
@@ -278,7 +376,10 @@ export function dailyPlanSummary(
   for (const task of tasks) {
     if (!task.curriculum) continue;
     aliases.set(`curriculum:${task.curriculum.id}:${task.curriculum.exerciseId}`, task.id);
-    aliases.set(`legacy-task:${task.curriculum.exerciseId}`, task.id);
+    // Unqualified legacy IDs came from the Intermediate-only personal course.
+    // Another catalog may reuse s1-d1-t1 without inheriting that practice credit.
+    if (task.curriculum.id.startsWith('cwa-intermediate-'))
+      aliases.set(`legacy-task:${task.curriculum.exerciseId}`, task.id);
   }
   const seenEntries = new Set<string>();
   for (const entry of entries) {
@@ -414,6 +515,10 @@ export function weeklyReport(
         ...(entry.qsoCount !== undefined ? [`${entry.qsoCount} QSOs`] : []),
       ];
       lines.push(`- ${details.join(' · ')}${entry.notes ? ` — ${entry.notes}` : ''}`);
+      const attempt = savedCopyAttempt(entry);
+      if (attempt) {
+        for (const detail of copyAttemptReportDetails(attempt)) lines.push(`  ${detail}`);
+      }
     }
     lines.push('');
   }
@@ -500,7 +605,7 @@ export function legacyPlan(
           }
         }
       }
-      output.set(result.id, validatePlannedTask(result));
+      output.set(result.id, nativeCopyTask(validatePlannedTask(result)));
     }
   }
   return validatePlan([...output.values()]);

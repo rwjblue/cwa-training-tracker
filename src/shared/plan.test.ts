@@ -8,6 +8,7 @@ import {
   validatePlan,
   validatePlannedTask,
   weeklyReport,
+  nativeCopyTask,
   type PlannedTask,
 } from './plan';
 
@@ -154,6 +155,40 @@ describe('today’s private course plan', () => {
     ).toBe(true);
   });
 
+  it('keeps old Intermediate practice credit out of another course with the same exercise ID', () => {
+    const courses = ['cwa-intermediate-v2.3', 'cwa-fundamental-v2.0'];
+    const tasks = courses.map((id) =>
+      exercise({
+        id: `curriculum:${id}:s1-d1-t1`,
+        dueDate: '2026-09-29',
+        curriculum: { id, exerciseId: 's1-d1-t1', day: 1, sourceUrl: 'https://cwops.org/' },
+      }),
+    );
+    const result = dailyPlanSummary(
+      tasks,
+      meetings,
+      [
+        {
+          id: 'old-attempt',
+          date: '2026-09-29',
+          kind: 'listening',
+          minutes: 5,
+          notes: '',
+          createdAt: '2026-09-29T12:00:00Z',
+          source: 'legacy',
+          metadata: { legacyAttempt: { taskId: 's1-d1-t1' } },
+        },
+      ],
+      '2026-09-29',
+    );
+    expect(
+      result.assignedToday.find((item) => item.task.curriculum?.id === courses[0])?.loggedMinutes,
+    ).toBe(5);
+    expect(
+      result.assignedToday.find((item) => item.task.curriculum?.id === courses[1])?.loggedMinutes,
+    ).toBe(0);
+  });
+
   it('keeps lessons undated until a course schedule exists and handles an empty or finished course', () => {
     const undated = dailyPlanSummary([exercise({ lesson: 2 })], [], [], '2026-09-29');
     expect(undated.assignedToday).toEqual([]);
@@ -238,6 +273,69 @@ describe('private planned exercises', () => {
 });
 
 describe('legacy homework migration', () => {
+  it('adapts LCWO launch links without changing imported history, notes, identity or other websites', () => {
+    for (const [path, mode] of [
+      ['wordtraining', 'words'],
+      ['callsigns', 'callsigns'],
+      ['plaintext', 'plaintext'],
+      ['groups', 'groups'],
+    ] as const) {
+      const task = exercise({
+        id: 'legacy-task:copy',
+        source: 'legacy',
+        kind: 'icr',
+        title: 'Private assignment',
+        notes: 'Keep my original instructions',
+        link: `https://lcwo.net/${path}`,
+        done: true,
+      });
+      const original = structuredClone(task);
+      expect(nativeCopyTask(task)).toMatchObject({
+        ...task,
+        exercise: { type: 'copy', recipe: { mode } },
+      });
+      expect(task).toEqual(original);
+    }
+    const unrelated = exercise({
+      kind: 'icr',
+      link: 'https://morsecode.world/international/trainer/',
+    });
+    expect(nativeCopyTask(unrelated)).toBe(unrelated);
+    for (const path of ['koch', 'morsemachine', 'qtc', 'index.php?p=koch']) {
+      const unsupported = exercise({
+        kind: 'icr',
+        title: 'Word practice',
+        link: `https://lcwo.net/${path}`,
+      });
+      expect(nativeCopyTask(unsupported)).toBe(unsupported);
+    }
+    expect(
+      nativeCopyTask(exercise({ kind: 'icr', link: 'https://lcwo.net/index.php?p=callsigns' }))
+        .exercise,
+    ).toMatchObject({ type: 'copy', recipe: { mode: 'callsigns' } });
+    expect(
+      nativeCopyTask(exercise({ kind: 'icr', link: 'https://lcwo.net/', title: 'Word copy' }))
+        .exercise,
+    ).toMatchObject({ type: 'copy', recipe: { mode: 'words' } });
+    const imported = legacyPlan(
+      {
+        assignments: [
+          {
+            session: 1,
+            tasks: [{ id: 'words', title: 'Word copy', kind: 'icr', resourceId: 'lcwo' }],
+          },
+        ],
+        resources: [{ id: 'lcwo', url: 'https://lcwo.net/wordtraining' }],
+      },
+      [],
+      '2026-09-28T12:00:00Z',
+    );
+    expect(imported[0]).toMatchObject({
+      id: 'legacy-task:words',
+      link: 'https://lcwo.net/wordtraining',
+      exercise: { type: 'copy', recipe: { mode: 'words' } },
+    });
+  });
   it('derives Runner completion from unique required practice while retaining uninterrupted simulator rules', () => {
     const course = {
       assignments: [

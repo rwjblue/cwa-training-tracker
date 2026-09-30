@@ -1,0 +1,1060 @@
+{
+  "id": "cwa-beginner-v4.8",
+  "version": "4.8",
+  "sourceUrl": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm",
+  "resourcesUrl": "https://cwops.org/cw-academy/cw-academy-student-resources/",
+  "verifiedAt": "2026-09-29",
+  "sessionLinks": {
+    "1": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139164",
+    "2": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm",
+    "3": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139166",
+    "4": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139167",
+    "5": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139168",
+    "6": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139169",
+    "7": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139170",
+    "8": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139171",
+    "9": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139172",
+    "10": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139173",
+    "11": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139175",
+    "12": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139176",
+    "13": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139177",
+    "14": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139178",
+    "15": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139179",
+    "16": "https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm#_Toc173139180"
+  },
+  "scheduleRule": "Repeat each session’s activities across the three app preparation days. The source assigns sessions, not numbered days.",
+  "exercises": [
+    {
+      "id": "s1-d1-t1",
+      "session": 1,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 1: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s1-d1-t2",
+      "session": 1,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 1: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s1-d2-t1",
+      "session": 1,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 1: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s1-d2-t2",
+      "session": 1,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 1: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s1-d3-t1",
+      "session": 1,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 1: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s1-d3-t2",
+      "session": 1,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 1: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s2-d1-t1",
+      "session": 2,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 2: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s2-d1-t2",
+      "session": 2,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 2: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s2-d2-t1",
+      "session": 2,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 2: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s2-d2-t2",
+      "session": 2,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 2: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s2-d3-t1",
+      "session": 2,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 2: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s2-d3-t2",
+      "session": 2,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 2: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s3-d1-t1",
+      "session": 3,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 3: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s3-d1-t2",
+      "session": 3,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 3: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s3-d2-t1",
+      "session": 3,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 3: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s3-d2-t2",
+      "session": 3,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 3: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s3-d3-t1",
+      "session": 3,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 3: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s3-d3-t2",
+      "session": 3,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 3: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s4-d1-t1",
+      "session": 4,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 4: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s4-d1-t2",
+      "session": 4,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 4: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s4-d2-t1",
+      "session": 4,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 4: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s4-d2-t2",
+      "session": 4,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 4: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s4-d3-t1",
+      "session": 4,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 4: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s4-d3-t2",
+      "session": 4,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 4: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s5-d1-t1",
+      "session": 5,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 5: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s5-d1-t2",
+      "session": 5,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 5: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s5-d2-t1",
+      "session": 5,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 5: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s5-d2-t2",
+      "session": 5,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 5: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s5-d3-t1",
+      "session": 5,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 5: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s5-d3-t2",
+      "session": 5,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 5: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s6-d1-t1",
+      "session": 6,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 6: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s6-d1-t2",
+      "session": 6,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 6: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s6-d2-t1",
+      "session": 6,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 6: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s6-d2-t2",
+      "session": 6,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 6: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s6-d3-t1",
+      "session": 6,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 6: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s6-d3-t2",
+      "session": 6,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 6: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s7-d1-t1",
+      "session": 7,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 7: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s7-d1-t2",
+      "session": 7,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 7: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s7-d2-t1",
+      "session": 7,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 7: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s7-d2-t2",
+      "session": 7,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 7: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s7-d3-t1",
+      "session": 7,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 7: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s7-d3-t2",
+      "session": 7,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 7: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s8-d1-t1",
+      "session": 8,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 8: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s8-d1-t2",
+      "session": 8,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 8: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s8-d2-t1",
+      "session": 8,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 8: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s8-d2-t2",
+      "session": 8,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 8: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s8-d3-t1",
+      "session": 8,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 8: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s8-d3-t2",
+      "session": 8,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 8: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s9-d1-t1",
+      "session": 9,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 9: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s9-d1-t2",
+      "session": 9,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 9: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s9-d2-t1",
+      "session": 9,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 9: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s9-d2-t2",
+      "session": 9,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 9: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s9-d3-t1",
+      "session": 9,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 9: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s9-d3-t2",
+      "session": 9,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 9: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s10-d1-t1",
+      "session": 10,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 10: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s10-d1-t2",
+      "session": 10,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 10: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s10-d2-t1",
+      "session": 10,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 10: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s10-d2-t2",
+      "session": 10,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 10: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s10-d3-t1",
+      "session": 10,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 10: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s10-d3-t2",
+      "session": 10,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 10: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s11-d1-t1",
+      "session": 11,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 11: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s11-d1-t2",
+      "session": 11,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 11: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s11-d1-t3",
+      "session": 11,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s11-d2-t1",
+      "session": 11,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 11: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s11-d2-t2",
+      "session": 11,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 11: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s11-d2-t3",
+      "session": 11,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s11-d3-t1",
+      "session": 11,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 11: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s11-d3-t2",
+      "session": 11,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 11: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s11-d3-t3",
+      "session": 11,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s12-d1-t1",
+      "session": 12,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 12: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s12-d1-t2",
+      "session": 12,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 12: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s12-d1-t3",
+      "session": 12,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s12-d2-t1",
+      "session": 12,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 12: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s12-d2-t2",
+      "session": 12,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 12: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s12-d2-t3",
+      "session": 12,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s12-d3-t1",
+      "session": 12,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 12: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s12-d3-t2",
+      "session": 12,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 12: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s12-d3-t3",
+      "session": 12,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s13-d1-t1",
+      "session": 13,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 13: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s13-d1-t2",
+      "session": 13,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 13: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s13-d1-t3",
+      "session": 13,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s13-d2-t1",
+      "session": 13,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 13: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s13-d2-t2",
+      "session": 13,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 13: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s13-d2-t3",
+      "session": 13,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s13-d3-t1",
+      "session": 13,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "listening",
+      "title": "Session 13: Copy practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Select this session in the official Morse Code Trainer and practice its copying message types. Initial copying settings are 18 character / 6 effective WPM; follow your advisor’s adjustments."
+    },
+    {
+      "id": "s13-d3-t2",
+      "session": 13,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Session 13: Sending practice",
+      "url": "https://morsecode.world/international/trainer/trainer.html",
+      "notes": "Use this session’s sending message types as the model for your keying. Initial sending settings are 15 character / 6 effective WPM. The complete content stays in the linked official curriculum."
+    },
+    {
+      "id": "s13-d3-t3",
+      "session": 13,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "icr",
+      "title": "Single-character spoken recognition",
+      "url": "https://morsecode.world/international/trainer/character.html",
+      "notes": "Use the curriculum’s Morse Code Trainer speech-after exercise. Recognize each character before the spoken answer; this is a listening exercise rather than a typed-copy test."
+    },
+    {
+      "id": "s14-d1-t1",
+      "session": 14,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s14-d1-t2",
+      "session": 14,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s14-d2-t1",
+      "session": 14,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s14-d2-t2",
+      "session": 14,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s14-d3-t1",
+      "session": 14,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s14-d3-t2",
+      "session": 14,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s15-d1-t1",
+      "session": 15,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s15-d1-t2",
+      "session": 15,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s15-d2-t1",
+      "session": 15,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s15-d2-t2",
+      "session": 15,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s15-d3-t1",
+      "session": 15,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s15-d3-t2",
+      "session": 15,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s16-d1-t1",
+      "session": 16,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s16-d1-t2",
+      "session": 16,
+      "day": 1,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s16-d2-t1",
+      "session": 16,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s16-d2-t2",
+      "session": 16,
+      "day": 2,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    },
+    {
+      "id": "s16-d3-t1",
+      "session": 16,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "on-air",
+      "title": "On-air listening and preparation",
+      "notes": "Use the linked session and your advisor’s directions to practice real on-air listening and prepare for contacts."
+    },
+    {
+      "id": "s16-d3-t2",
+      "session": 16,
+      "day": 3,
+      "kind": "manual",
+      "practiceKind": "sending",
+      "title": "Personal sending practice",
+      "notes": "Practice your own station information as directed in the linked session. Keep your personal details in your private notes."
+    }
+  ]
+}

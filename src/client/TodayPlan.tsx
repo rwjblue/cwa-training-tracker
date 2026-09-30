@@ -25,7 +25,7 @@ import {
   type PlannedTask,
 } from '../shared/plan';
 import './today-plan.css';
-import { INTERMEDIATE_CURRICULUM } from '../shared/curriculum';
+import { curriculumForLevel } from '../shared/curriculum';
 
 export interface TodayPlanProps {
   profile: Profile;
@@ -75,7 +75,8 @@ export default function TodayPlan({
   const [saveError, setSaveError] = useState('');
   const today = dateInTimezone(new Date(), profile.timezone);
   const plan = dailyPlanSummary(tasks, courseMeetings(profile), entries, today);
-  const curriculum = tasks.find((task) => task.curriculum)?.curriculum;
+  const course = curriculumForLevel(profile.level);
+  const curriculum = tasks.some((task) => task.curriculum?.id === course?.id) ? course : undefined;
   const needsCourseDates = !profile.firstClassDate;
   async function toggle(task: PlannedTask) {
     setSaving((current) => [...current, task.id]);
@@ -122,7 +123,7 @@ export default function TodayPlan({
       </header>
       {!loading && curriculum && (
         <p className="today-plan-curriculum">
-          Intermediate · syllabus v{INTERMEDIATE_CURRICULUM.version}
+          {curriculum.title.replace('CW Academy ', '')} · syllabus v{curriculum.version}
           <a href={curriculum.sourceUrl} target="_blank" rel="noreferrer">
             Official syllabus <ExternalLink size={12} />
           </a>
@@ -166,9 +167,8 @@ export default function TodayPlan({
           <div>
             <h3>{needsCourseDates ? 'Set up your course.' : 'Make your daily practice plan.'}</h3>
             <p>
-              {profile.level === 'intermediate'
-                ? 'Your Intermediate assignments appear automatically when you save your course dates. Each day has its own listening and sending exercises.'
-                : 'Intermediate assignments are built in. For other levels, follow the official student resources and add your advisor’s exercises.'}
+              Your course assignments appear automatically when you save your course dates. Follow
+              the linked official instructions and add your advisor’s exercises.
             </p>
             <div className="today-plan-empty-actions">
               {onSetupCourse && (
