@@ -205,7 +205,7 @@ function practiceDetails(
       title: row.title ?? `Sending scales: ${sections.join(' + ')}`,
       kind: 'sending',
       notes:
-        'Open the sending scales and practice the listed sections on your key. Time your practice here.',
+        'Practice the listed sending scales on your key with the text and timer here. Bob Carter’s original PDF is linked for reference.',
       exercise: { type: 'sending', url: SCALES_URL, sections },
     };
   }

@@ -21,6 +21,14 @@ history, while unfinished scripts, custom lists, time and notes still have no du
 recovery. Runner's scratchpad-only switch guard and official-audio detach cleanup are
 fixed. See the [canonical inventory](../trainer-parity.md) for these cross-cutting updates.
 
+On 2026-09-30, sending gained a native scales reader with selectable prescribed
+sections, adjustable text size, and Bob Carter WR7Q’s PDF link. Start no longer
+opens a tab for scales. The public studio also offers all three sections, and
+section changes retain elapsed time. Native rows use mechanical character
+patterns, a conventional pangram and original guidance; the original instruction
+prose remains at its source. This addresses readable material grouping below;
+optional adapter input, capture, replay and retained takes remain absent.
+
 Read-only source audit, 2026-09-29. No personal data was opened, modified, exported, or imported. No implementation changes or tests were run for this audit. This is the detailed appendix to the canonical parity inventory; recorded-course audio, scratchpad/timer internals, LCWO, reports, course planning, and backend/export semantics are covered in the audio and planning appendices.
 
 Status: **present** means an active reachable equivalent; **partial** means a meaningful subset or different lifecycle; **missing** means no active equivalent found. P1 means a substantial training capability or work-loss gap; P2 means useful parity after those; P3 means a small refinement or deliberate product choice. These are parity priorities, not security severity.

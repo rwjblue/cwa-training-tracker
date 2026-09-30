@@ -7,6 +7,7 @@ import {
   Headphones,
   Play,
   Plus,
+  Radio,
   RotateCcw,
   Shuffle,
   Square,
@@ -33,6 +34,7 @@ import ListeningSoundSettings from './ListeningSoundSettings';
 import MorseTranscript from './MorseTranscript';
 import MorseRunnerStudio, { DEFAULT_RUNNER_SETTINGS } from './MorseRunnerStudio';
 import CopyTrainer from './CopyTrainer';
+import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
@@ -138,6 +140,7 @@ export default function PracticeStudio({
   }));
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
+  const isSending = activity?.type === 'sending' || (!assigned && tool === 'sending');
   const [text, setText] = useState(() => {
     const initial = loadPracticePreferences();
     return initial.mode === 'custom' ? '' : generatePractice(initial.mode, initial);
@@ -429,6 +432,7 @@ export default function PracticeStudio({
         return;
       }
       if (assigned) return;
+      if (isSending) return;
       if (tool !== 'free') {
         await trainer.current?.play();
         return;
@@ -447,13 +451,9 @@ export default function PracticeStudio({
       setError(activity.unresolved ?? 'This recording is unavailable.');
       return;
     }
-    if (
-      (activity?.type === 'external' || activity?.type === 'sending') &&
-      !running &&
-      seconds === 0
-    )
+    if (activity?.type === 'external' && !running && seconds === 0)
       window.open(activity.url, '_blank', 'noopener,noreferrer');
-    if (assigned && activity?.type !== 'audio' && !running) startTimer();
+    if (((assigned && activity?.type !== 'audio') || isSending) && !running) startTimer();
     if (!playing) await play();
   };
   const generate = () => {
@@ -495,7 +495,7 @@ export default function PracticeStudio({
               ? isRunner
                 ? 'Your assigned simulator settings and engine results, together.'
                 : 'Your course material and practice timer, together.'
-              : 'Copy practice, word listening, QSO conversations, and simulator practice. No account required to practice.'}
+              : 'Copy practice, sending scales, word listening, QSO conversations, and simulator practice. No account required to practice.'}
           </p>
         </div>
         <span className="chip">
@@ -605,6 +605,7 @@ export default function PracticeStudio({
               ['words', 'Word listening'],
               ['qso', 'QSO practice'],
               ['free', 'Free practice'],
+              ['sending', 'Sending practice'],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -676,7 +677,7 @@ export default function PracticeStudio({
             disabled={savingNavigation || savingCompletion || saveFailed}
             aria-busy={savingNavigation || savingCompletion}
           >
-            <div className="studio-quick-actions">
+            <div className={`studio-quick-actions ${isSending ? 'is-sending' : ''}`}>
               <button
                 className="button dark"
                 disabled={activity?.type === 'audio' && !recordingUrl}
@@ -724,14 +725,22 @@ export default function PracticeStudio({
               >
                 <div className="section-heading">
                   <div>
-                    <h2>{assigned ? 'Your assigned exercise' : 'The listening room'}</h2>
+                    <h2>
+                      {isSending
+                        ? 'Your sending practice'
+                        : assigned
+                          ? 'Your assigned exercise'
+                          : 'The listening room'}
+                    </h2>
                     <p>
-                      {assigned
-                        ? 'Practice this material, then save your time.'
-                        : 'Hear the sound. Let the letters follow.'}
+                      {isSending
+                        ? 'Keep your key, practice text, and timer together.'
+                        : assigned
+                          ? 'Practice this material, then save your time.'
+                          : 'Hear the sound. Let the letters follow.'}
                     </p>
                   </div>
-                  <Headphones size={23} />
+                  {isSending ? <Radio size={23} /> : <Headphones size={23} />}
                 </div>
                 {activity?.type === 'audio' ? (
                   <div className="assigned-recording">
@@ -815,18 +824,18 @@ export default function PracticeStudio({
                       </a>
                     )}
                   </div>
+                ) : isSending ? (
+                  <SendingScales
+                    key={launch?.id ?? 'public-sending'}
+                    sections={activity?.type === 'sending' ? activity.sections : undefined}
+                  />
                 ) : assigned ? (
                   <div className="assigned-offline">
                     <p>
-                      {activity?.type === 'sending'
-                        ? 'Use your key and the assigned sending sections. Start practice opens the exercise and times your session.'
-                        : activity?.type === 'external'
-                          ? 'Start practice opens the assigned tool in a new tab and starts your timer here.'
-                          : 'Use your key, radio, or other practice material. The timer keeps your time linked to this exercise.'}
+                      {activity?.type === 'external'
+                        ? 'Start practice opens the assigned tool in a new tab and starts your timer here.'
+                        : 'Use your key, radio, or other practice material. The timer keeps your time linked to this exercise.'}
                     </p>
-                    {activity?.type === 'sending' && (
-                      <p>Sections: {activity.sections.join(', ')}.</p>
-                    )}
                   </div>
                 ) : tool !== 'free' ? (
                   <ListeningTrainer
@@ -999,7 +1008,7 @@ export default function PracticeStudio({
                     )}
                   </>
                 )}
-                {!assigned && (
+                {!assigned && !isSending && (
                   <div className="playback-toolbar">
                     <button
                       className="button dark play-button"
@@ -1028,11 +1037,13 @@ export default function PracticeStudio({
                   </div>
                 )}
                 <p className="studio-playback-help">
-                  {assigned
-                    ? activity?.type === 'audio'
-                      ? 'Press Play in the audio controls to count listening time. Pauses and seeks do not add time. Use the recall timer for focused notes between listens.'
-                      : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
-                    : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
+                  {isSending
+                    ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
+                    : assigned
+                      ? activity?.type === 'audio'
+                        ? 'Press Play in the audio controls to count listening time. Pauses and seeks do not add time. Use the recall timer for focused notes between listens.'
+                        : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
+                      : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
                 </p>
                 <div className="studio-scratchpad">
                   <label className="field" htmlFor="practice-scratchpad">
@@ -1043,7 +1054,11 @@ export default function PracticeStudio({
                       maxLength={10000}
                       value={scratchpad}
                       onChange={(event) => changeScratchpad(event.target.value)}
-                      placeholder="Jot down what you hear, difficult words, or details to revisit…"
+                      placeholder={
+                        isSending
+                          ? 'Note difficult characters, spacing, or patterns to revisit…'
+                          : 'Jot down what you hear, difficult words, or details to revisit…'
+                      }
                       aria-describedby="scratchpad-help"
                     />
                   </label>
@@ -1069,12 +1084,18 @@ export default function PracticeStudio({
                   </div>
                   <h2>Time your practice.</h2>
                   <p>
-                    Audio playback counts automatically. Use the timer for{' '}
-                    {activity?.type === 'audio' ? 'focused recall and notes' : 'other practice'},
-                    then review and save.
+                    {isSending ? (
+                      'Start the timer, send the patterns on your key, then review and save your time.'
+                    ) : (
+                      <>
+                        Audio playback counts automatically. Use the timer for{' '}
+                        {activity?.type === 'audio' ? 'focused recall and notes' : 'other practice'}
+                        , then review and save.
+                      </>
+                    )}
                   </p>
                   <div className="studio-timer-steps" aria-label="How to log timed practice">
-                    <span>1. Play or start timer</span>
+                    <span>{isSending ? '1. Start timer' : '1. Play or start timer'}</span>
                     <span>2. Practice</span>
                     <span>3. Save session</span>
                   </div>
@@ -1214,7 +1235,9 @@ export default function PracticeStudio({
                     </div>
                   )}
                   <p className="studio-timer-scope">
-                    Listening time follows the audio, including when your screen locks.{' '}
+                    {isSending
+                      ? 'Keep the scales in view while you practice. '
+                      : 'Listening time follows the audio, including when your screen locks. '}
                     {automaticSave
                       ? 'Practice under 30 seconds is not logged automatically. Review and save before reloading to keep unfinished time.'
                       : 'Review and save before leaving to keep your practice time.'}
@@ -1230,10 +1253,10 @@ export default function PracticeStudio({
                           return;
                         }
                         onLog({
-                          kind: launch?.task?.kind ?? 'listening',
+                          kind: launch?.task?.kind ?? (isSending ? 'sending' : 'listening'),
                           lesson: launch?.task?.lesson,
                           notes: launch?.task?.title,
-                          ...(!assigned
+                          ...(!assigned && !isSending
                             ? { characterWpm, effectiveWpm }
                             : activity?.type === 'audio' && recordingWpm
                               ? { characterWpm: recordingWpm }

@@ -152,6 +152,13 @@ the audio engine establishes credited practice time. Check the iframe's narrow
 security headers and desktop/mobile fit in the same journey. Verify pinned
 vendor hashes when updating the bundle; do not duplicate upstream engine tests.
 
+For sending scales, protect prescribed-section filtering, complete mechanical
+character patterns and prosign notation with fast tests. One browser journey
+covers public access, readable section selection, text size, Start without a
+popup, uninterrupted timer changes and a reviewed assignment-linked sending save.
+Check the large-text reader at desktop/mobile widths and keep the PDF link visible.
+Native patterns do not require fetching external reference material in CI.
+
 For native copy, keep generation, full-text alignment, adaptive scoring, and
 evidence validation in the shared domain tests. Clock tests cover non-overlap,
 countdown exclusion, replay and inactivity; recovery tests cover account scope,

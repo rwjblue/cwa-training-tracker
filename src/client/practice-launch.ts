@@ -6,7 +6,7 @@ export type PracticeActivity = NonNullable<PlannedTask['exercise']> | { type: 't
 export interface PracticeLaunch {
   id: string;
   task?: PlannedTask;
-  tool?: 'words' | 'qso' | 'free' | 'copy';
+  tool?: 'words' | 'qso' | 'free' | 'copy' | 'sending';
   activity?: PracticeActivity;
 }
 

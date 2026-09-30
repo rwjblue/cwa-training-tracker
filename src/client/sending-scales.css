@@ -1,0 +1,155 @@
+.sending-scales {
+  display: grid;
+  gap: 24px;
+}
+.sending-source {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: #f3f5e9;
+  border: 1px solid #d2dcca;
+  border-radius: 8px;
+}
+.sending-source strong {
+  font-family: Georgia, serif;
+  font-size: 21px;
+  color: #36523a;
+}
+.sending-source p {
+  color: #526249;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 6px;
+}
+.sending-source .button {
+  justify-self: start;
+  white-space: normal;
+  text-align: left;
+}
+.sending-controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.sending-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sending-sections button {
+  padding: 11px 16px;
+  border: 1px solid #bfcbb5;
+  border-radius: 6px;
+  background: #fffefa;
+  color: #415836;
+  font-size: 13px;
+}
+.sending-sections button[aria-pressed='true'] {
+  background: #38513b;
+  color: #fff;
+  border-color: #38513b;
+}
+.sending-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #526249;
+}
+.sending-controls select {
+  padding: 10px 12px;
+  border: 1px solid #bfcbb5;
+  border-radius: 6px;
+  background: #fffefa;
+  color: #415836;
+  font-size: 13px;
+}
+.sending-reading-heading h3 {
+  font-family: Georgia, serif;
+  color: #36523a;
+  font-size: 25px;
+}
+.sending-reading-heading p {
+  margin-top: 8px;
+  color: #526249;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.sending-rows {
+  margin-top: 20px;
+  border: 1px solid #d2dcca;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sending-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 18px 20px;
+  background: #fffefa;
+}
+.sending-row:nth-child(even) {
+  background: #f5f6ef;
+}
+.sending-row + .sending-row {
+  border-top: 1px solid #e2e8d9;
+}
+.sending-group {
+  display: grid;
+  gap: 5px;
+  max-width: 100%;
+  font:
+    22px / 1.7 ui-monospace,
+    monospace;
+  color: #294c36;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.sending-group small {
+  font:
+    12px / 1.5 system-ui,
+    sans-serif;
+  color: #526249;
+  letter-spacing: normal;
+}
+.sending-reading.is-large .sending-group {
+  font-size: 30px;
+}
+.sending-row.is-phrases {
+  flex-direction: column;
+}
+.studio-quick-actions.is-sending {
+  position: sticky;
+  top: 12px;
+  z-index: 2;
+  box-shadow: 0 3px 12px #294c3612;
+}
+@media (max-width: 640px) {
+  .sending-source {
+    padding: 14px;
+  }
+  .sending-source .button {
+    font-size: 12px;
+    padding: 11px 12px;
+  }
+  .sending-controls {
+    align-items: stretch;
+  }
+  .sending-controls label {
+    width: 100%;
+  }
+  .sending-row {
+    padding: 14px;
+    gap: 12px 18px;
+  }
+  .sending-group {
+    font-size: 20px;
+  }
+  .sending-reading.is-large .sending-group {
+    font-size: 27px;
+  }
+  .studio-quick-actions.is-sending {
+    top: 6px;
+  }
+}

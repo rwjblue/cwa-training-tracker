@@ -70,14 +70,15 @@ export function usePracticeClock() {
       if (media.current && !media.current.paused) sample(media.current);
       refresh();
     };
-    const hidden = () => {
+    const visibilityChanged = () => {
       if (document.hidden && clock.current.snapshot(performance.now()).recalling) pause();
+      else tick();
     };
     const interval = setInterval(tick, 250);
-    document.addEventListener('visibilitychange', hidden);
+    document.addEventListener('visibilitychange', visibilityChanged);
     return () => {
       clearInterval(interval);
-      document.removeEventListener('visibilitychange', hidden);
+      document.removeEventListener('visibilitychange', visibilityChanged);
     };
   }, []);
   return {

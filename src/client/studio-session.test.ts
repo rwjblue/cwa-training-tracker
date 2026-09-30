@@ -88,6 +88,30 @@ it('captures assignment, actual recording sources and recall without inventing a
   });
 });
 
+it('saves public scales as measured sending practice without unrelated listening speeds', () => {
+  const value = input(42);
+  value.preferences.tool = 'sending';
+  const entry = studioSession(value)!;
+  expect(entry).toMatchObject({
+    kind: 'sending',
+    source: 'timer',
+    minutes: 42 / 60,
+    notes: 'Sending scales',
+    metadata: { practiceTool: 'sending', elapsedSeconds: 42 },
+  });
+  expect(entry.characterWpm).toBeUndefined();
+  expect(entry.effectiveWpm).toBeUndefined();
+  expect(entry.metadata?.practiceMode).toBeUndefined();
+  const storage = {
+    getItem: () => value.scratchpad,
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  };
+  saveStudioNotes('guest', 'public:sending', value.scratchpad, storage);
+  expect(clearSavedStudioNotes('guest', entry, storage)).toBe(true);
+  expect(loadStudioNotes('guest', 'public:sending', storage)).toBe('');
+});
+
 describe('navigation save coordination', () => {
   it('keeps one immutable request through concurrent navigation and an uncertain save retry', async () => {
     const coordinator = new StudioSaveCoordinator();

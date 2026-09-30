@@ -3,7 +3,7 @@ import { WORD_LENGTHS, type PracticeMode, type WordLength } from './audio';
 
 export const PRACTICE_PREFERENCES_KEY = 'cwa.practice.preferences.v1';
 export interface PracticePreferences {
-  tool: 'words' | 'qso' | 'free';
+  tool: 'words' | 'qso' | 'free' | 'sending';
   wordList: WordList;
   wordGap: number;
   shuffleWords: boolean;
@@ -46,7 +46,7 @@ export function normalizePracticePreferences(value: unknown): PracticePreference
   const defaults = DEFAULT_PRACTICE_PREFERENCES;
   const characterWpm = bounded(source.characterWpm, defaults.characterWpm, 5, 50);
   return {
-    tool: ['words', 'qso', 'free'].includes(String(source.tool))
+    tool: ['words', 'qso', 'free', 'sending'].includes(String(source.tool))
       ? (source.tool as PracticePreferences['tool'])
       : source.mode
         ? 'free'

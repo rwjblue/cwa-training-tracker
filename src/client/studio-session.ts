@@ -38,7 +38,9 @@ export function studioSession(
   return validatePracticeSession({
     ...identity,
     date: dateInTimezone(identity.createdAt, timezone),
-    kind: launch?.task?.kind ?? (tool === 'words' ? 'head-copy' : 'listening'),
+    kind:
+      launch?.task?.kind ??
+      (tool === 'sending' ? 'sending' : tool === 'words' ? 'head-copy' : 'listening'),
     lesson: launch?.task?.lesson,
     notes: [
       launch?.task?.title,
@@ -56,26 +58,28 @@ export function studioSession(
           ? preferences.wordList === 'custom'
             ? 'Custom word recognition'
             : WORD_LISTS[preferences.wordList].title
-          : tool === 'qso'
-            ? QSO_TEMPLATES.find((item) => item.id === preferences.qsoScenario)?.title
-            : undefined,
+          : tool === 'sending'
+            ? 'Sending scales'
+            : tool === 'qso'
+              ? QSO_TEMPLATES.find((item) => item.id === preferences.qsoScenario)?.title
+              : undefined,
     ]
       .filter(Boolean)
       .join(' · '),
     minutes: measured.seconds / 60,
-    ...(!assigned
+    ...(!assigned && tool !== 'sending'
       ? { characterWpm, effectiveWpm }
       : activity?.type === 'audio' && playedSpeeds.length === 1
         ? { characterWpm: playedSpeeds[0] }
         : {}),
-    source: assigned ? 'timer' : 'morse',
+    source: assigned || tool === 'sending' ? 'timer' : 'morse',
     metadata: {
       elapsedSeconds: measured.seconds,
       ...(scratchpad ? { scratchpad } : {}),
       recallSeconds: measured.recallSeconds,
       ...(measured.recordings.length ? { recordings: measured.recordings } : {}),
       practiceTool: assigned ? activity?.type : tool,
-      ...(!assigned ? { practiceMode: mode } : {}),
+      ...(!assigned && tool !== 'sending' ? { practiceMode: mode } : {}),
       ...(activity?.type === 'audio'
         ? {
             assignedRecordingUrl: activity.url,
@@ -173,7 +177,7 @@ export function clearSavedStudioNotes(
   const context =
     typeof taskId === 'string' && taskId
       ? taskId
-      : typeof tool === 'string' && ['words', 'qso', 'free'].includes(tool)
+      : typeof tool === 'string' && ['words', 'qso', 'free', 'sending'].includes(tool)
         ? `public:${tool}`
         : typeof explicitContext === 'string' && explicitContext
           ? explicitContext
