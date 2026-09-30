@@ -62,11 +62,32 @@
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
+.copy-comparison-table {
+  display: grid;
+  grid-template-columns:
+    24px
+    minmax(
+      0,
+      min(
+        calc(var(--copy-column-cells) * 1.15ch + (var(--copy-column-cells) - 1) * 1px),
+        calc((100% - 56px) / 2)
+      )
+    )
+    minmax(0, 1fr);
+  column-gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  font-family: var(--font-mono, monospace);
+  font-size: 17px;
+}
 .copy-comparison-columns,
+.copy-comparison-list,
+.copy-comparison-list > li,
 .copy-comparison-row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 12px;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  column-gap: 16px;
   align-items: start;
   min-width: 0;
 }
@@ -74,7 +95,11 @@
   padding: 8px 0;
   border-bottom: 1px solid #c8d0c2;
   font-size: 12px;
+  font-family: var(--font-body, sans-serif);
   color: #596151;
+}
+.copy-comparison-columns strong {
+  white-space: nowrap;
 }
 .copy-comparison-list {
   list-style: none;
@@ -115,6 +140,9 @@
 .copy-string-sent {
   color: #40513b;
 }
+.copy-string-sent .insertion {
+  display: none;
+}
 .copy-string-received .substitution {
   color: #782d1d;
   background: #ffe3d8;
@@ -134,6 +162,7 @@
   grid-column: 2 / -1;
   margin: 2px 0 0;
   font-size: 11px;
+  font-family: var(--font-body, sans-serif);
   line-height: 1.5;
   color: #8a3926;
 }
@@ -190,11 +219,7 @@
     font-size: 12px;
     color: #596151;
   }
-  .copy-comparison-columns,
-  .copy-comparison-row {
-    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 8px;
-  }
+  .copy-comparison-table,
   .copy-comparison-string {
     font-size: 15px;
   }

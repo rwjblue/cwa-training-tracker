@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   COPY_MODES,
-  copyTiming,
   createCopyAttempt,
   currentCopySpeeds,
   defaultCopyRecipe,
@@ -14,11 +13,13 @@ import { copyAttemptSessionFields } from '../shared/copy-report';
 import { dateInTimezone, validatePracticeSession, type PracticeSession } from '../shared/training';
 import type { PlannedTask } from '../shared/plan';
 import { api } from './api';
-import { buildMorseTrack, MorsePlayer } from './audio';
+import { MorsePlayer } from './audio';
+import { buildCopyTrack } from './copy-audio';
 import { CopyClock } from './copy-clock';
 import {
   claimCopyLease,
   clearCopyDraft,
+  copySetupRecipe,
   loadCopyDraft,
   loadCopyPreferences,
   ownsCopyLease,
@@ -74,9 +75,9 @@ function CopyTrainerSession({
   const draftRef = useRef(draft);
   const [recipe, setRecipe] = useState(
     initial?.attempt.recipe ??
-      assignedRecipe ??
-      loadCopyPreferences(scope, 'groups') ??
-      defaultCopyRecipe(),
+      copySetupRecipe(
+        assignedRecipe ?? loadCopyPreferences(scope, 'groups') ?? defaultCopyRecipe(),
+      ),
   );
   const [confirmedCharacters, setConfirmedCharacters] = useState(false);
   const [error, setError] = useState('');
@@ -234,10 +235,6 @@ function CopyTrainerSession({
     autoDeadline.current = undefined;
     try {
       const index = reviewIndex ?? current.attempt.trials.length;
-      const speeds =
-        reviewIndex === undefined
-          ? currentCopySpeeds(current.attempt)
-          : current.attempt.trials[index];
       const r = current.attempt.recipe;
       const key = `${current.attempt.id}:${index}:${reviewIndex === undefined ? 'trial' : 'review'}`;
       // Sample the previous track before changing its position, delay, or review role.
@@ -247,14 +244,7 @@ function CopyTrainerSession({
       if (measured) write(measured);
       reviewAudio.current = reviewIndex !== undefined;
       if (prepared.current !== key) {
-        const naturalGap = copyTiming(speeds.characterWpm, speeds.effectiveWpm).wordGap;
-        const track = buildMorseTrack([{ text: current.attempt.targets[index] }], {
-          characterWpm: speeds.characterWpm,
-          effectiveWpm: speeds.effectiveWpm,
-          frequency: r.toneHz,
-          volume: 0.7,
-          extraWordGap: naturalGap * r.extraWordSpacing,
-        });
+        const track = buildCopyTrack(current.attempt, index);
         delay.current = reviewIndex === undefined ? r.startDelaySeconds : 0;
         const offset = delay.current;
         player.current.prepare(
@@ -357,7 +347,7 @@ function CopyTrainerSession({
   const start = (selected = recipe) => {
     if (!hasControl()) return;
     try {
-      const valid = validateCopyRecipe(selected);
+      const valid = validateCopyRecipe(copySetupRecipe(selected));
       saveCopyPreferences(scope, valid);
       const attempt = createCopyAttempt(valid, {
         id: crypto.randomUUID(),
@@ -477,7 +467,7 @@ function CopyTrainerSession({
     setSaved(false);
     write(undefined);
     clock.current = new CopyClock();
-    setRecipe(nextRecipe);
+    setRecipe(copySetupRecipe(nextRecipe));
     setFeedback('');
     setRevealed(false);
     setError('');
@@ -587,7 +577,9 @@ function CopyTrainerSession({
   const attempt = draft?.attempt;
   const active = attempt?.status === 'active';
   const currentRecipe = attempt?.recipe ?? recipe;
-  const assignmentRecipes = assignedRecipe ? [assignedRecipe, ...(alternatives ?? [])] : [];
+  const assignmentRecipes = assignedRecipe
+    ? [assignedRecipe, ...(alternatives ?? [])].map(copySetupRecipe)
+    : [];
   const assignmentIndex = assignmentRecipes.findIndex((option) =>
     (Object.keys(option) as (keyof CopyRecipe)[]).every(
       (key) => option[key] === currentRecipe[key],
@@ -714,7 +706,10 @@ function CopyTrainerSession({
                   : 'Copy the complete recording'}
               </strong>
               <span>
-                {speeds.characterWpm}/{speeds.effectiveWpm} WPM · {currentRecipe.toneHz} Hz
+                {speeds.characterWpm}/{speeds.effectiveWpm} WPM ·{' '}
+                {currentRecipe.toneMode === 'random'
+                  ? '500–900 Hz random'
+                  : `${currentRecipe.toneHz} Hz`}
               </span>
             </div>
             <div className="copy-playback-controls">

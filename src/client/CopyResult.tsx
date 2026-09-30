@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react';
 import {
+  copyToneHz,
   scoreCopyText,
   summarizeCopyAttempt,
   type CopyAttempt,
@@ -41,6 +43,13 @@ export default function CopyResult({
 }) {
   const result = summarizeCopyAttempt(attempt);
   const continuous = attempt.recipe.mode === 'groups' || attempt.recipe.mode === 'plaintext';
+  const randomTone = attempt.recipe.toneMode === 'random';
+  const itemTones =
+    randomTone && !continuous ? attempt.trials.map((_, index) => copyToneHz(attempt, index)) : [];
+  const groupTones =
+    randomTone && attempt.recipe.mode === 'groups'
+      ? (attempt.targets[0]?.match(/\S+/g) ?? []).map((_, index) => copyToneHz(attempt, 0, index))
+      : [];
   const score =
     continuous && attempt.trials[0]
       ? scoreCopyText(
@@ -188,11 +197,30 @@ export default function CopyResult({
       )}
       <p className="copy-result-notice">
         {attempt.recipe.characterWpm}/{attempt.recipe.effectiveWpm} starting WPM ·{' '}
-        {attempt.recipe.toneHz} Hz
+        {randomTone
+          ? attempt.recipe.mode === 'groups'
+            ? 'Random tone (500–900 Hz per group)'
+            : continuous
+              ? `${copyToneHz(attempt)} Hz (random)`
+              : 'Random tone (500–900 Hz per item)'
+          : `${copyToneHz(attempt)} Hz`}
         {!continuous && ` · ${attempt.recipe.adaptive ? 'Adaptive' : 'Fixed'} speed`}
       </p>
       <details className="copy-result-settings">
         <summary>Round settings</summary>
+        {randomTone && <p>Random pitches stay the same when replayed.</p>}
+        {groupTones.length > 0 && (
+          <p>
+            Group pitch sequence (Hz):{' '}
+            {groupTones.map((tone, index) => `${index + 1}: ${tone}`).join(' · ')}
+          </p>
+        )}
+        {itemTones.length > 0 && (
+          <p>
+            Submitted item tones (Hz):{' '}
+            {itemTones.map((tone, index) => `${index + 1}: ${tone}`).join(' · ')}
+          </p>
+        )}
         {!continuous && (
           <p>
             Correct answers earn speed × length points
@@ -247,6 +275,12 @@ function CharacterComparison({
   unit: 'Group' | 'Word';
 }) {
   const rows = copyComparisonRows(alignment);
+  // Keep the sent column narrow so the copy starts beside it. Extra received
+  // characters can use the remaining width without moving that starting point.
+  const columnCells = Math.min(
+    24,
+    Math.max(4, ...rows.map((row) => row.cells.filter((cell) => cell.expected).length)),
+  );
   const shown = (text: string) => (text === ' ' ? '·' : text);
   return (
     <div className="copy-comparison">
@@ -268,61 +302,70 @@ function CharacterComparison({
           <b>·</b> space
         </span>
       </p>
-      <div className="copy-comparison-columns" aria-hidden="true">
-        <span>#</span>
-        <strong>Sent</strong>
-        <strong>Your copy</strong>
+      <div
+        className="copy-comparison-table"
+        style={{ '--copy-column-cells': columnCells } as CSSProperties}
+      >
+        <div className="copy-comparison-columns" aria-hidden="true">
+          <span>#</span>
+          <strong>Sent</strong>
+          <strong>Your copy</strong>
+        </div>
+        <ol className="copy-comparison-list" aria-label="Character comparison">
+          {rows.map((row) => (
+            <li key={row.number}>
+              <div
+                className="copy-comparison-row"
+                role="group"
+                aria-label={`${unit} ${row.number}`}
+              >
+                <span className="copy-row-number" aria-hidden="true">
+                  {row.number}
+                </span>
+                <span className="sr-only">
+                  {row.edits === 0
+                    ? 'Correct'
+                    : !row.copied.trim()
+                      ? 'Not copied'
+                      : `${row.edits} ${row.edits === 1 ? 'edit' : 'edits'}`}
+                </span>
+                <p className="sr-only">Sent: {row.sent}</p>
+                <p className="sr-only">Your copy: {row.copied || '(Not copied)'}</p>
+                {row.edits > 0 && (
+                  <p className="sr-only">
+                    {row.alignment.map(describeCopyEdit).filter(Boolean).join(' ')}
+                  </p>
+                )}
+                <div className="copy-comparison-string copy-string-sent" aria-hidden="true">
+                  {row.cells.map((item, index) => (
+                    <span className={`copy-comparison-character ${item.kind}`} key={index}>
+                      {shown(item.expected) || '\u00a0'}
+                    </span>
+                  ))}
+                </div>
+                <div className="copy-comparison-string copy-string-received" aria-hidden="true">
+                  {row.cells.map((item, index) => (
+                    <span
+                      className={`copy-comparison-character ${item.kind}`}
+                      key={index}
+                      title={describeCopyEdit(item) || undefined}
+                    >
+                      {item.kind === 'deletion'
+                        ? '−'
+                        : `${item.kind === 'insertion' ? '+' : ''}${shown(item.received)}`}
+                    </span>
+                  ))}
+                </div>
+                {row.boundaryNotes.map((note) => (
+                  <p className="copy-boundary-note" key={note}>
+                    {unit === 'Word' ? note.replaceAll('group', 'word') : note}
+                  </p>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ol>
       </div>
-      <ol className="copy-comparison-list" aria-label="Character comparison">
-        {rows.map((row) => (
-          <li key={row.number}>
-            <div className="copy-comparison-row" role="group" aria-label={`${unit} ${row.number}`}>
-              <span className="copy-row-number" aria-hidden="true">
-                {row.number}
-              </span>
-              <span className="sr-only">
-                {row.edits === 0
-                  ? 'Correct'
-                  : !row.copied.trim()
-                    ? 'Not copied'
-                    : `${row.edits} ${row.edits === 1 ? 'edit' : 'edits'}`}
-              </span>
-              <p className="sr-only">Sent: {row.sent}</p>
-              <p className="sr-only">Your copy: {row.copied || '(Not copied)'}</p>
-              {row.edits > 0 && (
-                <p className="sr-only">
-                  {row.alignment.map(describeCopyEdit).filter(Boolean).join(' ')}
-                </p>
-              )}
-              <div className="copy-comparison-string copy-string-sent" aria-hidden="true">
-                {row.cells.map((item, index) => (
-                  <span className={`copy-comparison-character ${item.kind}`} key={index}>
-                    {shown(item.expected) || '\u00a0'}
-                  </span>
-                ))}
-              </div>
-              <div className="copy-comparison-string copy-string-received" aria-hidden="true">
-                {row.cells.map((item, index) => (
-                  <span
-                    className={`copy-comparison-character ${item.kind}`}
-                    key={index}
-                    title={describeCopyEdit(item) || undefined}
-                  >
-                    {item.kind === 'deletion'
-                      ? '−'
-                      : `${item.kind === 'insertion' ? '+' : ''}${shown(item.received)}`}
-                  </span>
-                ))}
-              </div>
-              {row.boundaryNotes.map((note) => (
-                <p className="copy-boundary-note" key={note}>
-                  {unit === 'Word' ? note.replaceAll('group', 'word') : note}
-                </p>
-              ))}
-            </div>
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }

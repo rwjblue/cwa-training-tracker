@@ -3,6 +3,7 @@ import { COPY_MORSE, COPY_WORD_COLLECTIONS, COPY_SENTENCES } from './copy-conten
 import {
   copyTextSeconds,
   copyTiming,
+  copyToneHz,
   createCopyAttempt,
   currentCopySpeeds,
   defaultCopyRecipe,
@@ -15,6 +16,68 @@ import {
 } from './copy-practice.ts';
 
 const now = '2026-09-29T12:00:00.000Z';
+
+describe('copy tone evidence', () => {
+  it('defaults new recipes to random while preserving legacy fixed recipes and saved JSON', () => {
+    for (const mode of ['groups', 'words', 'callsigns', 'plaintext'] as const)
+      expect(defaultCopyRecipe(mode).toneMode).toBe('random');
+    const { toneMode: _toneMode, ...legacyRecipe } = defaultCopyRecipe();
+    legacyRecipe.lengthMode = 'count';
+    legacyRecipe.groupCount = 2;
+    const legacy = submitCopyAnswer(
+      createCopyAttempt(legacyRecipe, { id: 'old-count-round', seed: 'old-seed', now }),
+      '',
+      { now },
+    );
+    const storedJson = JSON.stringify(legacy);
+    const restored = validateCopyAttempt(JSON.parse(storedJson));
+    expect(JSON.stringify(restored)).toBe(storedJson);
+    expect(Object.hasOwn(restored.recipe, 'toneMode')).toBe(false);
+    expect(restored.recipe.lengthMode).toBe('count');
+    expect(restored.targets[0].split(' ')).toHaveLength(2);
+    expect(copyToneHz(restored, 0, 0)).toBe(600);
+    expect(copyToneHz(restored, 0, 1)).toBe(600);
+    expect(validateCopyRecipe({ mode: 'groups' })).not.toHaveProperty('toneMode');
+    expect(() => validateCopyRecipe({ mode: 'groups', toneMode: 'sweep' })).toThrow('tone mode');
+    const fixed = createCopyAttempt(
+      { ...defaultCopyRecipe('words'), toneMode: 'fixed', toneHz: 700 },
+      { id: 'fixed-tone', seed: 'fixed-tone', now },
+    );
+    expect(fixed.targets.every((_, index) => copyToneHz(fixed, index) === 700)).toBe(true);
+  });
+
+  it('keeps seeded pitches in range and stable across replay, recovery, and unrelated generation', () => {
+    for (const mode of ['groups', 'words', 'callsigns', 'plaintext'] as const) {
+      const recipe = { ...defaultCopyRecipe(mode), lengthMode: 'count' as const, groupCount: 4 };
+      const initial = createCopyAttempt(recipe, { id: `tone-${mode}`, seed: 's'.repeat(100), now });
+      const tones =
+        mode === 'groups'
+          ? initial.targets[0].split(' ').map((_, index) => copyToneHz(initial, 0, index))
+          : initial.targets.map((_, index) => copyToneHz(initial, index));
+      for (const tone of tones) {
+        expect(Number.isInteger(tone)).toBe(true);
+        expect(tone).toBeGreaterThanOrEqual(500);
+        expect(tone).toBeLessThanOrEqual(900);
+      }
+      expect(
+        generateCopyTargets({ ...recipe, toneMode: 'fixed', toneHz: 700 }, initial.seed),
+      ).toEqual(initial.targets);
+      generateCopyTargets(recipe, 'unrelated-generation');
+      const restored = validateCopyAttempt(
+        JSON.parse(
+          JSON.stringify(submitCopyAnswer(initial, initial.targets[0], { replayCount: 3, now })),
+        ),
+      );
+      const recoveredTones =
+        mode === 'groups'
+          ? restored.targets[0].split(' ').map((_, index) => copyToneHz(restored, 0, index))
+          : restored.targets.map((_, index) => copyToneHz(restored, index));
+      expect(recoveredTones).toEqual(tones);
+      if (mode === 'plaintext') expect(copyToneHz(restored, 0, 5)).toBe(tones[0]);
+      expect(() => copyToneHz(restored, restored.targets.length)).toThrow('Tone target index');
+    }
+  });
+});
 
 describe('native copy generation', () => {
   it('generates reproducible custom groups and rounds duration to a whole group', () => {

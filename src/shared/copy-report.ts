@@ -1,4 +1,10 @@
-import { summarizeCopyAttempt, validateCopyAttempt, type CopyAttempt } from './copy-practice.ts';
+import {
+  copyToneHz,
+  normalizeCopyText,
+  summarizeCopyAttempt,
+  validateCopyAttempt,
+  type CopyAttempt,
+} from './copy-practice.ts';
 import type { PracticeSession } from './training';
 
 const displayNumber = (value: number) => Number(value.toFixed(2)).toString();
@@ -69,6 +75,23 @@ export function copyAttemptReportDetails(attempt: CopyAttempt): string[] {
       `${attempt.recipe.callFilter} calls · ${attempt.recipe.adaptive ? 'adaptive' : 'fixed'} speed`,
     );
   }
+  if (attempt.recipe.toneMode === 'random') {
+    if (attempt.recipe.mode === 'groups') {
+      const tones = normalizeCopyText(attempt.targets[0])
+        .split(' ')
+        .map((_, index) => copyToneHz(attempt, 0, index));
+      lines.push(
+        `Tone: random 500–900 Hz per group · recording group tones (Hz): ${tones.join(', ')}`,
+      );
+    } else if (attempt.recipe.mode === 'plaintext') {
+      lines.push(`Tone: random 500–900 Hz per recording · ${copyToneHz(attempt)} Hz`);
+    } else {
+      const tones = attempt.trials.map((_, index) => copyToneHz(attempt, index));
+      lines.push(
+        `Tone: random 500–900 Hz per ${attempt.recipe.mode === 'words' ? 'word' : 'call'}${tones.length ? ` · submitted trial tones (Hz): ${tones.join(', ')}` : ''}`,
+      );
+    }
+  } else lines.push(`Tone: fixed ${attempt.recipe.toneHz} Hz`);
   if (attempt.trials.length) {
     const speeds = [
       ...new Set(attempt.trials.map((trial) => `${trial.characterWpm}/${trial.effectiveWpm}`)),

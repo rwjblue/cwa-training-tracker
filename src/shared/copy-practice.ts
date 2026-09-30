@@ -10,6 +10,8 @@ export interface CopyRecipe {
   mode: CopyMode;
   characterWpm: number;
   effectiveWpm: number;
+  /** Omitted in legacy recipes, which must retain their fixed tone and JSON shape. */
+  toneMode?: 'fixed' | 'random';
   toneHz: number;
   extraWordSpacing: number;
   startDelaySeconds: number;
@@ -68,6 +70,8 @@ export interface CopyAlignment {
 
 export const COPY_MODES: readonly CopyMode[] = ['groups', 'words', 'callsigns', 'plaintext'];
 export const COPY_MAX_TEXT = 2000;
+export const COPY_RANDOM_TONE_MIN_HZ = 500;
+export const COPY_RANDOM_TONE_MAX_HZ = 900;
 const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const digits = '0123456789';
 
@@ -76,6 +80,7 @@ export function defaultCopyRecipe(mode: CopyMode = 'groups'): CopyRecipe {
     mode,
     characterWpm: 25,
     effectiveWpm: 10,
+    toneMode: 'random',
     toneHz: 600,
     extraWordSpacing: 0,
     startDelaySeconds: 1,
@@ -137,6 +142,9 @@ export function validateCopyRecipe(value: unknown): CopyRecipe {
     mode,
     characterWpm: numeric(p.characterWpm, 'Character speed', 5, 100),
     effectiveWpm: numeric(p.effectiveWpm, 'Effective speed', 1, 100),
+    ...(input.toneMode === undefined
+      ? {}
+      : { toneMode: option(input.toneMode, ['fixed', 'random'] as const, 'tone mode') }),
     toneHz: numeric(p.toneHz, 'Tone', 200, 1200),
     extraWordSpacing: numeric(p.extraWordSpacing, 'Extra word spacing', 0, 40),
     startDelaySeconds: numeric(p.startDelaySeconds, 'Start delay', 0, 20),
@@ -220,14 +228,40 @@ export function copyTextSeconds(
 }
 
 /** Stable non-cryptographic PRNG: reproducible exercises, never credentials or secrets. */
-function randomFromSeed(seed: string) {
+function randomFromSeed(seed: string, namespace = '') {
   text(seed, 'Exercise seed', 100, true);
   let state = 2166136261;
-  for (const c of seed) state = Math.imul(state ^ c.codePointAt(0)!, 16777619) >>> 0;
+  for (const c of namespace + seed) state = Math.imul(state ^ c.codePointAt(0)!, 16777619) >>> 0;
   return (length: number) => {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
     return Math.floor((state / 4294967296) * length);
   };
+}
+
+/**
+ * Reproducible pitch for version-1 attempts. Keep this namespace and algorithm
+ * stable: the saved seed and recipe are the pitch evidence for replay/recovery.
+ * Code groups change per group; words/calls per target; plain text per recording.
+ * A separate namespace leaves the target generator's random sequence untouched.
+ */
+export function copyToneHz(
+  attempt: Pick<CopyAttempt, 'recipe' | 'seed' | 'targets'>,
+  targetIndex = 0,
+  wordIndex = 0,
+): number {
+  numeric(targetIndex, 'Tone target index', 0, attempt.targets.length - 1, true);
+  numeric(wordIndex, 'Tone group index', 0, COPY_MAX_TEXT, true);
+  const { recipe } = attempt;
+  if (recipe.mode === 'groups') {
+    const groups = normalizeCopyText(attempt.targets[targetIndex]).split(' ');
+    numeric(wordIndex, 'Tone group index', 0, groups.length - 1, true);
+  } else if (recipe.mode !== 'plaintext' && wordIndex !== 0) {
+    throw new Error('Word and callsign targets each have one tone.');
+  }
+  if (recipe.toneMode !== 'random') return numeric(recipe.toneHz, 'Tone', 200, 1200);
+  const groupIndex = recipe.mode === 'groups' ? wordIndex : 0;
+  const random = randomFromSeed(attempt.seed, `copy-tone-v1\0${targetIndex}\0${groupIndex}\0`);
+  return COPY_RANDOM_TONE_MIN_HZ + random(COPY_RANDOM_TONE_MAX_HZ - COPY_RANDOM_TONE_MIN_HZ + 1);
 }
 
 export function generateCopyTargets(value: CopyRecipe, seed: string): string[] {

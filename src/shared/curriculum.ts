@@ -108,7 +108,7 @@ function practiceDetails(
             durationSeconds: 60,
             startDelaySeconds: 2,
           }
-        : validateCopyRecipe(row.recipe);
+        : validateCopyRecipe({ toneMode: 'random', ...row.recipe });
     const alternatives =
       row.kind === 'icr'
         ? [
@@ -122,7 +122,7 @@ function practiceDetails(
               adaptive: false,
             },
           ]
-        : row.alternatives?.map(validateCopyRecipe);
+        : row.alternatives?.map((option) => validateCopyRecipe({ toneMode: 'random', ...option }));
     const exercise: Extract<PracticeExercise, { type: 'copy' }> = {
       type: 'copy',
       url: sourceUrl,

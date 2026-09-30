@@ -133,7 +133,10 @@ to cover guest recovery/sign-in, a complete 25-word round, uncertain-save retry,
 callsign controls, punctuation, downloads, curriculum presets and report evidence.
 The Start regression checks the same answer field stays in place, receives focus
 during the countdown, and retains the first typed characters into playback.
-Comparison tests retain the complete edit alignment across missing group boundaries.
+Comparison tests retain the complete edit alignment across missing group boundaries
+and keep columns adjacent with long extra input wrapping. Pitch tests verify
+500–900 Hz per-group audio, fixed tones, and repeatable replay/recovery without
+changing timing. Preserve legacy fixed-tone/count recipes and pending-save JSON.
 Never infer listening credit from a mocked timer. Corpus/generator versions are
 part of saved-result validation: a future revision must preserve validation of
 already-saved versions rather than silently regenerating different targets.

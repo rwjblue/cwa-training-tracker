@@ -3,14 +3,33 @@ import { readFile } from 'node:fs/promises';
 import { expectAccessible, signIn } from './helpers';
 import {
   createCopyAttempt,
+  copyToneHz,
   defaultCopyRecipe,
+  generateCopyTargets,
+  scoreCopyText,
   submitCopyAnswer,
 } from '../src/shared/copy-practice';
 import { copyAttemptSessionFields } from '../src/shared/copy-report';
 import { dateInTimezone } from '../src/shared/training';
 
 async function openCopy(page: Page) {
+  const observeAudio = () => {
+    // Observe actual rendered audio without fetching blob: URLs (blocked by CSP)
+    // or replacing native playback, its timing, or the generated PCM.
+    const browserWindow = window as Window & { copyAudioBlobs?: Map<string, Blob> };
+    if (browserWindow.copyAudioBlobs) return;
+    const observed = new Map<string, Blob>();
+    browserWindow.copyAudioBlobs = observed;
+    const createObjectURL = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (object) => {
+      const url = createObjectURL(object);
+      if (object instanceof Blob && object.type === 'audio/wav') observed.set(url, object);
+      return url;
+    };
+  };
+  await page.addInitScript(observeAudio);
   await page.goto('/#practice');
+  await page.evaluate(observeAudio);
   await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Copy practice', exact: true })).toBeVisible();
 }
@@ -20,11 +39,63 @@ async function configureShortGroups(page: Page) {
   await page.getByRole('button', { name: 'Clear selection', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Character E', exact: true }).check();
   await page.getByRole('combobox', { name: 'Characters per group', exact: true }).selectOption('1');
-  await page.getByRole('combobox', { name: 'Practice length', exact: true }).selectOption('count');
-  await page.getByRole('spinbutton', { name: 'Number of groups', exact: true }).fill('10');
+  await expect(page.getByRole('combobox', { name: 'Practice length', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('spinbutton', { name: 'Number of groups', exact: true })).toHaveCount(
+    0,
+  );
+  await page.getByRole('combobox', { name: 'Target duration', exact: true }).selectOption('10');
   await page.getByRole('spinbutton', { name: /^Effective speed/ }).fill('25');
   await page.getByText('Sound and options', { exact: true }).click();
   await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('2');
+}
+
+/** Measure the actual generated PCM, not only the selected tone label. */
+async function recordingTone(page: Page, toneCount = 1) {
+  return page
+    .getByLabel('Copy practice audio', { exact: true })
+    .evaluate(async (element: HTMLAudioElement, count: number) => {
+      const blob = (window as Window & { copyAudioBlobs?: Map<string, Blob> }).copyAudioBlobs?.get(
+        element.src,
+      );
+      if (!blob) throw new Error('No generated audio captured.');
+      const bytes = await blob.arrayBuffer();
+      const view = new DataView(bytes);
+      const rate = view.getUint32(24, true);
+      if (view.getUint16(22, true) !== 1 || view.getUint16(34, true) !== 16)
+        throw new Error('Expected mono 16-bit PCM practice audio.');
+      const samples = (bytes.byteLength - 44) / 2;
+      const sample = (index: number) => view.getInt16(44 + index * 2, true);
+      const starts: number[] = [];
+      let lastAudible = -Infinity;
+      for (let index = 1; index < samples && starts.length < count; index++) {
+        if (Math.abs(sample(index)) < 500) continue;
+        if (index - lastAudible > rate / 200) starts.push(index);
+        lastAudible = index;
+      }
+      const tones = starts.map((start) => {
+        const crossings: number[] = [];
+        for (let index = start; index < Math.min(samples, start + rate / 10); index++) {
+          const previous = sample(index - 1);
+          const current = sample(index);
+          if (previous <= 0 && current > 0) {
+            const at = index - 1 - previous / (current - previous);
+            if (crossings.length && at - crossings[crossings.length - 1] > rate / 200) break;
+            crossings.push(at);
+          }
+        }
+        if (crossings.length < 3) throw new Error('No measurable Morse tone found.');
+        return (rate * (crossings.length - 1)) / (crossings[crossings.length - 1] - crossings[0]);
+      });
+      if (tones.length !== count) throw new Error('Not enough Morse tones in this recording.');
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return {
+        hz: tones[0],
+        tones,
+        digest: [...new Uint8Array(digest)]
+          .map((byte) => byte.toString(16).padStart(2, '0'))
+          .join(''),
+      };
+    }, toneCount);
 }
 
 async function startWithoutMovingCopyField(
@@ -79,6 +150,7 @@ test('guest copy survives reload and signs in to save one measured result with v
   await page.screenshot({ path: '.tmp/copy-default-setup-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1280, height: 900 });
   await configureShortGroups(page);
+  await expect(page.getByRole('combobox', { name: 'Tone', exact: true })).toHaveValue('random');
   await expectAccessible(page, 'copy-setup-desktop');
   await page.screenshot({ path: '.tmp/copy-setup-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -86,11 +158,32 @@ test('guest copy survives reload and signs in to save one measured result with v
   await startWithoutMovingCopyField(page, 'Start code groups', 'E ');
   const audio = page.getByLabel('Copy practice audio', { exact: true });
   await expect(audio).toHaveAttribute('src', /^blob:/);
+  const randomTone = await recordingTone(page, 2);
+  for (const hz of randomTone.tones) {
+    expect(hz).toBeGreaterThanOrEqual(499.5);
+    expect(hz).toBeLessThanOrEqual(900.5);
+  }
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(0);
-  await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
-  const answer = `${Array(9).fill('E').join(' ')} T`;
+  await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled({
+    timeout: 15_000,
+  });
+  const target = generateCopyTargets(
+    {
+      ...defaultCopyRecipe(),
+      groupKind: 'custom',
+      customCharacters: 'E',
+      groupLength: 1,
+      effectiveWpm: 25,
+      durationSeconds: 10,
+      lengthMode: 'duration',
+    },
+    'e-only',
+  )[0];
+  const groupCount = target.split(' ').length;
+  const answer = `${target.slice(0, -1)}T`;
+  const score = scoreCopyText(target, answer);
   await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill(answer);
   await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
   await page.reload();
@@ -99,8 +192,8 @@ test('guest copy survives reload and signs in to save one measured result with v
   await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   await page.getByRole('button', { name: 'Check copy', exact: true }).click();
-  await expect(page.locator('.copy-result-stats')).toContainText('90%');
-  await expect(page.getByRole('group', { name: 'Group 10', exact: true })).toContainText(
+  await expect(page.locator('.copy-result-stats')).toContainText(`${score.accuracy}%`);
+  await expect(page.getByRole('group', { name: `Group ${groupCount}`, exact: true })).toContainText(
     'Changed E to T.',
   );
   await expect(
@@ -115,22 +208,25 @@ test('guest copy survives reload and signs in to save one measured result with v
   await page.screenshot({ path: '.tmp/copy-result-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Sign in to save result', exact: true }).click();
   await signIn(page, { dialogAlreadyOpen: true });
-  await expect(page.getByRole('dialog')).toContainText('90%');
+  await expect(page.getByRole('dialog')).toContainText(`${score.accuracy}%`);
   await expect(page.getByLabel(/^Time practiced/)).toHaveAttribute('readonly', '');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   const entry = entries[0];
-  expect(entry.accuracy).toBe(90);
+  expect(entry.accuracy).toBe(score.accuracy);
   expect(entry.metadata.copyAttempt.trials[0].answer).toBe(answer);
-  expect(entry.metadata.copyAttempt.audioSeconds).toBeGreaterThan(0);
-  expect(entry.metadata.copyAttempt.audioSeconds).toBeLessThan(5);
+  expect(entry.metadata.copyAttempt.audioSeconds).toBeGreaterThan(8);
+  expect(entry.metadata.copyAttempt.audioSeconds).toBeLessThan(12);
   expect(entry.metadata.copyAttempt.interruptionCount).toBeGreaterThan(0);
+  randomTone.tones.forEach((hz, index) => {
+    expect(Math.abs(hz - copyToneHz(entry.metadata.copyAttempt, 0, index))).toBeLessThan(1);
+  });
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
   await page.getByRole('button', { name: 'Practice log', exact: true }).click();
   await page.getByText('Code groups result', { exact: true }).click();
-  await expect(page.locator('.session-copy-result')).toContainText('90%');
+  await expect(page.locator('.session-copy-result')).toContainText(`${score.accuracy}%`);
   await expectAccessible(page, 'copy-history-mobile');
   await page.screenshot({ path: '.tmp/copy-history-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
@@ -138,7 +234,7 @@ test('guest copy survives reload and signs in to save one measured result with v
   await page.getByRole('button', { name: 'Practice report', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Code groups · completed');
   await expect(page.getByRole('dialog')).toContainText(
-    'Native copy: 1 edits · 10% errors · 90% accuracy',
+    `Native copy: 1 edits · ${score.errorPercent}% errors · ${score.accuracy}% accuracy`,
   );
   await expect(page.getByRole('dialog')).toContainText('Actual character/effective WPM: 25/25');
   await expect(page.getByRole('dialog')).toContainText('Measured time:');
@@ -242,7 +338,7 @@ test('authenticated word round completes all trials and retries an uncertain sav
   await page.screenshot({ path: '.tmp/copy-assignment-desktop.png', fullPage: true });
 });
 
-test('group feedback preserves later matches when a whole middle group was omitted', async ({
+test('group feedback keeps adjacent columns and later matches after omissions and extra input', async ({
   page,
   context,
 }) => {
@@ -309,12 +405,80 @@ test('group feedback preserves later matches when a whole middle group was omitt
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
+    const columnGap = await later.evaluate((row, sent) => {
+      const columns = [...row.children].filter(
+        (element) => element.getAttribute('aria-hidden') === 'true' && element.textContent === sent,
+      );
+      const sentEnd = columns[0].lastElementChild!.getBoundingClientRect().right;
+      const copiedStart = columns[1].firstElementChild!.getBoundingClientRect().left;
+      return copiedStart - sentEnd;
+    }, groups[2]);
+    expect(columnGap).toBeGreaterThanOrEqual(0);
+    expect(columnGap).toBeLessThanOrEqual(32);
     await page.screenshot({
       path: `.tmp/copy-omitted-group-${viewport.width}.png`,
       fullPage: true,
     });
   }
   await expectAccessible(page, 'copy-omitted-group-mobile');
+  // A separate, unambiguous insertion fixture checks wrapping without changing
+  // the globally optimal alignment of the omission example above.
+  const shortInitial = createCopyAttempt(
+    { ...initial.recipe, groupLength: 3 },
+    {
+      id: initial.id,
+      seed: initial.seed,
+      now: createdAt,
+    },
+  );
+  const extraAttempt = {
+    ...submitCopyAnswer(shortInitial, `${shortInitial.targets[0]} ${'X'.repeat(100)}`, {
+      now: endedAt,
+    }),
+    audioSeconds: 20,
+    answerSeconds: 5,
+  };
+  const replacement = await context.request.put(`/api/entries/copy:${initial.id}`, {
+    headers: { Origin: new URL(page.url()).origin },
+    data: {
+      ...copyAttemptSessionFields(extraAttempt),
+      date: endedAt.slice(0, 10),
+      kind: 'icr',
+      notes: 'Excess copied text wraps.',
+    },
+  });
+  expect(replacement.ok()).toBe(true);
+  await page.reload();
+  await page.getByText('Code groups result', { exact: true }).click();
+  await expect(comparison.getByRole('group', { name: 'Group 4', exact: true })).toContainText(
+    'Extra X.',
+  );
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    const columnGap = await comparison
+      .getByRole('group', { name: 'Group 1', exact: true })
+      .evaluate((row, sent) => {
+        const columns = [...row.children].filter(
+          (element) =>
+            element.getAttribute('aria-hidden') === 'true' && element.textContent === sent,
+        );
+        const sentEnd = columns[0].lastElementChild!.getBoundingClientRect().right;
+        const copiedStart = columns[1].firstElementChild!.getBoundingClientRect().left;
+        return copiedStart - sentEnd;
+      }, shortInitial.targets[0].split(' ')[0]);
+    expect(columnGap).toBeGreaterThanOrEqual(0);
+    expect(columnGap).toBeLessThanOrEqual(32);
+    const extraRow = await comparison
+      .getByRole('group', { name: 'Group 4', exact: true })
+      .boundingBox();
+    // Extra characters should wrap across available space, not form a tall,
+    // two-character column beside an otherwise empty comparison.
+    await page.screenshot({ path: `.tmp/copy-extra-input-${width}.png`, fullPage: true });
+    expect(extraRow!.height).toBeLessThan(width === 390 ? 700 : 200);
+  }
 });
 
 test('assigned copy alternatives stay selected when a round is recovered and reopened', async ({
@@ -411,7 +575,9 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.screenshot({ path: '.tmp/copy-calls-setup-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Start callsign copy', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Check & next', exact: true })).toBeEnabled();
+  const firstPlay = await recordingTone(page);
   await page.getByRole('button', { name: 'Play again', exact: true }).click();
+  expect((await recordingTone(page)).digest).toBe(firstPlay.digest);
   await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill('BAD');
   await page.getByRole('textbox', { name: 'Your copy', exact: true }).press('Enter');
   await expect(page.getByText('Call 1 of 25', { exact: true })).toBeVisible();
@@ -436,8 +602,11 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.getByRole('spinbutton', { name: /^Character speed/ }).fill('100');
   await page.getByRole('spinbutton', { name: /^Effective speed/ }).fill('100');
   await page.getByText('Sound and options', { exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tone', exact: true }).selectOption('fixed');
+  await page.getByRole('spinbutton', { name: 'Tone frequency Hz', exact: true }).fill('700');
   await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
   await page.getByRole('button', { name: 'Start plain text', exact: true }).click();
+  expect(Math.abs((await recordingTone(page)).hz - 700)).toBeLessThan(1);
   await page.getByRole('button', { name: 'Reveal answer', exact: true }).click();
   const target = await page
     .locator('.copy-revealed')

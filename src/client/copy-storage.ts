@@ -91,6 +91,15 @@ export function clearCopyDraft(scope: string, attemptId: string) {
   }
 }
 
+/** New rounds use current defaults; existing attempt recipes are never migrated. */
+export function copySetupRecipe(recipe: CopyRecipe): CopyRecipe {
+  return {
+    ...recipe,
+    toneMode: recipe.toneMode ?? 'random',
+    ...(recipe.mode === 'groups' ? { lengthMode: 'duration' as const } : {}),
+  };
+}
+
 export function loadCopyPreferences(
   scope: string,
   mode: CopyRecipe['mode'],
@@ -98,7 +107,7 @@ export function loadCopyPreferences(
   try {
     const raw = localStorage.getItem(`${copyStorageKey(scope)}:settings:${mode}`);
     const recipe = raw ? validateCopyRecipe(JSON.parse(raw)) : undefined;
-    return recipe?.mode === mode ? recipe : undefined;
+    return recipe?.mode === mode ? copySetupRecipe(recipe) : undefined;
   } catch {
     return;
   }

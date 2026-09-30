@@ -90,40 +90,28 @@ export default function CopySettings({
                 <option value="random">Random (2–7)</option>
               </select>
             </label>
-            <label className="field">
-              <span className="copy-setting-label">Practice length</span>
-              <select
-                value={recipe.lengthMode}
-                onChange={(e) => change({ lengthMode: e.target.value as CopyRecipe['lengthMode'] })}
-              >
-                <option value="duration">By duration</option>
-                <option value="count">By group count</option>
-              </select>
-            </label>
-            {recipe.lengthMode === 'duration' ? (
+            {disabled && recipe.lengthMode === 'count' ? (
+              <div className="field">
+                <span className="copy-setting-label">Round length</span>
+                <output className="copy-settings-value">{recipe.groupCount} groups</output>
+              </div>
+            ) : (
               <label className="field">
                 <span className="copy-setting-label">Target duration</span>
                 <select
                   value={recipe.durationSeconds}
-                  onChange={(e) => change({ durationSeconds: Number(e.target.value) })}
+                  onChange={(e) =>
+                    change({ lengthMode: 'duration', durationSeconds: Number(e.target.value) })
+                  }
                 >
-                  {[60, 120, 180, 300, 600].map((seconds) => (
+                  {[10, 60, 120, 180, 300, 600].map((seconds) => (
                     <option key={seconds} value={seconds}>
-                      {seconds / 60} {seconds === 60 ? 'minute' : 'minutes'}
+                      {seconds < 60
+                        ? `${seconds} seconds`
+                        : `${seconds / 60} ${seconds === 60 ? 'minute' : 'minutes'}`}
                     </option>
                   ))}
                 </select>
-              </label>
-            ) : (
-              <label className="field">
-                <span className="copy-setting-label">Number of groups</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={recipe.groupCount}
-                  onChange={(e) => change({ groupCount: Number(e.target.value) })}
-                />
               </label>
             )}
           </>
@@ -253,19 +241,31 @@ export default function CopySettings({
       <details className="copy-extra-settings">
         <summary>Sound and options</summary>
         <div className="copy-settings-grid copy-settings-secondary">
-          <label className="field">
-            <span className="copy-setting-label">
-              Tone <span className="label-hint">Hz</span>
-            </span>
-            <input
-              type="number"
-              min="200"
-              max="1200"
-              step="10"
-              value={recipe.toneHz}
-              onChange={(e) => change({ toneHz: Number(e.target.value) })}
-            />
+          <label className="field copy-tone-mode">
+            <span className="copy-setting-label">Tone</span>
+            <select
+              value={recipe.toneMode ?? 'fixed'}
+              onChange={(e) => change({ toneMode: e.target.value as CopyRecipe['toneMode'] })}
+            >
+              <option value="random">Random (500–900 Hz)</option>
+              <option value="fixed">Fixed</option>
+            </select>
           </label>
+          {recipe.toneMode !== 'random' && (
+            <label className="field">
+              <span className="copy-setting-label">
+                Tone frequency <span className="label-hint">Hz</span>
+              </span>
+              <input
+                type="number"
+                min="200"
+                max="1200"
+                step="10"
+                value={recipe.toneHz}
+                onChange={(e) => change({ toneHz: Number(e.target.value) })}
+              />
+            </label>
+          )}
           <label className="field">
             <span className="copy-setting-label">Extra word spacing</span>
             <input

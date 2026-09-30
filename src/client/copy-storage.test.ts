@@ -91,6 +91,39 @@ describe('native copy recovery', () => {
     expect(loadCopyDraft('account')).toBeUndefined();
   });
 
+  it('migrates future settings to duration and random tone without changing old drafts', () => {
+    const legacy = draft();
+    delete legacy.attempt.recipe.toneMode;
+    saveCopyDraft('guest', legacy);
+    saveCopyPreferences('guest', legacy.attempt.recipe);
+    const settings = loadCopyPreferences('guest', 'groups');
+    expect(settings).toMatchObject({ lengthMode: 'duration', toneMode: 'random' });
+    expect(loadCopyDraft('guest')?.attempt).toEqual(legacy.attempt);
+    expect(loadCopyDraft('guest')?.attempt.recipe).not.toHaveProperty('toneMode');
+    saveCopyPreferences('guest', { ...settings!, toneMode: 'fixed', toneHz: 725 });
+    expect(loadCopyPreferences('guest', 'groups')).toMatchObject({
+      toneMode: 'fixed',
+      toneHz: 725,
+    });
+  });
+
+  it('retains a legacy pending save without adding random-tone metadata', () => {
+    const current = draft();
+    delete current.attempt.recipe.toneMode;
+    current.attempt = submitCopyAnswer(current.attempt, current.attempt.targets[0], {
+      now: current.attempt.updatedAt,
+    });
+    current.pending = validatePracticeSession({
+      ...copyAttemptSessionFields(current.attempt),
+      date: '2026-09-29',
+      kind: 'icr',
+      notes: current.notes,
+    });
+    saveCopyDraft('account', current);
+    expect(loadCopyDraft('account')?.pending).toEqual(current.pending);
+    expect(loadCopyDraft('account')?.attempt.recipe).not.toHaveProperty('toneMode');
+  });
+
   it('rejects malformed recovery, impossible answer origins, and settings for another mode', () => {
     for (const bad of [
       { ...draft(), trialAnswerStartedAt: 4 },

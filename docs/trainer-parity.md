@@ -40,7 +40,11 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   Fundamental blocks. Typed answers, grading, actual time, private evidence,
   recovery and report details are present. Setup and typing share one workspace;
   Start focuses the existing answer field immediately. Results compare transmitted
-  groups on separate aligned rows, including missing groups and extra input.
+  groups on separate aligned rows with adjacent columns, including missing groups
+  and extra input. New group rounds use duration only. Random 500–900 Hz pitch
+  is the default, changing per group or word/call and retained on replay/recovery;
+  plain text keeps one pitch for the recording. Legacy fixed-tone/count results
+  remain readable and recoverable.
   [Copy trainer](../src/client/CopyTrainer.tsx),
   [domain](../src/shared/copy-practice.ts), [scope and differences](lcwo-native-trainers-proposal.md).
 - **Word and QSO listening:** the same 70 unique common QSO words and 30 common

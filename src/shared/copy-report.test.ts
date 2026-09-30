@@ -1,10 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from './copy-practice';
+import {
+  copyToneHz,
+  createCopyAttempt,
+  defaultCopyRecipe,
+  submitCopyAnswer,
+} from './copy-practice';
 import { copyAttemptReportDetails, copyAttemptSessionFields } from './copy-report';
 import { weeklyReport } from './plan';
 import { DEFAULT_PROFILE, validatePracticeSession } from './training';
 
 describe('native copy report evidence', () => {
+  it('reports reproducible group and submitted-trial pitches while legacy tones stay fixed', () => {
+    const groups = createCopyAttempt(
+      { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 2 },
+      { id: 'group-tones', seed: 'group-tones', now: '2026-09-28T12:00:00.000Z' },
+    );
+    expect(copyAttemptReportDetails(groups)).toContain(
+      `Tone: random 500–900 Hz per group · recording group tones (Hz): ${copyToneHz(groups, 0, 0)}, ${copyToneHz(groups, 0, 1)}`,
+    );
+    let words = createCopyAttempt(defaultCopyRecipe('words'), {
+      id: 'word-tones',
+      seed: 'word-tones',
+      now: '2026-09-28T12:00:00.000Z',
+    });
+    words = submitCopyAnswer(words, words.targets[0], { now: '2026-09-28T12:00:01.000Z' });
+    expect(copyAttemptReportDetails(words)).toContain(
+      `Tone: random 500–900 Hz per word · submitted trial tones (Hz): ${copyToneHz(words, 0)}`,
+    );
+    const { toneMode: _toneMode, ...legacyRecipe } = groups.recipe;
+    expect(copyAttemptReportDetails({ ...groups, recipe: legacyRecipe })).toContain(
+      'Tone: fixed 600 Hz',
+    );
+  });
+
   it('prints individual whole attempts, their actual speeds and explicit partial status', () => {
     const recipe = {
       ...defaultCopyRecipe('words'),

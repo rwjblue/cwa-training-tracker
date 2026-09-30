@@ -1,19 +1,33 @@
 # Native copy trainers: LCWO research and proposal
 
-Research date: **September 29, 2026**. Status: **core implementation in this
-checkout with Chromium browser acceptance complete; not deployed**. The research
-and original delivery estimates below explain the design, not unfinished scope.
+Research date: **September 29, 2026**. Status: **native trainers implemented**.
+The research and original delivery estimates below explain the design, not
+unfinished scope.
 
 ## Implementation status
 
 The four native modes are implemented in [CopyTrainer](../src/client/CopyTrainer.tsx)
 and the shared [copy domain](../src/shared/copy-practice.ts). Groups support
-letters, figures, mixed/custom pools, fixed/random group lengths, duration or
-count, both speeds, extra spacing, tone and countdown. Word and callsign rounds
-have 25 trials, fixed/adaptive speed, replay, optional skip, and per-trial results;
+letters, figures, mixed/custom pools, fixed/random group lengths, duration,
+both speeds, extra spacing, tone and countdown. Group-count configuration is
+retired from new practice; historical count-based attempts still validate, replay,
+and retain their original settings. Word and callsign rounds have 25 trials, fixed/adaptive speed, replay, optional skip, and per-trial results;
 callsigns add filtering, speed ceiling, stop-on-error and blind feedback. Plain
 text uses short authored sentences. These are native equivalents with versioned
 scoring, timing and content, not identical LCWO corpora or scores.
+
+New practice defaults to a random 500–900 Hz tone per group, word, or callsign.
+This matches LCWO's documented source behavior for
+[groups](https://github.com/dj1yfk/lcwo/blob/3d0b25b539c18fe24c23601f3b3579428858148f/inc/functions.php#L176-L187),
+[words](https://github.com/dj1yfk/lcwo/blob/3d0b25b539c18fe24c23601f3b3579428858148f/inc/wordtraining.php#L504-L510)
+and [callsigns](https://github.com/dj1yfk/lcwo/blob/3d0b25b539c18fe24c23601f3b3579428858148f/inc/callsigns.php#L130-L134),
+with the first group randomized too. Pitches are repeatable from the saved attempt
+and do not affect content generation, so replay, recovery and review keep the
+same pitches. Fixed tones remain optional.
+Plain text uses one random pitch for the entire recording; this intentionally
+extends LCWO's setting, which its
+[plain-text player ignores](https://github.com/dj1yfk/lcwo/blob/3d0b25b539c18fe24c23601f3b3579428858148f/inc/playerfunctions.php#L29-L34). Previously saved
+fixed-tone results and pending saves retain their original evidence.
 
 Attempts save exact targets, answers, settings, per-trial speeds, replay/reveal
 flags, and audio/answer/review time. [Local drafts](../src/client/copy-storage.ts)
@@ -36,19 +50,20 @@ links adapt at launch without rewriting source records; unrelated LCWO tools
 remain external. No LCWO account connection, fetch, or live synchronization is
 needed for this workflow.
 
-Generation/scoring, clocks, curriculum, report selection and API validation pass
-140 unit/API tests. An independent agent reviewed guest and signed-in flows at
-1280px and 390px, using real Chromium media playback and local Wrangler/D1.
-The three [native browser journeys](../e2e/copy-practice.spec.ts) cover all modes,
+Generation/scoring, clocks, curriculum, report selection and API validation have
+focused unit/API coverage. An independent agent reviewed guest and signed-in
+flows at 1280px and 390px, using real Chromium media playback and local Wrangler/D1.
+The [native browser journeys](../e2e/copy-practice.spec.ts) cover all modes,
 paused reload recovery, mobile sign-in, history/report evidence, an uncertain
 save retry, downloads including notes, and Fundamental preset/character selection.
-Inspected states pass accessibility checks. All 17 browser regression journeys
-passed across the full run and a focused rerun after a test-only correction.
+Inspected states pass accessibility checks. Browser regressions also cover
+immediate Start focus, the persistent answer field, adjacent comparison columns,
+omitted groups, and recovered assignment choices.
 Physical iPhone, Safari and lock-screen behavior have not been verified.
 
 Remaining differences include LCWO's broader/multilingual dictionaries, real
 callsign database and proverb collections, Koch/MorseMachine/QTC/TX modes, REAL
-timing, cut numbers/framing/random tone, long 30-minute runs, exact legacy scoring,
+timing, cut numbers/framing, long 30-minute runs, exact legacy scoring,
 automatic curriculum progression and the configurable advisor-form workflow.
 Current native groups allow 10–600-second targets. Repetition and advancement
 instructions are visible guidance; completing a round does not automatically

@@ -46,6 +46,14 @@
   max-width: 120px;
 }
 
+.copy-settings-value {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: 14px;
+  color: #626c5e;
+}
+
 .copy-settings .field-hint,
 .copy-settings-hint {
   color: #626c5e;
@@ -91,7 +99,12 @@
 }
 
 .copy-settings .copy-settings-secondary {
+  grid-template-columns: 210px repeat(auto-fit, minmax(120px, 140px));
   padding: 4px 0 8px;
+}
+
+.copy-settings .copy-tone-mode {
+  min-width: 210px;
 }
 
 .copy-settings .copy-options {
@@ -212,6 +225,12 @@
   .copy-settings .field select {
     min-height: 44px;
     font-size: 16px;
+  }
+
+  .copy-settings .copy-tone-mode {
+    grid-column: 1 / -1;
+    min-width: 0;
+    max-width: 260px;
   }
 
   .copy-settings .checkbox-label {
