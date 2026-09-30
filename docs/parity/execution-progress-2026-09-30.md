@@ -42,7 +42,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   posted; issue #1 is closed after publication and deployment. Mobile checks used
   browser emulation; client evidence remains source consistency, not proficiency.
 
-## Issue #2 — implementation and review corrections validated; recheck pending
+## Issue #2 — completed, independently accepted, published and deployed
 
 - Fresh issue body/comments rechecked after #1 closed; only dependency #1.
   Pinned original device persistence and synchronization remain read-only evidence.
@@ -91,15 +91,28 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 - Correction validation: check, all 333 tests and build pass. All 36 standard
   browser journeys pass, including both new client boundary regressions. An
   additional focused pass verifies the storage notice at desktop/mobile widths,
-  emulated touch, keyboard recovery, accessibility and overflow. The review gate
-  awaits independent recheck; no issue #2 publication or deployment yet.
+  emulated touch, keyboard recovery, accessibility and overflow.
+- Independent correction gate accepted: all ten independently authored browser
+  journeys, 91 Worker/domain tests and eight SQL boundary probes passed. The
+  reviewer independently closed all four findings and inspected corrected
+  desktop/mobile screenshots, keyboard/touch, accessibility and overflow.
+- Signed implementation `d1ea29b2` and corrections `3701b4e8` are published on
+  main with GitHub-verified valid signatures. Signed publication matches reviewed
+  tree `e7abfbe5031944253cce265387196e9464753281` exactly.
+- Production version `533795f5-9c6c-453c-b824-d434a8c746a8` applied both migrations;
+  no pending migrations remain. The first D1 authorization error was transient;
+  expected-account/database checks and complete deployment retry succeeded.
+  Health is 200, anonymous private history is 401 and served JS/CSS match build.
+- [Completion evidence and review outcome](https://github.com/rwjblue/cwa-training-tracker/issues/2#issuecomment-5920046262)
+  posted; #2 is closed after acceptance, publication and production verification.
+  The app shell must load; no service-worker shell or physical-device verification
+  is claimed. Device backup/clear and reset/replacement fencing remain #3/#4.
 
 ## Remaining queue
 
-Issue #2 must pass its implementation commit, independent review/corrections,
-signed publication, production deployment and issue closure before #3 begins.
-Issues #3–#46 remain pending. No external blockers have been established.
-Read-only maps for #2 and #3/#4 lifecycle hooks remain in ignored queue notes.
+Issue #3 begins next, following the completed #2 gate. Issues #3–#46 remain pending.
+No external blockers remain. Read-only maps for #3–#16, lifecycle hooks and source
+evidence remain in ignored queue notes; no future issue implementation has begun.
 
 ## Concurrent work to preserve
 
