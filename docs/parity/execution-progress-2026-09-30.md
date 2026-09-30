@@ -42,7 +42,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   posted; issue #1 is closed after publication and deployment. Mobile checks used
   browser emulation; client evidence remains source consistency, not proficiency.
 
-## Issue #2 — implementation validated; independent review pending
+## Issue #2 — implementation and review corrections validated; recheck pending
 
 - Fresh issue body/comments rechecked after #1 closed; only dependency #1.
   Pinned original device persistence and synchronization remain read-only evidence.
@@ -75,6 +75,24 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   acknowledgement hashes and retired task ownership proofs. Bindings and
   configuration are unchanged. Device backup/clear and full reset/replacement
   ordering remain #3/#4; no active elapsed-time crash/reload recovery is added.
+
+- Implementation commit `660a8f5c` passed check, 321 tests and all 34 standard
+  browser journeys before fresh independent review. The reviewer exercised eight
+  additional browser cases, including six passing acceptance journeys and two
+  reproduced failures, plus fresh Worker/client review.
+- Four substantive P2 findings require correction: failed selected-account
+  persistence can reopen the prior private scope; editing during a preference
+  save loses later input; a merge import can omit retired task ownership; and a
+  course-removal race can insert a delayed result with active placement.
+  All four are corrected: failed selection invalidates stale scope and exposes
+  recovery feedback; preference controls pause until the save receipt; merge
+  imports retire removed owned links transactionally; and conditional insertion
+  rechecks delayed-result placement from the frozen request after a plan race.
+- Correction validation: check, all 333 tests and build pass. All 36 standard
+  browser journeys pass, including both new client boundary regressions. An
+  additional focused pass verifies the storage notice at desktop/mobile widths,
+  emulated touch, keyboard recovery, accessibility and overflow. The review gate
+  awaits independent recheck; no issue #2 publication or deployment yet.
 
 ## Remaining queue
 

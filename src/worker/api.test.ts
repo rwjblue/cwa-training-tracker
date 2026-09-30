@@ -3,7 +3,7 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from './index';
 import { DEFAULT_PROFILE, type PracticeSession, type TrainingExport } from '../shared/training';
-import type { PlannedTask } from '../shared/plan';
+import { dailyPlanSummary, type PlannedTask } from '../shared/plan';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { getAuth } from './auth';
@@ -62,7 +62,7 @@ class SQLiteStatement {
   values: SQLInputValue[] = [];
   constructor(
     private sqlite: DatabaseSync,
-    private sql: string,
+    readonly sql: string,
   ) {}
   bind(...values: SQLInputValue[]) {
     this.values = values;
@@ -1627,6 +1627,254 @@ describe('account operation revisions and receipts', () => {
       practiceTool: 'sending',
       plannedTaskId: taskId,
     },
+  });
+
+  it.each(['level', 'firstClassDate'] as const)(
+    'retains delayed-result ownership when a merge import changes %s without trusting imported historical IDs',
+    async (field) => {
+      const auth = await signIn(`merge-retirement-${field}@example.test`);
+      const profile = { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' };
+      await request('/api/settings', 'PUT', profile, auth.cookie);
+      const before = await snapshot(auth.cookie);
+      const taskId = before.plan[0].id;
+      const frozen = finished(taskId, 'frozen-before-merge');
+      const historical = {
+        ...entry('imported-provenance'),
+        historicalPlannedTaskId: 'never-owned-imported-task',
+      };
+      const imported = await request(
+        '/api/import',
+        'POST',
+        {
+          mode: 'merge',
+          data: {
+            ...backup([historical]),
+            profile: { ...profile, [field]: field === 'level' ? 'fundamental' : '' },
+          },
+        },
+        auth.cookie,
+      );
+      expect(imported.status).toBe(200);
+      const current = await snapshot(auth.cookie);
+      expect(current.plan.some((task) => task.id === taskId)).toBe(false);
+      expect(
+        db.sqlite
+          .prepare('SELECT task_id FROM retired_plan_tasks WHERE user_id = ? AND task_id = ?')
+          .get(auth.user.id, taskId)?.task_id,
+      ).toBe(taskId);
+      expect(
+        db.sqlite
+          .prepare('SELECT count(*) AS count FROM retired_plan_tasks WHERE task_id = ?')
+          .get(historical.historicalPlannedTaskId)?.count,
+      ).toBe(0);
+      const saved = await request('/api/entries', 'POST', frozen, auth.cookie);
+      expect(saved.status).toBe(201);
+      expect(await saved.json()).toMatchObject({
+        entry: { historicalPlannedTaskId: taskId, notes: frozen.notes, minutes: frozen.minutes },
+      });
+      expect(await snapshot(auth.cookie)).toEqual(current);
+      expect(
+        (
+          await request(
+            '/api/entries',
+            'POST',
+            finished(historical.historicalPlannedTaskId, 'new-invented-claim'),
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    },
+  );
+
+  it.each(['entry', 'retirement'] as const)(
+    'rolls back a course-changing merge import when its %s write fails',
+    async (boundary) => {
+      const auth = await signIn(`merge-rollback-${boundary}@example.test`);
+      const profile = { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' };
+      await request('/api/settings', 'PUT', profile, auth.cookie);
+      const before = await snapshot(auth.cookie);
+      const bytes = db.sqlite
+        .prepare('SELECT storage_bytes FROM users WHERE id = ?')
+        .get(auth.user.id)?.storage_bytes;
+      const table = boundary === 'entry' ? 'practice_entries' : 'retired_plan_tasks';
+      db.sqlite.exec(
+        `CREATE TRIGGER reject_merge BEFORE INSERT ON ${table} BEGIN SELECT RAISE(ABORT, 'synthetic_merge_failure'); END;`,
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const imported = await request(
+        '/api/import',
+        'POST',
+        {
+          mode: 'merge',
+          data: {
+            ...backup([entry('merge-failing-entry')]),
+            profile: { ...profile, level: 'fundamental' },
+          },
+        },
+        auth.cookie,
+      );
+      expect(imported.status).toBe(500);
+      expect(await snapshot(auth.cookie)).toEqual(before);
+      expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+        0,
+      );
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM retired_plan_tasks').get()?.count,
+      ).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+      ).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+          ?.storage_bytes,
+      ).toBe(bytes);
+    },
+  );
+
+  it('re-evaluates a new linked result after course removal commits at its guarded SQL boundary while retaining earlier saved progress', async () => {
+    const auth = await signIn('placement-boundary-race@example.test');
+    const profile = { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' };
+    await request('/api/settings', 'PUT', profile, auth.cookie);
+    const before = await snapshot(auth.cookie);
+    const taskId = before.plan[0].id;
+    const earlier = finished(taskId, 'saved-before-removal');
+    const confirmed = await request('/api/entries', 'POST', earlier, auth.cookie);
+    expect(confirmed.status).toBe(201);
+    const earlierSaved = ((await confirmed.json()) as { entry: PracticeSession }).entry;
+    expect(earlierSaved.metadata?.plannedTaskId).toBe(taskId);
+    expect(await snapshot(auth.cookie)).toEqual(before);
+    let reached!: () => void;
+    let release!: () => void;
+    const boundaryReached = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const boundaryReleased = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let held = false;
+    const actualBatch = db.batch.bind(db);
+    vi.spyOn(db, 'batch').mockImplementation(async (statements) => {
+      if (
+        !held &&
+        statements.some((statement) => statement.sql.includes('INSERT INTO practice_entries'))
+      ) {
+        held = true;
+        reached();
+        await boundaryReleased;
+      }
+      return actualBatch(statements);
+    });
+    const frozen = finished(taskId, 'new-result-after-removal');
+    const frozenBody = JSON.stringify(frozen);
+    const pending = request('/api/entries', 'POST', frozen, auth.cookie);
+    await boundaryReached;
+    expect(
+      db.sqlite
+        .prepare('SELECT count(*) AS count FROM practice_entries WHERE id = ?')
+        .get(frozen.id)?.count,
+    ).toBe(0);
+    expect(
+      (await request('/api/settings', 'PUT', { ...profile, firstClassDate: '' }, auth.cookie))
+        .status,
+    ).toBe(200);
+    const removed = await snapshot(auth.cookie);
+    expect(removed.plan).toHaveLength(0);
+    release();
+    const response = await pending;
+    expect(response.status).toBe(201);
+    const historical = ((await response.json()) as { entry: PracticeSession }).entry;
+    expect(historical.historicalPlannedTaskId).toBe(taskId);
+    expect(historical.metadata).not.toHaveProperty('plannedTaskId');
+    expect(historical).toMatchObject({
+      notes: frozen.notes,
+      minutes: frozen.minutes,
+      metadata: { elapsedSeconds: 90.25, recallSeconds: 5 },
+    });
+    expect(JSON.stringify(frozen)).toBe(frozenBody);
+    expect(await snapshot(auth.cookie)).toEqual(removed);
+    expect((await request('/api/entries', 'POST', earlier, auth.cookie)).status).toBe(200);
+    expect((await request('/api/settings', 'PUT', profile, auth.cookie)).status).toBe(200);
+    const restored = await snapshot(auth.cookie);
+    const summary = dailyPlanSummary(restored.plan, [], [earlierSaved, historical], '2026-09-30');
+    const task = [
+      ...summary.assignedToday,
+      ...summary.earlier,
+      ...summary.preparation,
+      ...summary.unscheduled,
+      ...summary.upcoming,
+    ].find((item) => item.task.id === taskId)!;
+    expect(task.loggedMinutes).toBe(earlierSaved.minutes);
+    expect(task.status).toBe('started');
+    const retried = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(retried.status).toBe(200);
+    expect(await retried.json()).toEqual({ entry: historical, duplicate: true });
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      2,
+    );
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+  });
+
+  it('keeps guarded concurrent exact linked-result inserts idempotent', async () => {
+    const auth = await signIn('linked-concurrent-exact@example.test');
+    await request('/api/plan', 'POST', customTask(), auth.cookie);
+    const before = await snapshot(auth.cookie);
+    const frozen = finished(customTask().id);
+    const responses = await Promise.all([
+      request('/api/entries', 'POST', frozen, auth.cookie),
+      request('/api/entries', 'POST', frozen, auth.cookie),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 201]);
+    expect(await snapshot(auth.cookie)).toEqual(before);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      1,
+    );
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+  });
+
+  it('returns retryable 503 after bounded actual SQL contention and later accepts the same frozen linked result', async () => {
+    const auth = await signIn('linked-contention@example.test');
+    await request('/api/plan', 'POST', customTask(), auth.cookie);
+    const frozen = finished(customTask().id);
+    const originalBody = JSON.stringify(frozen);
+    const actualBatch = db.batch.bind(db);
+    let conflicts = 0;
+    const contending = vi.spyOn(db, 'batch').mockImplementation(async (statements) => {
+      if (statements.some((statement) => statement.sql.includes('INSERT INTO practice_entries'))) {
+        conflicts++;
+        db.sqlite
+          .prepare('UPDATE users SET account_revision = account_revision + 1 WHERE id = ?')
+          .run(auth.user.id);
+      }
+      return actualBatch(statements);
+    });
+    const response = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining('retried') });
+    expect(conflicts).toBe(3);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      0,
+    );
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+    contending.mockRestore();
+    const beforeRetry = await snapshot(auth.cookie);
+    const retry = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(retry.status).toBe(201);
+    expect(await retry.json()).toMatchObject({
+      entry: {
+        id: frozen.id,
+        notes: frozen.notes,
+        minutes: frozen.minutes,
+        metadata: { plannedTaskId: customTask().id },
+      },
+    });
+    expect(JSON.stringify(frozen)).toBe(originalBody);
+    expect(await snapshot(auth.cookie)).toEqual(beforeRetry);
   });
 
   it.each(['semantic', 'direct'] as const)(

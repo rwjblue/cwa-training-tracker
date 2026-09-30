@@ -11,6 +11,7 @@ import { api, ApiError, type User } from './api';
 
 export const ACCOUNT_DATA_EVENT = 'cwa:account-data';
 const ACTIVE_ACCOUNT_KEY = 'cwa:account:active:v1';
+const SELECTION_FAILURE_KEY = 'cwa:account:selection-failure:v1';
 const CACHE_LIMIT = 4_000_000;
 const MAX_OPERATIONS = 1000;
 const operationPrefix = (scope: string) => `cwa:account:operation:v1:${encodeURIComponent(scope)}:`;
@@ -22,6 +23,9 @@ const cacheKey = (scope: string) => `cwa:account:cache:v1:${encodeURIComponent(s
 const identityKey = (scope: string) => `cwa:account:identity:v1:${encodeURIComponent(scope)}`;
 const changed = () => window.dispatchEvent(new Event(ACCOUNT_DATA_EVENT));
 let selectionOverride: { id?: string } | undefined;
+let selectionFailure: { accountId?: string } | undefined;
+const selectionFailureMessage =
+  'This browser could not remember the selected account for offline reopening. Your queued work remains stored separately for each account. Keep this page open or sign in again online to reopen it.';
 
 export interface CachedAccount {
   user: User;
@@ -161,9 +165,14 @@ export function forgetActiveAccount(): void {
   if (previous) suspendAccountUploads(previous);
   try {
     localStorage.removeItem(ACTIVE_ACCOUNT_KEY);
-    selectionOverride = localStorage.getItem(ACTIVE_ACCOUNT_KEY) === null ? undefined : {};
+    if (localStorage.getItem(ACTIVE_ACCOUNT_KEY) !== null)
+      throw new Error('The old selection was not removed.');
+    localStorage.removeItem(SELECTION_FAILURE_KEY);
+    selectionOverride = undefined;
+    selectionFailure = undefined;
   } catch {
     selectionOverride = {};
+    invalidateStoredSelection(previous);
   }
   changed();
 }
@@ -175,17 +184,71 @@ export function selectAccountIdentity(user: User): void {
   retainAccountIdentity(user);
   try {
     localStorage.setItem(ACTIVE_ACCOUNT_KEY, user.id);
-    selectionOverride =
-      localStorage.getItem(ACTIVE_ACCOUNT_KEY) === user.id ? undefined : { id: user.id };
+    if (localStorage.getItem(ACTIVE_ACCOUNT_KEY) !== user.id)
+      throw new Error('The account selection was not retained.');
+    localStorage.removeItem(SELECTION_FAILURE_KEY);
+    if (localStorage.getItem(SELECTION_FAILURE_KEY) !== null)
+      throw new Error('The previous storage failure could not be cleared.');
+    selectionOverride = undefined;
+    selectionFailure = undefined;
   } catch {
     selectionOverride = { id: user.id };
+    invalidateStoredSelection(user.id);
   }
   changed();
 }
 
+function invalidateStoredSelection(accountId?: string): void {
+  selectionFailure = { accountId };
+  // This non-authentication marker also protects a new shell if deleting the old pointer fails.
+  try {
+    localStorage.setItem(
+      SELECTION_FAILURE_KEY,
+      JSON.stringify({ version: 1, ...(accountId ? { accountId } : {}) }),
+    );
+  } catch {
+    /* Removing the obsolete pointer remains sufficient when storage is full. */
+  }
+  try {
+    localStorage.removeItem(ACTIVE_ACCOUNT_KEY);
+  } catch {
+    /* The persisted failure marker prevents selecting an obsolete scope. */
+  }
+}
+
+function storedSelectionFailure(): { accountId?: string } | undefined {
+  try {
+    const raw = localStorage.getItem(SELECTION_FAILURE_KEY);
+    if (!raw) return undefined;
+    if (raw.length > 500) return {};
+    const input = JSON.parse(raw) as { version?: number; accountId?: unknown };
+    if (
+      input.version === 1 &&
+      (input.accountId === undefined ||
+        (typeof input.accountId === 'string' &&
+          /^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]{0,199}$/.test(input.accountId)))
+    )
+      return input as { accountId?: string };
+  } catch {
+    /* An unreadable failure marker cannot authorize an older cached selection. */
+  }
+  return {};
+}
+
+export function getAccountStorageStatus(scope?: string): string | undefined {
+  const failure = selectionFailure ?? storedSelectionFailure();
+  return failure && (!scope || !failure.accountId || failure.accountId === scope)
+    ? selectionFailureMessage
+    : undefined;
+}
+
 export function getSelectedAccountId(readStored = false): string | undefined {
-  if (readStored) selectionOverride = undefined;
+  if (readStored) {
+    selectionOverride = undefined;
+    selectionFailure = undefined;
+  }
   if (selectionOverride) return selectionOverride.id;
+  if (storedSelectionFailure()) return undefined;
   try {
     return localStorage.getItem(ACTIVE_ACCOUNT_KEY) ?? undefined;
   } catch {
@@ -193,9 +256,10 @@ export function getSelectedAccountId(readStored = false): string | undefined {
   }
 }
 
-/** Unavailable storage does not revoke current in-memory identity; an explicit clear does. */
+/** Fresh in-memory selection survives storage failure; failed cached selections grant no scope. */
 export function isSelectedAccount(scope: string): boolean {
   if (selectionOverride) return selectionOverride.id === scope;
+  if (storedSelectionFailure()) return false;
   try {
     return localStorage.getItem(ACTIVE_ACCOUNT_KEY) === scope;
   } catch {

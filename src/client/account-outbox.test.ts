@@ -17,6 +17,7 @@ import {
   resumeAccountUploads,
   loadSelectedAccountIdentity,
   isSelectedAccount,
+  getAccountStorageStatus,
 } from './account-outbox';
 
 const fetchMock = vi.fn();
@@ -436,7 +437,7 @@ it('keeps a freshly confirmed logical account selectable when a full device cann
     },
   });
   selectAccountIdentity(accountB);
-  expect(localStorage.getItem('cwa:account:active:v1')).toBe(accountA);
+  expect(localStorage.getItem('cwa:account:active:v1')).toBeNull();
   expect(getSelectedAccountId()).toBe(accountB.id);
   expect(isSelectedAccount(accountB.id)).toBe(true);
   expect(isSelectedAccount(accountA)).toBe(false);
@@ -444,6 +445,97 @@ it('keeps a freshly confirmed logical account selectable when a full device cann
   expect(fetchMock).not.toHaveBeenCalled();
   forgetActiveAccount();
   expect(getSelectedAccountId()).toBeUndefined();
+});
+
+it.each(['throw', 'no-op', 'wrong-readback'])(
+  'invalidates obsolete offline selection after a fresh account %s write failure',
+  async (failure) => {
+    const accountA = owner();
+    const accountB = { id: 'newly-selected-account', email: 'another@example.test' };
+    const snapshotB = { ...state(), accountId: accountB.id };
+    rememberAccount(accountB, snapshotB, false);
+    const pendingA = queueAccountChange(state(), {
+      type: 'settings',
+      changes: { callsign: 'N0FIRST' },
+    });
+    const pendingB = queueAccountChange(snapshotB, {
+      type: 'settings',
+      changes: { dailyGoalMinutes: 35 },
+    });
+    const retainedA = localStorage.getItem(`cwa:account:cache:v1:${accountA.id}`);
+    const retainedB = localStorage.getItem(`cwa:account:cache:v1:${accountB.id}`);
+    const originalStorage = localStorage;
+    vi.stubGlobal('localStorage', {
+      ...originalStorage,
+      get length() {
+        return values.size;
+      },
+      setItem: (name: string, value: string) => {
+        if (name === 'cwa:account:active:v1') {
+          if (failure === 'throw') throw new Error('Quota');
+          if (failure === 'no-op') return;
+          originalStorage.setItem(name, accountA.id);
+          return;
+        }
+        originalStorage.setItem(name, value);
+      },
+    });
+    selectAccountIdentity(accountB);
+    expect(localStorage.getItem('cwa:account:active:v1')).toBeNull();
+    expect(getSelectedAccountId()).toBe(accountB.id);
+    expect(isSelectedAccount(accountB.id)).toBe(true);
+    expect(isSelectedAccount(accountA.id)).toBe(false);
+    expect(getAccountStorageStatus(accountB.id)).toContain('offline reopening');
+    expect(getAccountStorageStatus(accountA.id)).toBeUndefined();
+    vi.resetModules();
+    const reopened = await import('./account-outbox');
+    expect(reopened.getSelectedAccountId()).toBeUndefined();
+    expect(reopened.loadSelectedAccountIdentity()).toBeNull();
+    expect(reopened.loadCachedAccount()).toBeNull();
+    expect(reopened.getAccountStorageStatus()).toContain('offline reopening');
+    expect(reopened.loadAccountOperations(accountA.id)[0].operation).toEqual(pendingA.operation);
+    expect(reopened.loadAccountOperations(accountB.id)[0].operation).toEqual(pendingB.operation);
+    expect(localStorage.getItem(`cwa:account:cache:v1:${accountA.id}`)).toBe(retainedA);
+    expect(localStorage.getItem(`cwa:account:cache:v1:${accountB.id}`)).toBe(retainedB);
+    vi.stubGlobal('localStorage', originalStorage);
+    selectAccountIdentity(accountB);
+    expect(getSelectedAccountId()).toBe(accountB.id);
+    expect(getAccountStorageStatus(accountB.id)).toBeUndefined();
+    expect(localStorage.getItem('cwa:account:selection-failure:v1')).toBeNull();
+  },
+);
+
+it('a persisted storage-failure marker blocks an obsolete pointer even if its removal also fails', async () => {
+  const accountA = scope;
+  const accountB = { id: 'failed-removal-account', email: 'another@example.test' };
+  const originalStorage = localStorage;
+  vi.stubGlobal('localStorage', {
+    ...originalStorage,
+    setItem: (name: string, value: string) => {
+      if (name === 'cwa:account:active:v1') throw new Error('Cannot select');
+      originalStorage.setItem(name, value);
+    },
+    removeItem: (name: string) => {
+      if (name === 'cwa:account:active:v1') throw new Error('Cannot remove');
+      originalStorage.removeItem(name);
+    },
+  });
+  selectAccountIdentity(accountB);
+  expect(localStorage.getItem('cwa:account:active:v1')).toBe(accountA);
+  expect(getSelectedAccountId()).toBe(accountB.id);
+  vi.resetModules();
+  const reopened = await import('./account-outbox');
+  expect(reopened.getSelectedAccountId()).toBeUndefined();
+  expect(reopened.loadSelectedAccountIdentity()).toBeNull();
+});
+
+it('does not trust an old cached selection when its persisted failure marker is damaged', async () => {
+  localStorage.setItem('cwa:account:selection-failure:v1', '{damaged');
+  vi.resetModules();
+  const reopened = await import('./account-outbox');
+  expect(reopened.getSelectedAccountId()).toBeUndefined();
+  expect(reopened.loadSelectedAccountIdentity()).toBeNull();
+  expect(reopened.getAccountStorageStatus()).toContain('offline reopening');
 });
 
 it('reads the selected identity before its snapshot is available and fences a stale tab acknowledgement', async () => {

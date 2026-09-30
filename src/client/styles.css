@@ -4380,7 +4380,8 @@ body {
   overflow-wrap: anywhere;
   margin-top: 10px;
 }
-.session-form-fields {
+.session-form-fields,
+.preference-form-fields {
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -4388,6 +4389,7 @@ body {
 }
 
 .account-sync-status,
+.account-storage-status,
 .practice-sync-status {
   display: block;
   overflow-wrap: anywhere;
@@ -4398,6 +4400,7 @@ body {
   padding-left: 1.25rem;
 }
 .account-sync-status p,
+.account-storage-status p,
 .practice-sync-status p {
   margin: 0.35rem 0 0.65rem;
 }
@@ -4412,6 +4415,7 @@ body {
   margin-left: 0.5rem;
 }
 .account-sync-status .button,
+.account-storage-status .button,
 .practice-sync-status .button {
   min-height: 44px;
   font-size: 12px;

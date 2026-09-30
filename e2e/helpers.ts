@@ -93,5 +93,6 @@ export async function signIn(page: Page, { dialogAlreadyOpen = false } = {}) {
     .getByRole('button', { name: /verify|continue|sign in/i })
     .last()
     .click();
+  await expect(page.getByRole('dialog', { name: 'Check your inbox.', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Open your account', exact: true })).toBeVisible();
 }

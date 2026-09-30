@@ -61,6 +61,7 @@ import {
   selectAccountIdentity,
   getSelectedAccountId,
   loadSelectedAccountIdentity,
+  getAccountStorageStatus,
 } from './account-outbox';
 import { useAccountData } from './useAccountData';
 import AccountSyncStatus from './AccountSyncStatus';
@@ -263,6 +264,7 @@ function App() {
   const profileAccountId = account.state?.accountId;
   const tasks = account.state?.plan ?? [];
   const [offlineIdentity, setOfflineIdentity] = useState(false);
+  const [accountStorageStatus, setAccountStorageStatus] = useState(() => getAccountStorageStatus());
   const [practiceStates, setPracticeStates] = useState(() => loadPracticeSaveStates('guest'));
   const pendingTaskIds = account.operations.flatMap(({ operation }) =>
     operation.change.type === 'settings'
@@ -351,8 +353,14 @@ function App() {
   };
   useEffect(() => {
     const selectedChanged = (event: Event) => {
-      if (event instanceof StorageEvent && event.key !== 'cwa:account:active:v1') return;
-      const selectedId = getSelectedAccountId(event instanceof StorageEvent);
+      if (
+        event instanceof StorageEvent &&
+        !['cwa:account:active:v1', 'cwa:account:selection-failure:v1'].includes(event.key ?? '')
+      )
+        return;
+      const selectedId = getSelectedAccountId(
+        event instanceof StorageEvent && event.key === 'cwa:account:active:v1',
+      );
       if (selectedId === activeAccount.current) return;
       const cached = selectedId ? loadCachedAccount(selectedId) : null;
       const next = cached?.user ?? (selectedId ? loadSelectedAccountIdentity() : null);
@@ -380,6 +388,16 @@ function App() {
       window.removeEventListener(ACCOUNT_DATA_EVENT, selectedChanged);
     };
   }, []);
+  useEffect(() => {
+    const update = () => setAccountStorageStatus(getAccountStorageStatus(activeAccount.current));
+    update();
+    window.addEventListener(ACCOUNT_DATA_EVENT, update);
+    window.addEventListener('storage', update);
+    return () => {
+      window.removeEventListener(ACCOUNT_DATA_EVENT, update);
+      window.removeEventListener('storage', update);
+    };
+  }, [user?.id]);
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(''), 5500);
@@ -730,6 +748,19 @@ function App() {
           </div>
         </header>
         <main id="main-content" className="main-content" tabIndex={-1}>
+          {accountStorageStatus && (
+            <section className="alert account-storage-status" aria-label="Account storage status">
+              <p role="status">{accountStorageStatus}</p>
+              {user && (
+                <button
+                  className="button outline small"
+                  onClick={() => selectAccountIdentity(user)}
+                >
+                  Try remembering this account
+                </button>
+              )}
+            </section>
+          )}
           {appError && (
             <div className="alert error" role="alert">
               {appError}
@@ -2522,6 +2553,7 @@ function Account({
   }, [profile, revision]);
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError('');
     try {
@@ -2686,130 +2718,134 @@ function Account({
             </div>
             <Target size={20} />
           </div>
-          <form onSubmit={saveProfile}>
-            <div className="form-grid">
-              <label className="field">
-                Name
-                <input
-                  value={form.displayName}
-                  maxLength={100}
-                  onChange={(e) => editProfile({ ...form, displayName: e.target.value })}
-                  placeholder="What should we call you?"
-                />
-              </label>
-              <label className="field">
-                Callsign <span className="label-hint">optional</span>
-                <input
-                  value={form.callsign}
-                  maxLength={30}
-                  onChange={(e) => editProfile({ ...form, callsign: e.target.value.toUpperCase() })}
-                  placeholder="N0CALL"
-                />
-              </label>
-              <label className="field">
-                Your course level
-                <select
-                  value={form.level}
-                  onChange={(e) => editProfile({ ...form, level: e.target.value as CourseLevel })}
-                >
-                  {levels.map((level) => (
-                    <option key={level.id} value={level.id}>
-                      {level.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Daily practice goal <span className="label-hint">minutes</span>
-                <input
-                  type="number"
-                  min="5"
-                  max="480"
-                  required
-                  value={form.dailyGoalMinutes}
-                  onChange={(e) =>
-                    editProfile({ ...form, dailyGoalMinutes: Number(e.target.value) })
-                  }
-                />
-              </label>
-              <label className="field">
-                First class date <span className="label-hint">optional</span>
-                <input
-                  type="date"
-                  value={form.firstClassDate}
-                  onChange={(e) => editProfile({ ...form, firstClassDate: e.target.value })}
-                />
-              </label>
-              <TimeZoneSelect
-                value={form.timezone}
-                onChange={(timezone) => editProfile({ ...form, timezone })}
-              />
-            </div>
-            <div className="avatar-preference">
-              <input
-                id="use-gravatar"
-                type="checkbox"
-                checked={form.useGravatar !== false}
-                onChange={(event) => editProfile({ ...form, useGravatar: event.target.checked })}
-                aria-describedby="gravatar-help"
-              />
-              <span>
-                <label htmlFor="use-gravatar">
-                  <strong>Use my Gravatar image</strong>
+          <form onSubmit={saveProfile} aria-busy={saving}>
+            <fieldset className="preference-form-fields" disabled={saving}>
+              <div className="form-grid">
+                <label className="field">
+                  Name
+                  <input
+                    value={form.displayName}
+                    maxLength={100}
+                    onChange={(e) => editProfile({ ...form, displayName: e.target.value })}
+                    placeholder="What should we call you?"
+                  />
                 </label>
-                <span className="field-hint" id="gravatar-help">
-                  Gravatar is a profile picture linked to your email address. We show the picture
-                  for your sign-in email beside your callsign.{' '}
-                  <a href="https://gravatar.com/" target="_blank" rel="noopener noreferrer">
-                    Set or change your Gravatar
-                  </a>
-                  .
-                </span>
-                <span className="field-hint">
-                  Loading it shares an email hash and your IP address with Gravatar.
-                </span>
-              </span>
-            </div>
-            <fieldset className="weekday-field">
-              <legend>Class meeting days</legend>
-              <div>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
-                  <label key={day} className={form.classDays.includes(index) ? 'selected' : ''}>
-                    <input
-                      type="checkbox"
-                      checked={form.classDays.includes(index)}
-                      onChange={(e) =>
-                        editProfile({
-                          ...form,
-                          classDays: e.target.checked
-                            ? [...form.classDays, index].sort()
-                            : form.classDays.filter((d) => d !== index),
-                        })
-                      }
-                    />
-                    <span>{day}</span>
-                  </label>
-                ))}
+                <label className="field">
+                  Callsign <span className="label-hint">optional</span>
+                  <input
+                    value={form.callsign}
+                    maxLength={30}
+                    onChange={(e) =>
+                      editProfile({ ...form, callsign: e.target.value.toUpperCase() })
+                    }
+                    placeholder="N0CALL"
+                  />
+                </label>
+                <label className="field">
+                  Your course level
+                  <select
+                    value={form.level}
+                    onChange={(e) => editProfile({ ...form, level: e.target.value as CourseLevel })}
+                  >
+                    {levels.map((level) => (
+                      <option key={level.id} value={level.id}>
+                        {level.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Daily practice goal <span className="label-hint">minutes</span>
+                  <input
+                    type="number"
+                    min="5"
+                    max="480"
+                    required
+                    value={form.dailyGoalMinutes}
+                    onChange={(e) =>
+                      editProfile({ ...form, dailyGoalMinutes: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  First class date <span className="label-hint">optional</span>
+                  <input
+                    type="date"
+                    value={form.firstClassDate}
+                    onChange={(e) => editProfile({ ...form, firstClassDate: e.target.value })}
+                  />
+                </label>
+                <TimeZoneSelect
+                  value={form.timezone}
+                  onChange={(timezone) => editProfile({ ...form, timezone })}
+                />
               </div>
-              <p className="field-hint">
-                Used to plan your 16 class dates. Confirm your actual schedule with your advisor.
+              <div className="avatar-preference">
+                <input
+                  id="use-gravatar"
+                  type="checkbox"
+                  checked={form.useGravatar !== false}
+                  onChange={(event) => editProfile({ ...form, useGravatar: event.target.checked })}
+                  aria-describedby="gravatar-help"
+                />
+                <span>
+                  <label htmlFor="use-gravatar">
+                    <strong>Use my Gravatar image</strong>
+                  </label>
+                  <span className="field-hint" id="gravatar-help">
+                    Gravatar is a profile picture linked to your email address. We show the picture
+                    for your sign-in email beside your callsign.{' '}
+                    <a href="https://gravatar.com/" target="_blank" rel="noopener noreferrer">
+                      Set or change your Gravatar
+                    </a>
+                    .
+                  </span>
+                  <span className="field-hint">
+                    Loading it shares an email hash and your IP address with Gravatar.
+                  </span>
+                </span>
+              </div>
+              <fieldset className="weekday-field">
+                <legend>Class meeting days</legend>
+                <div>
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                    <label key={day} className={form.classDays.includes(index) ? 'selected' : ''}>
+                      <input
+                        type="checkbox"
+                        checked={form.classDays.includes(index)}
+                        onChange={(e) =>
+                          editProfile({
+                            ...form,
+                            classDays: e.target.checked
+                              ? [...form.classDays, index].sort()
+                              : form.classDays.filter((d) => d !== index),
+                          })
+                        }
+                      />
+                      <span>{day}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="field-hint">
+                  Used to plan your 16 class dates. Confirm your actual schedule with your advisor.
+                </p>
+              </fieldset>
+              <p className="course-material-note">
+                Save your first class date and meeting days to populate daily assignments for your
+                Academy level. Changing dates keeps recorded practice and completion.
               </p>
-            </fieldset>
-            <p className="course-material-note">
-              Save your first class date and meeting days to populate daily assignments for your
-              Academy level. Changing dates keeps recorded practice and completion.
-            </p>
-            <div className="account-form-actions">
-              <button className="button dark" type="submit" disabled={saving}>
-                {saving ? 'Saving…' : 'Save preferences'}
-                <Check size={16} />
-              </button>
-              {profile.firstClassDate && (
-                <button className="button outline" type="button" onClick={onToday}>
-                  View Today <ArrowRight size={16} />
+              <div className="account-form-actions">
+                <button className="button dark" type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save preferences'}
+                  <Check size={16} />
                 </button>
-              )}
-            </div>
+                {profile.firstClassDate && (
+                  <button className="button outline" type="button" onClick={onToday}>
+                    View Today <ArrowRight size={16} />
+                  </button>
+                )}
+              </div>
+            </fieldset>
           </form>
         </section>
         <div className="account-side">

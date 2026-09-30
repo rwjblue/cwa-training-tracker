@@ -120,6 +120,26 @@ export async function requireAccountRevision(
   return state;
 }
 
+export function isAccountRevisionConflict(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('account_revision_conflict');
+}
+
+/** Guard private writes against a captured snapshot without changing its revision. */
+export async function conditionalAccountWrite(
+  env: Env,
+  state: AccountSnapshot,
+  statements: D1PreparedStatement[],
+): Promise<D1Result[]> {
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO account_revision_guards (user_id, expected_revision, expected_generation) VALUES (?, ?, ?)',
+    ).bind(state.accountId, state.revision, state.generation),
+    ...statements,
+    env.DB.prepare('DELETE FROM account_revision_guards WHERE user_id = ?').bind(state.accountId),
+  ]);
+  return results.slice(1, -1);
+}
+
 export async function mutateAccount(
   env: Env,
   state: AccountSnapshot,
@@ -128,9 +148,6 @@ export async function mutateAccount(
   retiredIds: readonly string[] = [],
 ): Promise<{ state: AccountSnapshot; results: D1Result[] }> {
   const batch = [
-    env.DB.prepare(
-      'INSERT INTO account_revision_guards (user_id, expected_revision, expected_generation) VALUES (?, ?, ?)',
-    ).bind(state.accountId, state.revision, state.generation),
     ...statements,
     ...retiredTaskStatements(env, state, retiredIds),
     env.DB.prepare('UPDATE users SET account_revision = account_revision + 1 WHERE id = ?').bind(
@@ -144,17 +161,16 @@ export async function mutateAccount(
           ).bind(receipt.id, receipt.payloadHash, Date.now(), state.accountId),
         ]
       : []),
-    env.DB.prepare('DELETE FROM account_revision_guards WHERE user_id = ?').bind(state.accountId),
     ...accountSnapshotStatements(env, state.accountId),
   ];
   try {
-    const results = await env.DB.batch(batch);
+    const results = await conditionalAccountWrite(env, state, batch);
     return {
       state: snapshotFromResults(state.accountId, results.slice(-2)),
-      results: results.slice(1, 1 + statements.length),
+      results: results.slice(0, statements.length),
     };
   } catch (error) {
-    if (error instanceof Error && error.message.includes('account_revision_conflict'))
+    if (isAccountRevisionConflict(error))
       throw new HttpError(
         409,
         'Your account changed in another tab. Review the newer state before applying this change.',

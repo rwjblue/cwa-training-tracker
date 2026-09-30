@@ -242,3 +242,13 @@ resolution. Publication/review evidence is in the execution progress journal.
 Full device export/restore/clear and reset/replacement ordering remain #3/#4.
 Cached identity is labeled device data and grants no server authority; the app
 shell still needs to load. No active elapsed-time reload/crash recovery is claimed.
+
+Independent review identified and corrected four issue #2 boundaries: failed
+selection writes invalidate the previous account's offline fallback with a visible
+storage notice; preference fields disable during their short save receipt window;
+merge imports retire removed owned task links transactionally; and new linked
+result placement shares the conditional SQL write boundary. Placement contention
+rechecks the unchanged frozen result, with retryable failure if it persists.
+Earlier saved progress remains intact when a course is reselected. These changes
+use the existing outboxes, revision guard and evidence model. Independent recheck
+and publication status remain in the execution journal.

@@ -256,3 +256,153 @@ test('a guest review stays open when durable storage fails and retries the froze
   await page.reload();
   await expect(page.getByText('Storage unavailable result', { exact: true })).toBeVisible();
 });
+
+test('preference saving protects its submitted fields and retains the next draft', async ({
+  page,
+  context,
+}) => {
+  await context.setExtraHTTPHeaders({ 'CF-Connecting-IP': '192.0.2.114' });
+  await signIn(page);
+  await page.getByRole('button', { name: 'Open your account', exact: true }).click();
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(
+    '**/api/account-operations',
+    async (route) => {
+      const response = await route.fetch();
+      await held;
+      await route.fulfill({ response });
+    },
+    { times: 1 },
+  );
+  const name = page.getByLabel('Name', { exact: true });
+  await name.fill('First submitted preference');
+  await page.getByRole('button', { name: 'Save preferences', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  await expect(name).toBeDisabled();
+  await expect(
+    page.getByRole('combobox', { name: 'Your course level', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('checkbox', { name: 'Use my Gravatar image', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole('group', { name: 'Class meeting days' }).getByRole('checkbox').first(),
+  ).toBeDisabled();
+  await expect(name).toHaveValue('First submitted preference');
+  await expect(page.getByRole('button', { name: 'Save preferences', exact: true })).toBeEnabled();
+  await expect(name).toBeEnabled();
+  await name.fill('Next draft before the old acknowledgement');
+  release();
+  await expect(page.getByRole('region', { name: 'Account sync status' })).toHaveCount(0);
+  await expect(name).toHaveValue('Next draft before the old acknowledgement');
+  await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (await (await context.request.get('/api/account-state')).json()).state.settings.displayName,
+    )
+    .toBe('Next draft before the old acknowledgement');
+});
+
+test('failed account selection cannot reopen the previous account offline', async ({
+  page,
+  context,
+}) => {
+  await context.setExtraHTTPHeaders({ 'CF-Connecting-IP': '192.0.2.115' });
+  await signIn(page);
+  const accountA = (await (await context.request.get('/api/me')).json()).user.id;
+  expect(
+    (
+      await context.request.post('/api/auth/logout', {
+        headers: { Origin: 'http://localhost:8791' },
+        data: {},
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.getByRole('button', { name: 'Log practice', exact: true }).first().click();
+  await page.getByLabel(/^Time practiced/).fill('1:17');
+  await page.getByLabel(/^Notes/).fill('Keep account A private after choosing B');
+  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  const status = page.getByRole('region', { name: 'Practice upload status' });
+  await expect(
+    status.getByRole('button', { name: 'Sign in to upload', exact: true }),
+  ).toBeVisible();
+  const originalA = await page.evaluate(
+    (scope) =>
+      Object.entries(localStorage).filter(([key]) =>
+        key.startsWith(`cwa:practice:pending:v1:${encodeURIComponent(scope)}:`),
+      ),
+    accountA,
+  );
+  expect(originalA).toHaveLength(1);
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Reflect.set(window, 'restoreSyntheticAccountSelection', () => {
+      Storage.prototype.setItem = original;
+    });
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'cwa:account:active:v1')
+        throw new DOMException('Synthetic selection failure', 'QuotaExceededError');
+      original.call(this, key, value);
+    };
+  });
+  await status.getByRole('button', { name: 'Sign in to upload', exact: true }).click();
+  await signIn(page, { dialogAlreadyOpen: true });
+  const accountB = (await (await context.request.get('/api/me')).json()).user.id;
+  expect(accountB).not.toBe(accountA);
+  await expect(
+    page.getByText('Keep account A private after choosing B', { exact: true }),
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('cwa:account:active:v1'))).toBeNull();
+  await expect(page.getByRole('region', { name: 'Account storage status' })).toContainText(
+    'offline',
+  );
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  await expectAccessible(page, 'offline-account-selection-failure');
+  await page.screenshot({ path: '.tmp/offline-account-selection-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const recovery = page.getByRole('button', { name: 'Try remembering this account', exact: true });
+  expect((await recovery.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await recovery.tap();
+  await expect(page.getByRole('region', { name: 'Account storage status' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('cwa:account:active:v1'))).toBeNull();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expectAccessible(page, 'offline-account-selection-failure-mobile');
+  await page.screenshot({ path: '.tmp/offline-account-selection-mobile.png', fullPage: true });
+  const shell = await context.newPage();
+  await shell.route('**/api/**', (route) => route.abort('internetdisconnected'));
+  await shell.goto('/#logbook');
+  await expect(shell.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  await expect(
+    shell.getByText('Keep account A private after choosing B', { exact: true }),
+  ).toHaveCount(0);
+  await expect(shell.getByRole('region', { name: 'Practice upload status' })).toHaveCount(0);
+  expect(
+    await shell.evaluate(
+      (scope) =>
+        Object.entries(localStorage).filter(([key]) =>
+          key.startsWith(`cwa:practice:pending:v1:${encodeURIComponent(scope)}:`),
+        ),
+      accountA,
+    ),
+  ).toEqual(originalA);
+  // The old live session retains B; an explicit retry can remember it once storage recovers.
+  await page.evaluate(() =>
+    (
+      window as unknown as { restoreSyntheticAccountSelection: () => void }
+    ).restoreSyntheticAccountSelection(),
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await recovery.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('region', { name: 'Account storage status' })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('cwa:account:active:v1'))).toBe(accountB);
+  await page.close();
+  await expect(
+    shell.getByText('Keep account A private after choosing B', { exact: true }),
+  ).toHaveCount(0);
+});

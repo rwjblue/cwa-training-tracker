@@ -15,7 +15,9 @@ import type { PlannedTask } from '../shared/plan';
 import { mergeCurriculumPlan } from '../shared/curriculum';
 import { sessionEvidence } from '../shared/practice-evidence';
 import {
+  conditionalAccountWrite,
   getAccountSnapshot,
+  isAccountRevisionConflict,
   mutateAccount,
   requireAccountRevision,
   retiredTaskIds,
@@ -23,6 +25,7 @@ import {
 
 const MAX_ENTRIES = 20_000;
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
+const MAX_PLACEMENT_ATTEMPTS = 3;
 
 /** JSON key order is not part of a saved record's identity. Arrays remain ordered. */
 function equivalentEntry(left: unknown, right: unknown): boolean {
@@ -77,6 +80,92 @@ function validated<T>(validate: (value: unknown) => T, value: unknown): T {
   }
 }
 
+async function storedEntry(
+  env: Env,
+  userId: string,
+  id: string,
+): Promise<PracticeSession | undefined> {
+  const row = await env.DB.prepare(
+    'SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?',
+  )
+    .bind(userId, id)
+    .first<{ entry_json: string }>();
+  return row
+    ? validated(
+        (value) => validatePracticeSession(value, { preserveHistoricalDuration: true }),
+        JSON.parse(row.entry_json),
+      )
+    : undefined;
+}
+
+function insertEntryStatement(
+  env: Env,
+  userId: string,
+  entry: PracticeSession,
+): D1PreparedStatement {
+  return env.DB.prepare(
+    `INSERT INTO practice_entries (user_id, id, date, entry_json)
+    SELECT ?, ?, ?, ? WHERE (SELECT count(*) FROM practice_entries WHERE user_id = ?) < ?
+    ON CONFLICT(user_id, id) DO NOTHING RETURNING id`,
+  ).bind(userId, entry.id, entry.date, JSON.stringify(entry), userId, MAX_ENTRIES);
+}
+
+/** Re-evaluate only unsaved placement; an earlier durable result keeps its original facts. */
+async function saveNewLinkedEntry(
+  env: Env,
+  userId: string,
+  frozen: PracticeSession,
+  taskId: string,
+  omittedCreatedAt: boolean,
+): Promise<Response> {
+  for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
+    if (attempt) {
+      const saved = await storedEntry(env, userId, frozen.id);
+      if (saved) {
+        if (equivalentRetry(saved, frozen, omittedCreatedAt))
+          return json({ entry: saved, duplicate: true });
+        throw new HttpError(409, 'A different practice entry already uses this session ID.');
+      }
+    }
+    const state = await getAccountSnapshot(env, userId);
+    let entry = frozen;
+    if (!state.plan.some((task) => task.id === taskId)) {
+      const retired = await env.DB.prepare(
+        'SELECT 1 AS owned FROM retired_plan_tasks WHERE user_id = ? AND task_id = ? AND generation = ?',
+      )
+        .bind(userId, taskId, state.generation)
+        .first();
+      if (!retired) throw new HttpError(400, 'The linked exercise is not in your account’s plan.');
+      if (entry.historicalPlannedTaskId !== undefined && entry.historicalPlannedTaskId !== taskId)
+        throw new HttpError(
+          400,
+          'A practice entry can have only one historical exercise placement.',
+        );
+      entry = historicalPlacement(frozen, taskId);
+    }
+    try {
+      const [inserted] = await conditionalAccountWrite(env, state, [
+        insertEntryStatement(env, userId, entry),
+      ]);
+      if (inserted.results.length) return json({ entry }, 201);
+    } catch (error) {
+      if (isAccountRevisionConflict(error)) continue;
+      throw error;
+    }
+    const saved = await storedEntry(env, userId, frozen.id);
+    if (saved && equivalentRetry(saved, frozen, omittedCreatedAt))
+      return json({ entry: saved, duplicate: true });
+    throw new HttpError(
+      409,
+      'This entry already exists, or your log has reached its 20,000-entry limit.',
+    );
+  }
+  throw new HttpError(
+    503,
+    'Your account changed while this result was uploading. Your result can be retried.',
+  );
+}
+
 async function entries(env: Env, userId: string): Promise<PracticeSession[]> {
   const result = await env.DB.prepare(
     'SELECT entry_json FROM practice_entries WHERE user_id = ? ORDER BY date DESC, id DESC',
@@ -124,6 +213,14 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       return json({ entry: previous, duplicate: true });
     throw new HttpError(409, 'A different practice entry already uses this session ID.');
   }
+  if (!id && typeof entry.metadata?.plannedTaskId === 'string')
+    return saveNewLinkedEntry(
+      env,
+      auth.user.id,
+      entry,
+      entry.metadata.plannedTaskId,
+      input.createdAt === undefined,
+    );
   const previousEvidence = sessionEvidence(previous?.metadata);
   const nextEvidence = sessionEvidence(entry.metadata);
   if (
@@ -179,13 +276,7 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       .first<{ id: string }>();
     if (!updated) throw new HttpError(404, 'This practice entry was not found.');
   } else {
-    const inserted = await env.DB.prepare(
-      `INSERT INTO practice_entries (user_id, id, date, entry_json)
-      SELECT ?, ?, ?, ? WHERE (SELECT count(*) FROM practice_entries WHERE user_id = ?) < ?
-      ON CONFLICT(user_id, id) DO NOTHING RETURNING id`,
-    )
-      .bind(auth.user.id, entry.id, entry.date, JSON.stringify(entry), auth.user.id, MAX_ENTRIES)
-      .first<{ id: string }>();
+    const inserted = await insertEntryStatement(env, auth.user.id, entry).first<{ id: string }>();
     if (!inserted) {
       // The insert resolves races. A retry after a lost response acknowledges only
       // an equivalent record owned by this account; it never overwrites edits.
@@ -426,7 +517,13 @@ export async function importData(request: Request, env: Env): Promise<Response> 
       offset = end;
     }
   }
-  const applied = await mutateAccount(env, state, statements);
+  const applied = await mutateAccount(
+    env,
+    state,
+    statements,
+    undefined,
+    input.mode === 'merge' ? retiredTaskIds(state, resultingPlan) : [],
+  );
   const results = applied.results;
   // D1's meta.changes includes quota-accounting trigger writes. RETURNING counts
   // only actual new entries and also handles concurrent merge conflicts.
