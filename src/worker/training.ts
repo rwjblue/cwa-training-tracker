@@ -17,6 +17,27 @@ import type { PlannedTask } from '../shared/plan';
 const MAX_ENTRIES = 20_000;
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
 
+/** JSON key order is not part of a saved record's identity. Arrays remain ordered. */
+function equivalentEntry(left: unknown, right: unknown): boolean {
+  const pending: [unknown, unknown][] = [[left, right]];
+  while (pending.length) {
+    const [a, b] = pending.pop()!;
+    if (a === b) continue;
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+      a.forEach((value, index) => pending.push([value, b[index]]));
+    } else if (isRecord(a) && isRecord(b)) {
+      const keys = Object.keys(a);
+      if (keys.length !== Object.keys(b).length) return false;
+      for (const key of keys) {
+        if (!Object.hasOwn(b, key)) return false;
+        pending.push([a[key], b[key]]);
+      }
+    } else return false;
+  }
+  return true;
+}
+
 function validated<T>(validate: (value: unknown) => T, value: unknown): T {
   try {
     return validate(value);
@@ -71,11 +92,25 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     )
       .bind(auth.user.id, entry.id, entry.date, JSON.stringify(entry), auth.user.id, MAX_ENTRIES)
       .first<{ id: string }>();
-    if (!inserted)
+    if (!inserted) {
+      // The insert resolves races. A retry after a lost response acknowledges only
+      // an equivalent record owned by this account; it never overwrites edits.
+      const row = await env.DB.prepare(
+        'SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?',
+      )
+        .bind(auth.user.id, entry.id)
+        .first<{ entry_json: string }>();
+      if (row) {
+        const saved = JSON.parse(row.entry_json) as PracticeSession;
+        const retried =
+          input.createdAt === undefined ? { ...entry, createdAt: saved.createdAt } : entry;
+        if (equivalentEntry(saved, retried)) return json({ entry: saved, duplicate: true });
+      }
       throw new HttpError(
         409,
         'This entry already exists, or your log has reached its 20,000-entry limit.',
       );
+    }
   }
   return json({ entry }, id ? 200 : 201);
 }

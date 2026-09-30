@@ -17,6 +17,8 @@ import {
   validateTrainingExport,
   type PracticeSession,
 } from './training';
+import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from './copy-practice';
+import { copyAttemptSessionFields } from './copy-report';
 
 function session(
   id: string,
@@ -96,6 +98,88 @@ function legacyFixture() {
 }
 
 describe('practice input validation', () => {
+  it('derives native copy time and measurements from validated attempt evidence', () => {
+    const initial = createCopyAttempt(
+      {
+        ...defaultCopyRecipe('groups'),
+        lengthMode: 'count',
+        groupCount: 2,
+      },
+      { id: 'measured', seed: 'fixture', now: '2026-09-28T12:00:00.000Z' },
+    );
+    const attempt = {
+      ...submitCopyAnswer(initial, initial.targets[0], { now: '2026-09-28T12:02:00.000Z' }),
+      audioSeconds: 60.25,
+      answerSeconds: 20.5,
+      reviewSeconds: 1.25,
+    };
+    const value = validatePracticeSession(
+      session('copy:measured', '2026-09-28', 999, {
+        characterWpm: 40,
+        effectiveWpm: 30,
+        accuracy: 5,
+        source: 'manual',
+        metadata: { copyAttempt: attempt, plannedTaskId: 'task:one', elapsedSeconds: 999 },
+      }),
+    );
+    expect(value).toMatchObject({
+      ...copyAttemptSessionFields(attempt),
+      minutes: 82 / 60,
+      characterWpm: 25,
+      effectiveWpm: 10,
+      accuracy: 100,
+      metadata: { elapsedSeconds: 82, plannedTaskId: 'task:one' },
+    });
+    const exported = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: '2026-09-28T13:00:00.000Z',
+      sessions: [value],
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(exported)))).toEqual(exported);
+    expect(() => validatePracticeSession({ ...value, id: 'different-id' })).toThrow(
+      'match its attempt',
+    );
+    expect(() =>
+      validatePracticeSession({
+        ...value,
+        metadata: { copyAttempt: { ...attempt, trials: [{ ...attempt.trials[0], distance: 2 }] } },
+      }),
+    ).toThrow('inconsistent distance');
+    expect(() => validatePracticeSession({ ...value, metadata: { copyAttempt: initial } })).toThrow(
+      'Finish or end',
+    );
+  });
+
+  it('does not invent one speed or missing accuracy for partial native attempts', () => {
+    let attempt = createCopyAttempt(defaultCopyRecipe('words'), {
+      id: 'adaptive',
+      seed: 'fixture',
+      now: '2026-09-28T12:00:00.000Z',
+    });
+    const unanswered = validatePracticeSession(
+      session('copy:adaptive', '2026-09-28', 1, {
+        accuracy: 99,
+        metadata: { copyAttempt: { ...attempt, status: 'abandoned' } },
+      }),
+    );
+    expect(unanswered).not.toHaveProperty('accuracy');
+    expect(unanswered.minutes).toBe(0);
+    for (let i = 0; i < 2; i++) {
+      attempt = submitCopyAnswer(attempt, attempt.targets[i], { now: '2026-09-28T12:02:00.000Z' });
+    }
+    const partial = validatePracticeSession(
+      session('copy:adaptive', '2026-09-28', 1, {
+        characterWpm: 25,
+        effectiveWpm: 10,
+        metadata: { copyAttempt: { ...attempt, status: 'abandoned', audioSeconds: 15 } },
+      }),
+    );
+    expect(partial).not.toHaveProperty('characterWpm');
+    expect(partial).not.toHaveProperty('effectiveWpm');
+    expect(partial).toMatchObject({ minutes: 0.25, accuracy: 100 });
+  });
+
   it('rejects invalid calendar dates, nonfinite time, and impossible speeds', () => {
     expect(isCalendarDate('2026-02-29')).toBe(false);
     expect(isCalendarDate('2024-02-29')).toBe(true);

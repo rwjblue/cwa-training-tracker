@@ -2,8 +2,10 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from './index';
-import { DEFAULT_PROFILE, type TrainingExport } from '../shared/training';
+import { DEFAULT_PROFILE, type PracticeSession, type TrainingExport } from '../shared/training';
 import type { PlannedTask } from '../shared/plan';
+import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
+import { copyAttemptSessionFields } from '../shared/copy-report';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -377,6 +379,163 @@ describe('authentication boundary', () => {
 });
 
 describe('private training data', () => {
+  it('acknowledges equivalent retries without duplicating or overwriting private entries', async () => {
+    const a = await signIn('a@example.com');
+    const b = await signIn('b@example.com');
+    const initial = { ...entry(), metadata: { nested: { first: 1, second: 2 }, values: [1, 2] } };
+    const normalized = { ...initial, createdAt: '2026-09-28T12:00:00.000Z' };
+    const responses = await Promise.all([
+      request('/api/entries', 'POST', initial, a.cookie),
+      request('/api/entries', 'POST', initial, a.cookie),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 201]);
+    const storedBytes = db.sqlite
+      .prepare('SELECT storage_bytes FROM users WHERE id = ?')
+      .get(a.user.id)?.storage_bytes;
+    const retried = await request(
+      '/api/entries',
+      'POST',
+      {
+        ...initial,
+        metadata: { values: [1, 2], nested: { second: 2, first: 1 } },
+      },
+      a.cookie,
+    );
+    expect(retried.status).toBe(200);
+    expect(await retried.json()).toMatchObject({ duplicate: true, entry: normalized });
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(a.user.id)
+        ?.storage_bytes,
+    ).toBe(storedBytes);
+    expect(
+      (
+        await request(
+          '/api/entries',
+          'POST',
+          {
+            ...initial,
+            metadata: { ...initial.metadata, values: [2, 1] },
+          },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    expect(
+      (await request('/api/entries', 'POST', { ...initial, notes: 'Changed' }, a.cookie)).status,
+    ).toBe(409);
+    expect(
+      (await request('/api/entries', 'POST', { ...initial, notes: 'Other account' }, b.cookie))
+        .status,
+    ).toBe(201);
+    const list = await (await request('/api/entries', 'GET', undefined, a.cookie)).json();
+    expect(list).toMatchObject({ entries: [normalized] });
+  });
+
+  it('keeps the original creation time when retrying an entry that omitted it', async () => {
+    const auth = await signIn('a@example.com');
+    const { createdAt: _createdAt, ...input } = entry();
+    const first = await request('/api/entries', 'POST', input, auth.cookie);
+    const saved = (await first.json()) as { entry: PracticeSession };
+    const again = await request('/api/entries', 'POST', input, auth.cookie);
+    expect(again.status).toBe(200);
+    expect(await again.json()).toEqual({ ...saved, duplicate: true });
+  });
+
+  it('validates native results, derives measured fields, and preserves them through private backup', async () => {
+    const auth = await signIn('a@example.com');
+    const initial = createCopyAttempt(
+      { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 2 },
+      {
+        id: 'native-api',
+        seed: 'private-copy',
+        now: '2026-09-28T12:00:00.000Z',
+      },
+    );
+    const attempt = {
+      ...submitCopyAnswer(initial, initial.targets[0], { now: '2026-09-28T12:02:00.000Z' }),
+      audioSeconds: 43.25,
+      answerSeconds: 8.5,
+      reviewSeconds: 2,
+    };
+    const input = {
+      ...entry('copy:native-api'),
+      ...copyAttemptSessionFields(attempt),
+      kind: 'icr',
+      minutes: 999,
+      characterWpm: 60,
+      effectiveWpm: 50,
+      accuracy: 1,
+    };
+    const forged = {
+      ...input,
+      metadata: { copyAttempt: { ...attempt, trials: [{ ...attempt.trials[0], points: 100 }] } },
+    };
+    expect((await request('/api/entries', 'POST', forged, auth.cookie)).status).toBe(400);
+    const first = await request('/api/entries', 'POST', input, auth.cookie);
+    expect(first.status).toBe(201);
+    const saved = (await first.json()) as { entry: PracticeSession };
+    expect(saved.entry).toMatchObject({
+      minutes: 53.75 / 60,
+      characterWpm: 25,
+      effectiveWpm: 10,
+      accuracy: 100,
+      metadata: { copyAttempt: attempt },
+    });
+    const retry = await request('/api/entries', 'POST', input, auth.cookie);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toEqual({ ...saved, duplicate: true });
+    const differentAttempt = {
+      ...submitCopyAnswer(initial, '?', { now: attempt.updatedAt }),
+      audioSeconds: attempt.audioSeconds,
+      answerSeconds: attempt.answerSeconds,
+      reviewSeconds: attempt.reviewSeconds,
+    };
+    expect(
+      (
+        await request(
+          '/api/entries',
+          'POST',
+          {
+            ...input,
+            metadata: { copyAttempt: differentAttempt },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    const legacy = {
+      source: 'rwjblue.com',
+      data: { lcwo: { runs: [{ id: 'original', score: 0 }] } },
+    };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'merge',
+            data: { ...backup([]), legacy },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions).toEqual([saved.entry]);
+    expect(exported.legacy).toEqual(legacy);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    const restored = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(restored.sessions).toEqual(exported.sessions);
+    expect(restored.legacy).toEqual(exported.legacy);
+  });
+
   it('isolates create, edit, delete, settings, and reset by account', async () => {
     const a = await signIn('a@example.com');
     const b = await signIn('b@example.com');

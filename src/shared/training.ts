@@ -1,4 +1,6 @@
 import { legacyPlan, validatePlan, type PlannedTask } from './plan.ts';
+import { validateCopyAttempt, type CopyAttempt } from './copy-practice.ts';
+import { copyAttemptSessionFields } from './copy-report.ts';
 
 /** Public domain model. Course instructions and personal records stay private. */
 export type CourseLevel = 'beginner' | 'fundamental' | 'intermediate' | 'advanced';
@@ -34,8 +36,8 @@ export interface PracticeSession {
   source?: 'manual' | 'timer' | 'morse' | 'legacy';
   sourceId?: string;
   createdAt: string;
-  /** Original imported metrics remain available for future migrations. */
-  metadata?: Record<string, unknown>;
+  /** Validated native evidence and original imported metrics travel with backups. */
+  metadata?: Record<string, unknown> & { copyAttempt?: CopyAttempt };
 }
 
 export interface TrainingExport {
@@ -137,13 +139,6 @@ export const PUBLIC_RESOURCES = [
     description: 'Explore the courses and register with CW Academy.',
     url: 'https://cwops.org/cw-academy/cw-academy-options/',
     category: 'Official',
-  },
-  {
-    id: 'lcwo',
-    title: 'Learn CW Online',
-    description: 'Character, word, and callsign practice in your browser.',
-    url: 'https://lcwo.net/',
-    category: 'Practice',
   },
   {
     id: 'morse-world',
@@ -377,6 +372,20 @@ export function validatePracticeSession(value: unknown): PracticeSession {
     const metadata = record(input.metadata, 'Session metadata');
     if (JSON.stringify(metadata).length > 200000) throw new Error('Session metadata is too large.');
     session.metadata = metadata;
+    if (metadata.copyAttempt !== undefined) {
+      const attempt = validateCopyAttempt(metadata.copyAttempt);
+      if (attempt.status === 'active')
+        throw new Error('Finish or end the copy attempt before saving.');
+      const measured = copyAttemptSessionFields(attempt);
+      if (session.id !== measured.id) throw new Error('The copy entry ID must match its attempt.');
+      // Generic form fields must not replace measured evidence with an unrelated
+      // speed or manually rounded time. Adaptive trials often have no one speed.
+      delete session.characterWpm;
+      delete session.effectiveWpm;
+      delete session.accuracy;
+      Object.assign(session, measured);
+      session.metadata = { ...metadata, ...measured.metadata };
+    }
   }
   return session;
 }
