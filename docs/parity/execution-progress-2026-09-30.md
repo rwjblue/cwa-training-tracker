@@ -9,7 +9,7 @@ snapshots and native dependency responses are retained in ignored
 The original `rwjblue.com` checkout is read-only evidence. Its pinned validator
 reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records were read.
 
-## Issue #1 — independent review corrections in progress
+## Issue #1 — completed, independently accepted, published and deployed
 
 - Shared version 1 Runner and timer/recording evidence validates cross-field
   timing, timestamps, scores, zero/absent values and exact catalog timing.
@@ -25,7 +25,8 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   browser suite passed all 30 journeys. Desktop/mobile correction/error/cancel/
   retry checks include keyboard and emulated touch. Runner arithmetic follows
   the bundled engine's confirmed-call × confirmed-prefix result.
-- Implementation commit: `c3612c9c`. Independent reviewer found five substantive
+- Signed implementation: `d8a0ce88`; signed review corrections: `969b792b`.
+  Independent reviewer found five substantive
   boundaries: old orphan-link imports, old duration edits, exact retries after
   task deletion, Runner review identity after lost acknowledgement, and normalized
   metadata size closure. Focused corrections retain old accounting explicitly,
@@ -33,13 +34,20 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   and build pass. Four independently authored desktop/mobile journeys and all 30
   standard browser journeys passed. The final near-limit orphan-link combination
   passed direct Worker recheck and two focused real import/export browser paths.
-- Review acceptance, follow-up commit, signed publication, deployment and issue
-  comment/closure remain pending. Do not start #2 until this gate passes.
+- Independent gate accepted at reviewed snapshot `b5e57a1`; signed publication
+  has the identical source tree and a GitHub-verified valid signature. Production
+  deployment `64fcc3b6-63f1-4d39-ab21-0299025ef1f5` passed health/asset checks and
+  anonymous private-history rejection. No config/binding changes or migrations.
+- [Completion evidence and review outcome](https://github.com/rwjblue/cwa-training-tracker/issues/1#issuecomment-5918327254)
+  posted; issue #1 is closed after publication and deployment. Mobile checks used
+  browser emulation; client evidence remains source consistency, not proficiency.
 
 ## Remaining queue
 
 Issues #2–#46 have not been implemented by this execution. No external blockers
-have been established. Their next step remains source/acceptance recheck.
+have been established. Next: issue #2 source/acceptance recheck, existing result
+queue reuse, centralized account plan/settings outbox and server revisions.
+Read-only maps for #2 and #3/#4 lifecycle hooks remain in ignored queue notes.
 
 ## Concurrent work to preserve
 
