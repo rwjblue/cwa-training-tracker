@@ -12,6 +12,7 @@ import {
   Square,
 } from 'lucide-react';
 import type { PracticeSession } from '../shared/training';
+import type { PlannedTask } from '../shared/plan';
 import {
   buildMorseTrack,
   type MorseTrack,
@@ -60,6 +61,7 @@ export default function PracticeStudio({
   timezone,
   onSaved,
   onAutoSave,
+  onTaskCompletion,
   onBeforeLeaveChange,
 }: {
   onLog: (initial?: Partial<PracticeSession>) => void;
@@ -72,6 +74,7 @@ export default function PracticeStudio({
   timezone?: string;
   onSaved?: (entry: PracticeSession) => void;
   onAutoSave: (entry: PracticeSession) => Promise<void>;
+  onTaskCompletion?: (task: PlannedTask, done: boolean) => Promise<void>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
 }) {
   const activity = launch?.activity;
@@ -157,6 +160,10 @@ export default function PracticeStudio({
   const navigationLocked = useRef(false);
   const [savingNavigation, setSavingNavigation] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const completionFlight = useRef<Promise<boolean> | undefined>(undefined);
+  const [savingCompletion, setSavingCompletion] = useState(false);
+  const [completionError, setCompletionError] = useState('');
+  const saveRetryIntent = useRef<'navigation' | 'completion'>('navigation');
   const beforeLeaveRef = useRef<() => Promise<boolean>>(async () => true);
   const identity = () =>
     (sessionIdentity.current ??= {
@@ -167,8 +174,8 @@ export default function PracticeStudio({
     setScratchpad(value);
     setNotesRemembered(saveStudioNotes(notesScope, notesContext, value));
   };
-  const [timerMinutes, setTimerMinutes] = useState(launch?.task?.targetMinutes ?? 15);
-  const timerDone = seconds >= timerMinutes * 60;
+  const [timerMinutes, setTimerMinutes] = useState<number | undefined>(launch?.task?.targetMinutes);
+  const timerDone = timerMinutes !== undefined && seconds >= timerMinutes * 60;
   const [confirmReset, setConfirmReset] = useState(false);
   const previousSaved = useRef(savedVersion);
   const player = useRef(new MorsePlayer());
@@ -196,9 +203,14 @@ export default function PracticeStudio({
   useEffect(() => () => player.current.dispose(), []);
   useEffect(() => {
     onUnsavedChange?.(
-      copyUnsaved || runnerUnsaved || running || seconds > 0 || scratchpad.length > 0,
+      savingCompletion ||
+        copyUnsaved ||
+        runnerUnsaved ||
+        running ||
+        seconds > 0 ||
+        scratchpad.length > 0,
     );
-  }, [copyUnsaved, runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
+  }, [savingCompletion, copyUnsaved, runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
@@ -213,7 +225,8 @@ export default function PracticeStudio({
       launch.tool === 'copy' || (!launch.tool && Boolean(loadCopyDraft(accountId ?? 'guest'))),
     );
     setCopyUnsaved(false);
-    setTimerMinutes(launch.task?.targetMinutes ?? 15);
+    setTimerMinutes(launch.task?.targetMinutes);
+    setCompletionError('');
     const nextTool = launch.tool;
     if (nextTool && nextTool !== 'copy')
       setPreferences((current) => ({ ...current, tool: nextTool }));
@@ -265,6 +278,8 @@ export default function PracticeStudio({
     if (entry) onLog(entry);
   };
   const beforeLeave = (): Promise<boolean> => {
+    if (completionFlight.current)
+      return completionFlight.current.then((saved) => saved && beforeLeaveRef.current());
     if (navigationFlight.current) return navigationFlight.current;
     if (isCopy) return Promise.resolve(true);
     if (isRunner)
@@ -292,6 +307,7 @@ export default function PracticeStudio({
         navigationLocked.current = false;
         return true;
       } catch (error) {
+        saveRetryIntent.current = 'navigation';
         setError(
           `Your session is still here. ${error instanceof Error ? error.message : 'The session could not be saved.'} Try saving again before continuing.`,
         );
@@ -303,6 +319,46 @@ export default function PracticeStudio({
       }
     })();
     return navigationFlight.current;
+  };
+  const changeCompletion = (done: boolean) => {
+    const task = launch?.task;
+    if (!task || !onTaskCompletion || completionFlight.current || navigationFlight.current) return;
+    setSavingCompletion(true);
+    setCompletionError('');
+    navigationLocked.current = true;
+    completionFlight.current = (async () => {
+      let saveBlocked = false;
+      try {
+        // Completion is a learner decision. Keep only time actually measured here;
+        // copy and simulator results retain their own save flow and active drafts.
+        if (done && !isCopy && !isRunner) {
+          pauseTimer();
+          try {
+            const outcome = await saveCoordinator.current.flush(captureSession(1), onAutoSave);
+            if (outcome === 'saved') changeScratchpad('');
+            resetTimer();
+            setSaveFailed(false);
+            setError('');
+          } catch (error) {
+            saveBlocked = true;
+            saveRetryIntent.current = 'completion';
+            setSaveFailed(true);
+            throw error;
+          }
+        }
+        await onTaskCompletion(task, done);
+        return true;
+      } catch (error) {
+        setCompletionError(
+          `${done ? 'Could not confirm completion.' : 'Could not confirm reopening.'} ${error instanceof Error ? error.message : 'Please try again.'}`,
+        );
+        return false;
+      } finally {
+        navigationLocked.current = saveBlocked;
+        setSavingCompletion(false);
+        completionFlight.current = undefined;
+      }
+    })();
   };
   beforeLeaveRef.current = beforeLeave;
   useEffect(() => {
@@ -452,7 +508,9 @@ export default function PracticeStudio({
             <span className="eyebrow">ASSIGNED PRACTICE</span>
             <strong>{launch.task.title}</strong>
             <span>
-              {launch.task.targetMinutes} min target · Saved time stays linked to this exercise.
+              {launch.task.targetMinutes !== undefined &&
+                `${launch.task.targetMinutes} min suggested · `}
+              Practice as long as you need. Saved time stays linked to this exercise.
             </span>
           </div>
           {launch.task.link && (
@@ -488,6 +546,44 @@ export default function PracticeStudio({
                 . Each saved round keeps its own result.
               </p>
             )}
+          {onTaskCompletion && (
+            <div className="studio-task-completion">
+              {launch.task.done ? (
+                <>
+                  <span className="studio-completion-status" role="status">
+                    <CheckCheck size={17} /> Exercise completed
+                  </span>
+                  <button
+                    className="text-button"
+                    disabled={savingCompletion || savingNavigation}
+                    onClick={() => changeCompletion(false)}
+                  >
+                    {savingCompletion ? 'Reopening…' : 'Reopen exercise'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="button dark"
+                    disabled={savingCompletion || savingNavigation}
+                    onClick={() => changeCompletion(true)}
+                  >
+                    <CheckCheck size={17} />
+                    {savingCompletion ? 'Completing…' : 'Complete exercise'}
+                  </button>
+                  <p>
+                    Mark it complete when you’re ready, even if you don’t need another replay. Only
+                    actual practice time is logged.
+                  </p>
+                </>
+              )}
+              {completionError && (
+                <p className="alert error" role="alert">
+                  {completionError}
+                </p>
+              )}
+            </div>
+          )}
           {onBack && (
             <button className="text-button" onClick={onBack}>
               Back to Today <ArrowRight size={14} />
@@ -565,17 +661,20 @@ export default function PracticeStudio({
           {saveFailed && (
             <button
               className="button outline"
-              disabled={savingNavigation}
-              onClick={() => void beforeLeave()}
+              disabled={savingNavigation || savingCompletion}
+              onClick={() => {
+                if (saveRetryIntent.current === 'completion') changeCompletion(true);
+                else void beforeLeave();
+              }}
             >
-              {savingNavigation ? 'Saving session…' : 'Retry saving session'}
+              {savingNavigation || savingCompletion ? 'Saving session…' : 'Retry saving session'}
             </button>
           )}
           {savingNavigation && <p role="status">Saving your practice…</p>}
           <fieldset
             className="studio-session-controls"
-            disabled={savingNavigation || saveFailed}
-            aria-busy={savingNavigation}
+            disabled={savingNavigation || savingCompletion || saveFailed}
+            aria-busy={savingNavigation || savingCompletion}
           >
             <div className="studio-quick-actions">
               <button
@@ -593,7 +692,7 @@ export default function PracticeStudio({
                       : 'Start practice'}
               </button>
               <span>
-                <strong>{duration(seconds)}</strong> / {duration(timerMinutes * 60)}{' '}
+                <strong>{duration(seconds)}</strong>{' '}
                 <span className="field-hint">
                   {running ? 'timing' : seconds > 0 ? 'unsaved' : 'elapsed'}
                 </span>
@@ -980,34 +1079,49 @@ export default function PracticeStudio({
                     <span>3. Save session</span>
                   </div>
                   <div className={`timer-readout ${running ? 'running' : ''}`} aria-live="off">
-                    {duration(Math.max(0, timerMinutes * 60 - seconds))}
+                    {duration(seconds)}
                   </div>
-                  <div className="timer-presets">
-                    {[
-                      ...new Set([
-                        5,
-                        10,
-                        15,
-                        30,
-                        ...(launch?.task ? [launch.task.targetMinutes] : []),
-                      ]),
-                    ]
-                      .sort((a, b) => a - b)
-                      .map((minutes) => (
-                        <button
-                          key={minutes}
-                          className={timerMinutes === minutes ? 'selected' : ''}
-                          disabled={running || seconds > 0}
-                          aria-pressed={timerMinutes === minutes}
-                          onClick={() => {
-                            setTimerMinutes(minutes);
-                            resetTimer();
-                          }}
-                        >
-                          {minutes} min
-                        </button>
-                      ))}
-                  </div>
+                  <details className="studio-time-goal">
+                    <summary>
+                      {timerMinutes === undefined
+                        ? 'Optional time goal'
+                        : `${timerMinutes} min suggested goal`}
+                    </summary>
+                    <p className="field-hint">
+                      A reminder you can change or skip. Completion is up to you.
+                    </p>
+                    <div className="timer-presets" role="group" aria-label="Optional time goal">
+                      <button
+                        className={timerMinutes === undefined ? 'selected' : ''}
+                        aria-pressed={timerMinutes === undefined}
+                        onClick={() => setTimerMinutes(undefined)}
+                      >
+                        No goal
+                      </button>
+                      {[
+                        ...new Set([
+                          5,
+                          10,
+                          15,
+                          30,
+                          ...(launch?.task?.targetMinutes !== undefined
+                            ? [launch.task.targetMinutes]
+                            : []),
+                        ]),
+                      ]
+                        .sort((a, b) => a - b)
+                        .map((minutes) => (
+                          <button
+                            key={minutes}
+                            className={timerMinutes === minutes ? 'selected' : ''}
+                            aria-pressed={timerMinutes === minutes}
+                            onClick={() => setTimerMinutes(minutes)}
+                          >
+                            {minutes} min
+                          </button>
+                        ))}
+                    </div>
+                  </details>
                   <button
                     className="button dark full"
                     onClick={() => (running ? pauseTimer() : startTimer())}
@@ -1049,7 +1163,9 @@ export default function PracticeStudio({
                   <p className="studio-save-help">
                     {automaticSave
                       ? `Review a session whenever you like. Switching tools or leaving the studio automatically saves 30 seconds or more of practice${accountId ? ' to your log' : ' on this device'}.`
-                      : 'This opens a practice entry for you to review. Nothing is added to your log until you choose Save practice.'}
+                      : launch?.task && onTaskCompletion
+                        ? 'Review your measured time before saving, or choose Complete exercise to save it and mark this exercise done.'
+                        : 'This opens a practice entry for you to review. Nothing is added to your log until you choose Save practice.'}
                   </p>
                   <div className="timer-secondary">
                     <button
@@ -1093,13 +1209,12 @@ export default function PracticeStudio({
                   )}
                   {timerDone && (
                     <div className="timer-complete" role="status">
-                      <CheckCheck size={18} /> Target reached. Keep practicing as long as you need,
-                      then review and save.
+                      <CheckCheck size={18} /> Suggested time reached. Keep practicing as long as
+                      you need.
                     </div>
                   )}
                   <p className="studio-timer-scope">
-                    Listening time follows the audio, including when your screen locks. The target
-                    is a guide, not a limit.{' '}
+                    Listening time follows the audio, including when your screen locks.{' '}
                     {automaticSave
                       ? 'Practice under 30 seconds is not logged automatically. Review and save before reloading to keep unfinished time.'
                       : 'Review and save before leaving to keep your practice time.'}

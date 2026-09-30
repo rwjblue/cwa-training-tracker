@@ -857,6 +857,261 @@ describe('private training data', () => {
     expect(await plan(a.cookie)).toEqual(shifted);
   });
 
+  describe('plan status updates', () => {
+    const task = (id = 'status-exercise') => ({
+      id,
+      title: 'An exercise with private notes',
+      kind: 'listening',
+      done: false,
+      notes: 'Keep this reminder',
+      createdAt: '2026-09-28T12:00:00Z',
+    });
+    const settings = {
+      ...DEFAULT_PROFILE,
+      level: 'intermediate',
+      firstClassDate: '2026-10-08',
+      classDays: [1, 4],
+    };
+    const plan = async (cookie: string) =>
+      (
+        (await (await request('/api/plan', 'GET', undefined, cookie)).json()) as {
+          plan: PlannedTask[];
+        }
+      ).plan;
+
+    it('requires authentication and same-origin requests and applies the write rate limit', async () => {
+      const body = { ids: ['status-exercise'], done: true };
+      expect((await request('/api/plan/status', 'POST', body)).status).toBe(401);
+      const auth = await signIn('status@example.com');
+      await request('/api/plan', 'POST', task(), auth.cookie);
+      expect(
+        (
+          await request('/api/plan/status', 'POST', body, auth.cookie, {
+            Origin: 'https://attacker.example',
+          })
+        ).status,
+      ).toBe(403);
+      db.sqlite.prepare('UPDATE rate_limits SET count = 120').run();
+      expect((await request('/api/plan/status', 'POST', body, auth.cookie)).status).toBe(429);
+      expect((await plan(auth.cookie))[0].done).toBe(false);
+    });
+
+    it('rejects invalid, duplicate, oversized, and ambiguous status payloads before plan writes', async () => {
+      const auth = await signIn('status@example.com');
+      for (const body of [
+        {},
+        { ids: [], done: true },
+        { ids: ['one'] },
+        { ids: 'one', done: true },
+        { ids: ['one', 'one'], done: true },
+        { ids: [''], done: true },
+        { ids: [1], done: true },
+        { ids: ['bad/id'], done: true },
+        { ids: ['a'.repeat(201)], done: true },
+        { ids: Array.from({ length: 2001 }, (_, index) => `task-${index}`), done: true },
+        { ids: ['one'], done: 'true' },
+        { ids: ['one'], dismissedFromToday: null },
+        { ids: ['one'], done: false, dismissedFromToday: 1 },
+        { ids: ['one'], done: true, notes: 'Not a status field' },
+        { ids: ['one'], dismissedFromToday: true, targetMinutes: 15 },
+      ]) {
+        const response = await request('/api/plan/status', 'POST', body, auth.cookie);
+        expect(response.status, JSON.stringify(body)).toBe(400);
+      }
+      expect(db.sqlite.prepare('SELECT count(*) AS count FROM training_plan').get()?.count).toBe(0);
+    });
+
+    it('rejects missing or foreign IDs without changing or materializing any selected task', async () => {
+      const a = await signIn('a@example.com');
+      const b = await signIn('b@example.com');
+      await request('/api/settings', 'PUT', settings, a.cookie);
+      await request('/api/plan', 'POST', task('mine'), a.cookie);
+      await request('/api/plan', 'POST', task('theirs'), b.cookie);
+      const initial = await plan(a.cookie);
+      const generated = initial.find((item) => item.source === 'curriculum')!;
+      const response = await request(
+        '/api/plan/status',
+        'POST',
+        {
+          ids: ['mine', generated.id, 'theirs'],
+          done: true,
+          dismissedFromToday: true,
+        },
+        a.cookie,
+      );
+      expect(response.status).toBe(404);
+      expect(await plan(a.cookie)).toEqual(initial);
+      expect((await plan(b.cookie))[0].done).toBe(false);
+      expect(
+        db.sqlite
+          .prepare('SELECT count(*) AS count FROM training_plan WHERE user_id = ?')
+          .get(a.user.id)?.count,
+      ).toBe(1);
+      expect(
+        (
+          await request(
+            '/api/plan/status',
+            'POST',
+            {
+              ids: ['mine', 'missing'],
+              dismissedFromToday: true,
+            },
+            a.cookie,
+          )
+        ).status,
+      ).toBe(404);
+      expect(await plan(a.cookie)).toEqual(initial);
+    });
+
+    it('dismisses a mixed bulk selection without completion, time credit, or stale field replacement', async () => {
+      const auth = await signIn('status@example.com');
+      const other = await signIn('other@example.com');
+      for (const account of [auth, other])
+        await request('/api/settings', 'PUT', settings, account.cookie);
+      await request('/api/plan', 'POST', task(), auth.cookie);
+      const initial = await plan(auth.cookie);
+      const generated = initial.filter((item) => item.source === 'curriculum').slice(0, 2);
+      // A different view can update notes between rendering Today and dismissing its rows.
+      await request(
+        '/api/plan/status-exercise',
+        'PUT',
+        {
+          ...task(),
+          notes: 'A newer reminder',
+          targetMinutes: 17,
+        },
+        auth.cookie,
+      );
+      const before = await plan(auth.cookie);
+      const ids = [task().id, ...generated.map((item) => item.id)];
+      const selected = before.filter((item) => ids.includes(item.id));
+      const response = await request(
+        '/api/plan/status',
+        'POST',
+        {
+          ids,
+          dismissedFromToday: true,
+        },
+        auth.cookie,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        tasks: selected.map((item) => ({ ...item, dismissedFromToday: true })),
+      });
+      expect(
+        db.sqlite
+          .prepare('SELECT count(*) AS count FROM training_plan WHERE user_id = ?')
+          .get(auth.user.id)?.count,
+      ).toBe(3);
+      expect(await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()).toEqual({
+        entries: [],
+      });
+      expect((await plan(other.cookie)).filter((item) => ids.includes(item.id))).toEqual(generated);
+      expect((await plan(auth.cookie)).filter((item) => !ids.includes(item.id))).toEqual(
+        before.filter((item) => !ids.includes(item.id)),
+      );
+    });
+
+    it('preserves completion and dismissal in export/import and can reopen and restore independently', async () => {
+      const auth = await signIn('status@example.com');
+      await request('/api/settings', 'PUT', settings, auth.cookie);
+      const generated = (await plan(auth.cookie))[0];
+      const ids = [generated.id];
+      expect(
+        (
+          await request(
+            '/api/plan/status',
+            'POST',
+            {
+              ids,
+              done: true,
+              dismissedFromToday: true,
+            },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(200);
+      const exported = (await (
+        await request('/api/export', 'GET', undefined, auth.cookie)
+      ).json()) as TrainingExport;
+      expect(exported.plan?.find((item) => item.id === generated.id)).toMatchObject({
+        done: true,
+        dismissedFromToday: true,
+      });
+      const other = await signIn('restore@example.com');
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            {
+              data: exported,
+              mode: 'replace',
+            },
+            other.cookie,
+          )
+        ).status,
+      ).toBe(200);
+      const reopened = await request(
+        '/api/plan/status',
+        'POST',
+        { ids, done: false },
+        other.cookie,
+      );
+      expect(await reopened.json()).toEqual({
+        tasks: [{ ...generated, done: false, dismissedFromToday: true }],
+      });
+      const restored = await request(
+        '/api/plan/status',
+        'POST',
+        {
+          ids,
+          dismissedFromToday: false,
+        },
+        other.cookie,
+      );
+      expect(await restored.json()).toEqual({
+        tasks: [{ ...generated, done: false, dismissedFromToday: false }],
+      });
+      expect((await plan(auth.cookie)).find((item) => item.id === generated.id)).toMatchObject({
+        done: true,
+        dismissedFromToday: true,
+      });
+      expect(await (await request('/api/entries', 'GET', undefined, other.cookie)).json()).toEqual({
+        entries: [],
+      });
+    });
+
+    it('rolls back generated materialization if the status update fails inside the batch', async () => {
+      const auth = await signIn('status@example.com');
+      await request('/api/settings', 'PUT', settings, auth.cookie);
+      const initial = await plan(auth.cookie);
+      const storedBytes = db.sqlite
+        .prepare('SELECT storage_bytes FROM users WHERE id = ?')
+        .get(auth.user.id)?.storage_bytes;
+      db.sqlite.exec(`CREATE TRIGGER reject_status_patch BEFORE UPDATE OF task_json ON training_plan
+        WHEN json_extract(NEW.task_json, '$.dismissedFromToday') = 1
+        BEGIN SELECT RAISE(ABORT, 'status_patch_failed'); END;`);
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const response = await request(
+        '/api/plan/status',
+        'POST',
+        {
+          ids: initial.slice(0, 2).map((item) => item.id),
+          dismissedFromToday: true,
+        },
+        auth.cookie,
+      );
+      expect(response.status).toBe(500);
+      expect(db.sqlite.prepare('SELECT count(*) AS count FROM training_plan').get()?.count).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+          ?.storage_bytes,
+      ).toBe(storedBytes);
+      expect(await plan(auth.cookie)).toEqual(initial);
+    });
+  });
+
   it('enforces the storage budget transactionally and restores bytes after deletion', async () => {
     const auth = await signIn('a@example.com');
     const large = {

@@ -108,14 +108,6 @@
 .today-plan-task:first-child {
   border-top: 0;
 }
-.today-plan-check {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  margin: 3px 0 0;
-  accent-color: #41633e;
-  cursor: pointer;
-}
 .today-plan-task-content {
   min-width: 0;
   flex: 1;
@@ -186,10 +178,43 @@
   font-size: 12px;
 }
 .today-plan-task-actions > .today-plan-practice {
-  padding: 6px 10px;
-  border: 1px solid #c9d7bd;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #2b5038;
   border-radius: 5px;
-  background: #eef3e8;
+  background: #2b5038;
+  color: #fff;
+}
+.today-plan-dismiss-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 8px;
+}
+.today-plan-dismiss-actions .text-button {
+  min-height: 44px;
+  font-size: 13px;
+  color: #4e6345;
+}
+.today-plan-dismiss-actions > span {
+  color: #62705b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.today-plan-dismissed {
+  margin: 0 25px 16px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f3f5ee;
+  color: #4e6345;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.today-plan-dismissed button {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .daily-practice-button {
   width: 100%;
@@ -415,6 +440,10 @@
   }
   .today-plan-disclosure {
     margin: 0 18px;
+  }
+  .today-plan-dismissed {
+    margin-left: 18px;
+    margin-right: 18px;
   }
   .today-plan-disclosure > summary {
     font-size: 14px;

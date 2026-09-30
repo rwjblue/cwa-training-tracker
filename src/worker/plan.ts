@@ -67,6 +67,60 @@ export async function listPlan(request: Request, env: Env): Promise<Response> {
   return json({ plan: await getPlanData(env, auth.user.id) });
 }
 
+export async function updatePlanStatus(request: Request, env: Env): Promise<Response> {
+  const auth = await requireAuth(request, env);
+  await rateLimit(env, `write:${auth.user.id}`, 120, 60);
+  const body = await readJson(request, 420_000);
+  if (Object.keys(body).some((key) => !['ids', 'done', 'dismissedFromToday'].includes(key)))
+    throw new HttpError(
+      400,
+      'Only exercise IDs and completion or dismissal status may be changed.',
+    );
+  if (
+    !Array.isArray(body.ids) ||
+    body.ids.length < 1 ||
+    body.ids.length > 2000 ||
+    body.ids.some(
+      (id) =>
+        typeof id !== 'string' || id.length > 200 || !/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]*$/.test(id),
+    ) ||
+    new Set(body.ids).size !== body.ids.length
+  )
+    throw new HttpError(400, 'Choose between 1 and 2,000 distinct valid exercise IDs.');
+  const changes: Partial<Pick<PlannedTask, 'done' | 'dismissedFromToday'>> = {};
+  for (const key of ['done', 'dismissedFromToday'] as const) {
+    if (body[key] === undefined) continue;
+    if (typeof body[key] !== 'boolean')
+      throw new HttpError(400, 'Exercise completion and dismissal must be true or false.');
+    changes[key] = body[key];
+  }
+  if (!Object.keys(changes).length)
+    throw new HttpError(400, 'Choose a completion or dismissal status to change.');
+
+  const ids = new Set<string>(body.ids);
+  const selected = (await getPlanData(env, auth.user.id)).filter((task) => ids.has(task.id));
+  if (selected.length !== ids.size)
+    throw new HttpError(404, 'One or more exercises were not found in your current plan.');
+
+  // Materialize generated assignments and patch only status in the same transaction.
+  // Existing task notes, duration overrides, and practice evidence are untouched.
+  await env.DB.batch([
+    ...planStatementsForImport(
+      env,
+      auth.user.id,
+      selected.filter((task) => task.source === 'curriculum'),
+      false,
+    ),
+    env.DB.prepare(
+      `UPDATE training_plan SET task_json = json_patch(task_json, ?)
+      WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))`,
+    ).bind(JSON.stringify(changes), auth.user.id, JSON.stringify([...ids])),
+  ]);
+  return json({
+    tasks: (await getPlanData(env, auth.user.id)).filter((task) => ids.has(task.id)),
+  });
+}
+
 export async function savePlan(request: Request, env: Env, id?: string): Promise<Response> {
   const auth = await requireAuth(request, env);
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);

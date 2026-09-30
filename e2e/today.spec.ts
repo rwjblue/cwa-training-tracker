@@ -18,7 +18,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await expect(page.getByLabel('Practice date (optional)', { exact: true })).toHaveValue(today);
   await page.getByLabel('Exercise title', { exact: true }).fill('Today’s sending warm-up');
   await page.getByRole('combobox', { name: 'Activity', exact: true }).selectOption('sending');
-  await page.getByLabel('Suggested minutes', { exact: true }).fill('12');
+  await page.getByLabel('Suggested minutes (optional)', { exact: true }).fill('12');
   await page
     .getByLabel('Exercise link (optional)', { exact: true })
     .fill('https://example.org/today');
@@ -101,9 +101,12 @@ test('Today brings personal assignments forward and keeps logging separate from 
     ).done,
   ).toBe(false);
 
-  await panel
-    .getByRole('checkbox', { name: 'Mark Today’s sending warm-up complete', exact: true })
-    .click();
+  await expect(panel.getByRole('checkbox')).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Practice', exact: true }).click();
+  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
   await expect
     .poll(
@@ -149,6 +152,13 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
   await page.getByRole('button', { name: 'View Today', exact: true }).click();
   await expect(panel.getByRole('heading', { name: /Assigned for today/ })).toBeVisible();
+  await expect(
+    panel.getByRole('link', { name: 'Session 1 syllabus', exact: true }),
+  ).toHaveAttribute(
+    'href',
+    'https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm#_Toc172984024',
+  );
+  await expect(panel.getByRole('checkbox')).toHaveCount(0);
 
   const plan = (await (await context.request.get('/api/plan')).json()).plan;
   const assigned = plan.find(
@@ -317,14 +327,346 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   await expect(audio).toHaveAttribute('src', fasterUrl!); // remembered next-faster default
+  await page.clock.resume();
+  await audio.evaluate((element: HTMLAudioElement) => element.play());
+  await expect
+    .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
+    .toBeGreaterThan(1.2);
+  await page.route('**/api/plan/status', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Completion temporarily unavailable.' }),
+    }),
+  );
+  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Could not confirm completion.');
+  expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+  const savedBeforeCompletion = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(savedBeforeCompletion).toHaveLength(2);
+  const recent = savedBeforeCompletion.find((entry: { id: string }) => entry.id !== entries[0].id);
+  expect(recent.metadata.plannedTaskId).toBe(assigned.id);
+  expect(recent.metadata.elapsedSeconds).toBeGreaterThanOrEqual(1);
+  expect(recent.metadata.elapsedSeconds).toBeLessThanOrEqual(4);
+  expect(
+    (await (await context.request.get('/api/plan')).json()).plan.find(
+      (task: { id: string }) => task.id === assigned.id,
+    ).done,
+  ).toBe(false);
+  await page.unroute('**/api/plan/status');
+  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
-  await row.getByRole('checkbox', { name: `Mark ${assigned.title} complete`, exact: true }).click();
   await expect(row).toHaveCount(0);
   await expect(panel.getByText('1/4 done', { exact: true })).toBeVisible();
   await page.reload();
   const after = (await (await context.request.get('/api/plan')).json()).plan;
   expect(after.find((task: { id: string }) => task.id === assigned.id).done).toBe(true);
   expect(after).toHaveLength(plan.length);
-  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
+    savedBeforeCompletion,
+  );
+});
+
+test('an exercise without a time target can be completed and reopened without logging practice', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const panel = page.getByRole('region', { name: 'What should I do today?' });
+  await panel.getByRole('button', { name: 'Add an exercise', exact: true }).click();
+  await page.getByLabel('Exercise title', { exact: true }).fill('Review the exchange structure');
+  await expect(page.getByLabel('Suggested minutes (optional)', { exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: 'Save exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const original = (await (await context.request.get('/api/plan')).json()).plan[0];
+  expect(original.targetMinutes).toBeUndefined();
+  await page.getByRole('button', { name: 'Log practice', exact: true }).click();
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('');
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  let entryWrites = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
+      entryWrites += 1;
+  });
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(panel.getByRole('checkbox')).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Practice', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeVisible();
+  await expect(page.getByText('15:00', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/15 min target/)).toHaveCount(0);
+  await expectAccessible(page, 'exercise-no-target-desktop');
+  await page.screenshot({ path: '.tmp/exercise-no-target-desktop.png', fullPage: true });
+  let releaseCompletion!: () => void;
+  const heldCompletion = new Promise<void>((resolve) => {
+    releaseCompletion = resolve;
+  });
+  await page.route('**/api/plan/status', async (route) => {
+    await heldCompletion;
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Completion temporarily unavailable.' }),
+    });
+  });
+  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Completing…', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  await expect(page).toHaveURL(/#practice$/);
+  releaseCompletion();
+  await expect(page.getByRole('alert')).toContainText('Could not confirm completion.');
+  await expect(page).toHaveURL(/#practice$/);
+  expect((await (await context.request.get('/api/plan')).json()).plan[0].done).toBe(false);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
+  await page.unroute('**/api/plan/status');
+  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await expect(page).toHaveURL(/#practice$/);
+  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeVisible();
+  expect((await (await context.request.get('/api/plan')).json()).plan[0]).toMatchObject({
+    id: original.id,
+    done: true,
+  });
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
+  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  await page.reload();
+  await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
+  await panel.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
+  await panel.getByRole('button', { name: 'Review exercise', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectAccessible(page, 'exercise-completed-mobile');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: '.tmp/exercise-completed-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: 'Reopen exercise', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Complete exercise', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  await page.reload();
+  await expect(panel.getByRole('button', { name: 'Practice', exact: true })).toBeVisible();
+  expect((await (await context.request.get('/api/plan')).json()).plan[0]).toMatchObject({
+    id: original.id,
+    done: false,
+  });
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
+  expect(entryWrites).toBe(0);
+});
+
+test('earlier work can be dismissed in bulk and restored without completion or changed practice', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const settings = (await (await context.request.get('/api/settings')).json()).settings;
+  const today = dateInTimezone(new Date(), settings.timezone);
+  const fixtures = [
+    {
+      id: 'earlier-started',
+      title: 'Earlier sending practice',
+      dueDate: addDays(today, -2),
+      done: false,
+    },
+    {
+      id: 'earlier-ready',
+      title: 'Earlier listening practice',
+      dueDate: addDays(today, -1),
+      done: false,
+    },
+    { id: 'today-ready', title: 'Today’s planned exchange', dueDate: today, done: false },
+    {
+      id: 'future-ready',
+      title: 'Future exchange practice',
+      dueDate: addDays(today, 1),
+      done: false,
+    },
+    {
+      id: 'earlier-done',
+      title: 'Previously completed practice',
+      dueDate: addDays(today, -3),
+      done: true,
+    },
+  ];
+  for (const task of fixtures) {
+    const response = await context.request.post('/api/plan', {
+      headers: { Origin: 'http://localhost:8791' },
+      data: { task: { ...task, kind: 'sending', notes: '', createdAt: new Date().toISOString() } },
+    });
+    expect(response.status()).toBe(201);
+  }
+  const saved = await context.request.post('/api/entries', {
+    headers: { Origin: 'http://localhost:8791' },
+    data: {
+      date: addDays(today, -2),
+      kind: 'sending',
+      minutes: 2,
+      notes: 'Previously recorded practice stays intact.',
+      source: 'manual',
+      metadata: { plannedTaskId: 'earlier-started' },
+    },
+  });
+  expect(saved.status()).toBe(201);
+  const entries = (await (await context.request.get('/api/entries')).json()).entries;
+  await page.reload();
+  const panel = page.getByRole('region', { name: 'What should I do today?' });
+  await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
+  await expect(
+    panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
+  ).toBeVisible();
+  const updates: unknown[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/plan/status' && request.method() === 'POST')
+      updates.push(request.postDataJSON());
+  });
+  await panel.getByRole('button', { name: 'Dismiss earlier work', exact: true }).click();
+  await expect(
+    panel.getByText(/2 earlier exercises are hidden from Today and still unfinished/),
+  ).toBeVisible();
+  expect(updates).toEqual([
+    { ids: ['earlier-started', 'earlier-ready'], dismissedFromToday: true },
+  ]);
+  const dismissed = (await (await context.request.get('/api/plan')).json()).plan;
+  for (const fixture of fixtures) {
+    const task = dismissed.find((item: { id: string }) => item.id === fixture.id);
+    expect(task.done).toBe(fixture.done);
+    expect(task.dismissedFromToday).toBe(
+      fixture.id === 'earlier-started' || fixture.id === 'earlier-ready' ? true : undefined,
+    );
+  }
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
+  await expect(
+    panel.getByRole('heading', { name: 'Today’s planned exchange', exact: true }),
+  ).toBeVisible();
+  await expectAccessible(page, 'earlier-dismissed-desktop');
+  await page.screenshot({ path: '.tmp/earlier-dismissed-desktop.png', fullPage: true });
+  await page.reload();
+  await expect(panel.locator('summary').filter({ hasText: 'Earlier unfinished work' })).toHaveCount(
+    0,
+  );
+  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  const oldRow = page.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+  });
+  await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toBeVisible();
+  await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectAccessible(page, 'earlier-restore-mobile');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: '.tmp/earlier-restore-mobile.png', fullPage: true });
+  await oldRow.getByRole('button', { name: 'Restore to Today', exact: true }).click();
+  await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toHaveCount(0);
+  await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.reload();
+  await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
+  await expect(
+    panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
+  ).toHaveCount(0);
+  const restored = (await (await context.request.get('/api/plan')).json()).plan;
+  expect(restored.find((task: { id: string }) => task.id === 'earlier-started')).toMatchObject({
+    done: false,
+    dismissedFromToday: false,
+  });
+  expect(restored.find((task: { id: string }) => task.id === 'earlier-ready')).toMatchObject({
+    done: false,
+    dismissedFromToday: true,
+  });
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
+});
+
+test('completion retries a failed measured sending save without discarding time or duplicating credit', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const settings = (await (await context.request.get('/api/settings')).json()).settings;
+  const task = {
+    id: 'sending-completion-retry',
+    title: 'Send one familiar exchange',
+    kind: 'sending',
+    dueDate: dateInTimezone(new Date(), settings.timezone),
+    done: false,
+    notes: '',
+    createdAt: new Date().toISOString(),
+  };
+  expect(
+    (
+      await context.request.post('/api/plan', {
+        headers: { Origin: 'http://localhost:8791' },
+        data: { task },
+      })
+    ).status(),
+  ).toBe(201);
+  await page.reload();
+  await page
+    .getByRole('region', { name: 'What should I do today?' })
+    .getByRole('button', { name: 'Practice', exact: true })
+    .click();
+  const now = new Date();
+  await page.clock.install({ time: now });
+  await page.clock.pauseAt(new Date(now.getTime() + 1000));
+  await page.getByRole('button', { name: 'Start timer', exact: true }).click();
+  await page.clock.fastForward(4_000);
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    document.documentElement.dataset.blockPracticeSave = 'true';
+    Storage.prototype.setItem = function (key, value) {
+      if (
+        key.startsWith('cwa:practice:pending:') &&
+        document.documentElement.dataset.blockPracticeSave === 'true'
+      )
+        throw new DOMException('Test storage unavailable', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  });
+  const bodies: unknown[] = [];
+  const dialogs: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
+      bodies.push(request.postDataJSON());
+  });
+  page.on('dialog', async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.dismiss();
+  });
+  await page.route('**/api/entries', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Practice storage temporarily unavailable.' }),
+    }),
+  );
+  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Could not confirm completion.');
+  await expect(page.locator('.timer-readout')).toHaveText('00:04');
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
+  expect((await (await context.request.get('/api/plan')).json()).plan[0].done).toBe(false);
+  await page.unroute('**/api/entries');
+  await page.evaluate(() => {
+    document.documentElement.dataset.blockPracticeSave = 'false';
+  });
+  await page.getByRole('button', { name: 'Retry saving session', exact: true }).click();
+  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  const entries = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({
+    kind: 'sending',
+    minutes: 4 / 60,
+    metadata: { plannedTaskId: task.id, elapsedSeconds: 4 },
+  });
+  expect((await (await context.request.get('/api/plan')).json()).plan[0].done).toBe(true);
+  expect(bodies).toHaveLength(2);
+  expect(bodies[1]).toEqual(bodies[0]);
+  expect(dialogs).toEqual([]);
+  await expect(page).toHaveURL(/#practice$/);
   await page.clock.resume();
 });

@@ -102,16 +102,22 @@ export default function Plan({
     void load();
   }, []);
 
-  async function complete(task: PlannedTask) {
+  async function updateTask(
+    task: PlannedTask,
+    changes: Partial<Pick<PlannedTask, 'done' | 'dismissedFromToday'>>,
+  ) {
     setBusy(task.id);
     setError('');
     try {
-      const result = await api<{ task: PlannedTask }>(
-        `/plan/${encodeURIComponent(task.id)}`,
-        { task: { ...task, done: !task.done } },
-        'PUT',
+      const result = await api<{ tasks: PlannedTask[] }>(
+        '/plan/status',
+        { ids: [task.id], ...changes },
+        'POST',
+        AbortSignal.timeout(10_000),
       );
-      setTasks((current) => current.map((item) => (item.id === task.id ? result.task : item)));
+      setTasks((current) =>
+        current.map((item) => result.tasks.find((updated) => updated.id === item.id) ?? item),
+      );
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -175,7 +181,7 @@ export default function Plan({
           </button>
           <button
             className="button outline small"
-            onClick={() => setEditing({ lesson: nextLesson, targetMinutes: 15 })}
+            onClick={() => setEditing({ lesson: nextLesson })}
           >
             <Plus size={15} /> Add exercise
           </button>
@@ -245,18 +251,23 @@ export default function Plan({
                   checked={task.done}
                   disabled={busy === task.id}
                   aria-label={`Mark ${task.title} ${task.done ? 'incomplete' : 'complete'}`}
-                  onChange={() => void complete(task)}
+                  onChange={() => void updateTask(task, { done: !task.done })}
                 />
                 <div className="plan-task-body">
                   <div className="plan-task-title">
                     <h3>{task.title}</h3>
                     {overdue && <span className="plan-overdue">Earlier work</span>}
+                    {task.dismissedFromToday && (
+                      <span className="plan-dismissed">Dismissed from Today</span>
+                    )}
                   </div>
                   <p className="plan-task-meta">
                     {task.lesson ? `Session ${task.lesson} · ` : ''}
                     {task.curriculum ? `Day ${task.curriculum.day} · ` : ''}
-                    {PRACTICE_KINDS.find((kind) => kind.id === task.kind)?.label} ·{' '}
-                    {Number(task.targetMinutes.toFixed(1))} min suggested
+                    {PRACTICE_KINDS.find((kind) => kind.id === task.kind)?.label}
+                    {task.targetMinutes !== undefined
+                      ? ` · ${Number(task.targetMinutes.toFixed(1))} min suggested`
+                      : ''}
                     {due ? ` · ${dayLabel(due)}` : ''}
                   </p>
                   {task.notes && (
@@ -280,6 +291,14 @@ export default function Plan({
                     <button onClick={() => onLog(practiceForTask(task, today))}>
                       <Plus size={12} /> Log practice
                     </button>
+                    {task.dismissedFromToday && (
+                      <button
+                        disabled={busy === task.id}
+                        onClick={() => void updateTask(task, { dismissedFromToday: false })}
+                      >
+                        {busy === task.id ? 'Restoring…' : 'Restore to Today'}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="plan-task-actions">
@@ -322,7 +341,7 @@ export default function Plan({
           )}
           <button
             className="button outline small"
-            onClick={() => setEditing({ lesson: nextLesson, targetMinutes: 15 })}
+            onClick={() => setEditing({ lesson: nextLesson })}
           >
             Add an exercise <Plus size={14} />
           </button>
@@ -441,7 +460,6 @@ function TaskEditor({
     id: crypto.randomUUID(),
     title: '',
     kind: 'listening',
-    targetMinutes: 15,
     done: false,
     notes: '',
     createdAt: new Date().toISOString(),
@@ -503,15 +521,21 @@ function TaskEditor({
             </select>
           </label>
           <label>
-            Suggested minutes
+            Suggested minutes (optional)
             <input
               type="number"
-              required
               min={1}
               max={1440}
               step="any"
-              value={task.targetMinutes}
-              onChange={(event) => setTask({ ...task, targetMinutes: Number(event.target.value) })}
+              value={task.targetMinutes ?? ''}
+              placeholder="No time target"
+              onChange={(event) =>
+                setTask({
+                  ...task,
+                  targetMinutes: event.target.value === '' ? undefined : Number(event.target.value),
+                  ...(task.curriculum ? { targetMinutesExplicit: true } : {}),
+                })
+              }
             />
           </label>
         </div>

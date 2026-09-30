@@ -119,11 +119,40 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(page.getByRole('dialog')).toContainText('Please retry saving your practice.');
   await expect(page).toHaveURL(/#practice$/);
   expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(125 / 60, 8);
+  let releaseSave!: () => void;
+  const heldSave = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  let confirmCommitted!: () => void;
+  const committed = new Promise<void>((resolve) => {
+    confirmCommitted = resolve;
+  });
+  await page.route(
+    '**/api/entries',
+    async (route) => {
+      const response = await route.fetch();
+      confirmCommitted();
+      await heldSave;
+      await route.fulfill({ response });
+    },
+    { times: 1 },
+  );
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await committed;
+  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page).toHaveURL(/#practice$/);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+  releaseSave();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
   await expect(page.getByRole('region', { name: 'What should I do today?' })).toBeVisible();
-  const timed = (await (await context.request.get('/api/entries')).json()).entries[0];
+  const afterSave = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(afterSave).toHaveLength(1);
+  const timed = afterSave[0];
   expect(timed.minutes).toBeCloseTo(125 / 60, 10);
   expect(timed.metadata.elapsedSeconds).toBe(125);
   expect(timed.metadata.scratchpad).toBe('Copied the final call.');

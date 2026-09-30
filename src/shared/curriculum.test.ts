@@ -4,8 +4,15 @@ import {
   curriculumPlan,
   INTERMEDIATE_CURRICULUM,
   mergeCurriculumPlan,
+  sessionSyllabusUrl,
 } from './curriculum';
-import { dailyPlanSummary, validatePlan, validatePlannedTask, type PlannedTask } from './plan';
+import {
+  dailyPlanSummary,
+  legacyPlan,
+  validatePlan,
+  validatePlannedTask,
+  type PlannedTask,
+} from './plan';
 import { DEFAULT_PROFILE, courseMeetings, type PracticeSession, type Profile } from './training';
 
 const profile: Profile = {
@@ -17,6 +24,113 @@ const profile: Profile = {
 };
 
 describe('automatic curriculum plan', () => {
+  it('preserves a newly imported explicit 15-minute recommendation without inventing one for untimed legacy work', () => {
+    const imported = legacyPlan(
+      {
+        assignments: [
+          {
+            session: 1,
+            tasks: [
+              {
+                id: 's1-d1-t1',
+                title: 'My assigned sending practice',
+                kind: 'sending',
+                minutes: 15,
+              },
+              { id: 's1-d1-t2', title: 'Untimed listening practice', kind: 'audio' },
+            ],
+          },
+        ],
+      },
+      [],
+      '2026-09-28T12:00:00.000Z',
+    );
+    expect(imported[0]).toMatchObject({ targetMinutes: 15, targetMinutesExplicit: true });
+    expect(imported[1]).not.toHaveProperty('targetMinutes');
+    expect(imported[1]).not.toHaveProperty('targetMinutesExplicit');
+    const merged = mergeCurriculumPlan(profile, imported);
+    expect(merged.find((task) => task.id === imported[0].id)).toMatchObject({
+      targetMinutes: 15,
+      targetMinutesExplicit: true,
+      source: 'legacy',
+      done: false,
+    });
+    expect(merged.find((task) => task.id === imported[1].id)).not.toHaveProperty('targetMinutes');
+  });
+
+  it('uses only authored duration recommendations and retires the old universal 15-minute placeholder', () => {
+    const initial = curriculumPlan(profile);
+    expect(initial.find((task) => task.title === 'WD101-10')?.targetMinutes).toBeUndefined();
+    expect(
+      initial
+        .filter((task) => task.kind === 'simulator')
+        .every((task) => task.targetMinutes === 15),
+    ).toBe(true);
+    expect(initial.filter((task) => task.targetMinutes !== undefined)).toHaveLength(23);
+    expect(
+      curriculumPlan({ ...profile, level: 'beginner' }).every(
+        (task) => task.targetMinutes === undefined,
+      ),
+    ).toBe(true);
+    expect(
+      curriculumPlan({ ...profile, level: 'advanced' }).every(
+        (task) => task.targetMinutes === undefined,
+      ),
+    ).toBe(true);
+    const unknown = initial.filter((task) => task.targetMinutes === undefined);
+    const stored: PlannedTask[] = [
+      { ...unknown[0], targetMinutes: 15, dismissedFromToday: true },
+      { ...unknown[1], targetMinutes: 12 },
+      { ...unknown[2], targetMinutes: 15, targetMinutesExplicit: true },
+      {
+        ...initial.find((task) => task.kind === 'simulator')!,
+        targetMinutes: undefined,
+        targetMinutesExplicit: true,
+      },
+      {
+        ...unknown[0],
+        id: 'manual:15',
+        source: 'manual',
+        curriculum: undefined,
+        targetMinutes: 15,
+      },
+    ];
+    const merged = mergeCurriculumPlan(profile, stored);
+    expect(merged.find((task) => task.id === stored[0].id)).toMatchObject({
+      dismissedFromToday: true,
+      done: false,
+    });
+    expect(merged.find((task) => task.id === stored[0].id)).not.toHaveProperty('targetMinutes');
+    expect(merged.find((task) => task.id === stored[1].id)?.targetMinutes).toBe(12);
+    expect(merged.find((task) => task.id === stored[2].id)?.targetMinutes).toBe(15);
+    expect(merged.find((task) => task.id === stored[3].id)).not.toHaveProperty('targetMinutes');
+    expect(merged.find((task) => task.id === 'manual:15')?.targetMinutes).toBe(15);
+    expect(
+      mergeCurriculumPlan(profile, [{ ...stored[0], dismissedFromToday: false }]).find(
+        (task) => task.id === stored[0].id,
+      )?.dismissedFromToday,
+    ).toBe(false);
+  });
+
+  it('links all 64 sessions to verified sections, including missing-bookmark and final-session exceptions', () => {
+    for (const level of ['beginner', 'fundamental', 'intermediate', 'advanced'] as const) {
+      const links = Array.from({ length: 16 }, (_, index) => sessionSyllabusUrl(level, index + 1)!);
+      expect(new Set(links).size).toBe(16);
+      expect(
+        links.every((url) => /^https:\/\/(?:cwa\.)?cwops\.org\/.+#(?:_Toc\d+|page=11)$/.test(url)),
+      ).toBe(true);
+      for (const invalid of [0, 17, 1.5, NaN])
+        expect(sessionSyllabusUrl(level, invalid)).toBeUndefined();
+    }
+    expect(sessionSyllabusUrl('beginner', 2)).toBe(
+      'https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.pdf#page=11',
+    );
+    expect(sessionSyllabusUrl('fundamental', 1)).toContain('#_Toc173138629');
+    expect(sessionSyllabusUrl('fundamental', 16)).toContain('#_Toc173138673');
+    expect(sessionSyllabusUrl('intermediate', 8)).toContain('#_Toc172984031');
+    expect(sessionSyllabusUrl('advanced', 16)).toContain('#_Toc197333306');
+  });
+
   it('dates all required Intermediate exercises and keeps official resource constraints intact', () => {
     const plan = curriculumPlan(profile);
     expect(plan).toHaveLength(213);

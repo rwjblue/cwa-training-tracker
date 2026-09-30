@@ -25,7 +25,7 @@ import {
   type PlannedTask,
 } from '../shared/plan';
 import './today-plan.css';
-import { curriculumForLevel } from '../shared/curriculum';
+import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
   profile: Profile;
@@ -34,7 +34,7 @@ export interface TodayPlanProps {
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
-  onToggle: (task: PlannedTask) => Promise<void>;
+  onDismiss: (tasks: PlannedTask[]) => Promise<void>;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onManagePlan: () => void;
   onImport: () => void;
@@ -61,7 +61,7 @@ export default function TodayPlan({
   loading = false,
   error,
   onRetry,
-  onToggle,
+  onDismiss,
   onLog,
   onManagePlan,
   onImport,
@@ -71,24 +71,31 @@ export default function TodayPlan({
   onSetupCourse,
 }: TodayPlanProps) {
   const titleId = useId();
-  const [saving, setSaving] = useState<string[]>([]);
+  const [dismissing, setDismissing] = useState(false);
+  const [dismissedCount, setDismissedCount] = useState(0);
   const [saveError, setSaveError] = useState('');
   const today = dateInTimezone(new Date(), profile.timezone);
   const plan = dailyPlanSummary(tasks, courseMeetings(profile), entries, today);
   const course = curriculumForLevel(profile.level);
   const curriculum = tasks.some((task) => task.curriculum?.id === course?.id) ? course : undefined;
   const needsCourseDates = !profile.firstClassDate;
-  async function toggle(task: PlannedTask) {
-    setSaving((current) => [...current, task.id]);
+  const syllabusUrl = plan.nextMeeting
+    ? sessionSyllabusUrl(profile.level, plan.nextMeeting.lesson)
+    : undefined;
+  async function dismissEarlier() {
+    if (dismissing || !plan.earlier.length) return;
+    const earlier = plan.earlier.map(({ task }) => task);
+    setDismissing(true);
     setSaveError('');
     try {
-      await onToggle(task);
+      await onDismiss(earlier);
+      setDismissedCount(earlier.length);
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : 'Could not save your exercise. Try again.',
+        error instanceof Error ? error.message : 'Could not dismiss earlier work. Try again.',
       );
     } finally {
-      setSaving((current) => current.filter((id) => id !== task.id));
+      setDismissing(false);
     }
   }
   const renderTasks = (items: DailyPlannedTask[]) => (
@@ -98,8 +105,6 @@ export default function TodayPlan({
           key={item.task.id}
           item={item}
           today={today}
-          saving={saving.includes(item.task.id)}
-          onToggle={() => void toggle(item.task)}
           onLog={() => onLog(practiceForTask(item.task, today))}
           onPractice={onPracticeTask ? () => onPracticeTask(item.task) : undefined}
         />
@@ -124,8 +129,9 @@ export default function TodayPlan({
       {!loading && curriculum && (
         <p className="today-plan-curriculum">
           {curriculum.title.replace('CW Academy ', '')} · syllabus v{curriculum.version}
-          <a href={curriculum.sourceUrl} target="_blank" rel="noreferrer">
-            Official syllabus <ExternalLink size={12} />
+          <a href={syllabusUrl ?? curriculum.sourceUrl} target="_blank" rel="noreferrer">
+            {syllabusUrl ? `Session ${plan.nextMeeting!.lesson} syllabus` : 'Official syllabus'}{' '}
+            <ExternalLink size={12} />
           </a>
         </p>
       )}
@@ -154,6 +160,13 @@ export default function TodayPlan({
             </button>
           )}
         </div>
+      )}
+      {dismissedCount > 0 && (
+        <p className="today-plan-dismissed" role="status">
+          {dismissedCount} earlier {dismissedCount === 1 ? 'exercise is' : 'exercises are'} hidden
+          from Today and still unfinished. Restore them in{' '}
+          <button onClick={onManagePlan}>your full plan</button>.
+        </p>
       )}
       {loading ? (
         <p className="today-plan-message" role="status">
@@ -262,6 +275,16 @@ export default function TodayPlan({
               <p className="today-plan-group-hint">
                 Available when you want to revisit it. Today’s assignments stay first.
               </p>
+              <div className="today-plan-dismiss-actions">
+                <button
+                  className="text-button"
+                  disabled={dismissing}
+                  onClick={() => void dismissEarlier()}
+                >
+                  {dismissing ? 'Dismissing…' : 'Dismiss earlier work'}
+                </button>
+                <span>Keeps these exercises unfinished in your full plan.</span>
+              </div>
               {renderTasks(plan.earlier)}
             </details>
           )}
@@ -294,7 +317,7 @@ export default function TodayPlan({
       {!loading && !error && (
         <footer className="today-plan-footnote">
           {tasks.length
-            ? 'Log the time you practiced. Mark an exercise complete when you are ready; checking it adds no minutes.'
+            ? 'Open an exercise to practice and mark it complete when you are ready. Completion and recorded practice time stay separate.'
             : 'Choose your level and class dates once. Your daily plan stays private; you can add your own exercises at any time.'}
         </footer>
       )}
@@ -305,15 +328,11 @@ export default function TodayPlan({
 function TodayTask({
   item,
   today,
-  saving,
-  onToggle,
   onLog,
   onPractice,
 }: {
   item: DailyPlannedTask;
   today: string;
-  saving: boolean;
-  onToggle: () => void;
   onLog: () => void;
   onPractice?: () => void;
 }) {
@@ -321,22 +340,16 @@ function TodayTask({
   const overdue = dueDate && dueDate < today;
   return (
     <li className={`today-plan-task ${task.done ? 'is-done' : ''}`}>
-      <input
-        type="checkbox"
-        className="today-plan-check"
-        checked={task.done}
-        disabled={saving}
-        aria-label={`Mark ${task.title} ${task.done ? 'incomplete' : 'complete'}`}
-        onChange={onToggle}
-      />
       <div className="today-plan-task-content">
         <div className="today-plan-task-title">
           <h4>{task.title}</h4>
           {status === 'started' && <span className="today-plan-started">Started</span>}
         </div>
         <p className="today-plan-task-meta">
-          {PRACTICE_KINDS.find((kind) => kind.id === task.kind)?.label} ·{' '}
-          {minuteLabel(task.targetMinutes)} min suggested
+          {PRACTICE_KINDS.find((kind) => kind.id === task.kind)?.label}
+          {task.targetMinutes !== undefined
+            ? ` · ${minuteLabel(task.targetMinutes)} min suggested`
+            : ''}
           {task.lesson ? ` · Session ${task.lesson}` : ''}
           {task.curriculum ? ` · Day ${task.curriculum.day}` : ''}
           {overdue ? ` · ${dayLabel(dueDate)}` : ''}
@@ -359,10 +372,14 @@ function TodayTask({
           </p>
         )}
         <div className="today-plan-task-actions">
-          {onPractice && !task.done && (
+          {onPractice && (
             <button className="today-plan-practice" onClick={onPractice}>
               <Play size={12} />{' '}
-              {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
+              {task.done
+                ? 'Review exercise'
+                : task.exercise?.type === 'audio'
+                  ? 'Listen & practice'
+                  : 'Practice'}
             </button>
           )}
           {task.link && (
@@ -374,7 +391,6 @@ function TodayTask({
             <Plus size={12} />
             Log practice
           </button>
-          {saving && <span role="status">Saving…</span>}
         </div>
       </div>
     </li>

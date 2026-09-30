@@ -318,13 +318,25 @@ function App() {
     profile.firstClassDate,
     profile.classDays.join(','),
   ]);
-  const toggleTask = async (task: PlannedTask) => {
-    const result = await api<{ task: PlannedTask }>(
-      `/plan/${encodeURIComponent(task.id)}`,
-      { task: { ...task, done: !task.done } },
-      'PUT',
+  const updateTaskStatus = async (
+    selected: PlannedTask[],
+    changes: { done?: boolean; dismissedFromToday?: boolean },
+  ) => {
+    const accountId = activeAccount.current;
+    const result = await api<{ tasks: PlannedTask[] }>(
+      '/plan/status',
+      { ids: selected.map((task) => task.id), ...changes },
+      'POST',
+      AbortSignal.timeout(10_000),
     );
-    setTasks((current) => current.map((item) => (item.id === task.id ? result.task : item)));
+    if (activeAccount.current !== accountId) return;
+    const updated = new Map(result.tasks.map((task) => [task.id, task]));
+    setTasks((current) => current.map((task) => updated.get(task.id) ?? task));
+    setPracticeLaunch((current) =>
+      current?.task && updated.has(current.task.id)
+        ? { ...current, task: updated.get(current.task.id)! }
+        : current,
+    );
   };
   useEffect(() => {
     if (toast) {
@@ -362,8 +374,9 @@ function App() {
     }
   }, [booting, user, page]);
   const confirmLeaveStudio = async () => {
-    if (currentPage.current !== 'practice' || !studioUnsaved.current) return true;
+    if (currentPage.current !== 'practice') return true;
     if (beforeLeaveStudio.current) return beforeLeaveStudio.current();
+    if (!studioUnsaved.current) return true;
     if (
       !window.confirm(
         'Leave this practice? Copy practice can be recovered on this device. Unsaved time and notes from other tools will be discarded.',
@@ -373,8 +386,7 @@ function App() {
     studioUnsaved.current = false;
     return true;
   };
-  const navigate = async (next: Page): Promise<boolean> => {
-    if (next !== 'practice' && !(await confirmLeaveStudio())) return false;
+  const showPage = (next: Page) => {
     setStartNewTask(false);
     currentPage.current = next;
     if (next !== 'practice') setPracticeLaunch(undefined);
@@ -382,6 +394,10 @@ function App() {
     setPage(next);
     setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const navigate = async (next: Page): Promise<boolean> => {
+    if (next !== 'practice' && !(await confirmLeaveStudio())) return false;
+    showPage(next);
     return true;
   };
   const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
@@ -711,7 +727,9 @@ function App() {
                           loading={planLoading}
                           error={planError}
                           onRetry={() => setPlanVersion((version) => version + 1)}
-                          onToggle={toggleTask}
+                          onDismiss={(tasks) =>
+                            updateTaskStatus(tasks, { dismissedFromToday: true })
+                          }
                           onLog={openLog}
                           onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
                           onManagePlan={() => navigate('course')}
@@ -744,6 +762,9 @@ function App() {
                   <PracticeStudio
                     onLog={openLog}
                     onAutoSave={autoSave}
+                    onTaskCompletion={(task: PlannedTask, done: boolean) =>
+                      updateTaskStatus([task], { done })
+                    }
                     onBeforeLeaveChange={(handler: (() => Promise<boolean>) | undefined) => {
                       beforeLeaveStudio.current = handler;
                     }}
@@ -843,6 +864,7 @@ function App() {
           isExisting={entries.some((entry) => entry.id === sessionEditor.id)}
           onClose={() => setSessionEditor(null)}
           onSaved={(entry) => {
+            if (activeAccount.current !== user?.id) return;
             const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
             if (!wasExisting && user) clearSavedStudioNotes(user.id, entry);
             acceptSavedPractice(entry);
@@ -853,7 +875,10 @@ function App() {
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
             ) {
               studioUnsaved.current = false;
-              navigate('overview');
+              // The paused studio snapshot was just acknowledged by the server.
+              // Its reset effect has not run yet; asking it to leave would save
+              // that same time again (or prompt to discard already-saved time).
+              showPage('overview');
             }
             notify('Practice logged. A little progress adds up.');
           }}
@@ -1670,7 +1695,7 @@ function Modal({
     const elements = () =>
       Array.from(
         panel.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]',
+          'button:enabled, input:enabled, select:enabled, textarea:enabled, a[href], [tabindex="0"]',
         ) ?? [],
       );
     // Establish focus before the dialog is painted. A delayed autofocus can
@@ -1921,11 +1946,19 @@ function SessionModal({
   onSaved: (entry: PracticeSession) => void;
 }) {
   const saveButton = useRef<HTMLButtonElement>(null);
+  const saving = useRef(false);
+  const [identity] = useState(() => ({
+    id: initial.id ?? crypto.randomUUID(),
+    createdAt: initial.createdAt ?? new Date().toISOString(),
+  }));
+  const close = () => {
+    if (!saving.current) onClose();
+  };
   const copyAttempt = savedCopyAttempt(initial);
   const [form, setForm] = useState({
     date: initial.date ?? dateString(),
     kind: initial.kind ?? 'listening',
-    minutes: String(initial.minutes ?? 15),
+    minutes: initial.minutes === undefined ? '' : String(initial.minutes),
     characterWpm: initial.characterWpm === undefined ? '' : String(initial.characterWpm),
     effectiveWpm: initial.effectiveWpm === undefined ? '' : String(initial.effectiveWpm),
     accuracy: initial.accuracy === undefined ? '' : String(initial.accuracy),
@@ -1941,10 +1974,13 @@ function SessionModal({
     setForm((current) => ({ ...current, [key]: value }));
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
     setError('');
     setBusy(true);
     const data: Record<string, unknown> = {
       ...initial,
+      ...identity,
       date: form.date,
       kind: form.kind,
       minutes: Number(form.minutes),
@@ -1962,18 +1998,20 @@ function SessionModal({
         isExisting ? `/entries/${initial.id}` : '/entries',
         data,
         isExisting ? 'PUT' : 'POST',
+        AbortSignal.timeout(10_000),
       );
       onSaved(result.entry);
     } catch (err) {
       setError((err as Error).message);
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   };
   return (
     <Modal
       title={isExisting ? 'A closer look at your practice.' : 'A little progress, worth recording.'}
-      onClose={onClose}
+      onClose={close}
       wide
       initialFocus={saveButton}
     >
@@ -1983,148 +2021,150 @@ function SessionModal({
           : 'Capture what you practiced and how it felt. The details are up to you.'}
       </p>
       {copyAttempt && <CopyResult attempt={copyAttempt} />}
-      <form onSubmit={save}>
-        <div className="form-grid">
-          <label className="field">
-            Activity
-            <select value={form.kind} onChange={(e) => update('kind', e.target.value)}>
-              {kinds.map((kind) => (
-                <option key={kind.id} value={kind.id}>
-                  {kind.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Practice date
-            <input
-              type="date"
-              value={form.date}
-              required
-              onChange={(e) => update('date', e.target.value)}
-            />
-          </label>
-          <label className="field">
-            Time practiced <span className="label-hint">minutes</span>
-            <input
-              type="number"
-              min="0"
-              max="1440"
-              step="any"
-              required
-              value={form.minutes}
-              readOnly={Boolean(copyAttempt)}
-              onChange={(e) => update('minutes', e.target.value)}
-            />
-          </label>
-          <label className="field">
-            Academy session <span className="label-hint">optional</span>
-            <select value={form.lesson} onChange={(e) => update('lesson', e.target.value)}>
-              <option value="">No session selected</option>
-              {Array.from({ length: 16 }, (_, i) => (
-                <option key={i} value={i + 1}>
-                  Session {i + 1}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="form-grid three">
-          <label className="field">
-            Character WPM
-            <input
-              type="number"
-              min="1"
-              max="150"
-              step="0.1"
-              placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
-              value={form.characterWpm}
-              readOnly={Boolean(copyAttempt)}
-              onChange={(e) => update('characterWpm', e.target.value)}
-            />
-          </label>
-          <label className="field">
-            Effective WPM
-            <input
-              type="number"
-              min="1"
-              max={form.characterWpm || 150}
-              step="0.1"
-              placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
-              value={form.effectiveWpm}
-              readOnly={Boolean(copyAttempt)}
-              onChange={(e) => update('effectiveWpm', e.target.value)}
-            />
-          </label>
-          <label className="field">
-            Accuracy <span className="label-hint">%</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
-              value={form.accuracy}
-              readOnly={Boolean(copyAttempt)}
-              onChange={(e) => update('accuracy', e.target.value)}
-            />
-          </label>
-        </div>
-        {form.kind === 'on-air' && (
-          <label className="field">
-            QSO count <span className="label-hint">optional</span>
-            <input
-              type="number"
-              min="0"
-              max="100000"
-              value={form.qsoCount}
-              onChange={(e) => update('qsoCount', e.target.value)}
-            />
-          </label>
-        )}
-        <label className="field">
-          Notes <span className="label-hint">optional</span>
-          <textarea
-            value={form.notes}
-            onChange={(e) => update('notes', e.target.value)}
-            maxLength={10000}
-            rows={3}
-            placeholder="What clicked? What would you like to try next time?"
-          />
-        </label>
-        {(form.scratchpad || typeof initial.metadata?.scratchpad === 'string') && (
-          <label className="field">
-            Scratchpad
-            <textarea
-              value={form.scratchpad}
-              onChange={(event) => update('scratchpad', event.target.value)}
-              maxLength={10000}
-              rows={5}
-            />
-          </label>
-        )}
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={form.context === 'class'}
-            onChange={(e) => update('context', e.target.checked ? 'class' : 'practice')}
-          />{' '}
-          This was a class meeting <span>(kept separate from practice goals)</span>
-        </label>
-        {error && (
-          <div className="alert error" role="alert">
-            {error}
+      <form onSubmit={save} aria-busy={busy}>
+        <fieldset className="session-form-fields" disabled={busy}>
+          <div className="form-grid">
+            <label className="field">
+              Activity
+              <select value={form.kind} onChange={(e) => update('kind', e.target.value)}>
+                {kinds.map((kind) => (
+                  <option key={kind.id} value={kind.id}>
+                    {kind.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Practice date
+              <input
+                type="date"
+                value={form.date}
+                required
+                onChange={(e) => update('date', e.target.value)}
+              />
+            </label>
+            <label className="field">
+              Time practiced <span className="label-hint">minutes</span>
+              <input
+                type="number"
+                min="0"
+                max="1440"
+                step="any"
+                required
+                value={form.minutes}
+                readOnly={Boolean(copyAttempt)}
+                onChange={(e) => update('minutes', e.target.value)}
+              />
+            </label>
+            <label className="field">
+              Academy session <span className="label-hint">optional</span>
+              <select value={form.lesson} onChange={(e) => update('lesson', e.target.value)}>
+                <option value="">No session selected</option>
+                {Array.from({ length: 16 }, (_, i) => (
+                  <option key={i} value={i + 1}>
+                    Session {i + 1}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-        )}
-        <div className="modal-actions">
-          <button className="button outline" type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button ref={saveButton} className="button dark" disabled={busy} type="submit">
-            {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
-            <Check size={16} />
-          </button>
-        </div>
+          <div className="form-grid three">
+            <label className="field">
+              Character WPM
+              <input
+                type="number"
+                min="1"
+                max="150"
+                step="0.1"
+                placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
+                value={form.characterWpm}
+                readOnly={Boolean(copyAttempt)}
+                onChange={(e) => update('characterWpm', e.target.value)}
+              />
+            </label>
+            <label className="field">
+              Effective WPM
+              <input
+                type="number"
+                min="1"
+                max={form.characterWpm || 150}
+                step="0.1"
+                placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
+                value={form.effectiveWpm}
+                readOnly={Boolean(copyAttempt)}
+                onChange={(e) => update('effectiveWpm', e.target.value)}
+              />
+            </label>
+            <label className="field">
+              Accuracy <span className="label-hint">%</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
+                value={form.accuracy}
+                readOnly={Boolean(copyAttempt)}
+                onChange={(e) => update('accuracy', e.target.value)}
+              />
+            </label>
+          </div>
+          {form.kind === 'on-air' && (
+            <label className="field">
+              QSO count <span className="label-hint">optional</span>
+              <input
+                type="number"
+                min="0"
+                max="100000"
+                value={form.qsoCount}
+                onChange={(e) => update('qsoCount', e.target.value)}
+              />
+            </label>
+          )}
+          <label className="field">
+            Notes <span className="label-hint">optional</span>
+            <textarea
+              value={form.notes}
+              onChange={(e) => update('notes', e.target.value)}
+              maxLength={10000}
+              rows={3}
+              placeholder="What clicked? What would you like to try next time?"
+            />
+          </label>
+          {(form.scratchpad || typeof initial.metadata?.scratchpad === 'string') && (
+            <label className="field">
+              Scratchpad
+              <textarea
+                value={form.scratchpad}
+                onChange={(event) => update('scratchpad', event.target.value)}
+                maxLength={10000}
+                rows={5}
+              />
+            </label>
+          )}
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={form.context === 'class'}
+              onChange={(e) => update('context', e.target.checked ? 'class' : 'practice')}
+            />{' '}
+            This was a class meeting <span>(kept separate from practice goals)</span>
+          </label>
+          {error && (
+            <div className="alert error" role="alert">
+              {error}
+            </div>
+          )}
+          <div className="modal-actions">
+            <button className="button outline" type="button" onClick={close} disabled={busy}>
+              Cancel
+            </button>
+            <button ref={saveButton} className="button dark" disabled={busy} type="submit">
+              {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
+              <Check size={16} />
+            </button>
+          </div>
+        </fieldset>
       </form>
     </Modal>
   );

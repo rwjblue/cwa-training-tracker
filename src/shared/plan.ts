@@ -35,8 +35,13 @@ export interface PlannedTask {
   lesson?: number;
   dueDate?: string;
   link?: string;
-  targetMinutes: number;
+  /** Omitted when the exercise has no explicit duration recommendation. */
+  targetMinutes?: number;
+  /** Distinguishes a learner's curriculum duration override from old generated defaults. */
+  targetMinutesExplicit?: boolean;
   done: boolean;
+  /** Hide earlier unfinished work from Today without completing it. */
+  dismissedFromToday?: boolean;
   notes: string;
   createdAt: string;
   source?: 'manual' | 'legacy' | 'curriculum';
@@ -249,14 +254,19 @@ export function validatePlannedTask(value: unknown): PlannedTask {
   if (!kinds.includes(input.kind as PracticeKind))
     throw new Error('Choose a valid exercise activity.');
   if (
-    typeof input.targetMinutes !== 'number' ||
-    !Number.isFinite(input.targetMinutes) ||
-    input.targetMinutes < 1 ||
-    input.targetMinutes > 1440
+    input.targetMinutes !== undefined &&
+    (typeof input.targetMinutes !== 'number' ||
+      !Number.isFinite(input.targetMinutes) ||
+      input.targetMinutes < 1 ||
+      input.targetMinutes > 1440)
   )
     throw new Error('Suggested minutes must be between 1 and 1440.');
   if (typeof input.done !== 'boolean')
     throw new Error('Exercise completion must be true or false.');
+  if (input.dismissedFromToday !== undefined && typeof input.dismissedFromToday !== 'boolean')
+    throw new Error('Exercise dismissal must be true or false.');
+  if (input.targetMinutesExplicit !== undefined && typeof input.targetMinutesExplicit !== 'boolean')
+    throw new Error('Exercise duration override must be true or false.');
   if (input.notes !== undefined && (typeof input.notes !== 'string' || input.notes.length > 10000))
     throw new Error('Exercise notes must be at most 10,000 characters.');
   if (
@@ -270,11 +280,15 @@ export function validatePlannedTask(value: unknown): PlannedTask {
     id: input.id,
     title: input.title.trim(),
     kind: input.kind as PracticeKind,
-    targetMinutes: input.targetMinutes,
     done: input.done,
     notes: String(input.notes ?? ''),
     createdAt: new Date(input.createdAt).toISOString(),
   };
+  if (input.targetMinutes !== undefined) task.targetMinutes = input.targetMinutes as number;
+  if (input.targetMinutesExplicit !== undefined)
+    task.targetMinutesExplicit = input.targetMinutesExplicit as boolean;
+  if (input.dismissedFromToday !== undefined)
+    task.dismissedFromToday = input.dismissedFromToday as boolean;
   if (input.lesson !== undefined) {
     if (
       typeof input.lesson !== 'number' ||
@@ -429,7 +443,7 @@ export function dailyPlanSummary(
     };
     if (dueDate === today) assignedToday.push(item);
     else if (dueDate && dueDate < today) {
-      if (!task.done) earlier.push(item);
+      if (!task.done && !task.dismissedFromToday) earlier.push(item);
     } else if (dueDate && !task.dueDate && nextMeeting && task.lesson === nextMeeting.lesson)
       preparation.push(item);
     else if (dueDate) {
@@ -468,7 +482,7 @@ export function practiceForTask(task: PlannedTask, date: string): Partial<Practi
     date,
     kind: task.kind,
     lesson: task.lesson,
-    minutes: task.targetMinutes,
+    ...(task.targetMinutes !== undefined ? { minutes: task.targetMinutes } : {}),
     notes: task.title,
     source: 'manual',
     metadata: { plannedTaskId: task.id },
@@ -576,7 +590,9 @@ export function legacyPlan(
         id: `legacy-task:${task.id}`,
         title: task.title,
         kind: legacyKinds[String(task.kind)] ?? 'other',
-        targetMinutes: typeof task.minutes === 'number' && task.minutes > 0 ? task.minutes : 15,
+        ...(typeof task.minutes === 'number' && task.minutes > 0
+          ? { targetMinutes: task.minutes, targetMinutesExplicit: true }
+          : {}),
         done,
         notes: typeof task.instructions === 'string' ? task.instructions : '',
         createdAt,

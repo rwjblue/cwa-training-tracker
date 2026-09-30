@@ -10,7 +10,7 @@ test('private homework supports completion, reporting, and deletion without losi
   await expect(page.getByRole('heading', { name: 'Know what to practice next.' })).toBeVisible();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
   await page.getByLabel('Exercise title', { exact: true }).fill('Practice a clear exchange');
-  await page.getByLabel('Suggested minutes', { exact: true }).fill('12');
+  await page.getByLabel('Suggested minutes (optional)', { exact: true }).fill('12');
   await page
     .getByLabel('Exercise link (optional)', { exact: true })
     .fill('https://example.org/practice');

@@ -74,6 +74,53 @@ describe('today’s private course plan', () => {
     expect(tasks.every((task) => !task.done)).toBe(true);
   });
 
+  it('dismisses only earlier unfinished tasks without changing completion or practice, and restores their progress', () => {
+    const older = exercise({ id: 'older', dueDate: '2026-09-28', dismissedFromToday: true });
+    const tasks = [
+      older,
+      exercise({ id: 'today', dueDate: '2026-09-29', dismissedFromToday: true }),
+      exercise({ id: 'future', dueDate: '2026-09-30', dismissedFromToday: true }),
+      exercise({ id: 'undated', dismissedFromToday: true }),
+    ];
+    const entries: PracticeSession[] = [
+      {
+        id: 'heard',
+        date: '2026-09-28',
+        kind: 'listening',
+        minutes: 2.5,
+        notes: '',
+        createdAt: '2026-09-28T12:00:00Z',
+        metadata: { plannedTaskId: older.id },
+      },
+    ];
+    const original = structuredClone({ tasks, entries });
+    const result = dailyPlanSummary(tasks, meetings, entries, '2026-09-29');
+    expect(result.earlier).toEqual([]);
+    expect(ids(result.assignedToday)).toEqual(['today']);
+    expect(ids(result.upcoming)).toEqual(['future']);
+    expect(ids(result.unscheduled)).toEqual(['undated']);
+    expect(result.completedCount).toBe(0);
+    expect({ tasks, entries }).toEqual(original);
+    const restored = dailyPlanSummary(
+      [{ ...older, dismissedFromToday: false }],
+      meetings,
+      entries,
+      '2026-09-29',
+    );
+    expect(restored.earlier[0]).toMatchObject({
+      status: 'started',
+      loggedMinutes: 2.5,
+      todayMinutes: 0,
+    });
+    const rescheduled = dailyPlanSummary(
+      [{ ...older, dueDate: '2026-09-29' }],
+      meetings,
+      entries,
+      '2026-09-29',
+    );
+    expect(rescheduled.assignedToday[0].task.id).toBe(older.id);
+  });
+
   it('measures linked practice without counting class, future, duplicate, or unrelated entries', () => {
     const task = exercise({ dueDate: '2026-09-29' });
     const entry: PracticeSession = {
@@ -212,6 +259,14 @@ describe('private planned exercises', () => {
     expect(() => validatePlannedTask(exercise({ targetMinutes: Infinity }))).toThrow('minutes');
     expect(() => validatePlannedTask(exercise({ lesson: 17 }))).toThrow('session');
     expect(() => validatePlannedTask(exercise({ dueDate: '2026-02-29' }))).toThrow('date');
+    for (const value of ['true', 1, null]) {
+      expect(() => validatePlannedTask({ ...exercise(), dismissedFromToday: value })).toThrow(
+        'dismissal',
+      );
+      expect(() => validatePlannedTask({ ...exercise(), targetMinutesExplicit: value })).toThrow(
+        'duration override',
+      );
+    }
   });
 
   it('allows useful web links and rejects executable links or embedded credentials', () => {
@@ -257,6 +312,10 @@ describe('private planned exercises', () => {
       metadata: { plannedTaskId: task.id },
     });
     expect(task.done).toBe(false);
+    const untimed = exercise();
+    delete untimed.targetMinutes;
+    expect(validatePlannedTask(untimed)).toEqual(untimed);
+    expect(practiceForTask(untimed, '2026-09-28')).not.toHaveProperty('minutes');
   });
 
   it('keeps plans in version1 backups alongside personal history', () => {
@@ -265,9 +324,22 @@ describe('private planned exercises', () => {
       version: 1,
       exportedAt: '2026-09-28T12:00:00Z',
       sessions: [],
-      plan: [exercise()],
+      plan: [
+        exercise({
+          targetMinutes: undefined,
+          dismissedFromToday: true,
+          targetMinutesExplicit: true,
+        }),
+        exercise({ id: 'restored', dismissedFromToday: false }),
+      ],
     });
-    expect(exported.plan).toEqual([exercise()]);
+    expect(exported.plan?.[0]).not.toHaveProperty('targetMinutes');
+    expect(exported.plan?.[0]).toMatchObject({
+      dismissedFromToday: true,
+      done: false,
+      targetMinutesExplicit: true,
+    });
+    expect(exported.plan?.[1].dismissedFromToday).toBe(false);
     expect(validateTrainingExport(JSON.parse(JSON.stringify(exported)))).toEqual(exported);
   });
 });

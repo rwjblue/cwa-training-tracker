@@ -18,7 +18,7 @@ import {
   saveEntry,
   saveSettings,
 } from './training';
-import { deletePlan, listPlan, savePlan } from './plan';
+import { deletePlan, listPlan, savePlan, updatePlanStatus } from './plan';
 
 async function api(request: Request, env: Env, path: string): Promise<Response> {
   const method = request.method;
@@ -48,6 +48,7 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   if (method === 'DELETE' && entryId) return deleteEntry(request, env, decodeURIComponent(entryId));
   if (method === 'GET' && path === '/api/plan') return listPlan(request, env);
   if (method === 'POST' && path === '/api/plan') return savePlan(request, env);
+  if (method === 'POST' && path === '/api/plan/status') return updatePlanStatus(request, env);
   const planId = path.match(/^\/api\/plan\/([^/]{1,600})$/)?.[1];
   if (method === 'PUT' && planId) return savePlan(request, env, decodeURIComponent(planId));
   if (method === 'DELETE' && planId) return deletePlan(request, env, decodeURIComponent(planId));

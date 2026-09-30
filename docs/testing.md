@@ -110,6 +110,33 @@ sources and scratchpad text. Reuse synthetic audio instead of downloading course
 recordings. Catalog tests protect exact URL groups and known replacements; live
 network availability is an explicit catalog maintenance check, not a CI test.
 
+For assigned practice, keep recommended duration, elapsed practice, and completion
+separate. Pure tests cover absent duration recommendations, removal of old generated
+15-minute placeholders, preserved learner overrides (including explicitly clearing
+a duration), and version 1 backup round trips. A browser journey should open an
+untimed assignment with elapsed time at zero and no invented goal, mark it complete
+without playing audio or saving time, then reopen it. Assert the practice log is
+unchanged. Optional goals must not cap elapsed time or complete the exercise.
+When manually logging an exercise with no recommendation, require the learner's
+actual duration rather than supplying 15 minutes.
+
+Today should have no completion checkbox; completion remains explicit in the studio
+and course plan. Keep dismissal selection in pure tests: only earlier unfinished
+items disappear, restoration retains linked practice, and rescheduling a dismissed
+item to today or the future makes it eligible again. Test bulk dismissal and restore
+at the Worker layer for account isolation, atomicity, and preservation of completion
+and other task fields. One browser journey should dismiss earlier work, verify it
+stays in the course plan, restore it, and confirm that no time or completion was
+added. Keep overflow and accessible button names in the desktop/mobile check.
+
+Curriculum link tests cover all 16 sessions in each of the four published catalogs.
+Verify the current-session syllabus link in the browser rather than just a generic
+resources URL. The Beginner session 2 HTML bookmark is missing: the tested fallback
+is the official PDF at `#page=11`. Fundamental uses each session's first homework
+day, with the sole session 16 heading as an exception. Recheck real bookmark targets
+and the PDF's physical page when updating source versions; do not put live external
+fetches or restricted curriculum content into fixtures.
+
 For QSO copy checks, test scenario-specific answer keys and accepted formatting
 at the pure-logic layer. Missing substantive details, wrong station attribution,
 and near-match callsigns must not pass. Keep one browser journey for hidden
@@ -149,3 +176,11 @@ replay, and listening navigation above/below the 30-second threshold with actual
 media movement. Guest local history must survive reload and support explicitly
 saving a selected result after sign-in; background upload acknowledgements must
 not reset a newly started session. Keep notes and report checks in those journeys.
+Use fake timers for the queue's 750ms local receipt and 10-second upload timeout,
+including a stalled response body. A local receipt requires durable storage; with
+storage unavailable, only server acknowledgement counts as success. Confirmed
+manual saves must clear the original scratchpad context even when navigation
+unmounts the studio before its effects run; canceled or failed saves retain notes.
+Hold a manual-save acknowledgement after the server commits it to verify that
+Escape, Close, and Cancel cannot dismiss the saving dialog. A confirmed save
+returns directly to Today without asking the old studio snapshot to save again.

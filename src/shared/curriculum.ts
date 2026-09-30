@@ -47,6 +47,7 @@ interface Catalog {
   resourcesUrl: string;
   verifiedAt: string;
   sessionLinks?: Record<string, string>;
+  dayLinks?: Record<string, string>;
   exercises: CatalogExercise[];
 }
 
@@ -56,6 +57,22 @@ const catalogs: Partial<Record<Profile['level'], Catalog>> = {
   beginner: beginner as Catalog,
   advanced: advanced as Catalog,
 };
+
+/** Official section targets verified against the published syllabi on 2026-09-29. */
+export function sessionSyllabusUrl(level: Profile['level'], lesson: number): string | undefined {
+  if (!Number.isInteger(lesson) || lesson < 1 || lesson > 16) return undefined;
+  const catalog = catalogs[level];
+  if (!catalog) return undefined;
+  // The Beginner HTML TOC references a missing Session 02 bookmark. Its official
+  // PDF has the section on physical page 11, so use that working destination.
+  if (level === 'beginner' && lesson === 2)
+    return 'https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.pdf#page=11';
+  return (
+    catalog.sessionLinks?.[String(lesson)] ??
+    catalog.dayLinks?.[`${lesson}-1`] ??
+    catalog.dayLinks?.[`${lesson}-3`]
+  );
+}
 
 /** Published catalogs only; prototype curricula require a separate opted-in identity. */
 export function curriculumForLevel(level: Profile['level']) {
@@ -226,14 +243,14 @@ export function curriculumPlan(profile: Profile): PlannedTask[] {
     .filter((row) => !row.optional)
     .map((row) => {
       const sourceUrl =
-        row.sourceUrl ?? catalog.sessionLinks?.[String(row.session)] ?? catalog.sourceUrl;
+        row.sourceUrl ?? sessionSyllabusUrl(profile.level, row.session) ?? catalog.sourceUrl;
       const details = practiceDetails(row, sourceUrl);
       return {
         id: `curriculum:${catalog.id}:${row.id}`,
         ...details,
         lesson: row.session,
         dueDate: addDays(meetings[row.session - 1].date, row.day - 3),
-        targetMinutes: row.minutes ?? 15,
+        ...(row.minutes !== undefined ? { targetMinutes: row.minutes } : {}),
         done: false,
         createdAt: `${catalog.verifiedAt}T00:00:00.000Z`,
         source: 'curriculum',
@@ -270,7 +287,7 @@ export function mergeCurriculumPlan(
     if (legacy) consumed.add(legacy.id);
     const saved = override ?? legacy;
     if (!saved) return task;
-    return {
+    const merged: PlannedTask = {
       ...task,
       ...saved,
       id: legacy?.id ?? task.id,
@@ -282,6 +299,17 @@ export function mergeCurriculumPlan(
       kind: task.kind,
       link: task.link,
     };
+    // Older generated rows persisted a universal 15-minute fallback. Preserve
+    // deliberate edits (including a cleared duration), not that old placeholder.
+    if (saved.targetMinutesExplicit && saved.targetMinutes === undefined)
+      delete merged.targetMinutes;
+    else if (
+      !saved.targetMinutesExplicit &&
+      task.targetMinutes === undefined &&
+      saved.targetMinutes === 15
+    )
+      delete merged.targetMinutes;
+    return merged;
   });
   // Inactive generated rows stay in the private backup and return if the course is reselected.
   return [

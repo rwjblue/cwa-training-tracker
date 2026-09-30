@@ -39,6 +39,8 @@ test('email login, private records, backup controls, and passkeys work together'
   const origin = 'http://localhost:8791';
   const headers = { Origin: origin };
   await page.getByRole('button', { name: 'Log practice', exact: true }).click();
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('');
+  await page.getByLabel(/^Time practiced/).fill('15');
   await page.getByLabel('Character WPM', { exact: true }).fill('20');
   await page.getByLabel('Effective WPM', { exact: true }).fill('10');
   await page.getByLabel(/^Notes/).fill('Browser integration practice');
