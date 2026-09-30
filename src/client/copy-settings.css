@@ -1,0 +1,229 @@
+.copy-settings {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.copy-settings .copy-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 140px));
+  align-items: start;
+  gap: 10px;
+  max-width: 890px;
+  margin: 0;
+}
+
+.copy-settings .field {
+  min-width: 0;
+  margin: 0;
+  gap: 5px;
+}
+
+.copy-setting-label {
+  display: block;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.copy-setting-label .label-hint {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.copy-settings .field input,
+.copy-settings .field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.copy-settings .field input[type='number'] {
+  max-width: 120px;
+}
+
+.copy-settings .field-hint,
+.copy-settings-hint {
+  color: #626c5e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.copy-settings .copy-primary-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 0;
+}
+
+.copy-settings .checkbox-label {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.copy-settings .checkbox-label input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.copy-settings .copy-extra-settings {
+  margin-top: 4px;
+}
+
+.copy-settings .copy-extra-settings > summary {
+  width: fit-content;
+  min-height: 44px;
+  align-content: center;
+  color: #626c5e;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.copy-settings .copy-settings-secondary {
+  padding: 4px 0 8px;
+}
+
+.copy-settings .copy-options {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.copy-settings .copy-help {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: #f0f3ed;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.copy-settings .copy-character-set {
+  min-width: 0;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #c5cbc1;
+  border-radius: 6px;
+}
+
+.copy-settings .copy-character-set legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.copy-settings .copy-character-set p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.copy-settings .copy-character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+.copy-settings .copy-character-grid label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.copy-settings .copy-character-grid input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.copy-settings .copy-character-grid span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  border: 1px solid #a9b2a3;
+  border-radius: 5px;
+  font-family: var(--font-mono, monospace);
+}
+
+.copy-settings .copy-character-grid input:checked + span {
+  color: white;
+  background: #405d35;
+}
+
+.copy-settings .copy-character-grid input:focus-visible + span {
+  outline: 3px solid #ae6a16;
+  outline-offset: 2px;
+}
+
+.copy-settings .copy-inline-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+}
+
+.copy-settings .copy-inline-actions button {
+  min-height: 44px;
+  padding: 4px;
+}
+
+.copy-settings:disabled .field input,
+.copy-settings:disabled .field select {
+  opacity: 1;
+  color: #626c5e;
+  -webkit-text-fill-color: #626c5e;
+  background: var(--paper, #fff);
+  cursor: default;
+}
+
+.copy-settings:disabled .copy-character-grid label,
+.copy-settings:disabled .copy-character-grid input {
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .copy-settings .copy-settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+  }
+
+  .copy-settings .field input,
+  .copy-settings .field select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .copy-settings .checkbox-label {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .copy-settings .copy-primary-options {
+    gap: 0;
+  }
+
+  .copy-settings .copy-settings-hint {
+    flex-basis: 100%;
+  }
+}

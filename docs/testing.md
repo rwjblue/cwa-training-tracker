@@ -131,6 +131,9 @@ countdown exclusion, replay and inactivity; recovery tests cover account scope,
 tab ownership and immutable pending saves. Browser journeys use real short audio
 to cover guest recovery/sign-in, a complete 25-word round, uncertain-save retry,
 callsign controls, punctuation, downloads, curriculum presets and report evidence.
+The Start regression checks the same answer field stays in place, receives focus
+during the countdown, and retains the first typed characters into playback.
+Comparison tests retain the complete edit alignment across missing group boundaries.
 Never infer listening credit from a mocked timer. Corpus/generator versions are
 part of saved-result validation: a future revision must preserve validation of
 already-saved versions rather than silently regenerating different targets.

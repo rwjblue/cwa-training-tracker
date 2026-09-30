@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { expectAccessible, signIn } from './helpers';
+import {
+  createCopyAttempt,
+  defaultCopyRecipe,
+  submitCopyAnswer,
+} from '../src/shared/copy-practice';
+import { copyAttemptSessionFields } from '../src/shared/copy-report';
+import { dateInTimezone } from '../src/shared/training';
 
 async function openCopy(page: Page) {
   await page.goto('/#practice');
@@ -16,8 +23,50 @@ async function configureShortGroups(page: Page) {
   await page.getByRole('combobox', { name: 'Practice length', exact: true }).selectOption('count');
   await page.getByRole('spinbutton', { name: 'Number of groups', exact: true }).fill('10');
   await page.getByRole('spinbutton', { name: /^Effective speed/ }).fill('25');
-  await page.getByText('Spacing and start delay', { exact: true }).click();
-  await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
+  await page.getByText('Sound and options', { exact: true }).click();
+  await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('2');
+}
+
+async function startWithoutMovingCopyField(
+  page: Page,
+  buttonName: string,
+  firstCopy: string,
+  countdownSeconds = 2,
+) {
+  const answer = page.getByRole('textbox', { name: 'Your copy', exact: true });
+  await expect(answer).toBeVisible();
+  await expect(answer).toHaveAttribute('readonly', '');
+  const original = (await answer.elementHandle())!;
+  const beforeY = await original.evaluate(
+    (element) => element.getBoundingClientRect().top + scrollY,
+  );
+  await page.getByRole('button', { name: buttonName, exact: true }).click();
+  // Read immediately: auto-retrying focus assertions would miss a delayed focus at audio end.
+  const started = await original.evaluate((element: HTMLTextAreaElement) => ({
+    connected: element.isConnected,
+    focused: document.activeElement === element,
+    readOnly: element.readOnly,
+    y: element.getBoundingClientRect().top + scrollY,
+    audioPosition: document.querySelector<HTMLAudioElement>(
+      'audio[aria-label="Copy practice audio"]',
+    )!.currentTime,
+  }));
+  expect(started.connected).toBe(true);
+  expect(started.focused).toBe(true);
+  expect(started.readOnly).toBe(false);
+  expect(Math.abs(started.y - beforeY)).toBeLessThanOrEqual(1);
+  expect(started.audioPosition).toBeLessThan(countdownSeconds);
+  await page.keyboard.type(firstCopy);
+  await expect(answer).toHaveValue(firstCopy);
+  await expect
+    .poll(() =>
+      page
+        .getByLabel('Copy practice audio', { exact: true })
+        .evaluate((element: HTMLAudioElement) => element.currentTime),
+    )
+    .toBeGreaterThan(countdownSeconds);
+  await expect(answer).toHaveValue(firstCopy);
+  await original.dispose();
 }
 
 test('guest copy survives reload and signs in to save one measured result with visible feedback', async ({
@@ -25,10 +74,16 @@ test('guest copy survives reload and signs in to save one measured result with v
   context,
 }) => {
   await openCopy(page);
+  await page.screenshot({ path: '.tmp/copy-default-setup-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: '.tmp/copy-default-setup-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
   await configureShortGroups(page);
   await expectAccessible(page, 'copy-setup-desktop');
   await page.screenshot({ path: '.tmp/copy-setup-desktop.png', fullPage: true });
-  await page.getByRole('button', { name: 'Start code groups', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: '.tmp/copy-setup-mobile.png', fullPage: true });
+  await startWithoutMovingCopyField(page, 'Start code groups', 'E ');
   const audio = page.getByLabel('Copy practice audio', { exact: true });
   await expect(audio).toHaveAttribute('src', /^blob:/);
   await expect
@@ -45,7 +100,9 @@ test('guest copy survives reload and signs in to save one measured result with v
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   await page.getByRole('button', { name: 'Check copy', exact: true }).click();
   await expect(page.locator('.copy-result-stats')).toContainText('90%');
-  await expect(page.getByLabel('Character comparison')).toContainText('E→T');
+  await expect(page.getByRole('group', { name: 'Group 10', exact: true })).toContainText(
+    'Changed E to T.',
+  );
   await expect(
     page.getByRole('button', { name: 'Practice missed characters', exact: true }),
   ).toBeVisible();
@@ -101,9 +158,9 @@ test('authenticated word round completes all trials and retries an uncertain sav
   await page.getByRole('spinbutton', { name: /^Starting effective speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: 'Maximum word length', exact: false }).fill('1');
   await page.getByRole('checkbox', { name: /^Adaptive speed/ }).uncheck();
-  await page.getByText('Spacing and start delay', { exact: true }).click();
-  await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
-  await page.getByRole('button', { name: 'Start word copy', exact: true }).click();
+  await page.getByText('Sound and options', { exact: true }).click();
+  await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('1');
+  await startWithoutMovingCopyField(page, 'Start word copy', 'A', 1);
   for (let n = 1; n <= 25; n++) {
     await expect(page.getByText(`Word ${n} of 25`, { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Check & next', exact: true })).toBeEnabled();
@@ -185,6 +242,141 @@ test('authenticated word round completes all trials and retries an uncertain sav
   await page.screenshot({ path: '.tmp/copy-assignment-desktop.png', fullPage: true });
 });
 
+test('group feedback preserves later matches when a whole middle group was omitted', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const endedAt = new Date().toISOString();
+  const createdAt = new Date(Date.parse(endedAt) - 120_000).toISOString();
+  const initial = createCopyAttempt(
+    {
+      ...defaultCopyRecipe(),
+      lengthMode: 'count',
+      groupCount: 4,
+      groupLength: 5,
+    },
+    { id: crypto.randomUUID(), seed: 'comparison-missing-middle', now: createdAt },
+  );
+  const groups = initial.targets[0].split(' ');
+  const answer = [groups[0], groups[2], groups[3]].join(' ');
+  const attempt = {
+    ...submitCopyAnswer(initial, answer, { now: endedAt }),
+    audioSeconds: 20,
+    answerSeconds: 5,
+  };
+  const response = await context.request.post('/api/entries', {
+    headers: { Origin: new URL(page.url()).origin },
+    data: {
+      ...copyAttemptSessionFields(attempt),
+      date: endedAt.slice(0, 10),
+      kind: 'icr',
+      notes: 'Whole middle group omitted.',
+    },
+  });
+  expect(response.status()).toBe(201);
+  await page.goto('/#logbook');
+  await page.reload();
+  await page.getByText('Code groups result', { exact: true }).click();
+  const comparison = page.getByRole('list', { name: 'Character comparison', exact: true });
+  await expect(comparison.getByRole('group')).toHaveCount(4);
+  await expect(comparison.getByRole('group', { name: 'Group 2', exact: true })).toContainText(
+    `Sent: ${groups[1]}`,
+  );
+  await expect(comparison.getByRole('group', { name: 'Group 2', exact: true })).toContainText(
+    'Not copied',
+  );
+  const later = comparison.getByRole('group', { name: 'Group 3', exact: true });
+  await expect(later).toContainText(`Sent: ${groups[2]}`);
+  await expect(later).toContainText(`Your copy: ${groups[2]}`);
+  await expect(later).toContainText('Correct');
+  for (const viewport of [
+    { width: 1280, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const bounds = await comparison.getByRole('group').evaluateAll((elements) =>
+      elements.map((element) => {
+        const { top, bottom, height } = element.getBoundingClientRect();
+        return { top, bottom, height };
+      }),
+    );
+    expect(
+      bounds.every(
+        (row, index) => row.height > 0 && (!index || row.top >= bounds[index - 1].bottom),
+      ),
+    ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({
+      path: `.tmp/copy-omitted-group-${viewport.width}.png`,
+      fullPage: true,
+    });
+  }
+  await expectAccessible(page, 'copy-omitted-group-mobile');
+});
+
+test('assigned copy alternatives stay selected when a round is recovered and reopened', async ({
+  page,
+  context,
+}) => {
+  await signIn(page);
+  const { settings } = await (await context.request.get('/api/settings')).json();
+  const title = 'Choose groups or words';
+  const words = {
+    ...defaultCopyRecipe('words'),
+    characterWpm: 50,
+    effectiveWpm: 50,
+    maxWordLength: 1,
+    startDelaySeconds: 2,
+  };
+  const response = await context.request.post('/api/plan', {
+    headers: { Origin: new URL(page.url()).origin },
+    data: {
+      task: {
+        id: crypto.randomUUID(),
+        title,
+        kind: 'icr',
+        targetMinutes: 3,
+        done: false,
+        dueDate: dateInTimezone(new Date(), settings.timezone),
+        notes: '',
+        createdAt: new Date().toISOString(),
+        exercise: { type: 'copy', recipe: defaultCopyRecipe(), alternatives: [words] },
+      },
+    },
+  });
+  expect(response.ok()).toBe(true);
+  await page.reload();
+  const assigned = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: title, exact: true }) });
+  await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
+  const option = page.getByRole('combobox', { name: 'Assignment option', exact: true });
+  await option.selectOption('1');
+  await expect(option.locator('option:checked')).toContainText('Word copy');
+  await page.getByRole('button', { name: 'Start word copy', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill('A');
+  await page.getByRole('button', { name: 'Pause audio', exact: true }).click();
+  await expect(option).toBeDisabled();
+  await expect(option).toHaveValue('1');
+  await page.reload();
+  await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Word copy', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
+  await expect(option).toBeDisabled();
+  await expect(option).toHaveValue('1');
+  await expect(option.locator('option:checked')).toContainText('Word copy');
+  await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('A');
+  await page.screenshot({ path: '.tmp/copy-recovered-assignment-option.png', fullPage: true });
+});
+
 test('callsign controls protect replay and blind feedback, and plain text grades punctuation and exports', async ({
   page,
 }) => {
@@ -195,11 +387,25 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.getByRole('spinbutton', { name: /^Minimum character speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: /^Starting effective speed/ }).fill('50');
   await page.getByRole('combobox', { name: 'Callsigns', exact: false }).selectOption('simple');
+  await page.getByText('Sound and options', { exact: true }).click();
   await page.getByRole('checkbox', { name: 'Pause after an incorrect call' }).check();
   await page
     .getByRole('checkbox', { name: 'Hide call feedback until the round is complete' })
     .check();
-  await page.getByText('Spacing and start delay', { exact: true }).click();
+  const checkboxLayout = await page
+    .getByRole('checkbox', { name: 'Hide call feedback until the round is complete' })
+    .evaluate((element) => {
+      const text = [...element.closest('label')!.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+      )!;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      return {
+        boxRight: element.getBoundingClientRect().right,
+        textLeft: range.getClientRects()[0].left,
+      };
+    });
+  expect(checkboxLayout.textLeft).toBeGreaterThanOrEqual(checkboxLayout.boxRight);
   await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
   await expectAccessible(page, 'copy-calls-setup-mobile');
   await page.screenshot({ path: '.tmp/copy-calls-setup-mobile.png', fullPage: true });
@@ -229,7 +435,7 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.getByRole('button', { name: 'Plain text', exact: true }).click();
   await page.getByRole('spinbutton', { name: /^Character speed/ }).fill('100');
   await page.getByRole('spinbutton', { name: /^Effective speed/ }).fill('100');
-  await page.getByText('Spacing and start delay', { exact: true }).click();
+  await page.getByText('Sound and options', { exact: true }).click();
   await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
   await page.getByRole('button', { name: 'Start plain text', exact: true }).click();
   await page.getByRole('button', { name: 'Reveal answer', exact: true }).click();
@@ -241,12 +447,13 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill(answer);
   await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Check copy', exact: true }).click();
+  await page.getByText('Scoring details', { exact: true }).click();
   await expect(
     page.getByText(`1 edits / ${target.length} transmitted characters, including spaces`, {
       exact: false,
     }),
   ).toBeVisible();
-  await expect(page.getByLabel('Character comparison')).toContainText('−.');
+  await expect(page.getByLabel('Character comparison')).toContainText('Missing');
   await page
     .getByRole('textbox', { name: 'Notes for this round', exact: true })
     .fill('Missed the sentence ending.');

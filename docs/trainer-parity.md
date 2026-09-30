@@ -38,7 +38,10 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
 - **Native copy practice:** Code Groups, Word Copy, Callsign Copy and Plain Text
   run in the site, including all 20 Intermediate ICR assignments and 98
   Fundamental blocks. Typed answers, grading, actual time, private evidence,
-  recovery and report details are present. [Copy trainer](../src/client/CopyTrainer.tsx),
+  recovery and report details are present. Setup and typing share one workspace;
+  Start focuses the existing answer field immediately. Results compare transmitted
+  groups on separate aligned rows, including missing groups and extra input.
+  [Copy trainer](../src/client/CopyTrainer.tsx),
   [domain](../src/shared/copy-practice.ts), [scope and differences](lcwo-native-trainers-proposal.md).
 - **Word and QSO listening:** the same 70 unique common QSO words and 30 common
   English words, custom lists, four generated contact scenarios, native Morse

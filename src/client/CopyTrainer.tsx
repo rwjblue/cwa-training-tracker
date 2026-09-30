@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   COPY_MODES,
   copyTiming,
@@ -78,7 +79,6 @@ function CopyTrainerSession({
       defaultCopyRecipe(),
   );
   const [confirmedCharacters, setConfirmedCharacters] = useState(false);
-  const [assignmentOption, setAssignmentOption] = useState('0');
   const [error, setError] = useState('');
   const [storageWarning, setStorageWarning] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -101,6 +101,11 @@ function CopyTrainerSession({
   const reviewAudio = useRef(false);
   const leaseOwner = useRef(crypto.randomUUID());
   const answerInput = useRef<HTMLTextAreaElement>(null);
+  const answerHintId = useId();
+  const focusAnswer = () => {
+    answerInput.current?.focus({ preventScroll: true });
+    answerInput.current?.scrollIntoView({ block: 'nearest' });
+  };
   const submitRef = useRef<() => void>(() => {});
   const autoDeadline = useRef(initial?.autoSkipAt);
 
@@ -371,10 +376,16 @@ function CopyTrainerSession({
       clock.current = new CopyClock();
       prepared.current = '';
       savedRef.current = false;
-      setSaved(false);
-      setRevealed(false);
-      setFeedback('');
-      write(next);
+      // Unlock the existing input within the click gesture, before preparing audio.
+      // This also lets mobile browsers open the keyboard immediately.
+      flushSync(() => {
+        setSaved(false);
+        setRevealed(false);
+        setFeedback('');
+        setError('');
+        write(next);
+      });
+      focusAnswer();
       playTarget(next);
     } catch (reason) {
       setError((reason as Error).message);
@@ -575,31 +586,34 @@ function CopyTrainerSession({
   };
   const attempt = draft?.attempt;
   const active = attempt?.status === 'active';
-  const discrete = attempt?.recipe.mode === 'words' || attempt?.recipe.mode === 'callsigns';
+  const currentRecipe = attempt?.recipe ?? recipe;
+  const assignmentRecipes = assignedRecipe ? [assignedRecipe, ...(alternatives ?? [])] : [];
+  const assignmentIndex = assignmentRecipes.findIndex((option) =>
+    (Object.keys(option) as (keyof CopyRecipe)[]).every(
+      (key) => option[key] === currentRecipe[key],
+    ),
+  );
+  const assignmentOption = assignmentIndex < 0 ? 'custom' : String(assignmentIndex);
+  const discrete = currentRecipe.mode === 'words' || currentRecipe.mode === 'callsigns';
   const measured = clock.current.snapshot(performance.now());
-  const speeds = attempt ? currentCopySpeeds(attempt) : undefined;
+  const speeds = attempt ? currentCopySpeeds(attempt) : recipe;
   const needsCharacters = requiresCharacterSelection && !confirmedCharacters;
   void tick;
 
   return (
     <section className="copy-trainer" aria-label="Copy practice">
       <header className="copy-heading">
-        <div>
-          <span className="eyebrow">LISTEN · COPY · REVIEW</span>
-          <h2>{attempt ? COPY_LABELS[attempt.recipe.mode] : 'Copy practice'}</h2>
-        </div>
-        {attempt && (
-          <span className="copy-time" aria-label="Measured practice time">
-            {copyDuration(measured.audioSeconds + measured.answerSeconds + measured.reviewSeconds)}{' '}
-            <small>measured</small>
-          </span>
-        )}
+        <h2>Copy practice</h2>
+        <span className="copy-time" aria-label="Measured practice time">
+          {copyDuration(measured.audioSeconds + measured.answerSeconds + measured.reviewSeconds)}
+          <small>practice time</small>
+        </span>
       </header>
-      <p>
-        Practice here, check your copy, and keep a result for each round.{' '}
+      <p className="copy-intro">
+        Listen, type, then check your copy.{' '}
         {accountId
           ? 'Save results to your private history.'
-          : 'No account is needed to practice or download a result.'}
+          : 'Practice and download results without an account.'}
       </p>
       {blocked && (
         <div className="notice" role="alert">
@@ -627,15 +641,28 @@ function CopyTrainerSession({
           if (element) player.current.attach(element);
         }}
       />
-      {!attempt ? (
-        <>
+      {attempt && initial?.attempt.id === attempt.id && !saved && (
+        <p className="copy-help">
+          Recovered on this device. Playback stays paused until you continue.
+        </p>
+      )}
+      {draft && draft.task?.id !== task?.id && (
+        <p className="notice">
+          This round{' '}
+          {draft.task ? `belongs to ${draft.task.title}` : 'was started as open practice'}. Finish
+          it or start a new round for the current assignment.
+        </p>
+      )}
+      {!attempt || active ? (
+        <div className="copy-workspace">
           {!assignedRecipe && (
             <div className="copy-mode-tabs" role="group" aria-label="Copy mode">
               {COPY_MODES.map((mode) => (
                 <button
                   key={mode}
-                  className={recipe.mode === mode ? 'selected' : ''}
-                  aria-pressed={recipe.mode === mode}
+                  className={currentRecipe.mode === mode ? 'selected' : ''}
+                  aria-pressed={currentRecipe.mode === mode}
+                  disabled={active || blocked}
                   onClick={() => {
                     setError('');
                     setRecipe(loadCopyPreferences(scope, mode) ?? defaultCopyRecipe(mode));
@@ -647,16 +674,16 @@ function CopyTrainerSession({
             </div>
           )}
           {alternatives && alternatives.length > 0 && (
-            <label className="field">
+            <label className="field copy-assignment-option">
               Assignment option
               <select
                 value={assignmentOption}
+                disabled={active || blocked}
                 onChange={(e) => {
-                  setAssignmentOption(e.target.value);
-                  setRecipe([assignedRecipe!, ...alternatives][Number(e.target.value)]);
+                  setRecipe(assignmentRecipes[Number(e.target.value)]);
                 }}
               >
-                {[assignedRecipe!, ...alternatives].map((option, index) => (
+                {assignmentRecipes.map((option, index) => (
                   <option key={index} value={String(index)}>
                     {COPY_LABELS[option.mode]} ·{' '}
                     {option.mode === 'words' ? option.wordCollection : option.groupKind} ·{' '}
@@ -667,304 +694,297 @@ function CopyTrainerSession({
               </select>
             </label>
           )}
-          <CopySettings
-            recipe={recipe}
-            onChange={(next) => {
-              setRecipe(next);
-              setAssignmentOption('custom');
-            }}
-          />
+          <CopySettings recipe={currentRecipe} disabled={active || blocked} onChange={setRecipe} />
           {requiresCharacterSelection && (
-            <label className="checkbox-label">
+            <label className="checkbox-label copy-character-confirmation">
               <input
                 type="checkbox"
                 checked={confirmedCharacters}
+                disabled={active || blocked}
                 onChange={(e) => setConfirmedCharacters(e.target.checked)}
               />{' '}
               I have selected the characters I want to strengthen for this assignment.
             </label>
           )}
-          <button
-            className="button dark"
-            disabled={blocked || needsCharacters}
-            onClick={() => start()}
-          >
-            Start {COPY_LABELS[recipe.mode].toLowerCase()}
-          </button>
-          <p className="field-hint">
-            Timing starts with playback. Setup, countdown, pauses, and time away from this tab do
-            not count.
-          </p>
-        </>
-      ) : (
-        <>
-          {initial?.attempt.id === attempt.id && !saved && (
-            <p className="copy-help">
-              Recovered on this device. Playback stays paused until you continue.
-            </p>
-          )}
-          {draft.task?.id !== task?.id && (
-            <p className="notice">
-              This round{' '}
-              {draft.task ? `belongs to ${draft.task.title}` : 'was started as open practice'}.
-              Finish it or start a new round for the current assignment.
-            </p>
-          )}
-          {active ? (
-            <>
-              <div className="copy-round-status">
-                <strong>
-                  {discrete
-                    ? `${attempt.recipe.mode === 'words' ? 'Word' : 'Call'} ${attempt.trials.length + 1} of ${attempt.targets.length}`
-                    : 'Copy the complete recording'}
-                </strong>
-                <span>
-                  {speeds?.characterWpm}/{speeds?.effectiveWpm} WPM · {attempt.recipe.toneHz} Hz
-                </span>
-              </div>
-              <div className="copy-inline-actions">
-                <button
-                  className="button dark"
-                  disabled={blocked}
-                  onClick={() => (playing ? pause() : playTarget(draft, draft.heard))}
-                >
-                  {playing
+          <div className="copy-entry-panel">
+            <div className="copy-round-status">
+              <strong>
+                {discrete
+                  ? `${currentRecipe.mode === 'words' ? 'Word' : 'Call'} ${(attempt?.trials.length ?? 0) + 1} of ${attempt?.targets.length ?? 25}`
+                  : 'Copy the complete recording'}
+              </strong>
+              <span>
+                {speeds.characterWpm}/{speeds.effectiveWpm} WPM · {currentRecipe.toneHz} Hz
+              </span>
+            </div>
+            <div className="copy-playback-controls">
+              <button
+                className="button dark"
+                disabled={blocked || (!active && needsCharacters)}
+                onClick={() => {
+                  if (!draft) start();
+                  else if (playing) pause();
+                  else {
+                    focusAnswer();
+                    playTarget(draft, draft.heard);
+                  }
+                }}
+              >
+                {!active
+                  ? `Start ${COPY_LABELS[currentRecipe.mode].toLowerCase()}`
+                  : playing
                     ? 'Pause audio'
-                    : draft.heard
+                    : draft?.heard
                       ? 'Play again'
-                      : draft.position > 0
+                      : draft && draft.position > 0
                         ? 'Resume audio'
                         : 'Play audio'}
-                </button>
-                <button
-                  className="button outline"
-                  disabled={blocked || (!draft.heard && draft.position === 0)}
-                  onClick={() => playTarget(draft, true)}
-                >
-                  Replay from start
-                </button>
-                <span role="status">
-                  {playing
+              </button>
+              <button
+                className="button outline"
+                disabled={!active || blocked || (!draft?.heard && !draft?.position)}
+                onClick={() => {
+                  if (!draft) return;
+                  focusAnswer();
+                  playTarget(draft, true);
+                }}
+              >
+                Replay from start
+              </button>
+              <span className="copy-playback-status" role="status">
+                {!active
+                  ? 'Ready when you are'
+                  : playing
                     ? player.current.position < delay.current
                       ? 'Get ready…'
                       : 'Playing'
                     : measured.thinking === 'answer'
                       ? 'Answering'
-                      : 'Paused'}{' '}
-                  · {copyDuration(player.current.position)} /{' '}
-                  {copyDuration(player.current.track?.duration ?? 0)}
-                </span>
-              </div>
-              {feedback && (
-                <p className="copy-feedback" role="status">
-                  {feedback}
-                </p>
-              )}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  submit();
-                }}
-              >
-                <label className="field">
-                  Your copy
-                  <textarea
-                    ref={answerInput}
-                    rows={discrete ? 2 : 5}
-                    autoCapitalize="characters"
-                    autoComplete="off"
-                    spellCheck={false}
-                    maxLength={2000}
-                    value={draft.answer}
-                    disabled={blocked}
-                    onChange={(e) => {
-                      if (!hasControl()) return;
-                      if (!playing && draft.heard)
-                        clock.current.startThinking('answer', performance.now());
-                      clock.current.touch(performance.now());
-                      write({ ...snapshot()!, answer: e.target.value });
-                    }}
-                    onKeyDown={(e) => {
-                      if (discrete && e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        submit();
-                      }
-                    }}
-                  />
-                </label>
-                <p className="field-hint">
-                  {discrete
-                    ? 'Press Enter to check your answer and continue. A blank answer counts as skipped.'
-                    : 'You can type while listening. Finish playback before checking your copy.'}{' '}
-                  Answer time pauses after 30 seconds without input.
-                </p>
-                <div className="copy-inline-actions">
-                  <button
-                    type="submit"
-                    className="button dark"
-                    disabled={!draft.heard || playing || blocked}
-                  >
-                    {discrete ? 'Check & next' : 'Check copy'}
-                  </button>
-                  {draft.heard && !playing && (
-                    <button
-                      type="button"
-                      className="button outline"
-                      disabled={blocked}
-                      onClick={() => {
-                        if (!hasControl()) return;
-                        if (measured.thinking) pause();
-                        else {
-                          clock.current.startThinking('answer', performance.now());
-                          setTick((n) => n + 1);
-                        }
-                      }}
-                    >
-                      {measured.thinking ? 'Pause answering' : 'Resume answering'}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="text-button"
-                    disabled={blocked}
-                    onClick={() => {
-                      if (!hasControl()) return;
-                      setRevealed(true);
-                      write({
-                        ...snapshot()!,
-                        attempt: { ...snapshot()!.attempt, revealCount: attempt.revealCount + 1 },
-                      });
-                    }}
-                  >
-                    Reveal answer
-                  </button>
-                  <button
-                    type="button"
-                    className="text-button"
-                    disabled={blocked}
-                    onClick={endEarly}
-                  >
-                    Finish early
-                  </button>
-                </div>
-              </form>
-              {revealed && (
-                <p className="copy-revealed">
-                  {attempt.targets[attempt.trials.length]}{' '}
-                  <small>Marked as revealed in your result.</small>
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <CopyResult
-                attempt={attempt}
-                onReplay={
-                  draft.pending || saved || blocked
-                    ? undefined
-                    : (index) => playTarget(draft, false, index)
-                }
-              />
-              {playing && (
-                <button className="button outline" onClick={pause}>
-                  Pause review audio
+                      : 'Paused'}
+                {active && (
+                  <>
+                    {' '}
+                    · {copyDuration(player.current.position)} /{' '}
+                    {copyDuration(player.current.track?.duration ?? 0)}
+                  </>
+                )}
+              </span>
+            </div>
+            {discrete && (
+              <p className="copy-trial-feedback" role="status">
+                {feedback || '\u00a0'}
+              </p>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
+              }}
+            >
+              <label className="field copy-answer-field">
+                Your copy
+                <textarea
+                  ref={answerInput}
+                  rows={discrete ? 2 : 5}
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={2000}
+                  value={draft?.answer ?? ''}
+                  readOnly={!active}
+                  disabled={blocked}
+                  aria-describedby={answerHintId}
+                  placeholder="Start when you're ready, then type what you hear."
+                  onChange={(e) => {
+                    const current = snapshot();
+                    if (!hasControl() || current?.attempt.status !== 'active') return;
+                    if (!playingRef.current && current.heard)
+                      clock.current.startThinking('answer', performance.now());
+                    clock.current.touch(performance.now());
+                    write({ ...current, answer: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (active && discrete && e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      submit();
+                    }
+                  }}
+                />
+              </label>
+              <p className="field-hint" id={answerHintId}>
+                {discrete
+                  ? 'Press Enter to check and continue. A blank answer counts as skipped.'
+                  : 'Type while listening. Finish playback before checking your copy.'}
+              </p>
+              <div className="copy-inline-actions copy-answer-actions">
+                <button
+                  type="submit"
+                  className="button dark"
+                  disabled={!active || !draft?.heard || playing || blocked}
+                >
+                  {discrete ? 'Check & next' : 'Check copy'}
                 </button>
-              )}
-              {!saved && !draft.pending && (
-                <>
+                {draft?.heard && !playing && (
                   <button
-                    className="text-button"
+                    type="button"
+                    className="button outline"
                     disabled={blocked}
                     onClick={() => {
                       if (!hasControl()) return;
-                      if (measured.thinking === 'review') pause();
+                      if (measured.thinking) pause();
                       else {
-                        player.current.pause();
-                        clock.current.startThinking('review', performance.now());
+                        clock.current.startThinking('answer', performance.now());
                         setTick((n) => n + 1);
                       }
                     }}
                   >
-                    {measured.thinking === 'review' ? 'Pause review timer' : 'Start review timer'}
-                  </button>
-                  <p className="field-hint">
-                    Review timing is optional. It pauses after 30 seconds without interaction.
-                  </p>
-                  <label className="field">
-                    Notes for this round
-                    <textarea
-                      rows={2}
-                      maxLength={10000}
-                      value={draft.notes}
-                      disabled={blocked}
-                      onChange={(e) => {
-                        if (!hasControl()) return;
-                        clock.current.touch(performance.now());
-                        write({ ...snapshot()!, notes: e.target.value });
-                      }}
-                    />
-                  </label>
-                </>
-              )}
-              <div className="copy-inline-actions">
-                <button
-                  className="button dark"
-                  disabled={saved || saving || blocked}
-                  onClick={() => void save()}
-                >
-                  {saved
-                    ? 'Saved to history'
-                    : saving
-                      ? 'Saving…'
-                      : accountId
-                        ? draft.pending
-                          ? 'Retry save'
-                          : 'Save result'
-                        : 'Sign in to save result'}
-                </button>
-                <button className="button outline" onClick={download}>
-                  Download result
-                </button>
-                <button
-                  className="button outline"
-                  disabled={saving || blocked}
-                  onClick={() => newRound(assignedRecipe ?? recipe)}
-                >
-                  New round
-                </button>
-                {missedCopyCharacters(attempt) && (
-                  <button
-                    className="text-button"
-                    disabled={saving || blocked}
-                    onClick={() =>
-                      newRound(
-                        {
-                          ...defaultCopyRecipe('groups'),
-                          characterWpm: attempt.recipe.characterWpm,
-                          effectiveWpm: attempt.recipe.effectiveWpm,
-                          groupKind: 'custom',
-                          customCharacters: missedCopyCharacters(attempt),
-                        },
-                        true,
-                      )
-                    }
-                  >
-                    Practice missed characters
+                    {measured.thinking ? 'Pause answering' : 'Resume answering'}
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={!active || blocked}
+                  onClick={() => {
+                    const current = snapshot();
+                    if (!hasControl() || !current) return;
+                    setRevealed(true);
+                    write({
+                      ...current,
+                      attempt: { ...current.attempt, revealCount: current.attempt.revealCount + 1 },
+                    });
+                  }}
+                >
+                  Reveal answer
+                </button>
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={!active || blocked}
+                  onClick={endEarly}
+                >
+                  Finish early
+                </button>
               </div>
-              {saved && (
-                <p role="status">
-                  Saved. This round is included in your history and weekly report.
-                </p>
-              )}
-              {draft.pending && !saved && (
-                <p className="field-hint">
-                  This result is ready to save. Its contents stay fixed so retries cannot create
-                  duplicate practice.
-                </p>
-              )}
+            </form>
+            {revealed && attempt && (
+              <p className="copy-revealed">
+                {attempt.targets[attempt.trials.length]}{' '}
+                <small>Marked as revealed in your result.</small>
+              </p>
+            )}
+            <p className="copy-timing-hint">
+              Practice time excludes setup, countdown, pauses, and time away. Answer time pauses
+              after 30 seconds without input.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <CopyResult
+            attempt={attempt}
+            onReplay={
+              draft.pending || saved || blocked
+                ? undefined
+                : (index) => playTarget(draft, false, index)
+            }
+          />
+          {playing && (
+            <button className="button outline" onClick={pause}>
+              Pause review audio
+            </button>
+          )}
+          {!saved && !draft.pending && (
+            <>
+              <button
+                className="text-button"
+                disabled={blocked}
+                onClick={() => {
+                  if (!hasControl()) return;
+                  if (measured.thinking === 'review') pause();
+                  else {
+                    player.current.pause();
+                    clock.current.startThinking('review', performance.now());
+                    setTick((n) => n + 1);
+                  }
+                }}
+              >
+                {measured.thinking === 'review' ? 'Pause review timer' : 'Start review timer'}
+              </button>
+              <p className="field-hint">
+                Review timing is optional. It pauses after 30 seconds without interaction.
+              </p>
+              <label className="field">
+                Notes for this round
+                <textarea
+                  rows={2}
+                  maxLength={10000}
+                  value={draft.notes}
+                  disabled={blocked}
+                  onChange={(e) => {
+                    if (!hasControl()) return;
+                    clock.current.touch(performance.now());
+                    write({ ...snapshot()!, notes: e.target.value });
+                  }}
+                />
+              </label>
             </>
+          )}
+          <div className="copy-inline-actions">
+            <button
+              className="button dark"
+              disabled={saved || saving || blocked}
+              onClick={() => void save()}
+            >
+              {saved
+                ? 'Saved to history'
+                : saving
+                  ? 'Saving…'
+                  : accountId
+                    ? draft.pending
+                      ? 'Retry save'
+                      : 'Save result'
+                    : 'Sign in to save result'}
+            </button>
+            <button className="button outline" onClick={download}>
+              Download result
+            </button>
+            <button
+              className="button outline"
+              disabled={saving || blocked}
+              onClick={() => newRound(assignedRecipe ?? recipe)}
+            >
+              New round
+            </button>
+            {missedCopyCharacters(attempt) && (
+              <button
+                className="text-button"
+                disabled={saving || blocked}
+                onClick={() =>
+                  newRound(
+                    {
+                      ...defaultCopyRecipe('groups'),
+                      characterWpm: attempt.recipe.characterWpm,
+                      effectiveWpm: attempt.recipe.effectiveWpm,
+                      groupKind: 'custom',
+                      customCharacters: missedCopyCharacters(attempt),
+                    },
+                    true,
+                  )
+                }
+              >
+                Practice missed characters
+              </button>
+            )}
+          </div>
+          {saved && (
+            <p role="status">Saved. This round is included in your history and weekly report.</p>
+          )}
+          {draft.pending && !saved && (
+            <p className="field-hint">
+              This result is ready to save. Its contents stay fixed so retries cannot create
+              duplicate practice.
+            </p>
           )}
         </>
       )}

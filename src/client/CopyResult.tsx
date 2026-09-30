@@ -3,10 +3,12 @@ import {
   summarizeCopyAttempt,
   type CopyAttempt,
   type CopyMode,
+  type CopyAlignment,
 } from '../shared/copy-practice';
 import { savedCopyAttempt } from '../shared/copy-report';
 import type { PracticeSession } from '../shared/training';
-import './copy-trainer.css';
+import { copyComparisonRows, describeCopyEdit } from './copy-comparison';
+import './copy-result.css';
 
 export const COPY_LABELS: Record<CopyMode, string> = {
   groups: 'Code groups',
@@ -87,67 +89,47 @@ export default function CopyResult({
         · {copyDuration(attempt.reviewSeconds)} focused review · {result.replays} replays
       </p>
       {attempt.status === 'abandoned' && (
-        <p className="copy-help">
+        <p className="copy-result-notice">
           Partial round: {result.answered} of {result.total} answers submitted. Accuracy covers
           submitted answers.
         </p>
       )}
       {!result.answered && (
-        <p className="copy-help">
+        <p className="copy-result-notice">
           No answers were submitted, so this round has no accuracy result.
         </p>
       )}
       {attempt.revealCount > 0 && (
-        <p className="copy-help">Answers were revealed. This is practice with assistance.</p>
+        <p className="copy-result-notice">
+          Answers were revealed. This is practice with assistance.
+        </p>
       )}
       {attempt.interruptionCount > 0 && (
-        <p className="copy-help">
+        <p className="copy-result-notice">
           Restored after {attempt.interruptionCount} interruption
           {attempt.interruptionCount === 1 ? '' : 's'}.
         </p>
       )}
       {score ? (
         <>
-          <p className="copy-help">
-            {score.distance} edits / {score.denominator} transmitted{' '}
-            {attempt.recipe.mode === 'plaintext'
-              ? 'characters, including spaces'
-              : 'characters, excluding spaces'}{' '}
-            gives {score.errorPercent}% errors (capped at 100%). Case and repeated spaces are
-            ignored; missing group boundaries and extra input count.
-          </p>
-          <div className="copy-answer-comparison">
-            <div>
-              <strong>Sent</strong>
-              <pre>{attempt.targets[0]}</pre>
-            </div>
-            <div>
-              <strong>Your copy</strong>
-              <pre>{attempt.trials[0].answer || '(No answer)'}</pre>
-            </div>
-          </div>
-          <details open={score.distance > 0}>
-            <summary>Character feedback</summary>
-            <p className="copy-help">
-              Substitutions show sent → copied. Missing characters use −, extra characters use +. A
-              dot marks a space.
+          <CharacterComparison
+            alignment={score.alignment}
+            unit={attempt.recipe.mode === 'groups' ? 'Group' : 'Word'}
+          />
+          <details className="copy-scoring-details">
+            <summary>Scoring details</summary>
+            <p>
+              {score.distance} edits / {score.denominator} transmitted{' '}
+              {attempt.recipe.mode === 'plaintext'
+                ? 'characters, including spaces'
+                : 'characters, excluding spaces'}{' '}
+              gives {score.errorPercent}% errors (capped at 100%). Case and repeated spaces are
+              ignored; missing boundaries and extra input count.
             </p>
-            <div className="copy-alignment" aria-label="Character comparison">
-              {score.alignment.map((item, index) => {
-                const shown = (text: string) => (text === ' ' ? '·' : text);
-                return (
-                  <span key={index} className={`copy-char ${item.kind}`}>
-                    {item.kind === 'equal'
-                      ? shown(item.expected)
-                      : item.kind === 'substitution'
-                        ? `${shown(item.expected)}→${shown(item.received)}`
-                        : item.kind === 'deletion'
-                          ? `−${shown(item.expected)}`
-                          : `+${shown(item.received)}`}
-                  </span>
-                );
-              })}
-            </div>
+            <p>
+              The comparison uses the same full-text alignment as the score. Repeated characters can
+              have more than one equally valid alignment.
+            </p>
           </details>
           {onReplay && (
             <button className="button outline" type="button" onClick={() => onReplay(0)}>
@@ -204,16 +186,19 @@ export default function CopyResult({
           </div>
         )
       )}
-      <p className="copy-help">
+      <p className="copy-result-notice">
         {attempt.recipe.characterWpm}/{attempt.recipe.effectiveWpm} starting WPM ·{' '}
-        {attempt.recipe.toneHz} Hz ·{' '}
-        {continuous
-          ? 'Native edit-distance scoring'
-          : `${attempt.recipe.adaptive ? 'Adaptive' : 'Fixed'} speed; correct answers earn speed × length points${attempt.recipe.adaptive ? ' after the speed increment' : ''}`}
-        .
+        {attempt.recipe.toneHz} Hz
+        {!continuous && ` · ${attempt.recipe.adaptive ? 'Adaptive' : 'Fixed'} speed`}
       </p>
       <details className="copy-result-settings">
         <summary>Round settings</summary>
+        {!continuous && (
+          <p>
+            Correct answers earn speed × length points
+            {attempt.recipe.adaptive ? ' after the speed increment' : ''}.
+          </p>
+        )}
         {attempt.recipe.mode === 'groups' && (
           <p>
             {attempt.recipe.groupKind} characters
@@ -250,6 +235,94 @@ export default function CopyResult({
           Started {new Date(attempt.createdAt).toLocaleString()} · {attempt.scoringVersion}
         </p>
       </details>
+    </div>
+  );
+}
+
+function CharacterComparison({
+  alignment,
+  unit,
+}: {
+  alignment: CopyAlignment[];
+  unit: 'Group' | 'Word';
+}) {
+  const rows = copyComparisonRows(alignment);
+  const shown = (text: string) => (text === ' ' ? '·' : text);
+  return (
+    <div className="copy-comparison">
+      <div className="copy-comparison-heading">
+        <h3>{unit === 'Group' ? 'Group comparison' : 'Word comparison'}</h3>
+        <p>One {unit.toLowerCase()} per row.</p>
+      </div>
+      <p className="copy-comparison-legend">
+        <span>
+          <span className="copy-key-change">Underlined</span> changed
+        </span>
+        <span>
+          <b>−</b> missing
+        </span>
+        <span>
+          <b>+</b> extra
+        </span>
+        <span>
+          <b>·</b> space
+        </span>
+      </p>
+      <div className="copy-comparison-columns" aria-hidden="true">
+        <span>#</span>
+        <strong>Sent</strong>
+        <strong>Your copy</strong>
+      </div>
+      <ol className="copy-comparison-list" aria-label="Character comparison">
+        {rows.map((row) => (
+          <li key={row.number}>
+            <div className="copy-comparison-row" role="group" aria-label={`${unit} ${row.number}`}>
+              <span className="copy-row-number" aria-hidden="true">
+                {row.number}
+              </span>
+              <span className="sr-only">
+                {row.edits === 0
+                  ? 'Correct'
+                  : !row.copied.trim()
+                    ? 'Not copied'
+                    : `${row.edits} ${row.edits === 1 ? 'edit' : 'edits'}`}
+              </span>
+              <p className="sr-only">Sent: {row.sent}</p>
+              <p className="sr-only">Your copy: {row.copied || '(Not copied)'}</p>
+              {row.edits > 0 && (
+                <p className="sr-only">
+                  {row.alignment.map(describeCopyEdit).filter(Boolean).join(' ')}
+                </p>
+              )}
+              <div className="copy-comparison-string copy-string-sent" aria-hidden="true">
+                {row.cells.map((item, index) => (
+                  <span className={`copy-comparison-character ${item.kind}`} key={index}>
+                    {shown(item.expected) || '\u00a0'}
+                  </span>
+                ))}
+              </div>
+              <div className="copy-comparison-string copy-string-received" aria-hidden="true">
+                {row.cells.map((item, index) => (
+                  <span
+                    className={`copy-comparison-character ${item.kind}`}
+                    key={index}
+                    title={describeCopyEdit(item) || undefined}
+                  >
+                    {item.kind === 'deletion'
+                      ? '−'
+                      : `${item.kind === 'insertion' ? '+' : ''}${shown(item.received)}`}
+                  </span>
+                ))}
+              </div>
+              {row.boundaryNotes.map((note) => (
+                <p className="copy-boundary-note" key={note}>
+                  {unit === 'Word' ? note.replaceAll('group', 'word') : note}
+                </p>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
