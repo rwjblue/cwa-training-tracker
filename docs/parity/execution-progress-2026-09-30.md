@@ -108,7 +108,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   The app shell must load; no service-worker shell or physical-device verification
   is claimed. Device backup/clear and reset/replacement fencing remain #3/#4.
 
-## Issue #3 — implemented and validated; independent gate pending
+## Issue #3 — completed, independently accepted, published and deployed
 
 - Fresh live body/comments/dependencies rechecked after #2 closed; only #2 is
   required. Original pinned device schema and export/clear remain read-only
@@ -186,9 +186,31 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   40 standard browser journeys pass on the layer correction. The focused
   follow-up commit and independent recheck are next; publication remains held.
 
+- Final independent gate accepted on `df14d8e0`: all seven substantive findings
+  are resolved. All 17 independent browser journeys pass, including fresh mobile
+  Choose at the originally covered position, actual download/file chooser and
+  cancellation with the notice present, forward/reverse focus and actual restored
+  audio. Eight independent production-code probes cover the unchanged runtime
+  correction files. Thirty Axe checks have zero violations and 28 geometry states
+  have no horizontal overflow. No substantive UX/privacy/evidence/maintainability
+  finding remains; the reviewer explicitly released the harness.
+- Signed implementation `55a76cea`, corrections `d9fc70af` and notification layer
+  `cefebe11` are published on main with GitHub-verified valid signatures. Signed
+  publication has the exact accepted tree
+  `fc481324e833b9946d59e453fd2609b32f31f865`.
+- Production version `a20057e1-08d1-4ce1-997c-c5bcc4251c29` deployed through the
+  established task; no migrations were pending. Health/root return 200, anonymous
+  private history returns 401, and all served main/Studio JS/CSS match the validated
+  build. No Worker/config/binding changes or new migrations.
+- [Completion evidence and review outcome](https://github.com/rwjblue/cwa-training-tracker/issues/3#issuecomment-5921160526)
+  posted; #3 is closed after acceptance, signed publication and production checks.
+  Local clear cannot erase an already committed server write; #4 owns server
+  reset/replacement invalidation. Shell availability, browser emulation and future
+  explicit inventory extensions remain the documented limits.
+
 ## Remaining queue
 
-Issue #3 is in its validation/review loop. Issues #4–#46 remain pending.
+Issues #1–#3 are complete. Issues #4–#46 remain pending; #4 is next.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes; no future issue implementation has begun.
 
