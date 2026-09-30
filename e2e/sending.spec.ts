@@ -161,7 +161,7 @@ test('sending scales stay in the studio and save assigned practice without openi
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'sending',
   );
-  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(77 / 60, 8);
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('1:17');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);

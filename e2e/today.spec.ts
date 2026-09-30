@@ -80,7 +80,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'sending',
   );
-  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBe(7);
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('7:00');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
@@ -241,6 +241,11 @@ test('course dates populate Today with playable assignments and preserve linked 
     `Session ${assigned.lesson} · WD101-10`,
   );
   let listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
+  await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await expect(page.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
+  await expect(page.getByLabel('Effective WPM', { exact: true })).toHaveValue('10');
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue(/^\d+:\d{2}$/);
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
   const fasterUrl = await speed.getByRole('option', { name: /^13 WPM/ }).getAttribute('value');
   expect(fasterUrl).toBeTruthy();
@@ -280,6 +285,8 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await expect(dialog.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
+  await expect(dialog.getByLabel('Effective WPM', { exact: true })).toHaveValue('');
   await page.screenshot({ path: '.tmp/practice-review-mobile.png', fullPage: true });
   await expect(dialog.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Copied ALICE in OH. Revisit the final sentence.',
@@ -310,10 +317,19 @@ test('course dates populate Today with playable assignments and preserve linked 
   expect(entries[0].metadata.recordings[0]).toMatchObject({
     url: assigned.exercise.url,
     speedWpm: 10,
+    characterWpm: 25,
+    effectiveWpm: 10,
   });
-  expect(entries[0].metadata.recordings[1]).toMatchObject({ url: fasterUrl, speedWpm: 13 });
-  expect(entries[0].metadata.assignedCharacterWpm).toBe(10);
-  expect(entries[0].characterWpm).toBeUndefined(); // mixed speeds are not mislabeled as one speed
+  expect(entries[0].metadata.recordings[1]).toMatchObject({
+    url: fasterUrl,
+    speedWpm: 13,
+    characterWpm: 25,
+    effectiveWpm: 13,
+  });
+  expect(entries[0].metadata.assignedCharacterWpm).toBe(25);
+  expect(entries[0].metadata.assignedEffectiveWpm).toBe(10);
+  expect(entries[0].characterWpm).toBe(25);
+  expect(entries[0].effectiveWpm).toBeUndefined(); // effective speeds differ across files
 
   const nativeRecording = await audio.elementHandle();
   await audio.evaluate((element: HTMLAudioElement) => element.play());

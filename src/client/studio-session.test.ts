@@ -72,7 +72,7 @@ it('captures assignment, actual recording sources and recall without inventing a
       recallSeconds: 10,
       plannedTaskId: 'task:audio',
       assignedRecordingUrl: 'https://example.org/assigned.mp3',
-      assignedCharacterWpm: 15,
+      assignedSpeedWpm: 15,
       practiceTool: 'audio',
       recordings: value.measured.recordings,
     },
@@ -83,9 +83,45 @@ it('captures assignment, actual recording sources and recall without inventing a
   expect(result.notes).toContain('10 WPM: 00:20 listened; 15 WPM: 00:20 listened');
   value.measured.recordings = [value.measured.recordings[0]];
   expect(studioSession(value)).toMatchObject({
-    characterWpm: 10,
     metadata: { recordingUrl: 'https://example.org/slow.mp3' },
   });
+  expect(studioSession(value)?.characterWpm).toBeUndefined();
+});
+
+it('logs known recording timing and retains a shared character speed across effective-speed changes', () => {
+  const value = input(229.054);
+  const assignedUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_15.mp3';
+  const playedUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_18.mp3';
+  value.launch = {
+    id: 'launch:ing',
+    activity: { type: 'audio', url: assignedUrl, characterWpm: 15 },
+  };
+  value.measured.recordings = [{ url: playedUrl, speedWpm: 18, seconds: 229.054 }];
+  expect(studioSession(value)).toMatchObject({
+    characterWpm: 25,
+    effectiveWpm: 18,
+    minutes: 229.054 / 60,
+    notes: '18 WPM: 03:49 listened',
+    metadata: {
+      assignedSpeedWpm: 15,
+      assignedCharacterWpm: 25,
+      assignedEffectiveWpm: 15,
+      recordings: [{ url: playedUrl, characterWpm: 25, effectiveWpm: 18, seconds: 229.054 }],
+    },
+  });
+  value.measured.recordings.push({ url: assignedUrl, speedWpm: 15, seconds: 10 });
+  value.measured.seconds += 10;
+  const mixed = studioSession(value)!;
+  expect(mixed.characterWpm).toBe(25);
+  expect(mixed.effectiveWpm).toBeUndefined();
+  expect(mixed.metadata?.recordings).toEqual([
+    { url: playedUrl, speedWpm: 18, characterWpm: 25, effectiveWpm: 18, seconds: 229.054 },
+    { url: assignedUrl, speedWpm: 15, characterWpm: 25, effectiveWpm: 15, seconds: 10 },
+  ]);
+  // An unrecognized source must not inherit timing from the known file.
+  value.measured.recordings.push({ url: 'https://example.org/unknown.mp3', seconds: 5 });
+  value.measured.seconds += 5;
+  expect(studioSession(value)?.characterWpm).toBeUndefined();
 });
 
 it('saves public scales as measured sending practice without unrelated listening speeds', () => {

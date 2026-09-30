@@ -41,6 +41,10 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   Curriculum exercises have a duration only when the source recommends one or
   the learner sets one. The studio shows elapsed practice with an optional goal.
   Syllabus links open the relevant class session.
+  Practice review/edit duration uses minutes:seconds and preserves the original
+  measured precision when unchanged. Official recording logs distinguish
+  character and effective speeds using exact catalog sources and
+  [documented timing measurements](recording-speeds.md).
   [Curriculum](../src/shared/curriculum.ts), [daily plan](../src/shared/plan.ts).
 - **Native copy practice:** Code Groups, Word Copy, Callsign Copy and Plain Text
   run in the site, including all 20 Intermediate ICR assignments and 98

@@ -4,6 +4,7 @@ import {
   eligibleRecordingVariants,
   loadRecordingSpeedPreference,
   recordingVariants,
+  recordingSpeeds,
   saveRecordingSpeedPreference,
   selectRecordingVariant,
 } from './recording-variants';
@@ -13,6 +14,28 @@ const longQso = 'https://cwops.org/wp-content/uploads/2022/07/qso203_13.mp3';
 const shortQso = 'https://cwa.cwops.org/wp-content/uploads/QSO_203_13.mp3';
 
 describe('official recording choices', () => {
+  it('distinguishes character timing from effective recording speed without guessing unknown URLs', () => {
+    const ing = 'https://cwa.cwops.org/wp-content/uploads/ING7_18.mp3';
+    expect(recordingSpeeds(ing)).toEqual({ characterWpm: 25, effectiveWpm: 18 });
+    expect(recordingSpeeds(words)).toEqual({ characterWpm: 25, effectiveWpm: 10 });
+    expect(recordingSpeeds(longQso)).toEqual({ characterWpm: 25, effectiveWpm: 13 });
+    expect(recordingSpeeds('https://cwops.org/wp-content/uploads/2020/06/CWT-201-20.mp3')).toEqual({
+      characterWpm: 20,
+      effectiveWpm: 20,
+    });
+    expect(recordingSpeeds('https://cwops.org/wp-content/uploads/2018/12/CWT-213-30.mp3')).toEqual({
+      characterWpm: 30,
+      effectiveWpm: 30,
+    });
+    expect(recordingSpeeds('https://cwops.org/wp-content/uploads/2022/07/qso207_18.mp3')).toEqual({
+      characterWpm: 25,
+      effectiveWpm: 18,
+    });
+    expect(recordingSpeeds(undefined)).toBeUndefined();
+    expect(recordingSpeeds(`${ing}?speed=25`)).toBeUndefined();
+    expect(recordingSpeeds('https://example.org/ING7_18.mp3')).toBeUndefined();
+  });
+
   it('keeps the entire published catalog well-formed with unambiguous groups and speeds', () => {
     const urls = new Set<string>();
     const groups = new Set<string>();

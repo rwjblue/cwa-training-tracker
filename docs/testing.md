@@ -109,6 +109,12 @@ speed changes retain notes/time, and the reviewed saved record contains actual
 sources and scratchpad text. Reuse synthetic audio instead of downloading course
 recordings. Catalog tests protect exact URL groups and known replacements; live
 network availability is an explicit catalog maintenance check, not a CI test.
+Recording speed tests distinguish 25-WPM Farnsworth character timing from the
+effective variant label and normally spaced CWT files. Check single-speed review
+fields and mixed-speed per-file metadata in the assigned-recording journey.
+Duration input tests cover minutes:seconds, rollover, validation, and preserving
+unchanged measured precision; the record-edit journey verifies conversion back
+to stored minutes. Inspect the review form at desktop/mobile widths.
 
 For assigned practice, keep recommended duration, elapsed practice, and completion
 separate. Pure tests cover absent duration recommendations, removal of old generated

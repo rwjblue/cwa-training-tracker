@@ -67,6 +67,7 @@ import CopyResult, { CopyAttemptDetails } from './CopyResult';
 import { savedCopyAttempt } from '../shared/copy-report';
 import { clearCopyDraft } from './copy-storage';
 import { clearSavedStudioNotes } from './studio-session';
+import { formatPracticeDuration, practiceMinutesFromInput } from './practice-duration';
 import {
   autoSavePractice,
   flushPracticeSaves,
@@ -1954,7 +1955,7 @@ function SessionModal({
   const [form, setForm] = useState({
     date: initial.date ?? dateString(),
     kind: initial.kind ?? 'listening',
-    minutes: initial.minutes === undefined ? '' : String(initial.minutes),
+    minutes: formatPracticeDuration(initial.minutes),
     characterWpm: initial.characterWpm === undefined ? '' : String(initial.characterWpm),
     effectiveWpm: initial.effectiveWpm === undefined ? '' : String(initial.effectiveWpm),
     accuracy: initial.accuracy === undefined ? '' : String(initial.accuracy),
@@ -1971,6 +1972,11 @@ function SessionModal({
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving.current) return;
+    const minutes = practiceMinutesFromInput(form.minutes, initial.minutes);
+    if (minutes === null) {
+      setError('Enter time as minutes:seconds or minutes, from 0:00 to 1440:00.');
+      return;
+    }
     saving.current = true;
     setError('');
     setBusy(true);
@@ -1979,7 +1985,7 @@ function SessionModal({
       ...identity,
       date: form.date,
       kind: form.kind,
-      minutes: Number(form.minutes),
+      minutes,
       notes: form.notes,
       metadata: { ...initial.metadata, scratchpad: form.scratchpad },
       context: form.context,
@@ -2040,12 +2046,10 @@ function SessionModal({
               />
             </label>
             <label className="field">
-              Time practiced <span className="label-hint">minutes</span>
+              Time practiced <span className="label-hint">minutes:seconds</span>
               <input
-                type="number"
-                min="0"
-                max="1440"
-                step="any"
+                type="text"
+                placeholder="m:ss or minutes"
                 required
                 value={form.minutes}
                 readOnly={Boolean(copyAttempt)}

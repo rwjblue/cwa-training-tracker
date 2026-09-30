@@ -4,10 +4,11 @@ import type { PracticePreferences } from './practice-preferences';
 import type { PracticeClock } from './practice-clock';
 import { WORD_LISTS } from './word-content';
 import { QSO_TEMPLATES } from './qso-content';
+import { recordingSpeeds } from './recording-variants';
+import { formatPracticeDuration } from './practice-duration';
 
 export const STUDIO_AUTOSAVE_SECONDS = 30;
-const duration = (seconds: number) =>
-  `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+const duration = (seconds: number) => formatPracticeDuration(seconds / 60).padStart(5, '0');
 
 export interface StudioSessionInput {
   identity: { id: string; createdAt: string };
@@ -28,13 +29,17 @@ export function studioSession(
   const activity = launch?.activity;
   const assigned = Boolean(activity);
   const { tool, mode, characterWpm, effectiveWpm } = preferences;
-  const playedSpeeds = [
-    ...new Set(
-      measured.recordings
-        .map((item) => item.speedWpm)
-        .filter((speed): speed is number => speed !== undefined),
-    ),
-  ];
+  const recordings = measured.recordings.map((item) => ({
+    ...item,
+    ...recordingSpeeds(item.url),
+  }));
+  const sharedSpeed = (key: 'characterWpm' | 'effectiveWpm') => {
+    const speeds = new Set(recordings.map((item) => item[key]));
+    return speeds.size === 1 ? [...speeds][0] : undefined;
+  };
+  const playedCharacterWpm = sharedSpeed('characterWpm');
+  const playedEffectiveWpm = sharedSpeed('effectiveWpm');
+  const assignedSpeeds = activity?.type === 'audio' ? recordingSpeeds(activity.url) : undefined;
   return validatePracticeSession({
     ...identity,
     date: dateInTimezone(identity.createdAt, timezone),
@@ -44,8 +49,8 @@ export function studioSession(
     lesson: launch?.task?.lesson,
     notes: [
       launch?.task?.title,
-      measured.recordings.length
-        ? measured.recordings
+      recordings.length
+        ? recordings
             .map(
               (item) =>
                 `${item.speedWpm ? `${item.speedWpm} WPM` : 'Recording'}: ${duration(item.seconds)} listened`,
@@ -69,21 +74,30 @@ export function studioSession(
     minutes: measured.seconds / 60,
     ...(!assigned && tool !== 'sending'
       ? { characterWpm, effectiveWpm }
-      : activity?.type === 'audio' && playedSpeeds.length === 1
-        ? { characterWpm: playedSpeeds[0] }
+      : activity?.type === 'audio'
+        ? {
+            ...(playedCharacterWpm !== undefined ? { characterWpm: playedCharacterWpm } : {}),
+            ...(playedEffectiveWpm !== undefined ? { effectiveWpm: playedEffectiveWpm } : {}),
+          }
         : {}),
     source: assigned || tool === 'sending' ? 'timer' : 'morse',
     metadata: {
       elapsedSeconds: measured.seconds,
       ...(scratchpad ? { scratchpad } : {}),
       recallSeconds: measured.recallSeconds,
-      ...(measured.recordings.length ? { recordings: measured.recordings } : {}),
+      ...(recordings.length ? { recordings } : {}),
       practiceTool: assigned ? activity?.type : tool,
       ...(!assigned && tool !== 'sending' ? { practiceMode: mode } : {}),
       ...(activity?.type === 'audio'
         ? {
             assignedRecordingUrl: activity.url,
-            assignedCharacterWpm: activity.characterWpm,
+            assignedSpeedWpm: activity.characterWpm,
+            ...(assignedSpeeds
+              ? {
+                  assignedCharacterWpm: assignedSpeeds.characterWpm,
+                  assignedEffectiveWpm: assignedSpeeds.effectiveWpm,
+                }
+              : {}),
             ...(measured.recordings.length === 1
               ? { recordingUrl: measured.recordings[0].url }
               : {}),

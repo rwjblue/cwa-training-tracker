@@ -51,6 +51,24 @@ test('email login, private records, backup controls, and passkeys work together'
   await page.getByRole('button', { name: 'Practice log', exact: true }).click();
   await page.reload();
   await expect(page.getByText('Browser integration practice', { exact: true })).toBeVisible();
+  await page
+    .getByRole('button', { name: `Edit Listening on ${savedEntry.date}`, exact: true })
+    .click();
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('15:00');
+  await page.getByLabel(/^Time practiced/).fill('3:49');
+  const durationDialog = page.getByRole('dialog');
+  await durationDialog.screenshot({ path: '.tmp/practice-duration-review-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await durationDialog.screenshot({ path: '.tmp/practice-duration-review-mobile.png' });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect((await (await context.request.get('/api/entries')).json()).entries[0].minutes).toBe(
+    229 / 60,
+  );
   // Arrange one additional kind of private data; exercise backup operations
   // through the account UI rather than repeating Worker API import tests.
   const planned = await context.request.post('/api/plan', {

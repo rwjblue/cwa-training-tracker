@@ -93,7 +93,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByRole('button', { name: 'Review & save 01:23', exact: true }).click();
   await signIn(page, { dialogAlreadyOpen: true });
   await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
-  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(83 / 60, 8);
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('1:23');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page).toHaveURL(/#practice$/);
   await page.clock.fastForward(120_000);
@@ -108,7 +108,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
     .fill('Copied the final call.');
   await page.getByRole('button', { name: 'Log practice manually', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
-  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(125 / 60, 8);
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('2:05');
   await page.route(
     '**/api/entries',
     (route) =>
@@ -118,7 +118,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Please retry saving your practice.');
   await expect(page).toHaveURL(/#practice$/);
-  expect(Number(await page.getByLabel(/^Time practiced/).inputValue())).toBeCloseTo(125 / 60, 8);
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('2:05');
   let releaseSave!: () => void;
   const heldSave = new Promise<void>((resolve) => {
     releaseSave = resolve;

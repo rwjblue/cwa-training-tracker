@@ -4,6 +4,8 @@ export interface RecordingVariant {
   title: string;
   url: string;
   speedWpm: number;
+  characterWpm: number;
+  effectiveWpm: number;
   durationSeconds?: number;
 }
 export type RecordingSpeedPreference = 'assigned' | 'next';
@@ -41,7 +43,15 @@ export const RECORDING_URL_REPLACEMENTS: Readonly<Record<string, string>> = {
 
 const groupsByUrl = new Map<string, readonly RecordingVariant[]>();
 for (const group of catalog.groups) {
-  for (const variant of group.variants) groupsByUrl.set(variant.url, group.variants);
+  // Published WPM labels describe effective speed. The practice families use
+  // 25 WPM character timing; CWT recordings use normal spacing at their label.
+  // See docs/recording-speeds.md for official links and timing measurements.
+  const variants = group.variants.map((variant) => ({
+    ...variant,
+    characterWpm: group.id.startsWith('cwt-') ? variant.speedWpm : 25,
+    effectiveWpm: variant.speedWpm,
+  }));
+  for (const variant of variants) groupsByUrl.set(variant.url, variants);
 }
 const currentUrl = (url: string) => RECORDING_URL_REPLACEMENTS[url] ?? url;
 
@@ -50,6 +60,17 @@ export function recordingVariants(assignedUrl: string | undefined): RecordingVar
   return (assignedUrl ? (groupsByUrl.get(currentUrl(assignedUrl)) ?? []) : []).map((item) => ({
     ...item,
   }));
+}
+
+/** Timing metadata is available only for exact catalog URLs and verified replacements. */
+export function recordingSpeeds(
+  url: string | undefined,
+): Pick<RecordingVariant, 'characterWpm' | 'effectiveWpm'> | undefined {
+  if (!url) return undefined;
+  const variant = groupsByUrl.get(currentUrl(url))?.find((item) => item.url === currentUrl(url));
+  return variant
+    ? { characterWpm: variant.characterWpm, effectiveWpm: variant.effectiveWpm }
+    : undefined;
 }
 
 export function eligibleRecordingVariants(

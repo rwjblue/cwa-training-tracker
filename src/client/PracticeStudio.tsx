@@ -38,7 +38,7 @@ import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
-import { preferredRecording } from './recording-variants';
+import { preferredRecording, recordingSpeeds } from './recording-variants';
 import { usePracticeClock } from './usePracticeClock';
 import { MediaSessionController } from './media-session';
 import {
@@ -90,6 +90,7 @@ export default function PracticeStudio({
     activity?.type === 'audio' ? (selectedRecording?.url ?? activity.url) : undefined;
   const recordingWpm =
     activity?.type === 'audio' ? (selectedRecording?.speedWpm ?? activity.characterWpm) : undefined;
+  const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
   const [publicRunner, setPublicRunner] = useState(false);
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const [publicCopy, setPublicCopy] = useState(
@@ -764,6 +765,9 @@ export default function PracticeStudio({
                       {recordingWpm
                         ? `${recordingWpm} WPM${recordingWpm !== activity.characterWpm && activity.characterWpm ? ` selected (${activity.characterWpm} assigned)` : ''} · `
                         : ''}
+                      {selectedRecordingSpeeds
+                        ? `${selectedRecordingSpeeds.characterWpm} character / ${selectedRecordingSpeeds.effectiveWpm} effective WPM · `
+                        : ''}
                       {activity.minimumPasses
                         ? `${activity.minimumPasses}${activity.maximumPasses && activity.maximumPasses !== activity.minimumPasses ? `–${activity.maximumPasses}` : ''} listening passes assigned.`
                         : 'Listen at the recording’s original speed.'}
@@ -1283,8 +1287,8 @@ export default function PracticeStudio({
                           notes: launch?.task?.title,
                           ...(!assigned && !isSending
                             ? { characterWpm, effectiveWpm }
-                            : activity?.type === 'audio' && recordingWpm
-                              ? { characterWpm: recordingWpm }
+                            : activity?.type === 'audio'
+                              ? selectedRecordingSpeeds
                               : {}),
                           source: 'manual',
                           metadata: {
