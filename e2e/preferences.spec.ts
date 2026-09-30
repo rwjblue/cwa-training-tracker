@@ -11,7 +11,7 @@ async function savePreferences(page: Page) {
   await expect(page.getByRole('button', { name: 'Save preferences', exact: true })).toBeEnabled();
 }
 
-test('account identity, timezone, and opt-in avatars remain readable and private', async ({
+test('account identity and timezone stay readable with default avatars and persistent opt-out', async ({
   page,
   context,
 }) => {
@@ -33,6 +33,8 @@ test('account identity, timezone, and opt-in avatars remain readable and private
 
   await signIn(page);
   const account = page.getByRole('button', { name: 'Open your account', exact: true });
+  await expect.poll(() => avatarRequests.length).toBe(1);
+  await expect(account.locator('img')).toHaveCount(0);
   await expect(account).toHaveText('Me');
   await account.click();
   await expect(
@@ -40,14 +42,44 @@ test('account identity, timezone, and opt-in avatars remain readable and private
   ).toBeVisible();
   const timezone = page.getByRole('combobox', { name: 'Practice timezone', exact: true });
   const gravatar = page.getByRole('checkbox', { name: 'Use my Gravatar image', exact: true });
-  await expect(gravatar).not.toBeChecked();
+  await expect(gravatar).toBeChecked();
+  const gravatarLink = page.getByRole('link', { name: /Gravatar/ });
+  await expect(gravatarLink).toBeVisible();
+  await expect(gravatarLink).toHaveAttribute('href', 'https://gravatar.com/');
+  await expect(gravatarLink).toHaveCSS('text-decoration-line', 'underline');
+  await expect(page.locator('.avatar-preference')).toContainText('sign-in email');
+  await gravatar.uncheck();
   await timezone.selectOption('America/Los_Angeles');
   await page.getByLabel(/^Callsign/).fill('N1RWJ');
   await savePreferences(page);
   await expect(account).toHaveText('N1RWJ');
-  expect(avatarRequests).toHaveLength(0);
+  expect(avatarRequests).toHaveLength(1);
 
+  // Hold settings until the account button renders; opt-out must also hold during boot.
+  let releaseSettings!: () => void;
+  const heldSettings = new Promise<void>((resolve) => {
+    releaseSettings = resolve;
+  });
+  let confirmSettingsRequest!: () => void;
+  const settingsRequested = new Promise<void>((resolve) => {
+    confirmSettingsRequest = resolve;
+  });
+  await page.route(
+    '**/api/settings',
+    async (route) => {
+      const response = await route.fetch();
+      confirmSettingsRequest();
+      await heldSettings;
+      await route.fulfill({ response });
+    },
+    { times: 1 },
+  );
   await page.reload();
+  await settingsRequested;
+  await expect(account).toHaveText('Me');
+  await expect(account.locator('img')).toHaveCount(0);
+  expect(avatarRequests).toHaveLength(1);
+  releaseSettings();
   await expect(
     page.getByRole('heading', { name: 'Your practice preferences', exact: true }),
   ).toBeVisible();
@@ -56,7 +88,8 @@ test('account identity, timezone, and opt-in avatars remain readable and private
   await expect(account).toHaveText('N1RWJ');
   await expect(gravatar).not.toBeChecked();
   await expectAccessible(page, 'preferences-desktop');
-  expect(avatarRequests).toHaveLength(0);
+  await page.waitForLoadState('networkidle');
+  expect(avatarRequests).toHaveLength(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
@@ -64,7 +97,7 @@ test('account identity, timezone, and opt-in avatars remain readable and private
 
   await gravatar.check();
   await savePreferences(page);
-  await expect.poll(() => avatarRequests.length).toBe(1);
+  await expect.poll(() => avatarRequests.length).toBe(2);
   const avatarUrl = new URL(avatarRequests[0].url);
   expect(avatarUrl.origin).toBe('https://gravatar.com');
   expect(avatarUrl.pathname).toMatch(/^\/avatar\/[a-f0-9]{64}$/);

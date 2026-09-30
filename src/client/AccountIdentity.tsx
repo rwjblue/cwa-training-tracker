@@ -15,7 +15,7 @@ export function AccountIdentity({
   email,
   callsign,
   displayName,
-  useGravatar = false,
+  useGravatar = true,
   className = '',
 }: AccountIdentityProps) {
   const [avatar, setAvatar] = useState<{ email: string; url: string } | null>(null);

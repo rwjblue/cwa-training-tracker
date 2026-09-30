@@ -257,6 +257,7 @@ function App() {
     ...DEFAULT_PROFILE,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
+  const [profileAccountId, setProfileAccountId] = useState<string>();
   const [booting, setBooting] = useState(true);
   const [appError, setAppError] = useState('');
   const [authOpen, setAuthOpen] = useState(false);
@@ -271,12 +272,15 @@ function App() {
     if (current?.id !== user?.id) {
       setEntries([]);
       setProfile(DEFAULT_PROFILE);
+      setProfileAccountId(undefined);
     }
     setUser(current);
     if (current) {
       const [sessionData, settingsData] = await Promise.all([getEntries(), getSettings()]);
+      if (activeAccount.current !== current.id) return;
       setEntries(sessionData.entries);
       setProfile(settingsData.settings);
+      setProfileAccountId(current.id);
       setDemo(false);
       setPlanVersion((version) => version + 1);
       return settingsData.settings;
@@ -660,7 +664,7 @@ function App() {
                   email={user.email}
                   callsign={profile.callsign}
                   displayName={profile.displayName}
-                  useGravatar={profile.useGravatar}
+                  useGravatar={profileAccountId === user.id && profile.useGravatar !== false}
                 />
               </button>
             ) : (
@@ -2422,21 +2426,31 @@ function Account({
                 onChange={(timezone) => setForm({ ...form, timezone })}
               />
             </div>
-            <label className="avatar-preference">
+            <div className="avatar-preference">
               <input
+                id="use-gravatar"
                 type="checkbox"
-                checked={form.useGravatar === true}
+                checked={form.useGravatar !== false}
                 onChange={(event) => setForm({ ...form, useGravatar: event.target.checked })}
-                aria-label="Use my Gravatar image"
+                aria-describedby="gravatar-help"
               />
               <span>
-                <strong>Use my Gravatar image</strong>
+                <label htmlFor="use-gravatar">
+                  <strong>Use my Gravatar image</strong>
+                </label>
+                <span className="field-hint" id="gravatar-help">
+                  Gravatar is a profile picture linked to your email address. We show the picture
+                  for your sign-in email beside your callsign.{' '}
+                  <a href="https://gravatar.com/" target="_blank" rel="noopener noreferrer">
+                    Set or change your Gravatar
+                  </a>
+                  .
+                </span>
                 <span className="field-hint">
-                  Optional. Uses the image linked to your sign-in email. This contacts Gravatar and
-                  shares an email hash and your IP address. Your full callsign stays visible.
+                  Loading it shares an email hash and your IP address with Gravatar.
                 </span>
               </span>
-            </label>
+            </div>
             <fieldset className="weekday-field">
               <legend>Class meeting days</legend>
               <div>

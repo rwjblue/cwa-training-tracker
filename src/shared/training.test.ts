@@ -226,9 +226,10 @@ describe('practice input validation', () => {
     );
   });
 
-  it('defaults older profiles to no Gravatar requests and accepts only explicit booleans', () => {
+  it('defaults Gravatar on while preserving explicit opt-outs and requiring boolean preferences', () => {
     const { useGravatar: _omitted, ...olderProfile } = DEFAULT_PROFILE;
-    expect(validateProfile(olderProfile).useGravatar).toBe(false);
+    expect(DEFAULT_PROFILE.useGravatar).toBe(true);
+    expect(validateProfile(olderProfile).useGravatar).toBe(true);
     expect(validateProfile({ ...olderProfile, useGravatar: true }).useGravatar).toBe(true);
     expect(validateProfile({ ...olderProfile, useGravatar: false }).useGravatar).toBe(false);
     for (const invalid of ['true', 'false', 1, 0, null]) {
@@ -245,13 +246,20 @@ describe('practice input validation', () => {
       sessions: [],
       profile: olderProfile,
     };
-    expect(validateTrainingExport(backup).profile?.useGravatar).toBe(false);
+    expect(validateTrainingExport(backup).profile?.useGravatar).toBe(true);
     const optedIn = validateTrainingExport({
       ...backup,
       profile: { ...olderProfile, useGravatar: true },
     });
     expect(validateTrainingExport(JSON.parse(JSON.stringify(optedIn))).profile?.useGravatar).toBe(
       true,
+    );
+    const optedOut = validateTrainingExport({
+      ...backup,
+      profile: { ...olderProfile, useGravatar: false },
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(optedOut))).profile?.useGravatar).toBe(
+      false,
     );
   });
 });

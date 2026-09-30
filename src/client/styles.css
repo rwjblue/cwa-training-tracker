@@ -4355,6 +4355,10 @@ body {
 .avatar-preference .field-hint {
   display: block;
 }
+.avatar-preference a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
 @media (max-width: 600px) {
   .topbar-end {
     min-width: 0;

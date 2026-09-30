@@ -41,9 +41,10 @@ deleting their rows if an operational incident requires universal sign-out.
 ## Request boundaries
 
 Account identity uses the full callsign, falling back to “Me.” The optional
-`useGravatar` profile preference defaults to false, including in older imported
-profiles. Only an explicit opt-in loads an external avatar. The browser computes
-SHA-256 of the trimmed, lowercased sign-in email and requests a G-rated image
+`useGravatar` profile preference defaults to true, including in older imported
+profiles without a saved preference. Explicit opt-outs remain off. The account
+button waits for the current account's settings before loading an avatar. The
+browser computes SHA-256 of the trimmed, lowercased sign-in email and requests a G-rated image
 from `https://gravatar.com`, with `d=404` so missing images retain the local
 identity. Requests omit credentials and referrers. This still shares an email
 hash, IP address, and browser information with Gravatar; the privacy page

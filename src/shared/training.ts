@@ -10,7 +10,7 @@ export type PracticeKind =
 export interface Profile {
   displayName: string;
   callsign: string;
-  /** Loading a Gravatar contacts its external provider; missing means no consent. */
+  /** Enabled by default; an explicit false disables external avatar requests. */
   useGravatar?: boolean;
   level: CourseLevel;
   timezone: string;
@@ -59,7 +59,7 @@ export interface TrainingExport {
 export const DEFAULT_PROFILE: Profile = {
   displayName: '',
   callsign: '',
-  useGravatar: false,
+  useGravatar: true,
   level: 'beginner',
   timezone: 'UTC',
   dailyGoalMinutes: 60,
@@ -301,7 +301,7 @@ export function validateProfile(value: unknown): Profile {
   return {
     displayName: text(input.displayName, 'Display name', 100, '').trim(),
     callsign: text(input.callsign, 'Callsign', 30, '').trim().toUpperCase(),
-    useGravatar: input.useGravatar === true,
+    useGravatar: input.useGravatar !== false,
     level: level as CourseLevel,
     timezone,
     dailyGoalMinutes: number(
