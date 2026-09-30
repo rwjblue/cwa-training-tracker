@@ -1,11 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { expectAccessible, scopedRequest, signIn } from './helpers';
+import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 
 async function activate(page: Page, control: Locator, mobile: boolean) {
+  await expect(control).toBeEnabled();
   if (mobile) await control.tap();
   else {
     await control.focus();
@@ -69,6 +70,7 @@ test('safe stop describes a changed server log and refreshes a second open page'
     accountId: state.accountId,
     kind: 'reset',
     baseRevision: state.revision,
+    baseHistoryRevision: state.historyRevision,
     generation: state.generation,
     payloadHash: createHash('sha256')
       .update(JSON.stringify({ kind: 'reset', payload }))
@@ -154,7 +156,32 @@ async function replacement(
   return page.getByRole('dialog', { name: 'Replace your practice data?', exact: true });
 }
 async function geometry(page: Page, label: string) {
+  // Inspect the settled interface; transient modal opacity is not its contrast.
+  await page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.playState === 'running' &&
+            animation.effect?.getTiming().iterations !== Infinity,
+        )
+        .map((animation) => animation.finished.catch(() => {})),
+    );
+  });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const status = page.getByRole('region', { name: 'Account data change' });
+  if (await status.count()) {
+    const paragraphWidths = await status
+      .locator('p')
+      .evaluateAll((paragraphs) =>
+        paragraphs.map((paragraph) => paragraph.getBoundingClientRect().width),
+      );
+    expect(paragraphWidths.length).toBeGreaterThan(0);
+    // Pending/error instructions need a readable line, even if narrow columns
+    // technically avoid horizontal overflow and satisfy accessibility rules.
+    expect(Math.min(...paragraphWidths)).toBeGreaterThan(250);
+  }
   await expectAccessible(page, label);
   await page.screenshot({ path: `.tmp/${label}.png`, fullPage: true });
 }
@@ -389,6 +416,7 @@ for (const mobile of [false, true]) {
     await expect(
       failed.getByRole('button', { name: 'Stop request safely', exact: true }),
     ).toBeEnabled();
+    await geometry(page, `lifecycle-replace-failed-${mobile ? 'mobile' : 'desktop'}`);
     expect(
       (await (await context.request.get('/api/entries')).json()).entries.map(
         (entry: { notes: string }) => entry.notes,
@@ -451,6 +479,15 @@ for (const mobile of [false, true]) {
       mobile,
     );
     expect(device.stores.practice).toHaveLength(1);
+    await activate(
+      page,
+      pending.getByRole('button', { name: 'Retry exact request', exact: true }),
+      mobile,
+    );
+    await expect(pending).toContainText(
+      'Choose the same replacement file to retry this exact request.',
+    );
+    await geometry(page, `lifecycle-replace-pending-${mobile ? 'mobile' : 'desktop'}`);
     await page.unroute('**/api/import');
     await page.unroute('**/api/entries');
     const retryBodies: unknown[] = [];
@@ -515,5 +552,179 @@ for (const mobile of [false, true]) {
       ),
     ).toBe(false);
     await geometry(page, `lifecycle-replace-ready-${mobile ? 'mobile' : 'desktop'}`);
+  });
+}
+
+for (const kind of ['reset', 'replace'] as const) {
+  const mobile = kind === 'replace';
+  test(`Keep recovery files protects server work added after download (${kind})`, async ({
+    page,
+    context,
+  }) => {
+    await context.setExtraHTTPHeaders({
+      'CF-Connecting-IP': mobile ? '192.0.2.147' : '192.0.2.146',
+    });
+    await page.setViewportSize(
+      mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
+    );
+    await signIn(page);
+    const original = {
+      id: `backup-original-${kind}`,
+      date: '2026-09-30',
+      kind: 'other',
+      minutes: 1,
+      notes: 'Original server evidence',
+      source: 'manual',
+      createdAt: '2026-09-30T12:00:00.000Z',
+    };
+    expect((await scopedRequest(context, 'POST', '/api/entries', original)).ok()).toBe(true);
+    await page.reload();
+    await navigate(page, 'Your account', mobile);
+    let review: Locator;
+    if (kind === 'reset') {
+      await activate(
+        page,
+        page.getByRole('button', { name: 'Reset practice data', exact: true }),
+        mobile,
+      );
+      review = page.getByRole('dialog', { name: 'Start with a fresh page?', exact: true });
+      await review.getByLabel('Type RESET to continue', { exact: true }).fill('RESET');
+    } else {
+      const source = await (await context.request.get('/api/export')).json();
+      review = await replacement(
+        page,
+        {
+          ...source,
+          sessions: [
+            { ...original, id: 'replacement-recovery-safe', notes: 'Replacement evidence' },
+          ],
+        },
+        mobile,
+      );
+    }
+    const confirm = review.getByRole('button', {
+      name: kind === 'reset' ? 'Reset practice data' : 'Replace and import',
+      exact: true,
+    });
+    const firstServer = await fileDownload(
+      page,
+      review.getByRole('button', { name: 'Download server backup', exact: true }),
+      mobile,
+    );
+    expect(firstServer.sessions.map((entry: { notes: string }) => entry.notes)).toEqual([
+      'Original server evidence',
+    ]);
+    expect(firstServer.accountId).toBeUndefined();
+    expect(firstServer.historyRevision).toBeUndefined();
+    await fileDownload(
+      page,
+      review.getByRole('button', { name: 'Download device backup', exact: true }),
+      mobile,
+    );
+    await expect(confirm).toBeEnabled();
+    const authorityBefore = (await (await context.request.get('/api/account-state')).json()).state;
+    expect(
+      (
+        await scopedRequest(context, 'POST', '/api/entries', {
+          ...original,
+          id: `backup-newer-${kind}`,
+          notes: 'Server evidence added after download',
+        })
+      ).ok(),
+    ).toBe(true);
+    const authorityAfter = (await (await context.request.get('/api/account-state')).json()).state;
+    expect(authorityAfter.revision).toBe(authorityBefore.revision);
+    expect(authorityAfter.historyRevision).toBeGreaterThan(authorityBefore.historyRevision);
+    const refused = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/account-lifecycle/prepare',
+    );
+    await activate(page, confirm, mobile);
+    expect((await refused).status()).toBe(409);
+    const status = page.getByRole('region', { name: 'Account data change' });
+    await expect(
+      status.getByRole('button', { name: 'Stop request safely', exact: true }),
+    ).toBeEnabled();
+    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(2);
+    await geometry(page, `lifecycle-stale-backup-${kind}-${mobile ? 'mobile' : 'desktop'}`);
+    await activate(
+      page,
+      status.getByRole('button', { name: 'Stop request safely', exact: true }),
+      mobile,
+    );
+    await expect(review).toBeVisible();
+    await expect(confirm).toBeDisabled();
+
+    // A response downloaded for an older semantic revision must not rearm Keep
+    // when a remote edit lands while that export response is delayed.
+    await fileDownload(
+      page,
+      review.getByRole('button', { name: 'Download device backup', exact: true }),
+      mobile,
+    );
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let held!: () => void;
+    const captured = new Promise<void>((resolve) => {
+      held = resolve;
+    });
+    await page.route('**/api/account-lifecycle/backup', async (route) => {
+      const response = await route.fetch();
+      expect(response.ok()).toBe(true);
+      held();
+      await gate;
+      await route.fulfill({ response });
+    });
+    const delayedDownload = page.waitForEvent('download');
+    await activate(
+      page,
+      review.getByRole('button', { name: 'Download server backup', exact: true }),
+      mobile,
+    );
+    await captured;
+    try {
+      const { state } = await (await context.request.get('/api/account-state')).json();
+      expect(
+        (
+          await accountRequest(context, 'PUT', '/api/settings', {
+            ...state.settings,
+            displayName: 'Remote preference after export',
+          })
+        ).ok(),
+      ).toBe(true);
+    } finally {
+      release();
+    }
+    const delayedFile = JSON.parse(await readFile((await (await delayedDownload).path())!, 'utf8'));
+    expect(delayedFile.profile.displayName).not.toBe('Remote preference after export');
+    await expect(review).toContainText('Your server data changed after the download.');
+    await expect(confirm).toBeDisabled();
+    await page.unroute('**/api/account-lifecycle/backup');
+
+    const freshServer = await fileDownload(
+      page,
+      review.getByRole('button', { name: 'Download server backup', exact: true }),
+      mobile,
+    );
+    expect(freshServer.sessions.map((entry: { notes: string }) => entry.notes)).toContain(
+      'Server evidence added after download',
+    );
+    expect(freshServer.profile.displayName).toBe('Remote preference after export');
+    await expect(confirm).toBeEnabled();
+    await geometry(page, `lifecycle-fresh-backup-${kind}-${mobile ? 'mobile' : 'desktop'}`);
+    const applied = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === (kind === 'reset' ? '/api/reset' : '/api/import'),
+    );
+    await activate(page, confirm, mobile);
+    expect((await applied).ok()).toBe(true);
+    await expect(status).toHaveCount(0);
+    await expect(review).toHaveCount(0);
+    const after = await (await context.request.get('/api/entries')).json();
+    expect(after.generation).toBe(1);
+    expect(after.entries.map((entry: { notes: string }) => entry.notes)).toEqual(
+      kind === 'reset' ? [] : ['Replacement evidence'],
+    );
   });
 }

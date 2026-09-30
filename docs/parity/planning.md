@@ -321,10 +321,19 @@ Changed remote generations fence owners before cache/history publication and
 require a deliberate device recovery disposition. Other accounts, Guest work and
 shared defaults remain separate. Existing public practice and evidence stay intact.
 
+Independent review reproduced unreadable mobile recovery columns and a newer
+server-only result absent from the selected Keep files. Recovery feedback now uses
+a full-width stack. The downloaded server file is bound to a coherent server
+snapshot and a separate history mutation counter; the actual destructive SQL
+rejects later unlinked entry changes as well as semantic changes. Safe stop and
+newer observed authority invalidate the old download permission. Portable files
+retain data/evidence without granting runtime authority. Corrections pass complete
+local validation and await the independent recheck before acceptance.
+
 See [protocol](../../src/shared/account-lifecycle.ts),
 [Worker](../../src/worker/account-lifecycle.ts),
 [coordinator](../../src/client/account-lifecycle.ts), and
 [actual UI verification](../../e2e/account-lifecycle.spec.ts). Validation and the
-required fresh independent gate are in the execution journal. All 441 fast checks
-and 45 serialized browser journeys pass locally; this issue remains
+required fresh independent gate are in the execution journal. All 463 fast checks
+and 47 serialized browser journeys pass locally; this issue remains
 in progress until those gates, signed publication and deployment are complete.

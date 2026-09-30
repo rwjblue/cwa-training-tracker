@@ -7,9 +7,11 @@ import { dailyPlanSummary, type PlannedTask } from '../shared/plan';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { getAuth } from './auth';
+import { getAccountSnapshot } from './account-sync';
 import type { AccountChange, AccountOperation, AccountSnapshot } from '../shared/account-sync';
 import {
   hashLifecyclePayload,
+  type AccountLifecycleBackup,
   type LifecycleIdentity,
   type LifecycleResult,
 } from '../shared/account-lifecycle';
@@ -201,16 +203,15 @@ async function lifecycleIdentity(
   payload: unknown,
   id: string = crypto.randomUUID(),
 ): Promise<LifecycleIdentity> {
-  const row = db.sqlite
-    .prepare('SELECT account_revision, dataset_generation FROM users WHERE id = ?')
-    .get(accountId)!;
+  const state = await getAccountSnapshot(env, accountId);
   return {
     version: 1,
     id,
     accountId,
     kind,
-    baseRevision: Number(row.account_revision),
-    generation: Number(row.dataset_generation),
+    baseRevision: state.revision,
+    baseHistoryRevision: state.historyRevision!,
+    generation: state.generation,
     payloadHash: await hashLifecyclePayload(kind, payload),
   };
 }
@@ -1749,7 +1750,10 @@ describe('account operation revisions and receipts', () => {
       expect(await saved.json()).toMatchObject({
         entry: { historicalPlannedTaskId: taskId, notes: frozen.notes, minutes: frozen.minutes },
       });
-      expect(await snapshot(auth.cookie)).toEqual(current);
+      expect(await snapshot(auth.cookie)).toEqual({
+        ...current,
+        historyRevision: current.historyRevision! + 1,
+      });
       expect(
         (
           await request(
@@ -1819,7 +1823,10 @@ describe('account operation revisions and receipts', () => {
     expect(confirmed.status).toBe(201);
     const earlierSaved = ((await confirmed.json()) as { entry: PracticeSession }).entry;
     expect(earlierSaved.metadata?.plannedTaskId).toBe(taskId);
-    expect(await snapshot(auth.cookie)).toEqual(before);
+    expect(await snapshot(auth.cookie)).toEqual({
+      ...before,
+      historyRevision: before.historyRevision! + 1,
+    });
     let reached!: () => void;
     let release!: () => void;
     const boundaryReached = new Promise<void>((resolve) => {
@@ -1868,7 +1875,10 @@ describe('account operation revisions and receipts', () => {
       metadata: { elapsedSeconds: 90.25, recallSeconds: 5 },
     });
     expect(JSON.stringify(frozen)).toBe(frozenBody);
-    expect(await snapshot(auth.cookie)).toEqual(removed);
+    expect(await snapshot(auth.cookie)).toEqual({
+      ...removed,
+      historyRevision: removed.historyRevision! + 1,
+    });
     expect((await request('/api/entries', 'POST', earlier, auth.cookie)).status).toBe(200);
     expect((await request('/api/settings', 'PUT', profile, auth.cookie)).status).toBe(200);
     const restored = await snapshot(auth.cookie);
@@ -1908,7 +1918,10 @@ describe('account operation revisions and receipts', () => {
       request('/api/entries', 'POST', frozen, auth.cookie),
     ]);
     expect(responses.map((response) => response.status).sort()).toEqual([200, 201]);
-    expect(await snapshot(auth.cookie)).toEqual(before);
+    expect(await snapshot(auth.cookie)).toEqual({
+      ...before,
+      historyRevision: before.historyRevision! + 1,
+    });
     expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
       1,
     );
@@ -1956,7 +1969,10 @@ describe('account operation revisions and receipts', () => {
       },
     });
     expect(JSON.stringify(frozen)).toBe(originalBody);
-    expect(await snapshot(auth.cookie)).toEqual(beforeRetry);
+    expect(await snapshot(auth.cookie)).toEqual({
+      ...beforeRetry,
+      historyRevision: beforeRetry.historyRevision! + 1,
+    });
   });
 
   it.each(['semantic', 'direct'] as const)(
@@ -2022,7 +2038,10 @@ describe('account operation revisions and receipts', () => {
         },
       });
       expect(saved.metadata).not.toHaveProperty('plannedTaskId');
-      expect(await snapshot(auth.cookie)).toEqual(afterDelete);
+      expect(await snapshot(auth.cookie)).toEqual({
+        ...afterDelete,
+        historyRevision: afterDelete.historyRevision! + 1,
+      });
       expect(JSON.stringify(frozen)).toBe(originalBody);
       const retry = await request('/api/entries', 'POST', frozen, auth.cookie);
       expect(retry.status).toBe(200);
@@ -2743,6 +2762,244 @@ describe('account dataset lifecycle authority', () => {
     };
   }
 
+  async function serverBackup(cookie: string): Promise<AccountLifecycleBackup> {
+    const response = await request('/api/account-lifecycle/backup', 'GET', undefined, cookie);
+    expect(response.status).toBe(200);
+    return (await response.json()) as AccountLifecycleBackup;
+  }
+
+  it('returns one coherent, account-scoped recovery file and authority even when delivery is delayed', async () => {
+    expect((await request('/api/account-lifecycle/backup')).status).toBe(401);
+    const a = await signIn('coherent-backup-a@example.test');
+    const b = await signIn('coherent-backup-b@example.test');
+    await request('/api/entries', 'POST', entry('b-private'), b.cookie);
+    await request(
+      '/api/import',
+      'POST',
+      {
+        mode: 'merge',
+        data: {
+          ...backup([entry('a-original')]),
+          profile: { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' },
+          plan: [task()],
+          legacy: { source: 'rwjblue.com', data: { reminder: 'Synthetic archive' } },
+        },
+      },
+      a.cookie,
+    );
+    const before = await state(a.cookie);
+    const boundary = pauseBatch((sql) => sql.includes('SELECT source_json'), true);
+    const pending = serverBackup(a.cookie);
+    await boundary.entered;
+    await request('/api/entries', 'POST', entry('a-new'), a.cookie);
+    await request('/api/settings', 'PUT', DEFAULT_PROFILE, a.cookie);
+    boundary.release();
+    const captured = await pending;
+    expect(captured.state).toEqual(before);
+    expect(captured.state.historyRevision).toBe(1);
+    expect(captured.data.sessions.map((session) => session.id)).toEqual(['a-original']);
+    expect(captured.data.profile).toEqual(before.settings);
+    expect(captured.data.plan).toEqual([task()]);
+    expect(captured.data.legacy?.data).toEqual({ reminder: 'Synthetic archive' });
+    expect(captured.state.plan).toContainEqual(task());
+    expect(captured.state.plan.length).toBeGreaterThan(captured.data.plan!.length);
+    for (const field of [
+      'accountId',
+      'revision',
+      'historyRevision',
+      'generation',
+      'baseHistoryRevision',
+      'payloadHash',
+      'identity',
+      'state',
+    ])
+      expect(captured.data).not.toHaveProperty(field);
+    expect((await serverBackup(b.cookie)).data.sessions.map((session) => session.id)).toEqual([
+      'b-private',
+    ]);
+    const portable = await (await request('/api/export', 'GET', undefined, a.cookie)).json();
+    expect(portable).toMatchObject({ format: 'cwa-training-tracker', version: 1 });
+    expect(portable).not.toHaveProperty('state');
+    expect(portable).not.toHaveProperty('historyRevision');
+  });
+
+  it.each(
+    (['reset', 'replace'] as const).flatMap((kind) =>
+      (['post', 'put', 'delete'] as const).map((write) => [kind, write] as const),
+    ),
+  )(
+    'blocks stale backup %s after ordinary %s before prepare and after reservation',
+    async (kind, write) => {
+      const auth = await signIn(`backup-${kind}-${write}@example.test`);
+      await request('/api/entries', 'POST', entry('original'), auth.cookie);
+      await request('/api/entries', 'POST', entry('retained'), auth.cookie);
+      const captured = await serverBackup(auth.cookie);
+      const payload =
+        kind === 'reset'
+          ? { confirmation: 'RESET' }
+          : { mode: 'replace', data: backup([entry('replacement')]) };
+      const lifecycle: LifecycleIdentity = {
+        ...(await lifecycleIdentity(auth.user.id, kind, payload)),
+        baseRevision: captured.state.revision,
+        baseHistoryRevision: captured.state.historyRevision!,
+        generation: captured.state.generation,
+      };
+      expect(
+        (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+      ).toBe(200);
+      const changed =
+        write === 'post'
+          ? await request('/api/entries', 'POST', entry('server-only'), auth.cookie)
+          : write === 'put'
+            ? await request(
+                '/api/entries/original',
+                'PUT',
+                { ...entry('original'), notes: 'Server edit' },
+                auth.cookie,
+              )
+            : await request('/api/entries/original', 'DELETE', undefined, auth.cookie);
+      expect(changed.status).toBe(write === 'post' ? 201 : 200);
+      const current = await state(auth.cookie);
+      expect(current).toEqual({
+        ...captured.state,
+        historyRevision: captured.state.historyRevision! + 1,
+      });
+      expect(
+        (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+      ).toBe(409);
+      const unprepared = { ...lifecycle, id: 'never-prepared' };
+      expect(
+        (await request('/api/account-lifecycle/prepare', 'POST', unprepared, auth.cookie)).status,
+      ).toBe(409);
+      const beforeApply = (await history(auth.cookie)).entries;
+      const rejected = await request(
+        kind === 'reset' ? '/api/reset' : '/api/import',
+        'POST',
+        { ...payload, lifecycle },
+        auth.cookie,
+        {},
+        false,
+      );
+      expect(rejected.status).toBe(409);
+      expect((await history(auth.cookie)).entries).toEqual(beforeApply);
+      expect(await state(auth.cookie)).toEqual(current);
+      const canceled = await request(
+        '/api/account-lifecycle/cancel',
+        'POST',
+        lifecycle,
+        auth.cookie,
+      );
+      expect(await canceled.json()).toMatchObject({
+        identity: lifecycle,
+        outcome: 'canceled',
+        state: current,
+      });
+      const fresh = await lifecycleIdentity(auth.user.id, kind, payload);
+      expect(fresh.baseHistoryRevision).toBe(current.historyRevision);
+      expect(
+        (
+          await request(
+            kind === 'reset' ? '/api/reset' : '/api/import',
+            'POST',
+            { ...payload, lifecycle: fresh },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(200);
+    },
+  );
+
+  it.each(['prepare', 'apply'] as const)(
+    'rejects history committed after %s preflight at the actual SQL guard',
+    async (phase) => {
+      const auth = await signIn(`history-guard-${phase}@example.test`);
+      await request('/api/entries', 'POST', entry('original'), auth.cookie);
+      const captured = await serverBackup(auth.cookie);
+      const payload = { confirmation: 'RESET' };
+      const lifecycle = await lifecycleIdentity(auth.user.id, 'reset', payload);
+      if (phase === 'apply')
+        expect(
+          (await request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)).status,
+        ).toBe(200);
+      const boundary = pauseBatch((sql) =>
+        phase === 'prepare'
+          ? sql.includes("'pending','{}'")
+          : sql.includes('INSERT INTO account_lifecycle_guards'),
+      );
+      const pending =
+        phase === 'prepare'
+          ? request('/api/account-lifecycle/prepare', 'POST', lifecycle, auth.cookie)
+          : request('/api/reset', 'POST', { ...payload, lifecycle }, auth.cookie, {}, false);
+      await boundary.entered;
+      expect(
+        (await request('/api/entries', 'POST', entry('server-only'), auth.cookie)).status,
+      ).toBe(201);
+      boundary.release();
+      const response = await pending;
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({
+        state: {
+          revision: captured.state.revision,
+          historyRevision: captured.state.historyRevision! + 1,
+          generation: 0,
+        },
+      });
+      expect((await history(auth.cookie)).entries.map((session) => session.id).sort()).toEqual([
+        'original',
+        'server-only',
+      ]);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_lifecycle_guards').get()?.count,
+      ).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+      ).toBe(0);
+      expect(
+        await (
+          await request('/api/account-lifecycle/outcome', 'POST', lifecycle, auth.cookie)
+        ).json(),
+      ).toMatchObject({ outcome: 'unknown', reserved: phase === 'apply' });
+    },
+  );
+
+  it('keeps semantic outbox authority valid across entry changes and isolates history counters by account', async () => {
+    const a = await signIn('history-semantic-a@example.test');
+    const b = await signIn('history-semantic-b@example.test');
+    const original = await state(a.cookie);
+    const bOriginal = await state(b.cookie);
+    const operation: AccountOperation = {
+      version: 1,
+      id: 'preserved-settings',
+      accountId: a.user.id,
+      baseRevision: original.revision,
+      generation: original.generation,
+      createdAt: '2026-09-30T12:00:00.000Z',
+      change: { type: 'settings', changes: { callsign: 'N1KEEP' } },
+    };
+    await request('/api/entries', 'POST', entry('ordinary'), a.cookie);
+    await request(
+      '/api/entries/ordinary',
+      'PUT',
+      { ...entry('ordinary'), notes: 'Revised' },
+      a.cookie,
+    );
+    await request('/api/entries/ordinary', 'DELETE', undefined, a.cookie);
+    expect(await state(a.cookie)).toEqual({ ...original, historyRevision: 3 });
+    expect(await state(b.cookie)).toEqual(bOriginal);
+    expect((await request('/api/account-operations', 'POST', operation, a.cookie)).status).toBe(
+      200,
+    );
+    expect(await state(a.cookie)).toMatchObject({
+      revision: 1,
+      historyRevision: 3,
+      settings: { callsign: 'N1KEEP' },
+    });
+    expect((await request('/api/account-operations', 'POST', operation, a.cookie)).status).toBe(
+      200,
+    );
+    expect(await state(a.cookie)).toMatchObject({ revision: 1, historyRevision: 3 });
+  });
+
   it.each(['reset', 'replace'] as const)(
     'replays a lost %s acknowledgement without deleting later work or incrementing authority twice',
     async (kind) => {
@@ -2818,6 +3075,17 @@ describe('account dataset lifecycle authority', () => {
         )
       ).status,
     ).toBe(409);
+    for (const path of ['/api/account-lifecycle/outcome', '/api/account-lifecycle/cancel'])
+      expect(
+        (
+          await request(
+            path,
+            'POST',
+            { ...lifecycle, baseHistoryRevision: lifecycle.baseHistoryRevision + 1 },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(409);
     expect(
       (await request('/api/import', 'POST', { ...payload, lifecycle: null }, auth.cookie)).status,
     ).toBe(400);
@@ -3125,6 +3393,7 @@ describe('account dataset lifecycle authority', () => {
       accountId: auth.user.id,
       generation: 1,
       revision: 1,
+      historyRevision: 0,
     });
     const exported = await (await request('/api/export', 'GET', undefined, auth.cookie)).json();
     expect(JSON.stringify(exported)).not.toContain('payloadHash');
@@ -3455,7 +3724,14 @@ describe('account dataset lifecycle authority', () => {
     );
     expect(bytesAfterDelete).toBeLessThan(bytesBefore);
     expect(
-      await (await request('/api/account-lifecycle/prepare', 'POST', next, auth.cookie)).json(),
+      await (
+        await request(
+          '/api/account-lifecycle/prepare',
+          'POST',
+          await lifecycleIdentity(auth.user.id, 'reset', payload, next.id),
+          auth.cookie,
+        )
+      ).json(),
     ).toMatchObject({ outcome: 'unknown', reserved: true });
     const promoted = db.sqlite
       .prepare(

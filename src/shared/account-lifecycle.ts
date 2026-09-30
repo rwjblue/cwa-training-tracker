@@ -1,6 +1,13 @@
 import { validateAccountSnapshot, type AccountSnapshot } from './account-sync';
+import type { TrainingExport } from './training';
 
 export type LifecycleKind = 'reset' | 'replace';
+
+/** Runtime authority travels beside the portable file, never inside it. */
+export interface AccountLifecycleBackup {
+  data: TrainingExport;
+  state: AccountSnapshot;
+}
 
 /** Immutable runtime authority; portable training files cannot grant it. */
 export interface LifecycleIdentity {
@@ -9,6 +16,7 @@ export interface LifecycleIdentity {
   accountId: string;
   kind: LifecycleKind;
   baseRevision: number;
+  baseHistoryRevision: number;
   generation: number;
   payloadHash: string;
 }
@@ -55,7 +63,16 @@ function id(value: unknown): string {
 
 export function validateLifecycleIdentity(value: unknown): LifecycleIdentity {
   const input = record(value);
-  keys(input, ['version', 'id', 'accountId', 'kind', 'baseRevision', 'generation', 'payloadHash']);
+  keys(input, [
+    'version',
+    'id',
+    'accountId',
+    'kind',
+    'baseRevision',
+    'baseHistoryRevision',
+    'generation',
+    'payloadHash',
+  ]);
   if (input.version !== 1) throw new Error('Unsupported account lifecycle version.');
   if (input.kind !== 'reset' && input.kind !== 'replace')
     throw new Error('Choose reset or replace for this account lifecycle.');
@@ -67,6 +84,7 @@ export function validateLifecycleIdentity(value: unknown): LifecycleIdentity {
     accountId: id(input.accountId),
     kind: input.kind,
     baseRevision: counter(input.baseRevision),
+    baseHistoryRevision: counter(input.baseHistoryRevision),
     generation: counter(input.generation),
     payloadHash: input.payloadHash,
   };

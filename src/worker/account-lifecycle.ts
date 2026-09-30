@@ -23,6 +23,7 @@ type Receipt = {
   kind: LifecycleKind;
   payload_hash: string;
   base_revision: number;
+  base_history_revision: number;
   generation: number;
   outcome: 'pending' | 'applied' | 'canceled';
   result_json: string;
@@ -58,7 +59,7 @@ function promoteCanceledControl(env: Env, accountId: string): D1PreparedStatemen
         AND (SELECT storage_bytes - lifecycle_control_bytes FROM users WHERE id = ?)
           + length(CAST(lifecycle_id AS BLOB)) + length(CAST(kind AS BLOB))
           + length(CAST(payload_hash AS BLOB)) + length(CAST(outcome AS BLOB))
-          + length(CAST(result_json AS BLOB)) + 64 <= 6291456
+          + length(CAST(result_json AS BLOB)) + 72 <= 6291456
       ORDER BY created_at, lifecycle_id LIMIT 1
     )`,
   ).bind(accountId, accountId, accountId);
@@ -74,6 +75,7 @@ function resultFromReceipt(
     receipt.kind !== operation.kind ||
     receipt.payload_hash !== operation.payloadHash ||
     receipt.base_revision !== operation.baseRevision ||
+    receipt.base_history_revision !== operation.baseHistoryRevision ||
     receipt.generation !== operation.generation
   )
     throw new HttpError(409, 'A different lifecycle already uses this lifecycle ID.', { state });
@@ -136,7 +138,10 @@ export async function applyLifecycle(
       { code: 'lifecycle_not_prepared', reserved: false, state: prior.state },
     );
   assertAccountGeneration(state, operation.generation);
-  if (state.revision !== operation.baseRevision)
+  if (
+    state.revision !== operation.baseRevision ||
+    state.historyRevision !== operation.baseHistoryRevision
+  )
     throw new HttpError(
       409,
       'Your account changed. Review the newer state before resetting or replacing it.',
@@ -177,7 +182,11 @@ export async function applyLifecycle(
     // cancellation arriving before this guarded transaction executes.
     const outcome = await lifecycleOutcome(env, operation);
     if (outcome.outcome !== 'unknown') return outcome;
-    if (error instanceof Error && error.message.includes('account_revision_conflict')) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('account_revision_conflict') ||
+        error.message.includes('account_history_conflict'))
+    ) {
       const current = await getAccountSnapshot(env, state.accountId);
       assertAccountGeneration(current, operation.generation);
       throw new HttpError(
@@ -194,28 +203,33 @@ export async function prepareLifecycle(request: Request, env: Env): Promise<Resp
   const auth = await requireAuth(request, env);
   const operation = identity(await readJson(request, 2000), auth.user.id);
   const prior = await lifecycleOutcome(env, operation);
-  if (prior.outcome !== 'unknown' || prior.reserved) return json(prior);
+  if (prior.outcome !== 'unknown') return json(prior);
   assertAccountGeneration(prior.state, operation.generation);
-  if (prior.state.revision !== operation.baseRevision)
+  if (
+    prior.state.revision !== operation.baseRevision ||
+    prior.state.historyRevision !== operation.baseHistoryRevision
+  )
     throw new HttpError(
       409,
       'Your account changed. Review it before preparing reset or replacement.',
       { state: prior.state },
     );
+  if (prior.reserved) return json(prior);
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   try {
     const results = await conditionalAccountWrite(env, prior.state, [
       promoteCanceledControl(env, operation.accountId),
       env.DB.prepare(
         `INSERT INTO account_lifecycle_receipts
-        (user_id,lifecycle_id,kind,payload_hash,base_revision,generation,outcome,result_json,created_at)
-        VALUES (?,?,?,?,?,?,'pending','{}',?) ON CONFLICT(user_id,lifecycle_id) DO NOTHING`,
+        (user_id,lifecycle_id,kind,payload_hash,base_revision,base_history_revision,generation,outcome,result_json,created_at)
+        VALUES (?,?,?,?,?,?,?,'pending','{}',?) ON CONFLICT(user_id,lifecycle_id) DO NOTHING`,
       ).bind(
         operation.accountId,
         operation.id,
         operation.kind,
         operation.payloadHash,
         operation.baseRevision,
+        operation.baseHistoryRevision,
         operation.generation,
         Date.now(),
       ),
@@ -231,14 +245,18 @@ export async function prepareLifecycle(request: Request, env: Env): Promise<Resp
     );
   } catch (error) {
     const outcome = await lifecycleOutcome(env, operation);
-    if (outcome.outcome !== 'unknown' || outcome.reserved) return json(outcome);
+    if (outcome.outcome !== 'unknown') return json(outcome);
     if (error instanceof Error && error.message.includes('lifecycle_capacity'))
       throw new HttpError(
         409,
         'Safe cancellation capacity is full. No reset or replacement request was admitted.',
         { code: 'lifecycle_capacity', reserved: false, state: outcome.state },
       );
-    if (error instanceof Error && error.message.includes('account_revision_conflict')) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('account_revision_conflict') ||
+        error.message.includes('account_history_conflict'))
+    ) {
       assertAccountGeneration(outcome.state, operation.generation);
       throw new HttpError(
         409,
@@ -246,6 +264,7 @@ export async function prepareLifecycle(request: Request, env: Env): Promise<Resp
         { state: outcome.state },
       );
     }
+    if (outcome.reserved) return json(outcome);
     throw error;
   }
 }
@@ -265,27 +284,29 @@ export async function cancelLifecycle(request: Request, env: Env): Promise<Respo
     results = await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO account_lifecycle_receipts
-      (user_id,lifecycle_id,kind,payload_hash,base_revision,generation,outcome,result_json,created_at)
-      VALUES (?,?,?,?,?,?,'canceled','{}',?) ON CONFLICT(user_id,lifecycle_id) DO NOTHING`,
+      (user_id,lifecycle_id,kind,payload_hash,base_revision,base_history_revision,generation,outcome,result_json,created_at)
+      VALUES (?,?,?,?,?,?,?,'canceled','{}',?) ON CONFLICT(user_id,lifecycle_id) DO NOTHING`,
       ).bind(
         operation.accountId,
         operation.id,
         operation.kind,
         operation.payloadHash,
         operation.baseRevision,
+        operation.baseHistoryRevision,
         operation.generation,
         Date.now(),
       ),
       env.DB.prepare(
         `UPDATE account_lifecycle_receipts SET outcome = 'canceled'
       WHERE user_id = ? AND lifecycle_id = ? AND kind = ? AND payload_hash = ?
-        AND base_revision = ? AND generation = ? AND outcome = 'pending'`,
+        AND base_revision = ? AND base_history_revision = ? AND generation = ? AND outcome = 'pending'`,
       ).bind(
         operation.accountId,
         operation.id,
         operation.kind,
         operation.payloadHash,
         operation.baseRevision,
+        operation.baseHistoryRevision,
         operation.generation,
       ),
       promoteCanceledControl(env, operation.accountId),

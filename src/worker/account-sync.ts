@@ -10,12 +10,17 @@ import { requireAuth } from './auth';
 import { HttpError, json, readJson } from './http';
 import { hash, rateLimit } from './security';
 
-type AccountRow = { profile_json: string; account_revision: number; dataset_generation: number };
+type AccountRow = {
+  profile_json: string;
+  account_revision: number;
+  dataset_generation: number;
+  history_revision: number;
+};
 
 export function accountSnapshotStatements(env: Env, accountId: string): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      'SELECT profile_json, account_revision, dataset_generation FROM users WHERE id = ?',
+      'SELECT profile_json, account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
     ).bind(accountId),
     env.DB.prepare('SELECT task_json FROM training_plan WHERE user_id = ? ORDER BY id').bind(
       accountId,
@@ -30,6 +35,7 @@ export function snapshotFromResults(accountId: string, results: D1Result[]): Acc
     accountId,
     revision: row.account_revision,
     generation: row.dataset_generation,
+    historyRevision: row.history_revision,
     settings,
     plan: mergeCurriculumPlan(
       settings,

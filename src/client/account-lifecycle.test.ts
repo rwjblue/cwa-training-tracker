@@ -47,10 +47,11 @@ let values: Map<string, string>;
 let accountId = '';
 let sequence = 0;
 const user = () => ({ id: accountId, email: 'synthetic@example.test' });
-const state = (generation = 0, revision = 0): AccountSnapshot => ({
+const state = (generation = 0, revision = 0, historyRevision = 0): AccountSnapshot => ({
   accountId,
   generation,
   revision,
+  historyRevision,
   settings: { ...DEFAULT_PROFILE },
   plan: [],
 });
@@ -122,6 +123,190 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+it('freezes the reviewed history authority without adding authority to a legacy snapshot', async () => {
+  const reviewed = state(0, 0, 7);
+  rememberAccount(user(), reviewed);
+  const record = await beginAccountLifecycle({
+    user: user(),
+    state: reviewed,
+    kind: 'reset',
+    payload: { confirmation: 'RESET' },
+    policy: 'keep-recovery-files',
+  });
+  reviewed.historyRevision = 8;
+  expect(record.identity.baseHistoryRevision).toBe(7);
+  expect(loadAccountLifecycle(accountId)?.identity).toEqual(record.identity);
+  await stopAccountLifecycle(user(), transports());
+  const { historyRevision: _historyRevision, ...legacy } = state();
+  rememberAccount(user(), legacy);
+  expect(loadCachedAccount(accountId)?.state).not.toHaveProperty('historyRevision');
+  const legacyRecord = await beginAccountLifecycle({
+    user: user(),
+    state: legacy,
+    kind: 'reset',
+    payload: { confirmation: 'RESET' },
+    policy: 'discard',
+  });
+  expect(legacyRecord.identity.baseHistoryRevision).toBe(0);
+});
+
+it('refuses a downloaded state when known history advances while preparing its identity', async () => {
+  pending();
+  const downloaded = state(0, 0, 4);
+  rememberAccount(user(), downloaded);
+  const token = getDeviceScopeToken(accountId);
+  const preparing = beginAccountLifecycle({
+    user: user(),
+    state: downloaded,
+    kind: 'reset',
+    payload: { confirmation: 'RESET' },
+    policy: 'keep-recovery-files',
+  });
+  rememberAccount(user(), state(0, 0, 5));
+  await expect(preparing).rejects.toThrow('account changed during review');
+  expect(loadAccountLifecycle(accountId)).toBeNull();
+  expect(getDeviceScopeToken(accountId)).toBe(token);
+  expect(loadLocalPractice(accountId)).toEqual([entry()]);
+  expect(downloaded.historyRevision).toBe(4);
+  expect(loadCachedAccount(accountId)?.state.historyRevision).toBe(5);
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it.each(['reset', 'replace'] as const)(
+  'retains exact %s authority through history validation errors and newer unknown outcomes',
+  async (kind) => {
+    pending();
+    const pendingBody = values.get(pendingKey());
+    const originBody = values.get(originKey());
+    const reviewed = state(0, 0, 4);
+    rememberAccount(user(), reviewed);
+    const payload =
+      kind === 'reset'
+        ? { confirmation: 'RESET' }
+        : { mode: 'replace', data: { version: 1, entries: [] } };
+    const record = await beginAccountLifecycle({
+      user: user(),
+      state: reviewed,
+      kind,
+      payload,
+      policy: 'keep-recovery-files',
+    });
+    const transport = transports();
+    const advanced = state(0, 0, 5);
+    vi.mocked(transport.prepare)
+      .mockRejectedValueOnce(new ApiError('History changed.', 409, advanced, 'history_changed'))
+      .mockResolvedValueOnce({
+        ...result(record.identity, 'unknown'),
+        state: advanced,
+        reserved: true,
+      });
+    await expect(dispatchAccountLifecycle(user(), transport)).rejects.toThrow('History changed');
+    expect(loadAccountLifecycle(accountId)?.phase).toBe('prepared');
+    vi.mocked(transport.lookup).mockResolvedValueOnce({
+      ...result(record.identity, 'unknown'),
+      state: advanced,
+    });
+    await checkAccountLifecycle(user(), transport);
+    vi.mocked(transport.apply).mockRejectedValueOnce(
+      new ApiError('History changed.', 409, advanced, 'history_changed'),
+    );
+    await expect(dispatchAccountLifecycle(user(), transport)).rejects.toThrow('History changed');
+    expect(loadAccountLifecycle(accountId)?.identity).toEqual(record.identity);
+    expect(record.identity.baseHistoryRevision).toBe(4);
+    expect(transport.prepare).toHaveBeenNthCalledWith(1, record.identity);
+    expect(transport.prepare).toHaveBeenNthCalledWith(2, record.identity);
+    expect(transport.lookup).toHaveBeenCalledWith(record.identity);
+    expect(transport.apply).toHaveBeenCalledWith(record.identity, payload);
+    expect(values.get(pendingKey())).toBe(pendingBody);
+    expect(values.get(originKey())).toBe(originBody);
+    vi.mocked(transport.cancel).mockResolvedValueOnce({
+      ...result(record.identity, 'canceled'),
+      state: advanced,
+    });
+    await stopAccountLifecycle(user(), transport);
+    expect(transport.cancel).toHaveBeenCalledWith(record.identity);
+    expect(values.get(pendingKey())).toBe(pendingBody);
+    expect(values.get(originKey())).toBe(originBody);
+  },
+);
+
+it('reconciles the exact retained replacement receipt after reload and later history advances', async () => {
+  pending();
+  const payload = { mode: 'replace', data: { version: 1, entries: [] } };
+  const reviewed = state(0, 0, 4);
+  rememberAccount(user(), reviewed);
+  const record = await beginAccountLifecycle({
+    user: user(),
+    state: reviewed,
+    kind: 'replace',
+    payload,
+    policy: 'keep-recovery-files',
+  });
+  const transport = transports();
+  vi.mocked(transport.apply).mockRejectedValueOnce(new Error('Apply acknowledgement lost'));
+  await expect(dispatchAccountLifecycle(user(), transport)).rejects.toThrow(
+    'Apply acknowledgement lost',
+  );
+  vi.mocked(transport.lookup).mockResolvedValueOnce({
+    ...result(record.identity, 'unknown'),
+    state: state(0, 0, 5),
+  });
+  await checkAccountLifecycle(user(), transport);
+  expect(loadAccountLifecycle(accountId)?.phase).toBe('unknown');
+  expect(loadAccountLifecycle(accountId)?.identity).toEqual(record.identity);
+  expect(transport.lookup).toHaveBeenCalledWith(record.identity);
+  vi.resetModules();
+  const reopened = await import('./account-lifecycle');
+  expect(reopened.loadAccountLifecycle(accountId)?.identity).toEqual(record.identity);
+  await reopened.attachAccountLifecyclePayload(accountId, payload);
+  const later = state(1, 1, 9);
+  vi.mocked(transport.prepare).mockResolvedValueOnce({
+    ...result(record.identity, 'applied'),
+    state: later,
+  });
+  vi.mocked(transport.refresh!).mockResolvedValueOnce(later);
+  await reopened.dispatchAccountLifecycle(user(), transport);
+  expect(transport.prepare).toHaveBeenNthCalledWith(2, record.identity);
+  expect(record.identity.baseHistoryRevision).toBe(4);
+  expect(transport.apply).toHaveBeenCalledTimes(1);
+  expect(transport.apply).toHaveBeenCalledWith(record.identity, payload);
+  expect(reopened.loadAccountLifecycle(accountId)).toBeNull();
+  expect(loadCachedAccount(accountId)?.state.historyRevision).toBe(9);
+});
+
+it('does not publish known older history over authority observed here or cached by another page', () => {
+  rememberAccount(user(), state(0, 0, 5));
+  rememberAccount(user(), state(0, 0, 4));
+  expect(loadCachedAccount(accountId)?.state.historyRevision).toBe(5);
+  expect(loadAccountLifecycle(accountId)).toBeNull();
+  values.set(cacheKey(), JSON.stringify({ user: user(), state: state(0, 0, 6) }));
+  rememberAccount(user(), state(0, 0, 5));
+  expect(loadCachedAccount(accountId)?.state.historyRevision).toBe(6);
+  expect(() => observeAccountGeneration(user(), state(0, 0, -1))).toThrow('Invalid observed');
+});
+
+it('keeps applied cleanup paused when refresh would replace confirmed history with an older snapshot', async () => {
+  pending();
+  const record = await begin();
+  const transport = transports();
+  vi.mocked(transport.apply).mockResolvedValueOnce({
+    ...result(record.identity, 'applied'),
+    state: state(1, 1, 8),
+  });
+  vi.mocked(transport.refresh!)
+    .mockResolvedValueOnce(state(1, 1, 7))
+    .mockResolvedValueOnce(state(1, 1, 9));
+  await expect(dispatchAccountLifecycle(user(), transport)).rejects.toThrow(
+    'Reload the confirmed replacement account state',
+  );
+  expect(loadAccountLifecycle(accountId)?.phase).toBe('applied');
+  expect(loadLocalPractice(accountId)).toEqual([entry()]);
+  await retryAccountLifecycleLocal(user(), transport);
+  expect(transport.apply).toHaveBeenCalledTimes(1);
+  expect(loadAccountLifecycle(accountId)).toBeNull();
+  expect(loadCachedAccount(accountId)?.state.historyRevision).toBe(9);
 });
 
 it('captures both real queues and stops in-flight acknowledgements before dispatch', async () => {

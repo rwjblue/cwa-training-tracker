@@ -340,8 +340,15 @@ results, edits, Copy drafts and notes; shared defaults and other scopes remain.
 Recovery files preserve their original bodies, origins and evidence rather than
 granting authority to upload old work into a new dataset.
 
-The Worker applies the whole destructive transaction behind the original revision
-and dataset generation, advances both once, and records its terminal outcome.
+The Worker applies the whole destructive transaction behind the original semantic
+revision, history revision and dataset generation, advances the semantic revision
+and generation once, and records its terminal outcome. Ordinary entry mutations
+advance a separate history counter without creating semantic outbox conflicts.
+Server recovery files and their runtime authority come from one coherent database
+snapshot; Keep freezes that downloaded authority. Later entry creates, edits or
+deletions refuse the destructive transaction rather than erase work missing from
+the file. Safe cancellation and newer observed authority require a fresh download.
+Portable files still carry no runtime authority.
 Exact retries return that receipt without executing deletion again. Entry create,
 edit, delete, linked-result placement, semantic account operations and merge
 imports keep their original generation at actual SQL execution. Coherent history
@@ -375,6 +382,9 @@ Evidence: [lifecycle protocol](../src/shared/account-lifecycle.ts),
 [synthetic browser journeys](../e2e/account-lifecycle.spec.ts).
 Validation and the independent review gate are recorded in
 [execution progress](parity/execution-progress-2026-09-30.md).
-Local validation passes 441 fast checks and 45 serialized browser journeys.
-Independent acceptance, signed publication and production deployment remain pending.
+Local validation passes 463 fast checks and 47 serialized browser journeys.
+The first independent review requires corrections to mobile pending/error layout
+and recovery downloads that could omit newer server-only work. Both corrections
+pass complete local validation; their independent recheck, signed publication
+and deployment remain pending.
 It does not add active elapsed-time recovery or physical-device verification.

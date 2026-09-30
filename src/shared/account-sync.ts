@@ -6,6 +6,8 @@ export interface AccountSnapshot {
   accountId: string;
   revision: number;
   generation: number;
+  /** Present on fresh server state; older device snapshots may omit it. */
+  historyRevision?: number;
   settings: Profile;
   plan: PlannedTask[];
 }
@@ -239,7 +241,7 @@ export function validateAccountOperation(value: unknown): AccountOperation {
 
 export function validateAccountSnapshot(value: unknown): AccountSnapshot {
   const input = record(value);
-  keys(input, ['accountId', 'revision', 'generation', 'settings', 'plan']);
+  keys(input, ['accountId', 'revision', 'generation', 'historyRevision', 'settings', 'plan']);
   const settings = record(input.settings);
   keys(settings, profileFields);
   if (profileFields.some((key) => key !== 'useGravatar' && settings[key] === undefined))
@@ -248,6 +250,9 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
     accountId: id(input.accountId),
     revision: revision(input.revision),
     generation: revision(input.generation),
+    ...(input.historyRevision === undefined
+      ? {}
+      : { historyRevision: revision(input.historyRevision) }),
     settings: validateProfile(settings),
     plan: effectivePlan(input.plan),
   };

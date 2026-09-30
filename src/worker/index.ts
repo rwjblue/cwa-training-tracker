@@ -11,6 +11,7 @@ import {
 import {
   deleteEntry,
   exportData,
+  exportLifecycleBackup,
   getSettings,
   importData,
   listEntries,
@@ -27,6 +28,8 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   if (!['GET', 'HEAD'].includes(method)) requireSameOrigin(request, env);
   if (method === 'GET' && path === '/api/health') return json({ ok: true });
   if (method === 'GET' && path === '/api/account-state') return getAccountState(request, env);
+  if (method === 'GET' && path === '/api/account-lifecycle/backup')
+    return exportLifecycleBackup(request, env);
   if (method === 'POST' && path === '/api/account-lifecycle/outcome')
     return getLifecycleOutcome(request, env);
   if (method === 'POST' && path === '/api/account-lifecycle/prepare')

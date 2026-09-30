@@ -27,6 +27,7 @@ import {
   snapshotFromResults,
 } from './account-sync';
 import { applyLifecycle, validateLifecycleRequest } from './account-lifecycle';
+import type { AccountLifecycleBackup } from '../shared/account-lifecycle';
 
 const MAX_ENTRIES = 20_000;
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
@@ -184,18 +185,23 @@ async function saveNewLinkedEntry(
 export async function listEntries(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
   const [authority, entries] = await env.DB.batch([
-    env.DB.prepare('SELECT account_revision, dataset_generation FROM users WHERE id = ?').bind(
-      auth.user.id,
-    ),
+    env.DB.prepare(
+      'SELECT account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
+    ).bind(auth.user.id),
     env.DB.prepare(
       'SELECT entry_json FROM practice_entries WHERE user_id = ? ORDER BY date DESC, id DESC',
     ).bind(auth.user.id),
   ]);
-  const row = authority.results[0] as { account_revision: number; dataset_generation: number };
+  const row = authority.results[0] as {
+    account_revision: number;
+    dataset_generation: number;
+    history_revision: number;
+  };
   return json({
     accountId: auth.user.id,
     revision: row.account_revision,
     generation: row.dataset_generation,
+    historyRevision: row.history_revision,
     entries: entries.results.map((row) =>
       validatePracticeSession(JSON.parse((row as { entry_json: string }).entry_json), {
         preserveHistoricalDuration: true,
@@ -390,29 +396,27 @@ export async function saveSettings(request: Request, env: Env): Promise<Response
   return json({ settings, revision: applied.state.revision, generation: applied.state.generation });
 }
 
-export async function exportData(request: Request, env: Env): Promise<Response> {
-  const auth = await requireAuth(request, env);
+async function readAccountBackup(env: Env, accountId: string): Promise<AccountLifecycleBackup> {
   // D1 batches are transactions, so an export sees one coherent snapshot even
   // when another browser edits a profile or replaces its data concurrently.
-  const [settings, sessions, archive, plan] = await env.DB.batch<Record<string, string>>([
-    env.DB.prepare('SELECT profile_json FROM users WHERE id = ?').bind(auth.user.id),
+  const results = await env.DB.batch([
+    ...accountSnapshotStatements(env, accountId),
     env.DB.prepare(
       'SELECT entry_json FROM practice_entries WHERE user_id = ? ORDER BY date DESC, id DESC',
-    ).bind(auth.user.id),
+    ).bind(accountId),
     env.DB.prepare(
       `SELECT source_json FROM import_sources WHERE user_id = ? AND source_hash =
       (SELECT source_hash FROM import_sources WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) ORDER BY chunk`,
-    ).bind(auth.user.id, auth.user.id),
-    env.DB.prepare('SELECT task_json FROM training_plan WHERE user_id = ? ORDER BY id').bind(
-      auth.user.id,
-    ),
+    ).bind(accountId, accountId),
   ]);
+  const state = snapshotFromResults(accountId, results.slice(0, 2));
+  const [plan, sessions, archive] = results.slice(1) as D1Result<Record<string, string>>[];
   const exported: TrainingExport = {
     format: 'cwa-training-tracker',
     version: 1,
     evidenceVersion: 1,
     exportedAt: new Date().toISOString(),
-    profile: { ...DEFAULT_PROFILE, ...JSON.parse(settings.results[0].profile_json) },
+    profile: state.settings,
     sessions: sessions.results.map((row) =>
       validated(
         (value) => validatePracticeSession(value, { preserveHistoricalDuration: true }),
@@ -441,7 +445,26 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
       delete entry.metadata.plannedTaskId;
     }
   }
-  return json(validated(validateTrainingExport, exported), 200, {
+  const data = validated(validateTrainingExport, exported);
+  return {
+    data,
+    state: {
+      ...state,
+      settings: data.profile!,
+      plan: mergeCurriculumPlan(data.profile!, data.plan ?? []),
+    },
+  };
+}
+
+export async function exportLifecycleBackup(request: Request, env: Env): Promise<Response> {
+  const auth = await requireAuth(request, env);
+  return json(await readAccountBackup(env, auth.user.id));
+}
+
+export async function exportData(request: Request, env: Env): Promise<Response> {
+  const auth = await requireAuth(request, env);
+  const { data } = await readAccountBackup(env, auth.user.id);
+  return json(data, 200, {
     'Content-Disposition': `attachment; filename="cw-academy-backup-${new Date().toISOString().slice(0, 10)}.json"`,
   });
 }

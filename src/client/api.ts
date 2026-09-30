@@ -1,4 +1,9 @@
-import type { Profile, PracticeSession } from '../shared/training';
+import {
+  validateTrainingExport,
+  type Profile,
+  type PracticeSession,
+  type TrainingExport,
+} from '../shared/training';
 import type { AccountSnapshot } from '../shared/account-sync';
 import { validateAccountSnapshot } from '../shared/account-sync';
 import type { LifecycleIdentity, LifecycleResult } from '../shared/account-lifecycle';
@@ -85,6 +90,24 @@ export interface EntriesSnapshot {
 export const getEntries = (options: ApiOptions = {}, signal?: AbortSignal) =>
   api<EntriesSnapshot>('/entries', undefined, 'GET', signal, options);
 export const getSettings = () => api<{ settings: Profile }>('/settings');
+
+/** The authority and portable file describe the same transactional server snapshot. */
+export async function getLifecycleBackup(user: User): Promise<{
+  data: TrainingExport;
+  state: AccountSnapshot;
+}> {
+  const response = await api<{ data: unknown; state: unknown }>(
+    '/account-lifecycle/backup',
+    undefined,
+    'GET',
+    AbortSignal.timeout(10_000),
+    { accountId: user.id },
+  );
+  const state = validateAccountSnapshot(response.state);
+  if (state.accountId !== user.id || state.historyRevision === undefined)
+    throw new Error('The server backup does not identify this account’s current history.');
+  return { data: validateTrainingExport(response.data), state };
+}
 
 /** Every retry retains the reviewed account; current selection cannot redirect it. */
 export function accountLifecycleTransports(user: User): AccountLifecycleTransports {

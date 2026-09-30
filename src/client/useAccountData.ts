@@ -61,7 +61,11 @@ export function useAccountData(user: User | null) {
     setConfirmed((previous) =>
       previous?.accountId === state.accountId &&
       (previous.generation > state.generation ||
-        (previous.generation === state.generation && previous.revision > state.revision))
+        (previous.generation === state.generation &&
+          (previous.revision > state.revision ||
+            (previous.historyRevision !== undefined &&
+              state.historyRevision !== undefined &&
+              previous.historyRevision > state.historyRevision))))
         ? previous
         : state,
     );

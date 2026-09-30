@@ -210,7 +210,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 
 ## Remaining queue
 
-### Issue #4 — implementation validated; independent review pending
+### Issue #4 — review corrections validated; independent recheck pending
 
 - Rechecked the current issue, comments and dependencies after closing #3:
   unchanged approved finding 45, no comments, #2/#3 closed, no native blockers.
@@ -245,6 +245,33 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   elapsed-time reload recovery is claimed. Independent review, signed publication
   and production deployment remain pending. The two user-owned documentation
   files remain untouched.
+- Implementation commit `2bb3d74e` was independently reviewed after creation.
+  Seven fresh runtime probes passed, including two deliberate reproductions of
+  a Keep recoverability failure. The gate requires two corrections: full-width
+  mobile pending/error instructions, and coherent server-backup authority covering
+  ordinary unlinked history writes. The review also independently checked account
+  switching, late actual SQL, applied cleanup retry, remote history fencing, exact
+  replacement recovery, 55 focused client tests and eight fresh SQL probes.
+- Corrections bind Keep to the downloaded transactional snapshot,
+  add a separate entry-history counter and actual destructive SQL guard, and
+  invalidate download permission after cancellation/newer authority. Ordinary
+  semantic outbox revision behavior remains intact; portable files exclude
+  runtime authority. New root browser scenarios cover post-download practice,
+  safe stop, fresh recovery, delayed old downloads, desktop keyboard/mobile touch
+  and readable pending/error geometry. No acceptance or publication is claimed.
+- Final correction validation passed `mise run check`, `mise run test` (463
+  tests / 35 files), `mise run build` and all 47 serialized browser journeys
+  (6.4 minutes). All seven lifecycle journeys pass with desktop keyboard/mobile
+  touch, actual files, refused stale authority, safe cancellation, new downloads,
+  matching replacement retries and readable feedback. Root inspected eight
+  correction captures; geometry, settled contrast/axe and overflow checks pass.
+  Worker/shared focused checks pass 149 and client focused checks pass 78.
+- Trace inspection corrected a keyboard test activating a temporarily disabled
+  download control; it now waits for actual enablement without increased timeouts.
+  The rerun exposed an own-success stale-download warning, corrected by limiting
+  download invalidation to an unsubmitted review and clearing feedback on success.
+  Both affected keyboard journeys then passed; the full suite above includes
+  those corrections. Independent recheck is required after the follow-up commit.
 
 Issues #1–#3 are complete. Issue #4 is in progress; #5–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored

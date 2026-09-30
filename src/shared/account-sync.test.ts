@@ -152,6 +152,12 @@ describe('account synchronization protocol', () => {
 
   it('validates snapshot revision and duplicate task identities', () => {
     expect(validateAccountSnapshot(state())).toEqual(state());
+    expect(validateAccountSnapshot({ ...state(), historyRevision: 9 })).toEqual({
+      ...state(),
+      historyRevision: 9,
+    });
+    for (const historyRevision of ['9', -1, 0.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(() => validateAccountSnapshot({ ...state(), historyRevision })).toThrow();
     expect(() => validateAccountSnapshot({ ...state(), revision: '2' })).toThrow();
     expect(() => validateAccountSnapshot({ ...state(), settings: {} })).toThrow('missing');
     expect(() => validateAccountSnapshot({ ...state(), plan: [task, task] })).toThrow('duplicate');

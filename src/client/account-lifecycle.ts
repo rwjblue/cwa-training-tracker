@@ -73,9 +73,22 @@ interface LiveLifecycle {
 }
 const live = new Map<string, LiveLifecycle>();
 const running = new Map<string, Promise<LifecycleResult | undefined>>();
-const observed = new Map<string, { token: string; generation: number; revision: number }>();
+type AccountAuthority = Pick<AccountSnapshot, 'generation' | 'revision' | 'historyRevision'>;
+const observed = new Map<string, AccountAuthority & { token: string }>();
 const integer = (value: unknown) =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+
+function hasNewerKnownHistory(
+  previous: AccountAuthority | undefined,
+  current: AccountAuthority,
+): boolean {
+  return (
+    previous?.generation === current.generation &&
+    previous.historyRevision !== undefined &&
+    current.historyRevision !== undefined &&
+    previous.historyRevision > current.historyRevision
+  );
+}
 
 function validateRecord(value: unknown, scope: string): AccountLifecycleRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -195,6 +208,7 @@ export async function beginAccountLifecycle(options: {
     accountId: user.id,
     kind,
     baseRevision: state.revision,
+    baseHistoryRevision: state.historyRevision ?? 0,
     generation: state.generation,
     payloadHash: await hashLifecyclePayload(kind, payload),
   });
@@ -202,7 +216,9 @@ export async function beginAccountLifecycle(options: {
   const cached = loadCachedAccount(user.id);
   if (
     cached &&
-    (cached.state.generation !== state.generation || cached.state.revision > state.revision)
+    (cached.state.generation !== state.generation ||
+      cached.state.revision > state.revision ||
+      hasNewerKnownHistory(cached.state, state))
   )
     throw new Error('Your account changed during review. Reload and review its current history.');
   const device = prepareAccountLifecycleDeviceWork(user.id, user.email);
@@ -298,7 +314,9 @@ async function finalize(user: User, transports: AccountLifecycleTransports): Pro
     );
     if (
       state.accountId !== user.id ||
-      state.generation < (record.resultGeneration ?? record.identity.generation + 1)
+      state.generation < (record.resultGeneration ?? record.identity.generation + 1) ||
+      hasNewerKnownHistory(item?.state, state) ||
+      hasNewerKnownHistory(loadCachedAccount(user.id)?.state, state)
     )
       throw new Error('Reload the confirmed replacement account state before finishing recovery.');
     requireOwner(user);
@@ -323,6 +341,7 @@ async function finalize(user: User, transports: AccountLifecycleTransports): Pro
       token: record.token,
       generation: state.generation,
       revision: state.revision,
+      ...(state.historyRevision === undefined ? {} : { historyRevision: state.historyRevision }),
     });
   notifyDeviceScope(user.id);
   changed(user.id);
@@ -508,11 +527,12 @@ export const retryAccountLifecycleLocal = (
 /** A newer authoritative dataset fences producers before anyone publishes its cache/history. */
 export function observeAccountGeneration(
   user: User,
-  input: AccountSnapshot | { generation: number; revision: number; accountId?: string },
+  input: AccountSnapshot | (AccountAuthority & { accountId?: string }),
 ): boolean {
   if (
     !integer(input.generation) ||
     !integer(input.revision) ||
+    (input.historyRevision !== undefined && !integer(input.historyRevision)) ||
     (input.accountId !== undefined && input.accountId !== user.id)
   )
     throw new Error('Invalid observed account generation.');
@@ -547,18 +567,27 @@ export function observeAccountGeneration(
     ) ||
       Boolean(loadCopyDraft(user.id)));
   const retainedGeneration = origins.length ? Math.min(...origins) : undefined;
-  const previous =
+  const previous: AccountAuthority | undefined =
     remembered?.token === tokenBefore
       ? remembered
       : (cached ??
         (retainedGeneration === undefined
           ? undefined
           : { generation: retainedGeneration, revision: 0 }));
+  // History authority only guards confirmed snapshots; it never rebases queued edits.
+  if (hasNewerKnownHistory(previous, input) || hasNewerKnownHistory(cached, input)) return false;
   if (!uncertainRetainedWork && (!previous || input.generation <= previous.generation)) {
+    const historyRevision =
+      previous && input.generation < previous.generation
+        ? previous.historyRevision
+        : previous?.historyRevision === undefined && input.historyRevision === undefined
+          ? undefined
+          : Math.max(previous?.historyRevision ?? 0, input.historyRevision ?? 0);
     observed.set(user.id, {
       token: tokenBefore,
       generation: Math.max(previous?.generation ?? 0, input.generation),
       revision: Math.max(previous?.revision ?? 0, input.revision),
+      ...(historyRevision === undefined ? {} : { historyRevision }),
     });
     return true;
   }
@@ -575,6 +604,7 @@ export function observeAccountGeneration(
       accountId: user.id,
       kind: 'reset',
       baseRevision: base.revision,
+      baseHistoryRevision: base.historyRevision ?? 0,
       generation: base.generation,
       payloadHash: '0'.repeat(64),
     },

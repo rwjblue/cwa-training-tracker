@@ -4528,6 +4528,9 @@ body {
   font-weight: 600;
   margin-bottom: 10px;
 }
+.lifecycle-status {
+  display: block;
+}
 .lifecycle-status p {
   overflow-wrap: anywhere;
 }

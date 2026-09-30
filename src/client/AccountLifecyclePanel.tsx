@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Download, RotateCcw } from 'lucide-react';
 import type { AccountSnapshot } from '../shared/account-sync';
 import type { LifecycleResult } from '../shared/account-lifecycle';
-import { api, accountLifecycleTransports, type User } from './api';
+import { getLifecycleBackup, accountLifecycleTransports, type User } from './api';
 import Modal from './Modal';
 import { captureDeviceBackup, type DeviceBackup } from './device-backup';
 import {
@@ -66,7 +66,7 @@ export default function AccountLifecyclePanel({
   const [record, setRecord] = useState(initial.record);
   const [policy, setPolicy] = useState<'keep-recovery-files' | 'discard'>('keep-recovery-files');
   const [confirmation, setConfirmation] = useState('');
-  const [serverDownloaded, setServerDownloaded] = useState(false);
+  const [serverBackup, setServerBackup] = useState<AccountSnapshot | null>(null);
   const [deviceDownloaded, setDeviceDownloaded] = useState(false);
   const [discardRemote, setDiscardRemote] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -76,6 +76,10 @@ export default function AccountLifecyclePanel({
   const fileInput = useRef<HTMLInputElement>(null);
   const currentUser = useRef(user.id);
   currentUser.current = user.id;
+  const currentReview = useRef(review);
+  currentReview.current = review;
+  const currentState = useRef(state);
+  currentState.current = state;
   const busyRef = useRef(false);
   const readRecord = () => {
     try {
@@ -99,7 +103,7 @@ export default function AccountLifecyclePanel({
   useEffect(() => {
     setConfirmation('');
     setPolicy('keep-recovery-files');
-    setServerDownloaded(false);
+    setServerBackup(null);
     setDeviceDownloaded(false);
     setDiscardRemote(false);
     setRecoveryError('');
@@ -113,6 +117,25 @@ export default function AccountLifecyclePanel({
     }
   }, [review, user.id, user.email]);
 
+  useEffect(() => {
+    // Once admitted, the immutable request owns recovery. Its own successful
+    // generation change must not produce a stale-download warning afterward.
+    if (!review || record || busy) return;
+    if (
+      serverBackup &&
+      state &&
+      (state.accountId !== serverBackup.accountId ||
+        state.generation !== serverBackup.generation ||
+        state.revision > serverBackup.revision ||
+        (state.historyRevision ?? 0) > (serverBackup.historyRevision ?? 0))
+    ) {
+      setServerBackup(null);
+      setError(
+        'Your server data changed after the download. Download a fresh server backup before continuing.',
+      );
+    }
+  }, [state, serverBackup, review, record, busy]);
+
   const transports = () => accountLifecycleTransports(user);
   const reportResult = async (
     result: LifecycleResult | undefined,
@@ -122,6 +145,10 @@ export default function AccountLifecyclePanel({
     const remaining = readRecord();
     setRecord(remaining);
     if (result?.outcome === 'canceled' || (!remaining && record?.phase === 'canceled')) {
+      // A safely stopped request is a new review, never permission to erase a
+      // newer server snapshot using files downloaded for the original request.
+      setServerBackup(null);
+      setDeviceDownloaded(false);
       const generation = result?.state.generation ?? record?.resultGeneration;
       const originalGeneration = result?.identity.generation ?? record?.identity.generation;
       const changedElsewhere =
@@ -138,6 +165,8 @@ export default function AccountLifecyclePanel({
       result?.outcome === 'applied' ||
       (!remaining && ['applied', 'remote'].includes(record?.phase ?? ''))
     ) {
+      setServerBackup(null);
+      setError('');
       onReview(null);
       notify(
         record?.phase === 'remote'
@@ -174,21 +203,40 @@ export default function AccountLifecyclePanel({
   };
   const exportServer = async () => {
     if (busyRef.current) return;
+    const requestedReview = review;
     setError('');
     setBusy(true);
     busyRef.current = true;
     try {
-      const data = await api<unknown>('/export', undefined, 'GET', AbortSignal.timeout(10_000), {
-        accountId: user.id,
-      });
-      if (currentUser.current !== user.id) return;
-      download(data, `cw-academy-before-${review?.kind ?? record?.identity.kind ?? 'change'}.json`);
-      setServerDownloaded(true);
+      const backup = await getLifecycleBackup(user);
+      if (currentUser.current !== user.id || currentReview.current !== requestedReview) return;
+      const known = currentState.current;
+      if (
+        known &&
+        (known.accountId !== backup.state.accountId ||
+          known.generation > backup.state.generation ||
+          known.revision > backup.state.revision ||
+          (known.historyRevision ?? 0) > backup.state.historyRevision!)
+      )
+        throw new Error(
+          'Your server data changed during the download. Download a fresh server backup before continuing.',
+        );
+      download(
+        backup.data,
+        `cw-academy-before-${review?.kind ?? record?.identity.kind ?? 'change'}.json`,
+      );
+      setServerBackup(backup.state);
+      // Refresh confirmed authority so a newer download can be reviewed, and
+      // changes committed while it was downloading invalidate its permission.
+      await onComplete();
     } catch (failure) {
-      setError((failure as Error).message);
+      if (currentUser.current === user.id && currentReview.current === requestedReview) {
+        setServerBackup(null);
+        setError((failure as Error).message);
+      }
     } finally {
       busyRef.current = false;
-      setBusy(false);
+      if (currentUser.current === user.id) setBusy(false);
     }
   };
   const exportDevice = () => {
@@ -215,9 +263,13 @@ export default function AccountLifecyclePanel({
     setBusy(true);
     setError('');
     try {
+      const reviewedState =
+        policy === 'keep-recovery-files' ? serverBackup : await transports().refresh!();
+      if (!reviewedState) throw new Error('Download a fresh server backup before continuing.');
+      if (currentUser.current !== user.id || currentReview.current !== requested) return;
       await beginAccountLifecycle({
         user,
-        state,
+        state: reviewedState,
         kind: requested.kind,
         payload: requested.payload,
         policy,
@@ -267,7 +319,14 @@ export default function AccountLifecyclePanel({
   const canContinue =
     !!state &&
     (!reset || confirmation === 'RESET') &&
-    (policy === 'discard' || (serverDownloaded && deviceDownloaded && !recoveryError));
+    (policy === 'discard' ||
+      (serverBackup &&
+        serverBackup.accountId === state.accountId &&
+        serverBackup.generation === state.generation &&
+        serverBackup.revision === state.revision &&
+        serverBackup.historyRevision === state.historyRevision &&
+        deviceDownloaded &&
+        !recoveryError));
   return (
     <>
       {(record || (!review && error)) && (
@@ -471,7 +530,7 @@ export default function AccountLifecyclePanel({
               onClick={() => void exportServer()}
             >
               <Download size={15} />{' '}
-              {serverDownloaded ? 'Download server backup again' : 'Download server backup'}
+              {serverBackup ? 'Download server backup again' : 'Download server backup'}
             </button>
             <button className="button outline small" disabled={busy} onClick={exportDevice}>
               <Download size={15} />{' '}
