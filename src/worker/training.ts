@@ -61,7 +61,11 @@ async function entries(env: Env, userId: string): Promise<PracticeSession[]> {
   )
     .bind(userId)
     .all<{ entry_json: string }>();
-  return result.results.map((row) => validatePracticeSession(JSON.parse(row.entry_json)));
+  return result.results.map((row) =>
+    validatePracticeSession(JSON.parse(row.entry_json), {
+      preserveHistoricalDuration: true,
+    }),
+  );
 }
 
 export async function listEntries(request: Request, env: Env): Promise<Response> {
@@ -79,17 +83,32 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     id: id ?? input.id ?? crypto.randomUUID(),
     createdAt: input.createdAt ?? new Date().toISOString(),
   });
-  const original = id
-    ? await env.DB.prepare('SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?')
-        .bind(auth.user.id, id)
-        .first<{ entry_json: string }>()
-    : null;
+  const original = await env.DB.prepare(
+    'SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?',
+  )
+    .bind(auth.user.id, entry.id)
+    .first<{ entry_json: string }>();
   if (id && !original) throw new HttpError(404, 'This practice entry was not found.');
   const previous = original
-    ? validated(validatePracticeSession, JSON.parse(original.entry_json))
+    ? validated(
+        (value) => validatePracticeSession(value, { preserveHistoricalDuration: true }),
+        JSON.parse(original.entry_json),
+      )
     : undefined;
+  if (!id && previous) {
+    const retried =
+      input.createdAt === undefined ? { ...entry, createdAt: previous.createdAt } : entry;
+    if (equivalentEntry(previous, retried)) return json({ entry: previous, duplicate: true });
+    throw new HttpError(409, 'A different practice entry already uses this session ID.');
+  }
   const previousEvidence = sessionEvidence(previous?.metadata);
   const nextEvidence = sessionEvidence(entry.metadata);
+  if (
+    previous &&
+    previous.evidenceMode !== entry.evidenceMode &&
+    (previous.evidenceMode === 'historical' || entry.evidenceMode === 'historical')
+  )
+    throw new HttpError(400, 'Historical evidence accounting cannot be changed or removed.');
   // Notes, placement and declared corrections are editable. Raw source facts
   // remain immutable even if a client removes or replaces the metadata object.
   if (previousEvidence) {
@@ -106,6 +125,11 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
         'Measured source evidence cannot be changed or removed. Use a declared time correction.',
       );
   }
+  if (
+    previous?.metadata?.historicalTiming !== undefined &&
+    !equivalentEntry(previous.metadata.historicalTiming, entry.metadata?.historicalTiming)
+  )
+    throw new HttpError(400, 'Historical timing evidence cannot be changed or removed.');
   const taskId = entry.metadata?.plannedTaskId;
   if (
     typeof taskId === 'string' &&
@@ -194,10 +218,14 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
   const exported: TrainingExport = {
     format: 'cwa-training-tracker',
     version: 1,
+    evidenceVersion: 1,
     exportedAt: new Date().toISOString(),
     profile: { ...DEFAULT_PROFILE, ...JSON.parse(settings.results[0].profile_json) },
     sessions: sessions.results.map((row) =>
-      validated(validatePracticeSession, JSON.parse(row.entry_json)),
+      validated(
+        (value) => validatePracticeSession(value, { preserveHistoricalDuration: true }),
+        JSON.parse(row.entry_json),
+      ),
     ),
     plan: plan.results.map((row) => JSON.parse(row.task_json) as PlannedTask),
     ...(archive.results.length
@@ -216,7 +244,8 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
   for (const entry of exported.sessions) {
     const taskId = entry.metadata?.plannedTaskId;
     if (typeof taskId === 'string' && !availableTasks.has(taskId)) {
-      entry.metadata = { ...entry.metadata, historicalPlannedTaskId: taskId };
+      entry.historicalPlannedTaskId = taskId;
+      entry.metadata = { ...entry.metadata };
       delete entry.metadata.plannedTaskId;
     }
   }
@@ -245,9 +274,18 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     ...(data.plan ?? []).filter((task) => !ownedPlan.some((item) => item.id === task.id)),
   ]);
   const taskIds = new Set(resultingPlan.map((task) => task.id));
+  const historicalLinkIds = new Set<string>();
   for (const entry of data.sessions) {
     const taskId = entry.metadata?.plannedTaskId;
-    if (typeof taskId === 'string' && !taskIds.has(taskId))
+    if (typeof taskId !== 'string' || taskIds.has(taskId)) continue;
+    // Pre-evidence backups retained deleted/former-course IDs verbatim. Preserve
+    // their provenance without granting a missing exercise any assignment credit.
+    if (data.evidenceVersion === undefined) {
+      entry.historicalPlannedTaskId = taskId;
+      entry.metadata = { ...entry.metadata };
+      delete entry.metadata.plannedTaskId;
+      historicalLinkIds.add(entry.id);
+    } else
       throw new HttpError(
         400,
         'An imported practice entry links an exercise missing from the resulting account plan. Include that plan in the backup.',
@@ -350,7 +388,19 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     (sum, index) => sum + results[index].results.length,
     0,
   );
-  return json({ imported, skipped: data.sessions.length - imported });
+  const historicalLinks = entryStatementIndexes.reduce(
+    (sum, index) =>
+      sum +
+      results[index].results.filter((row) =>
+        historicalLinkIds.has(String((row as { id: string }).id)),
+      ).length,
+    0,
+  );
+  return json({
+    imported,
+    skipped: data.sessions.length - imported,
+    ...(historicalLinks ? { historicalLinks } : {}),
+  });
 }
 
 export async function resetData(request: Request, env: Env): Promise<Response> {

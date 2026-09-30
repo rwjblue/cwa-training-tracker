@@ -1179,6 +1179,208 @@ describe('validated non-copy evidence', () => {
     minutes: 900,
     metadata: { elapsedSeconds: 90.25, recallSeconds: 10, practiceTool: 'sending' },
   });
+  it.each([false, true])(
+    'normalizes near-limit orphan links without oversized metadata (timed %s)',
+    async (timed) => {
+      const auth = await signIn(`orphan-limit-${timed}@example.test`);
+      const metadata: Record<string, unknown> = {
+        plannedTaskId: 'deleted-own-link',
+        ...(timed ? { elapsedSeconds: 30 } : {}),
+        padding: '',
+      };
+      metadata.padding = 'x'.repeat(199995 - JSON.stringify(metadata).length);
+      const old = { ...entry('old-orphan-limit'), minutes: 0.5, metadata };
+      expect(JSON.stringify(metadata).length).toBe(199995);
+      db.sqlite
+        .prepare('INSERT INTO practice_entries (user_id,id,date,entry_json) VALUES (?,?,?,?)')
+        .run(auth.user.id, old.id, old.date, JSON.stringify(old));
+      const exportedResponse = await request('/api/export', 'GET', undefined, auth.cookie);
+      expect(exportedResponse.status).toBe(200);
+      const exported = (await exportedResponse.json()) as TrainingExport;
+      expect(exported.sessions[0].historicalPlannedTaskId).toBe('deleted-own-link');
+      expect(JSON.stringify(exported.sessions[0].metadata).length).toBeLessThanOrEqual(200000);
+      for (const mode of ['merge', 'replace']) {
+        const data =
+          mode === 'merge'
+            ? { ...backup([{ ...old, id: 'another-old-orphan' }]), plan: [] }
+            : { ...backup([old]), plan: [] };
+        expect((await request('/api/import', 'POST', { mode, data }, auth.cookie)).status).toBe(
+          200,
+        );
+        expect((await request('/api/entries', 'GET', undefined, auth.cookie)).status).toBe(200);
+        expect((await request('/api/export', 'GET', undefined, auth.cookie)).status).toBe(200);
+      }
+      expect(
+        (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+          .status,
+      ).toBe(200);
+    },
+  );
+  it('rejects modern normalization overflow before writing while keeping older near-limit records usable', async () => {
+    const auth = await signIn('near-limit-evidence@example.test');
+    const original = {
+      ...entry('old-large-evidence'),
+      source: 'timer',
+      minutes: 1,
+      metadata: { elapsedSeconds: 120, note: 'x'.repeat(199960) },
+    };
+    const refused = await request('/api/entries', 'POST', original, auth.cookie);
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({
+      error: expect.stringContaining('Normalized session metadata'),
+    });
+    db.sqlite
+      .prepare('INSERT INTO practice_entries (user_id,id,date,entry_json) VALUES (?,?,?,?)')
+      .run(auth.user.id, original.id, original.date, JSON.stringify(original));
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0]).toMatchObject({
+      evidenceMode: 'historical',
+      minutes: 1,
+      metadata: original.metadata,
+    });
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    const updated = { ...exported.sessions[0], notes: 'Reviewed historical accounting' };
+    expect(
+      (await request('/api/entries/old-large-evidence', 'PUT', updated, auth.cookie)).status,
+    ).toBe(200);
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries[0],
+    ).toEqual(updated);
+    expect(
+      (
+        await request(
+          '/api/entries/old-large-evidence',
+          'PUT',
+          { ...updated, evidenceMode: undefined },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+  });
+  it.each([false, true])(
+    'preserves pre-evidence D1 duration edits on reads and portable restore (recording %s)',
+    async (recording) => {
+      const auth = await signIn(`old-stored-${recording}@example.test`);
+      const original = {
+        ...entry('old-duration-edit'),
+        minutes: recording ? 0.5 : 1,
+        source: 'timer',
+        metadata: {
+          elapsedSeconds: 120,
+          recallSeconds: recording ? 10 : 0,
+          ...(recording
+            ? { recordings: [{ url: 'https://example.test/old.wav', seconds: 60 }] }
+            : {}),
+        },
+      };
+      db.sqlite
+        .prepare('INSERT INTO practice_entries (user_id,id,date,entry_json) VALUES (?,?,?,?)')
+        .run(auth.user.id, original.id, original.date, JSON.stringify(original));
+      const listed = (await (
+        await request('/api/entries', 'GET', undefined, auth.cookie)
+      ).json()) as { entries: PracticeSession[] };
+      expect(listed.entries[0].minutes).toBe(original.minutes);
+      if (recording)
+        expect(listed.entries[0].metadata?.historicalTiming).toMatchObject({
+          savedSeconds: 30,
+          timing: original.metadata,
+        });
+      else
+        expect(listed.entries[0].metadata?.evidence).toMatchObject({
+          measurement: { seconds: 120 },
+          correction: { seconds: 60 },
+        });
+      expect(
+        JSON.parse(
+          String(
+            db.sqlite
+              .prepare('SELECT entry_json FROM practice_entries WHERE user_id=? AND id=?')
+              .get(auth.user.id, original.id)?.entry_json,
+          ),
+        ),
+      ).toEqual(original);
+      const exported = (await (
+        await request('/api/export', 'GET', undefined, auth.cookie)
+      ).json()) as TrainingExport;
+      expect(exported.sessions).toEqual(listed.entries);
+      expect(
+        (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+          .status,
+      ).toBe(200);
+      expect(
+        (
+          (await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()) as {
+            entries: PracticeSession[];
+          }
+        ).entries,
+      ).toEqual(listed.entries);
+      if (recording)
+        expect(
+          (
+            await request(
+              '/api/entries/old-duration-edit',
+              'PUT',
+              { ...listed.entries[0], metadata: {} },
+              auth.cookie,
+            )
+          ).status,
+        ).toBe(400);
+    },
+  );
+  it.each(['merge', 'replace'])(
+    'restores old v1 orphan exercise links safely with %s',
+    async (mode) => {
+      const auth = await signIn(`old-${mode}-backup@example.test`);
+      await request('/api/entries', 'POST', entry(), auth.cookie);
+      const old = {
+        ...measured(),
+        minutes: 90.25 / 60,
+        metadata: { ...measured().metadata, plannedTaskId: 'previously-deleted-task' },
+      };
+      const response = await request(
+        '/api/import',
+        'POST',
+        {
+          mode,
+          data: { ...backup([old]), plan: [] },
+        },
+        auth.cookie,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ imported: 1, historicalLinks: 1 });
+      const exported = (await (
+        await request('/api/export', 'GET', undefined, auth.cookie)
+      ).json()) as TrainingExport;
+      expect(exported.evidenceVersion).toBe(1);
+      const restored = exported.sessions.find((item) => item.id === old.id)!;
+      expect(restored.minutes).toBe(old.minutes);
+      expect(restored.metadata?.plannedTaskId).toBeUndefined();
+      expect(restored.historicalPlannedTaskId).toBe('previously-deleted-task');
+      expect(restored.metadata?.evidence).toMatchObject({
+        measurement: { seconds: 90.25, recallSeconds: 10 },
+      });
+      expect(exported.sessions).toHaveLength(mode === 'merge' ? 2 : 1);
+      expect(
+        (await request('/api/import', 'POST', { mode, data: exported }, auth.cookie)).status,
+      ).toBe(200);
+      expect(
+        (
+          (await (
+            await request('/api/export', 'GET', undefined, auth.cookie)
+          ).json()) as TrainingExport
+        ).sessions,
+      ).toEqual(exported.sessions);
+    },
+  );
   it('keeps a deleted exercise as portable historical provenance without claiming a current task', async () => {
     const auth = await signIn('deleted-evidence@example.test');
     const task = {
@@ -1197,11 +1399,22 @@ describe('validated non-copy evidence', () => {
       auth.cookie,
     );
     await request('/api/plan/deleted-task', 'DELETE', undefined, auth.cookie);
+    const retryBody = {
+      ...measured(),
+      metadata: { ...measured().metadata, plannedTaskId: task.id },
+    };
+    const retry = await request('/api/entries', 'POST', retryBody, auth.cookie);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toMatchObject({ duplicate: true });
+    expect(
+      (await request('/api/entries', 'POST', { ...retryBody, notes: 'Changed body' }, auth.cookie))
+        .status,
+    ).toBe(409);
     const exported = (await (
       await request('/api/export', 'GET', undefined, auth.cookie)
     ).json()) as TrainingExport;
     expect(exported.sessions[0].metadata?.plannedTaskId).toBeUndefined();
-    expect(exported.sessions[0].metadata?.historicalPlannedTaskId).toBe('deleted-task');
+    expect(exported.sessions[0].historicalPlannedTaskId).toBe('deleted-task');
     expect(
       (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
         .status,
@@ -1334,8 +1547,14 @@ describe('validated non-copy evidence', () => {
     const linked = { ...measured(), metadata: { ...measured().metadata, plannedTaskId: task.id } };
     expect((await request('/api/entries', 'POST', linked, auth.cookie)).status).toBe(400);
     expect(
-      (await request('/api/import', 'POST', { mode: 'merge', data: backup([linked]) }, auth.cookie))
-        .status,
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...backup([linked]), evidenceVersion: 1 } },
+          auth.cookie,
+        )
+      ).status,
     ).toBe(400);
     expect(
       (
@@ -1370,7 +1589,10 @@ describe('validated non-copy evidence', () => {
         await request(
           '/api/import',
           'POST',
-          { mode: 'replace', data: { ...backup([next]), profile: DEFAULT_PROFILE } },
+          {
+            mode: 'replace',
+            data: { ...backup([next]), profile: DEFAULT_PROFILE, evidenceVersion: 1 },
+          },
           auth.cookie,
         )
       ).status,

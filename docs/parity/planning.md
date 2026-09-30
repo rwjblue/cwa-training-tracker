@@ -186,3 +186,19 @@ configuration summaries remain the later accepted issues; client results are not
 independent proof of proficiency, simulator scores or on-air activity. Validation,
 independent review and publication status are tracked in
 `execution-progress-2026-09-30.md`.
+
+Compatibility recheck: new backups retain version 1 and declare optional
+`evidenceVersion: 1`. Unmarked older backups convert missing exercise links to
+historical provenance, with an import receipt count; marked backups require
+current account plan references. Earlier raw timer totals differing from saved
+duration retain the saved duration as a historical correction. Contradictory
+recording/recall totals remain explicit historical accounting, with raw fields
+archived rather than invented corrections. Near-limit old timed metadata uses
+`evidenceMode: historical` and remains unchanged within the metadata budget.
+Unavailable task IDs use a validated top-level `historicalPlannedTaskId`, keeping
+their provenance outside the capped metadata payload, including near-limit old
+manual/timed backups and replacement imports.
+History, review and reports explain this accounting; it is not current native
+evidence. Current writes enforce the size limit after all normalization. Exact
+owned retries acknowledge a saved record even after task deletion; Runner review
+retains a stable run-owned session identity, timestamp and date when reopened.

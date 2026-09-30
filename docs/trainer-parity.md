@@ -118,6 +118,14 @@ measurements and explicit learner time corrections. Measured time/speeds cannot
 be replaced by generic form values; account plan references are validated.
 Known recording timing comes from exact catalog URLs. Historical source archives
 retain their own accounting instead of being promoted to native measurements.
+Old Companion duration edits and deleted-task links also round-trip as explicit
+historical accounting/provenance. New version 1 backups declare `evidenceVersion: 1`;
+marked native links are strict, while old orphan links retain no assignment credit.
+Near-limit raw timed records use `evidenceMode: historical`, preserving their full
+metadata without promotion. Final normalized metadata stays within the budget.
+Exact saved retries survive task deletion, and reopening Runner review preserves
+its run-owned session ID/date/timestamp, preventing duplicate credit after a lost
+acknowledgement. Finished offline durability remains issue #2.
 [Evidence model](../src/shared/practice-evidence.ts),
 [execution and review status](parity/execution-progress-2026-09-30.md).
 

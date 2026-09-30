@@ -1960,7 +1960,8 @@ function SessionModal({
   let measuredInitial = initial;
   let evidenceError = '';
   try {
-    evidence = sessionEvidence(initial.metadata);
+    evidence =
+      initial.evidenceMode === 'historical' ? undefined : sessionEvidence(initial.metadata);
     if (evidence)
       measuredInitial = validatePracticeSession({
         ...initial,
@@ -2085,6 +2086,7 @@ function SessionModal({
       </p>
       {copyAttempt && <CopyResult attempt={copyAttempt} />}
       {evidence && <EvidenceSummary evidence={evidence} />}
+      {!evidence && <PracticeEvidenceDetails entry={initial} expanded />}
       <form onSubmit={save} aria-busy={busy}>
         <fieldset className="session-form-fields" disabled={busy}>
           <div className="form-grid">
@@ -2416,15 +2418,18 @@ function Account({
     setDataBusy(true);
     setError('');
     try {
-      const result = await api<{ imported: number; skipped: number }>('/import', {
-        data: importData.data,
-        mode: importMode,
-      });
+      const result = await api<{ imported: number; skipped: number; historicalLinks?: number }>(
+        '/import',
+        {
+          data: importData.data,
+          mode: importMode,
+        },
+      );
       setArchiveVersion((value) => value + 1);
       await reload();
       setImportData(null);
       notify(
-        `Imported ${result.imported} sessions${result.skipped ? `; ${result.skipped} duplicates skipped` : ''}.`,
+        `Imported ${result.imported} sessions${result.skipped ? `; ${result.skipped} duplicates skipped` : ''}.${result.historicalLinks ? ` Retained ${result.historicalLinks} old exercise links as history without current assignment credit.` : ''}`,
       );
     } catch (err) {
       setError((err as Error).message);

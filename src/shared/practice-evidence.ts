@@ -394,3 +394,52 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
       : []),
   ];
 }
+
+/** Historical accounting stays readable without becoming current measured evidence. */
+export function practiceSessionEvidenceDetails(
+  metadata: Record<string, unknown> | undefined,
+  evidenceMode?: 'historical',
+  savedMinutes?: number,
+): string[] {
+  const evidence = sessionEvidence(metadata);
+  if (evidenceMode === 'historical')
+    return [
+      `Historical accounting: ${((savedMinutes ?? 0) * 60).toFixed(2)} saved seconds. Raw timed provenance is retained without promotion to current native evidence.`,
+      ...(evidence
+        ? practiceEvidenceDetails(evidence).map((detail) => `Historical raw source: ${detail}`)
+        : []),
+    ];
+  if (evidence) return practiceEvidenceDetails(evidence);
+  const historical = metadata?.historicalTiming;
+  if (!historical || typeof historical !== 'object' || Array.isArray(historical)) return [];
+  const row = historical as Record<string, unknown>;
+  const timing = row.timing;
+  if (
+    typeof row.savedSeconds !== 'number' ||
+    !Number.isFinite(row.savedSeconds) ||
+    !timing ||
+    typeof timing !== 'object' ||
+    Array.isArray(timing)
+  )
+    return [];
+  const raw = timing as Record<string, unknown>;
+  return [
+    `Historical accounting: ${row.savedSeconds.toFixed(2)} saved seconds. The earlier Companion stored a different total without a correction reason; these raw fields are not validated current native evidence.`,
+    ...(typeof raw.elapsedSeconds === 'number'
+      ? [
+          `Original timer: ${raw.elapsedSeconds.toFixed(2)} seconds${typeof raw.recallSeconds === 'number' ? `, including ${raw.recallSeconds.toFixed(2)} recall seconds` : ''}.`,
+        ]
+      : []),
+    ...(Array.isArray(raw.recordings)
+      ? raw.recordings
+          .filter(
+            (item) =>
+              item &&
+              typeof item === 'object' &&
+              typeof item.url === 'string' &&
+              typeof item.seconds === 'number',
+          )
+          .map((item) => `Original recording: ${item.seconds.toFixed(2)} seconds: ${item.url}`)
+      : []),
+  ];
+}

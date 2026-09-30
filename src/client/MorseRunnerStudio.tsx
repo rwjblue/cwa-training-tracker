@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCheck, ExternalLink, RotateCcw, Square } from 'lucide-react';
 import type { PlannedTask } from '../shared/plan';
-import type { PracticeSession } from '../shared/training';
+import { dateInTimezone, type PracticeSession } from '../shared/training';
 import {
   createRunnerRun,
   reduceRunnerEvent,
@@ -30,6 +30,7 @@ const time = (seconds: number) =>
 /** Engine messages alone determine practiced time. The studio wall clock is never used here. */
 export default function MorseRunnerStudio({
   settings,
+  timezone,
   task,
   externalUrl = fallbackUrl,
   savedEntry,
@@ -37,6 +38,7 @@ export default function MorseRunnerStudio({
   onUnsavedChange,
 }: {
   settings: RunnerSettings;
+  timezone?: string;
   task?: PlannedTask;
   externalUrl?: string;
   savedEntry?: PracticeSession;
@@ -44,6 +46,9 @@ export default function MorseRunnerStudio({
   onUnsavedChange: (unsaved: boolean) => void;
 }) {
   const [run, setRun] = useState(() => createRunnerRun(crypto.randomUUID(), settings));
+  const resultIdentity = useRef<{ runId: string; createdAt: string; date: string } | undefined>(
+    undefined,
+  );
   const current = useRef(run);
   const frame = useRef<HTMLIFrameElement>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -183,7 +188,18 @@ export default function MorseRunnerStudio({
     const latest = current.current;
     if (!terminal(latest) || latest.elapsedSeconds < 1 || savedRunId === latest.runId) return;
     const { lastSequence: _sequence, ...result } = latest;
+    if (resultIdentity.current?.runId !== latest.runId) {
+      const createdAt = latest.runEndedAt ?? latest.runStartedAt ?? new Date().toISOString();
+      resultIdentity.current = {
+        runId: latest.runId,
+        createdAt,
+        date: dateInTimezone(new Date(createdAt), timezone),
+      };
+    }
     callbacks.current.onLog({
+      id: `runner:${latest.runId}`,
+      createdAt: resultIdentity.current.createdAt,
+      date: resultIdentity.current.date,
       kind: 'simulator',
       minutes: latest.elapsedSeconds / 60,
       characterWpm: latest.settings.wpm,

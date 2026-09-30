@@ -102,6 +102,26 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   );
   await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
   await page.screenshot({ path: '.tmp/runner-review-desktop.png', fullPage: true });
+  // The server commits, but the acknowledgement is lost. Closing and reopening
+  // this same finished engine run must preserve its identity and retry once.
+  await page.route(
+    '**/api/entries',
+    async (route) => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(201);
+      await route.fulfill({
+        status: 502,
+        json: { error: 'Synthetic lost Runner acknowledgement.' },
+      });
+    },
+    { times: 1 },
+  );
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('alert')).toContainText('Synthetic lost Runner acknowledgement.');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
+  await page.getByRole('button', { name: 'Save practice', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);

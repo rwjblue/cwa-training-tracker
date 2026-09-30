@@ -646,6 +646,7 @@ export default function PracticeStudio({
         />
       ) : isRunner ? (
         <MorseRunnerStudio
+          timezone={timezone}
           key={launch?.id ?? 'public-runner'}
           settings={activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS}
           externalUrl={activity?.type === 'morse-runner' ? activity.url : undefined}

@@ -37,6 +37,10 @@ export interface PracticeSession {
   source?: 'manual' | 'timer' | 'morse' | 'legacy';
   sourceId?: string;
   createdAt: string;
+  /** Compatibility accounting for earlier raw timed records that cannot be promoted. */
+  evidenceMode?: 'historical';
+  /** Unavailable task provenance, outside metadata's independently bounded payload. */
+  historicalPlannedTaskId?: string;
   /** Validated native evidence and original imported metrics travel with backups. */
   metadata?: Record<string, unknown> & { copyAttempt?: CopyAttempt; evidence?: PracticeEvidence };
 }
@@ -44,6 +48,8 @@ export interface PracticeSession {
 export interface TrainingExport {
   format: 'cwa-training-tracker';
   version: 1;
+  /** Absent in older backups whose task links may need historical normalization. */
+  evidenceVersion?: 1;
   exportedAt: string;
   profile?: Profile;
   sessions: PracticeSession[];
@@ -342,7 +348,10 @@ function timestamp(value: unknown, label: string): string {
   return new Date(result).toISOString();
 }
 
-export function validatePracticeSession(value: unknown): PracticeSession {
+export function validatePracticeSession(
+  value: unknown,
+  options: { preserveHistoricalDuration?: boolean } = {},
+): PracticeSession {
   const input = record(value, 'Practice session');
   const id = text(input.id, 'Session ID', 200);
   if (!/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]*$/.test(id))
@@ -358,6 +367,17 @@ export function validatePracticeSession(value: unknown): PracticeSession {
     notes: text(input.notes, 'Notes', 10000, ''),
     createdAt: timestamp(input.createdAt, 'Created time'),
   };
+  if (input.evidenceMode !== undefined) {
+    if (input.evidenceMode !== 'historical')
+      throw new Error('Unsupported evidence accounting mode.');
+    session.evidenceMode = 'historical';
+  }
+  if (input.historicalPlannedTaskId !== undefined) {
+    const taskId = text(input.historicalPlannedTaskId, 'Historical task ID', 200);
+    if (!/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]*$/.test(taskId))
+      throw new Error('Historical task ID contains unsupported characters.');
+    session.historicalPlannedTaskId = taskId;
+  }
   if (input.characterWpm !== undefined)
     session.characterWpm = number(input.characterWpm, 'Character speed', 1, 150);
   if (input.effectiveWpm !== undefined)
@@ -384,7 +404,7 @@ export function validatePracticeSession(value: unknown): PracticeSession {
   }
   if (input.sourceId !== undefined) session.sourceId = text(input.sourceId, 'Source ID', 200);
   if (input.metadata !== undefined) {
-    const metadata = record(input.metadata, 'Session metadata');
+    let metadata = record(input.metadata, 'Session metadata');
     if (JSON.stringify(metadata).length > 200000) throw new Error('Session metadata is too large.');
     session.metadata = metadata;
     if (
@@ -396,7 +416,46 @@ export function validatePracticeSession(value: unknown): PracticeSession {
       throw new Error('Planned task ID contains unsupported characters.');
     // Imported archives remain historical source records. They are not upgraded
     // to native measurements, whose recording/recall accounting differs.
-    const evidence = sessionEvidence(metadata);
+    let evidence = sessionEvidence(metadata);
+    if (session.evidenceMode === 'historical') {
+      if (
+        metadata.evidence !== undefined ||
+        metadata.copyAttempt !== undefined ||
+        metadata.runner !== undefined ||
+        evidence?.type !== 'timed'
+      )
+        throw new Error(
+          'Historical accounting requires raw timed evidence without native, copy or Runner results.',
+        );
+      evidence = undefined;
+    }
+    if (
+      options.preserveHistoricalDuration &&
+      metadata.evidence === undefined &&
+      evidence?.type === 'timed' &&
+      Math.abs(session.minutes * 60 - evidence.measurement.seconds) > 0.001
+    ) {
+      const savedSeconds = session.minutes * 60;
+      const reason =
+        'Historical duration edit retained; the earlier Companion did not record a correction reason.';
+      if (
+        savedSeconds + 0.001 <
+        evidence.recordings.reduce((sum, item) => sum + item.seconds, 0) +
+          (evidence.measurement.recallSeconds ?? 0)
+      ) {
+        // Earlier generic duration edits could contradict recording/recall
+        // subtotals. Keep that historical accounting without inventing changes
+        // to the raw fields or promoting it to valid current native evidence.
+        const timing: Record<string, unknown> = {};
+        for (const key of ['elapsedSeconds', 'recallSeconds', 'recordings']) {
+          if (metadata[key] !== undefined) timing[key] = metadata[key];
+        }
+        metadata = { ...metadata, historicalTiming: { savedSeconds, timing, reason } };
+        for (const key of ['elapsedSeconds', 'recallSeconds', 'recordings']) delete metadata[key];
+        evidence = undefined;
+      } else evidence = { ...evidence, correction: { seconds: savedSeconds, reason } };
+    }
+    session.metadata = metadata;
     if (evidence) {
       session.metadata = { ...metadata, evidence };
       if (evidence.type === 'runner') {
@@ -433,6 +492,25 @@ export function validatePracticeSession(value: unknown): PracticeSession {
         }
       }
     }
+    if (session.metadata && JSON.stringify(session.metadata).length > 200000) {
+      if (
+        options.preserveHistoricalDuration &&
+        input.metadata &&
+        record(input.metadata, 'Session metadata').evidence === undefined &&
+        sessionEvidence(record(input.metadata, 'Session metadata'))?.type === 'timed'
+      ) {
+        session.evidenceMode = 'historical';
+        session.metadata = record(input.metadata, 'Session metadata');
+        session.minutes = number(input.minutes, 'Practice minutes', 0, 1440);
+        for (const key of ['characterWpm', 'effectiveWpm'] as const) {
+          if (input[key] === undefined) delete session[key];
+          else session[key] = number(input[key], 'Historical speed', 1, 150);
+        }
+      } else
+        throw new Error(
+          'Normalized session metadata is too large. Shorten the retained source notes.',
+        );
+    }
     if (metadata.copyAttempt !== undefined) {
       const attempt = validateCopyAttempt(metadata.copyAttempt);
       if (attempt.status === 'active')
@@ -448,6 +526,10 @@ export function validatePracticeSession(value: unknown): PracticeSession {
       session.metadata = { ...metadata, ...measured.metadata };
     }
   }
+  if (session.evidenceMode === 'historical' && session.metadata === undefined)
+    throw new Error('Historical accounting requires raw timed evidence.');
+  if (session.metadata && JSON.stringify(session.metadata).length > 200000)
+    throw new Error('Normalized session metadata is too large. Shorten the retained source notes.');
   return session;
 }
 
@@ -457,7 +539,11 @@ export function validateTrainingExport(value: unknown): TrainingExport {
     throw new Error('Unsupported training export format or version.');
   if (!Array.isArray(input.sessions) || input.sessions.length > 20000)
     throw new Error('Import must contain up to 20,000 sessions.');
-  const sessions = input.sessions.map(validatePracticeSession);
+  const sessions = input.sessions.map((session) =>
+    validatePracticeSession(session, {
+      preserveHistoricalDuration: input.evidenceVersion === undefined,
+    }),
+  );
   if (new Set(sessions.map((session) => session.id)).size !== sessions.length)
     throw new Error('Import contains duplicate session IDs.');
   const result: TrainingExport = {
@@ -466,6 +552,11 @@ export function validateTrainingExport(value: unknown): TrainingExport {
     exportedAt: timestamp(input.exportedAt, 'Exported time'),
     sessions,
   };
+  if (input.evidenceVersion !== undefined) {
+    if (input.evidenceVersion !== 1)
+      throw new Error('Unsupported practice evidence export version.');
+    result.evidenceVersion = 1;
+  }
   if (input.profile !== undefined) result.profile = validateProfile(input.profile);
   if (input.plan !== undefined) result.plan = validatePlan(input.plan);
   if (input.legacy !== undefined) {

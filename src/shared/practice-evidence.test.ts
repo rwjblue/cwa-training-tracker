@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { evidenceTime, sessionEvidence, validatePracticeEvidence } from './practice-evidence';
+import {
+  evidenceTime,
+  practiceSessionEvidenceDetails,
+  sessionEvidence,
+  validatePracticeEvidence,
+} from './practice-evidence';
 import { validatePracticeSession, validateTrainingExport } from './training';
 import { RUNNER_REVISION } from './runner';
 
@@ -203,5 +208,85 @@ describe('non-copy native evidence', () => {
       },
     };
     expect(validatePracticeSession(legacy)).toEqual(legacy);
+  });
+  it('preserves the declared evidence export version and rejects unsupported versions', () => {
+    const backup = {
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: '2026-09-30T12:00:00Z',
+      sessions: [],
+    };
+    expect(validateTrainingExport(backup).evidenceVersion).toBeUndefined();
+    expect(validateTrainingExport({ ...backup, evidenceVersion: 1 }).evidenceVersion).toBe(1);
+    expect(() => validateTrainingExport({ ...backup, evidenceVersion: 2 })).toThrow(
+      /evidence export version/,
+    );
+  });
+  it('retains old duration edits at historical boundaries without changing new measured writes', () => {
+    const old = {
+      ...session(undefined),
+      minutes: 1,
+      metadata: { elapsedSeconds: 120, recallSeconds: 0 },
+    };
+    expect(validatePracticeSession(old).minutes).toBe(2);
+    const historical = validatePracticeSession(old, { preserveHistoricalDuration: true });
+    expect(historical.minutes).toBe(1);
+    expect(historical.metadata?.evidence).toMatchObject({
+      measurement: { seconds: 120, recallSeconds: 0 },
+      correction: { seconds: 60, reason: expect.stringContaining('Historical duration edit') },
+    });
+    expect(validatePracticeSession(historical)).toEqual(historical);
+  });
+  it('archives contradictory old recording totals without inventing recall or native correction evidence', () => {
+    const old = {
+      ...session(undefined),
+      minutes: 0.5,
+      metadata: {
+        elapsedSeconds: 120,
+        recallSeconds: 10,
+        recordings: [{ url: 'https://example.test/source.wav', seconds: 60 }],
+      },
+    };
+    const historical = validatePracticeSession(old, { preserveHistoricalDuration: true });
+    expect(historical.minutes).toBe(0.5);
+    expect(historical.metadata?.evidence).toBeUndefined();
+    expect(historical.metadata?.historicalTiming).toMatchObject({
+      savedSeconds: 30,
+      timing: old.metadata,
+    });
+    expect(sessionEvidence(historical.metadata)).toBeUndefined();
+    expect(practiceSessionEvidenceDetails(historical.metadata).join(' ')).toContain(
+      'Original timer: 120.00 seconds, including 10.00 recall seconds',
+    );
+    expect(validatePracticeSession(historical)).toEqual(historical);
+  });
+  it('keeps normalization bounded and old near-limit metadata portable without dropping facts', () => {
+    const old = {
+      ...session(undefined),
+      minutes: 1,
+      metadata: { elapsedSeconds: 120, note: 'x'.repeat(199960) },
+    };
+    expect(JSON.stringify(old.metadata).length).toBeLessThanOrEqual(200000);
+    expect(() => validatePracticeSession(old)).toThrow(/Normalized session metadata/);
+    const historical = validatePracticeSession(old, { preserveHistoricalDuration: true });
+    expect(historical).toMatchObject({
+      minutes: 1,
+      evidenceMode: 'historical',
+      metadata: old.metadata,
+    });
+    expect(historical.metadata?.evidence).toBeUndefined();
+    expect(validatePracticeSession(historical)).toEqual(historical);
+    expect(
+      validateTrainingExport({
+        format: 'cwa-training-tracker',
+        version: 1,
+        evidenceVersion: 1,
+        exportedAt: old.createdAt,
+        sessions: [historical],
+      }).sessions[0],
+    ).toEqual(historical);
+    expect(() =>
+      validatePracticeSession({ ...historical, metadata: { evidence: timed() } }),
+    ).toThrow(/Historical accounting/);
   });
 });

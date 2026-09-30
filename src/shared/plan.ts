@@ -2,7 +2,7 @@ import type { PracticeKind, PracticeSession, Profile } from './training';
 import { isRunnerSettings, type RunnerSettings } from './runner.ts';
 import { defaultCopyRecipe, validateCopyRecipe, type CopyRecipe } from './copy-practice.ts';
 import { copyAttemptReportDetails, savedCopyAttempt } from './copy-report.ts';
-import { practiceEvidenceDetails, sessionEvidence } from './practice-evidence.ts';
+import { practiceSessionEvidenceDetails } from './practice-evidence.ts';
 
 export type SendingSection = 'warm-up' | 'drill' | 'exercise';
 export type PracticeExercise =
@@ -534,9 +534,12 @@ export function weeklyReport(
       if (attempt) {
         for (const detail of copyAttemptReportDetails(attempt)) lines.push(`  ${detail}`);
       }
-      const evidence = sessionEvidence(entry.metadata);
-      if (evidence)
-        for (const detail of practiceEvidenceDetails(evidence)) lines.push(`  ${detail}`);
+      for (const detail of practiceSessionEvidenceDetails(
+        entry.metadata,
+        entry.evidenceMode,
+        entry.minutes,
+      ))
+        lines.push(`  ${detail}`);
     }
     lines.push('');
   }

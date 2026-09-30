@@ -9,7 +9,7 @@ snapshots and native dependency responses are retained in ignored
 The original `rwjblue.com` checkout is read-only evidence. Its pinned validator
 reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records were read.
 
-## Issue #1 — implementation ready for independent review
+## Issue #1 — independent review corrections in progress
 
 - Shared version 1 Runner and timer/recording evidence validates cross-field
   timing, timestamps, scores, zero/absent values and exact catalog timing.
@@ -25,8 +25,16 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   browser suite passed all 30 journeys. Desktop/mobile correction/error/cancel/
   retry checks include keyboard and emulated touch. Runner arithmetic follows
   the bundled engine's confirmed-call × confirmed-prefix result.
-- Implementation commit, independent review, signed publication, deployment and
-  issue comment/closure remain pending. Do not start #2 until this gate passes.
+- Implementation commit: `c3612c9c`. Independent reviewer found five substantive
+  boundaries: old orphan-link imports, old duration edits, exact retries after
+  task deletion, Runner review identity after lost acknowledgement, and normalized
+  metadata size closure. Focused corrections retain old accounting explicitly,
+  protect raw history, and preserve stable retries. Current check, all 243 tests
+  and build pass. Four independently authored desktop/mobile journeys and all 30
+  standard browser journeys passed. The final near-limit orphan-link combination
+  passed direct Worker recheck and two focused real import/export browser paths.
+- Review acceptance, follow-up commit, signed publication, deployment and issue
+  comment/closure remain pending. Do not start #2 until this gate passes.
 
 ## Remaining queue
 
