@@ -170,6 +170,22 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   results and overflow checks pass. The correction commit and independent recheck
   are pending; this issue remains open and unpublished.
 
+- Correction commit `68edd084` received independent recheck: all 15 corrected
+  desktop/mobile browser journeys and eight fresh production-code probes pass,
+  closing all five original findings and the additional Guest-scope boundary.
+  Twenty-eight captured accessibility/geometry states have no violations or
+  overflow. The reviewer found one further substantive P2: a global notice at the
+  dialog's stacking level covers mobile Download/Choose and intercepts actual
+  center touches. The gate remains unaccepted for this finding.
+- The effective dialog layer now sits above page notifications. Existing desktop
+  keyboard/mobile touch device journeys exercise actual download and file chooser
+  controls immediately after sign-in while its notification is still present,
+  inspect the chosen file and cancel restore. Touches use the current control
+  centers so an actionability retry cannot disguise waiting for notice expiry.
+  Check, all 369 tests and build pass. All four focused device journeys and all
+  40 standard browser journeys pass on the layer correction. The focused
+  follow-up commit and independent recheck are next; publication remains held.
+
 ## Remaining queue
 
 Issue #3 is in its validation/review loop. Issues #4–#46 remain pending.

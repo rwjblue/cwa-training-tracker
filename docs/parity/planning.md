@@ -290,3 +290,6 @@ lease. These corrections preserve the original IDs and measurements. A separatel
 reproduced disconnected Guest reopen uses the displayed Guest scope without
 changing account selection; private account mismatches still reject before writes.
 Correction validation and the independent recheck remain in the execution journal.
+The recheck closed those six findings and reproduced notification overlap with
+mobile device file controls. The shared dialog layer now sits above page notices;
+actual Download/Choose gestures remain usable while a notice is present.

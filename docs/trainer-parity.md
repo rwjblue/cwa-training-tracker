@@ -316,6 +316,8 @@ retry a permanent rejection. Actual mutations retire the revoked Copy lease,
 allowing the restored owner to resume; unchanged restore retains its current owner.
 The shared modal selects visible, enabled, tabbable controls and keeps keyboard
 focus inside the dialog, including forward/reverse wrap and explicit initial focus.
+Dialogs also sit above global notifications so transient notices cannot obscure
+or intercept required file, backup, save and cancellation controls.
 
 Evidence: [device inventory and strict restore](../src/client/device-backup.ts),
 [scope ownership fence](../src/client/device-scope.ts),

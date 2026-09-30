@@ -3703,7 +3703,8 @@ body {
   font-size: 12px;
 }
 .modal-overlay {
-  z-index: 100;
+  /* Page notifications must not intercept dialog controls. */
+  z-index: 110;
 }
 .modal {
   flex-shrink: 0;

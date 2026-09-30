@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { expectAccessible, scopedRequest, signIn } from './helpers';
 
@@ -18,9 +18,23 @@ async function navigate(page: Page, name: string, touch: boolean) {
   }
 }
 
-async function downloadDevice(page: Page) {
+async function activateDeviceControl(page: Page, control: Locator, touch: boolean) {
+  if (touch) {
+    await control.scrollIntoViewIfNeeded();
+    const bounds = await control.boundingBox();
+    expect(bounds).not.toBeNull();
+    await page.touchscreen.tap(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+  } else {
+    await control.focus();
+    await page.keyboard.press('Enter');
+  }
+}
+
+async function downloadDevice(page: Page, touch?: boolean) {
   const downloaded = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download device backup', exact: true }).click();
+  const control = page.getByRole('button', { name: 'Download device backup', exact: true });
+  if (touch === undefined) await control.click();
+  else await activateDeviceControl(page, control, touch);
   const file = await downloaded;
   return { bytes: await readFile((await file.path())!), name: file.suggestedFilename() };
 }
@@ -77,6 +91,37 @@ for (const mobile of [false, true]) {
 
     await signIn(page);
     const scope = (await (await context.request.get('/api/me')).json()).user.id as string;
+    const signInNotice = page.getByRole('status').filter({ hasText: 'You’re signed in.' });
+    await navigate(page, 'This device', mobile);
+    await expect(
+      page.getByRole('region', { name: 'Scoped device work', exact: true }),
+    ).toBeVisible();
+    await expect(signInNotice).toBeVisible();
+    const accountFile = await downloadDevice(page, mobile);
+    expect(JSON.parse(accountFile.bytes.toString()).scope.id).toBe(scope);
+    await expect(signInNotice).toBeVisible();
+    const chosen = page.waitForEvent('filechooser');
+    await activateDeviceControl(
+      page,
+      page.getByRole('button', { name: 'Choose device backup', exact: true }),
+      mobile,
+    );
+    await (
+      await chosen
+    ).setFiles({
+      name: accountFile.name,
+      mimeType: 'application/json',
+      buffer: accountFile.bytes,
+    });
+    await expect(page.getByRole('region', { name: 'Review device restore' })).toBeVisible();
+    await expect(signInNotice).toBeVisible();
+    await activateDeviceControl(
+      page,
+      page.getByRole('button', { name: 'Cancel restore', exact: true }),
+      mobile,
+    );
+    await expect(page.getByRole('region', { name: 'Review device restore' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     expect(
       (
         await scopedRequest(context, 'POST', '/api/entries', {
