@@ -87,6 +87,9 @@ function CopyTrainerSession({
       ),
   );
   const [confirmedCharacters, setConfirmedCharacters] = useState(false);
+  useEffect(() => {
+    setConfirmedCharacters(false);
+  }, [recipe.mode, recipe.groupKind, recipe.customCharacters]);
   const [error, setError] = useState('');
   const [storageWarning, setStorageWarning] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -631,7 +634,11 @@ function CopyTrainerSession({
   const discrete = currentRecipe.mode === 'words' || currentRecipe.mode === 'callsigns';
   const measured = clock.current.snapshot(performance.now());
   const speeds = attempt ? currentCopySpeeds(attempt) : recipe;
-  const needsCharacters = requiresCharacterSelection && !confirmedCharacters;
+  const selectingCharacters =
+    requiresCharacterSelection &&
+    currentRecipe.mode === 'groups' &&
+    currentRecipe.groupKind === 'custom';
+  const needsCharacters = selectingCharacters && !confirmedCharacters;
   const replayWord = () => {
     const current = snapshot();
     if (
@@ -784,7 +791,7 @@ function CopyTrainerSession({
             </label>
           )}
           <CopySettings recipe={currentRecipe} disabled={active || blocked} onChange={setRecipe} />
-          {requiresCharacterSelection && (
+          {selectingCharacters && (
             <label className="checkbox-label copy-character-confirmation">
               <input
                 type="checkbox"

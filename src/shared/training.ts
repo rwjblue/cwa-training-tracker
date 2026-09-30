@@ -67,26 +67,40 @@ export const DEFAULT_PROFILE: Profile = {
   classDays: [1, 4],
 };
 
-export const COURSE_LEVELS: { id: CourseLevel; label: string; description: string }[] = [
+export const COURSE_LEVELS: {
+  id: CourseLevel;
+  label: string;
+  description: string;
+  prerequisite: string;
+  goal: string;
+}[] = [
   {
     id: 'beginner',
     label: 'Beginner',
     description: 'Build a foundation in characters, sending, and your first conversations.',
+    prerequisite: 'Little or no Morse experience.',
+    goal: 'Recognize characters, head copy and send at 6 WPM or more, and prepare for a basic QSO.',
   },
   {
     id: 'fundamental',
     label: 'Fundamental',
     description: 'Make character recognition automatic and build comfortable QSOs.',
+    prerequisite: 'Know the Morse characters and operate at 6 WPM or more.',
+    goal: 'Build instant character recognition, conversational QSOs and introductory contest skills at 10 WPM or more.',
   },
   {
     id: 'intermediate',
     label: 'Intermediate',
     description: 'Hear words as sounds and grow your confidence on the air.',
+    prerequisite: 'Operate at 10 WPM or more.',
+    goal: 'Build head copy, sending and on-air experience for conversations, DX and contests at 20 WPM or more.',
   },
   {
     id: 'advanced',
     label: 'Advanced',
     description: 'Develop fluent head copy and confident higher-speed operating.',
+    prerequisite: 'Operate at 20 WPM or more.',
+    goal: 'Recognize phrases, copy from behind and build higher-speed operating and contest skills toward 30 WPM or more.',
   },
 ];
 

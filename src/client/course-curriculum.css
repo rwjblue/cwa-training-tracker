@@ -1,0 +1,47 @@
+.curriculum-overview {
+  margin-top: 20px;
+  padding: 28px;
+}
+.curriculum-overview .section-heading {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.curriculum-overview h2 {
+  margin-top: 8px;
+}
+.curriculum-overview > p {
+  color: #526353;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 16px 0;
+}
+.curriculum-course-goals {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  padding: 18px 0;
+  border-block: 1px solid var(--line);
+}
+.curriculum-course-goals dt {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.curriculum-course-goals dd {
+  margin: 0;
+  color: #526353;
+  font-size: 13px;
+  line-height: 1.8;
+}
+@media (max-width: 600px) {
+  .curriculum-overview {
+    padding: 20px;
+  }
+  .curriculum-course-goals {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .curriculum-overview .button {
+    white-space: normal;
+  }
+}

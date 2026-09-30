@@ -144,7 +144,24 @@
         "extraWordSpacing": 0
       },
       "repetitions": 1,
-      "minutes": 1.0
+      "minutes": 1.0,
+      "alternatives": [
+        {
+          "mode": "groups",
+          "characterWpm": 25,
+          "effectiveWpm": 6,
+          "startDelaySeconds": 2,
+          "toneHz": 600,
+          "groupKind": "custom",
+          "groupLength": 2,
+          "durationSeconds": 60,
+          "lengthMode": "duration",
+          "extraWordSpacing": 0,
+          "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        }
+      ],
+      "requiresCharacterSelection": true,
+      "notes": "First finish the fourth one-minute letters round. Then combine the missed characters from all four rounds, choose the custom option, and practice that pool at least two more times."
     },
     {
       "id": "s1-d2-t1",
@@ -210,7 +227,7 @@
       "repetitions": 3,
       "minutes": 3.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Choose characters missed more than twice in your own results before starting. Complete three one-minute rounds and update your list."
     },
     {
       "id": "s1-d2-t5",
@@ -245,7 +262,7 @@
       "repetitions": 2,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select characters still missed more than once. Complete two one-minute rounds and refine your list."
     },
     {
       "id": "s1-d3-t1",
@@ -279,7 +296,7 @@
       "repetitions": 2,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select characters still missed more than once. Complete two one-minute rounds with only those characters."
     },
     {
       "id": "s1-d3-t3",
@@ -355,7 +372,7 @@
       "repetitions": 2,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select your difficult letters and add 3–5 familiar letters. Complete two one-minute rounds, then update the selection from your results."
     },
     {
       "id": "s2-d1-t3",
@@ -577,7 +594,7 @@
         "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       },
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters. The source leaves the number of rounds open."
+      "notes": "Select letters missed more than once over the previous two days. The source leaves the number of one-minute rounds open; take a break between rounds and remove letters you have mastered."
     },
     {
       "id": "s3-d1-t1",
@@ -611,7 +628,7 @@
       "repetitions": 2,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select your difficult letters and add 3–5 familiar letters. Complete two one-minute rounds, then update the selection from your results."
     },
     {
       "id": "s3-d1-t3",
@@ -664,7 +681,8 @@
       "recording": "QSO101_07",
       "url": "https://cwa.cwops.org/wp-content/uploads/QSO101_07.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 7
+      "characterWpm": 7,
+      "minimumPasses": 1
     },
     {
       "id": "s3-d2-t1",
@@ -698,7 +716,7 @@
       "repetitions": 3,
       "minutes": 3.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select the difficult letters from the previous day’s Copy 2 and add three more letters. Complete three one-minute rounds."
     },
     {
       "id": "s3-d2-t3",
@@ -733,7 +751,7 @@
       "repetitions": 3,
       "minutes": 3.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select four difficult letters only. Complete three one-minute rounds with that pool."
     },
     {
       "id": "s3-d2-t5",
@@ -768,7 +786,7 @@
       "repetitions": 3,
       "minutes": 3.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select a different set of four difficult letters from Copy 2. Complete three one-minute rounds with that pool."
     },
     {
       "id": "s3-d3-t1",
@@ -802,7 +820,7 @@
       "repetitions": 3,
       "minutes": 3.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Work on four difficult letters at a time. Complete three one-minute rounds with the selected pool."
     },
     {
       "id": "s3-d3-t3",
@@ -846,10 +864,12 @@
           "groupLength": 2,
           "durationSeconds": 60,
           "lengthMode": "duration",
-          "extraWordSpacing": 0
+          "extraWordSpacing": 0,
+          "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         }
       ],
-      "notes": "Use custom characters if difficult characters remain, or letters otherwise."
+      "notes": "If difficult characters remain, choose the custom option and select the remaining characters, four at a time. Otherwise use letters. Run three one-minute rounds with the chosen option.",
+      "requiresCharacterSelection": true
     },
     {
       "id": "s3-d3-t5",
@@ -1011,7 +1031,7 @@
       "repetitions": 2,
       "minutes": 4.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select difficult letters from day 1 and add five other letters of your choice. Complete two two-minute rounds, then update your list."
     },
     {
       "id": "s4-d2-t3",
@@ -1046,7 +1066,7 @@
       "repetitions": 2,
       "minutes": 4.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Use the character selection from Copy 1. Complete two more two-minute rounds, checking your results after each."
     },
     {
       "id": "s4-d2-t5",
@@ -1081,7 +1101,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Use the character selection from Copy 1 for one more two-minute round. Update your difficult-character list from all five rounds."
     },
     {
       "id": "s4-d3-t1",
@@ -1116,7 +1136,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select only the letters on your difficult-character list. Complete one two-minute round, then update your list."
     },
     {
       "id": "s4-d3-t3",
@@ -1151,7 +1171,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select letters from your difficult-character list for one two-minute round, then update your list."
     },
     {
       "id": "s4-d3-t5",
@@ -1172,7 +1192,8 @@
       "recording": "QSO102_07",
       "url": "https://cwa.cwops.org/wp-content/uploads/QSO102_07.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 7
+      "characterWpm": 7,
+      "minimumPasses": 2
     },
     {
       "id": "s5-d1-t1",
@@ -1386,7 +1407,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select letters from your difficult-character list. Complete one two-minute round, then update your list."
     },
     {
       "id": "s5-d3-t3",
@@ -1421,7 +1442,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select your difficult letters for one two-minute round, then update your list."
     },
     {
       "id": "s5-d3-t5",
@@ -1456,7 +1477,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Repeat Copy 2 using your difficult-letter selection for one two-minute round."
     },
     {
       "id": "s6-d1-t1",
@@ -1559,12 +1580,12 @@
         "durationSeconds": 120,
         "lengthMode": "duration",
         "extraWordSpacing": 2,
-        "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
       },
       "repetitions": 2,
       "minutes": 4.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select difficult characters from the earlier rounds and add five other letters or figures. Complete two two-minute rounds, then update your list."
     },
     {
       "id": "s6-d2-t1",
@@ -1662,7 +1683,7 @@
       "repetitions": 1,
       "minutes": 2.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult figures from your results and add two familiar digits before starting. The initial digit pool is a selection aid, not a personalized weak-character list."
+      "notes": "Select difficult figures from the earlier rounds and add two other figures. Complete one two-minute round, then update your list."
     },
     {
       "id": "s6-d3-t1",
@@ -1705,10 +1726,12 @@
           "groupLength": 4,
           "durationSeconds": 120,
           "lengthMode": "duration",
-          "extraWordSpacing": 2
+          "extraWordSpacing": 2,
+          "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         }
       ],
-      "notes": "The source names both mixed and custom characters. Mixed is the starting preset; confirm the selection with your advisor."
+      "notes": "The source names both mixed and custom characters. Mixed is the starting preset; confirm the selection with your advisor.",
+      "requiresCharacterSelection": true
     },
     {
       "id": "s6-d3-t3",
@@ -1738,12 +1761,12 @@
         "durationSeconds": 120,
         "lengthMode": "duration",
         "extraWordSpacing": 2,
-        "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "customCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
       },
       "repetitions": 2,
       "minutes": 4.0,
       "requiresCharacterSelection": true,
-      "notes": "Choose the difficult characters from your own results before starting. The source specifies how to mix them with familiar characters."
+      "notes": "Select difficult characters from the earlier rounds and add five other letters or figures. Complete two two-minute rounds using the Copy 1 settings."
     },
     {
       "id": "s6-d3-t5",
@@ -2879,7 +2902,8 @@
       "url": "https://cwops.org/wp-content/uploads/2022/07/ss-09.111.mp3",
       "title": "Copy 3: Official recording",
       "characterWpm": 9,
-      "minutes": 30
+      "minutes": 30,
+      "minimumPasses": 1
     },
     {
       "id": "s11-d2-t1",
@@ -3014,7 +3038,9 @@
       "recording": "qso-09.101",
       "url": "https://cwops.org/wp-content/uploads/2022/07/qso-09.101.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 9
+      "characterWpm": 9,
+      "minimumPasses": 2,
+      "maximumPasses": 2
     },
     {
       "id": "s12-d1-t1",
@@ -3111,7 +3137,9 @@
       "url": "https://cwops.org/wp-content/uploads/2022/07/ss-10.112.mp3",
       "title": "Copy 3: Official recording",
       "notes": "The source text says 9 WPM but links a file named 10 WPM. Use the original link and confirm the speed with your advisor.",
-      "minutes": 30
+      "minutes": 30,
+      "minimumPasses": 2,
+      "maximumPasses": 2
     },
     {
       "id": "s12-d2-t1",
@@ -3246,7 +3274,9 @@
       "recording": "POTA203_10",
       "url": "https://cwa.cwops.org/wp-content/uploads/POTA203_10.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 10
+      "characterWpm": 10,
+      "minimumPasses": 2,
+      "maximumPasses": 2
     },
     {
       "id": "s13-d1-t1",
@@ -3342,7 +3372,8 @@
       "recording": "PR205_10",
       "url": "https://cwa.cwops.org/wp-content/uploads/PR205_10.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 10
+      "characterWpm": 10,
+      "minimumPasses": 2
     },
     {
       "id": "s13-d2-t1",
@@ -3456,7 +3487,9 @@
       "recording": "qso-10.104",
       "url": "https://cwops.org/wp-content/uploads/2022/07/qso-10.104.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 10
+      "characterWpm": 10,
+      "minimumPasses": 2,
+      "maximumPasses": 2
     },
     {
       "id": "s13-d3-t5",
@@ -3563,7 +3596,8 @@
       "url": "https://cwops.org/wp-content/uploads/2022/07/ss-10.114.mp3",
       "title": "Copy 3: Official recording",
       "characterWpm": 10,
-      "notes": "The source limits this recording exercise to twenty minutes."
+      "notes": "The source limits this recording exercise to twenty minutes.",
+      "minimumPasses": 2
     },
     {
       "id": "s14-d2-t1",
@@ -3677,7 +3711,10 @@
       "recording": "POTA203_12",
       "url": "https://cwa.cwops.org/wp-content/uploads/POTA203_12.mp3",
       "title": "Copy 3: Official recording",
-      "characterWpm": 12
+      "characterWpm": 12,
+      "minimumPasses": 2,
+      "maximumPasses": 2,
+      "notes": "The source names QSO 105 but links POTA203_12. This task preserves that official link; confirm the intended recording with your advisor."
     },
     {
       "id": "s14-d3-t5",
@@ -3753,7 +3790,7 @@
         "effectiveWpm": 11,
         "startDelaySeconds": 2,
         "toneHz": 600,
-        "groupKind": "figures",
+        "groupKind": "letters",
         "groupLength": 5,
         "durationSeconds": 60,
         "lengthMode": "duration",

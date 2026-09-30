@@ -44,6 +44,7 @@ import {
   DEFAULT_PROFILE,
   PUBLIC_RESOURCES,
   COURSE_ROADMAP,
+  COURSE_LEVELS,
   courseMeetings,
   dateInTimezone,
   addDays,
@@ -54,6 +55,7 @@ import { MORSE } from './audio';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
 import './styles.css';
 import Plan from './Plan';
+import CourseCurriculum from './CourseCurriculum';
 import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
@@ -90,28 +92,7 @@ const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string 
   { id: 'on-air', label: 'On air', icon: Send, color: 'blue' },
   { id: 'other', label: 'Other practice', icon: BookOpen, color: 'green' },
 ];
-const levels: { id: CourseLevel; label: string; description: string }[] = [
-  {
-    id: 'beginner',
-    label: 'Beginner',
-    description: 'Build your foundation. Learn the sound of Morse and get comfortable sending.',
-  },
-  {
-    id: 'fundamental',
-    label: 'Fundamental',
-    description: 'Strengthen instant character recognition and start copying words by ear.',
-  },
-  {
-    id: 'intermediate',
-    label: 'Intermediate',
-    description: 'Develop conversational head copy and confidence on the air.',
-  },
-  {
-    id: 'advanced',
-    label: 'Advanced',
-    description: 'Refine your fluency, increase your speed, and enjoy the conversation.',
-  },
-];
+const levels = COURSE_LEVELS;
 const kindInfo = (id: PracticeKind) => kinds.find((k) => k.id === id) ?? kinds[6];
 const dateString = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -1585,6 +1566,7 @@ function Course({
             key={level.id}
             className={`course-level ${selectedLevel === level.id ? 'selected' : ''}`}
             onClick={() => setSelectedLevel(level.id)}
+            aria-pressed={selectedLevel === level.id}
           >
             <span>
               0{index + 1}
@@ -1600,6 +1582,7 @@ function Course({
           </button>
         ))}
       </div>
+      <CourseCurriculum level={selectedLevel} />
       <div className="section-heading outside-heading">
         <div>
           <h2>Eight weeks of showing up</h2>

@@ -51,7 +51,7 @@ interface Catalog {
   exercises: CatalogExercise[];
 }
 
-const catalogs: Partial<Record<Profile['level'], Catalog>> = {
+const catalogs: Record<Profile['level'], Catalog> = {
   intermediate: intermediate as Catalog,
   fundamental: fundamental as Catalog,
   beginner: beginner as Catalog,

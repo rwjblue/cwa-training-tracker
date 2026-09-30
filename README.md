@@ -46,11 +46,13 @@ CWops. Official course material stays at the
   and separate practice categories.
 - A Today view for your own assignments, next-class preparation, and unfinished
   work, backed by a personal homework plan with printable practice reports.
-  Choosing Intermediate and setting class dates automatically schedules the
-  v2.3 curriculum's 213 required exercises over 48 practice days. Recordings
+  Choosing a level and setting class dates automatically schedules the published
+  Beginner v4.8, Fundamental v2.0, Intermediate v2.3, or Advanced v2.1 curriculum.
+  The Academy guide explains each course's starting point, goals and practice
+  coverage, with direct links to its official syllabus. Recordings
   play from CWops; sending and external exercises open their assigned material.
   Saved time stays linked to the exercise. Class time stays separate from daily
-  goals. Other levels currently support personal and imported assignments.
+  goals. Personal and imported assignments remain available alongside the course.
 - Passwordless email codes that expire in five minutes, plus passkeys.
 - Readable callsign identity, optional Gravatar images, and a city-based timezone picker.
 - JSON export, validated repeatable import, and a training-data reset.

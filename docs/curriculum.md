@@ -10,6 +10,12 @@ CWops service, and an advisor's directions take precedence.
 
 - [CWops student resources](https://cwops.org/cw-academy/cw-academy-student-resources/)
   identifies the published course versions.
+- [CW Academy course options](https://cwops.org/cw-academy/cw-academy-options/)
+  supplies the starting speeds and course objectives shown in the Academy guide.
+- [Beginner v4.8](https://cwa.cwops.org/wp-content/uploads/Beginner-curriculum-ver-4.8.htm),
+  [Fundamental v2.0](https://cwops.org/wp-content/uploads/2025/04/CW-Academy-Fundamental-Curriculum-v2.0.htm),
+  and [Advanced v2.1](https://cwops.org/wp-content/uploads/2025/05/CW-Academy-Advanced-Curriculum-v2.1.htm)
+  supply the other published course metadata.
 - [Intermediate v2.3 curriculum](https://cwa.cwops.org/wp-content/uploads/Practice-Instructions-Intermediate-ver.2.3.htm)
   supplies session/day associations, recording identifiers, activity types,
   and numeric practice requirements.
@@ -47,8 +53,8 @@ Each occurrence has a stable identity such as
 `curriculum:cwa-intermediate-v2.3:s1-d1-t1`. Calendar dates are derived, so
 changing the schedule preserves completion and linked practice minutes.
 Repeated exercises on different preparation days have separate identities.
-Where the source provides no duration, **15 minutes is an app planning
-estimate**, not a CWops requirement.
+Where the source provides no duration, the assignment has no suggested time.
+Learners can add their own recommendation without a timer limiting practice.
 
 The catalog is shared; private storage holds saved completion and overrides.
 Existing `legacy-task:s1-d1-t1` Intermediate imports match the corresponding occurrence
@@ -96,14 +102,24 @@ repeats those blocks across its three preparation days as a scheduling conventio
 it does not claim that those numbered days come from the curriculum. Fundamental
 session 15 explicitly groups days 1–3; its blocks repeat across those days, while
 the three-contact goal appears once. Its open-ended session 16 guidance is one
-linked final-day activity. Other unspecified times use the 15-minute planning
-estimate. All catalog totals are task occurrences, not required practice minutes.
+linked final-day activity. Other unspecified times remain unset. All catalog totals
+are task occurrences, not required practice minutes.
 
 Advanced recording URLs are taken from the official
 [Advanced practice index](https://cwops.org/advanced-practice-files/), never
 constructed from guessed filenames. All 114 Advanced and 10 Fundamental recording
 URLs returned HTTP 200 with audio content types during this update. Availability
 can change; these are maintenance checks, not network-dependent test assertions.
+
+### Beginner setup decisions
+
+The first ten sessions retain 18 character / 6 effective WPM for copying and
+15 character / 6 effective WPM for sending. Sessions 11–13 switch both to
+25 character / at least 6 effective WPM with no added gaps. Their spoken
+recognition work uses the official trainer's CW Academy session 1–10 pool,
+Letters and Speech After. The 75% / 1–2 WPM progression is learner/advisor guidance,
+not automatic completion. Final blocks distinguish station-introduction sending,
+own-callsign listening and complete contact-exchange sending.
 
 ### Fundamental recipe decisions
 
@@ -117,6 +133,13 @@ Personal weak-character pools cannot be derived from the shared curriculum.
 Custom tasks require a learner selection; their initial alphabet or digit pool
 is only a selection aid. The linked source supplies the mix of difficult and
 familiar characters. No private learner results belong in the shared catalog.
+The confirmation applies when a custom-group option is selected; a letters-only
+alternative remains ready to run. Changing the selected pool clears confirmation.
+Session 1 day 1 keeps its final letters round and subsequent missed-character
+rounds together, with a custom option and separate follow-up guidance. Session 15
+uses the same letters-only recipe on all three days. Explicit recording pass
+counts remain guidance, with additional repetition uncapped where the source
+allows it.
 
 Source conflicts are visible in notes and alternatives: session 4 day 1 names
 both one and two minutes (the explicit duration and follow-up instruction give
@@ -125,6 +148,8 @@ while describing Q codes. Both relevant options remain available. Session 12
 day 1 describes a 9 WPM story but links a 10 WPM filename; the source link is
 preserved without asserting a speed. Callsign settings not restated by later
 sessions start at that session's effective speed as an app preset.
+Session 14 day 3 names QSO105-12 but links POTA203_12; the actual official link is
+preserved and the discrepancy is disclosed in the assignment notes.
 
 Native words and plain text use separately maintained app collections, not
 mirrored LCWO/CWops corpora. The abbreviation length cap where the source gives

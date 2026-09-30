@@ -150,6 +150,15 @@ or add one browser test per inventory row.
   numeric requirements, and original concise summaries are appropriate here;
   restricted curriculum paragraphs, scales, recordings, and instructor text stay
   at their sources or in the learner's private data.
+- A 2026-09-29 follow-up checked Beginner, Fundamental and Advanced against the
+  current published sources. Beginner late-session speeds, spoken-recognition
+  guidance and final exchange blocks were corrected. Fundamental follow-up pools,
+  letters-only final practice and recording repetitions were corrected. Advanced's
+  48 days, 114 recording occurrences and 48 sending blocks match the source;
+  optional contest practice stays in the linked syllabus. The public Academy guide
+  now shows each course's entry requirements, goals, practice coverage and syllabus,
+  using the same catalog as the private plan. Beginner practice still uses the
+  official external trainer. [Course evaluation and conventions](curriculum.md).
 - Session destinations were checked against the published syllabi linked from
   [CWops Student Resources](https://cwops.org/cw-academy/cw-academy-student-resources/)
   on 2026-09-29. HTML bookmarks are used for all sessions except
