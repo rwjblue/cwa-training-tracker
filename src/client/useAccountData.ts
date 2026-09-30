@@ -19,6 +19,12 @@ import {
   suspendAccountUploads,
   isSelectedAccount,
 } from './account-outbox';
+import {
+  getDeviceScopeToken,
+  isDeviceScopeCurrent,
+  requireCurrentDeviceScope,
+  subscribeDeviceScope,
+} from './device-scope';
 
 export {
   loadCachedAccount,
@@ -34,6 +40,7 @@ export {
 /** One owner for confirmed account data and device-pending semantic edits. */
 export function useAccountData(user: User | null) {
   const scope = user?.id;
+  const deviceToken = scope ? getDeviceScopeToken(scope) : 'guest';
   const active = useRef(scope);
   active.current = scope;
   const [confirmed, setConfirmed] = useState<AccountSnapshot | null>(() =>
@@ -43,8 +50,13 @@ export function useAccountData(user: User | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cached, setCached] = useState(Boolean(scope && loadCachedAccount(scope)));
-  const publish = useCallback((state: AccountSnapshot) => {
-    if (active.current !== state.accountId || !isSelectedAccount(state.accountId)) return;
+  const publish = useCallback((state: AccountSnapshot, token: string) => {
+    if (
+      active.current !== state.accountId ||
+      !isSelectedAccount(state.accountId) ||
+      !isDeviceScopeCurrent(state.accountId, token)
+    )
+      return;
     setConfirmed((previous) =>
       previous?.accountId === state.accountId &&
       (previous.generation > state.generation ||
@@ -56,10 +68,14 @@ export function useAccountData(user: User | null) {
 
   const flush = useCallback(
     async (accountId: string) => {
+      const token = getDeviceScopeToken(accountId);
       return flushAccountOperations(
         accountId,
-        publish,
-        () => active.current === accountId && isSelectedAccount(accountId),
+        (state) => publish(state, token),
+        () =>
+          active.current === accountId &&
+          isSelectedAccount(accountId) &&
+          isDeviceScopeCurrent(accountId, token),
       );
     },
     [publish],
@@ -68,6 +84,12 @@ export function useAccountData(user: User | null) {
   const refresh = useCallback(
     async (target = user): Promise<AccountSnapshot> => {
       if (!target) throw new Error('Sign in to reload your account.');
+      const token = target.id === scope ? deviceToken : getDeviceScopeToken(target.id);
+      requireCurrentDeviceScope(target.id, token);
+      const ownsResponse = () =>
+        active.current === target.id &&
+        isSelectedAccount(target.id) &&
+        isDeviceScopeCurrent(target.id, token);
       if (active.current === target.id) setLoading(true);
       try {
         const result = await api<{ state: AccountSnapshot }>(
@@ -80,21 +102,21 @@ export function useAccountData(user: User | null) {
         const state = validateAccountSnapshot(result.state);
         if (state.accountId !== target.id)
           throw new Error('The returned state belongs to another account.');
-        if (active.current === target.id && isSelectedAccount(target.id)) {
+        if (ownsResponse()) {
           rememberAccount(target, state);
-          publish(state);
+          publish(state, token);
         }
-        if (active.current === target.id && isSelectedAccount(target.id)) {
+        if (ownsResponse()) {
           setError('');
           setCached(false);
         }
-        if (active.current === target.id && isSelectedAccount(target.id)) {
+        if (ownsResponse()) {
           retryAccountOperations(target.id);
           await flush(target.id);
         }
         return state;
       } catch (failure) {
-        if (active.current === target.id) {
+        if (ownsResponse()) {
           setError(
             failure instanceof Error ? failure.message : 'Your account could not be refreshed.',
           );
@@ -102,10 +124,10 @@ export function useAccountData(user: User | null) {
         }
         throw failure;
       } finally {
-        if (active.current === target.id) setLoading(false);
+        if (ownsResponse()) setLoading(false);
       }
     },
-    [user, publish, flush],
+    [user, publish, flush, scope, deviceToken],
   );
 
   useEffect(() => {
@@ -130,7 +152,7 @@ export function useAccountData(user: User | null) {
     const update = () => {
       setVersion((value) => value + 1);
       const state = scope ? loadCachedAccount(scope)?.state : undefined;
-      if (state) publish(state);
+      if (state && scope) publish(state, getDeviceScopeToken(scope));
     };
     const online = () => {
       if (user) void refresh(user).catch(() => {});
@@ -138,10 +160,18 @@ export function useAccountData(user: User | null) {
     window.addEventListener(ACCOUNT_DATA_EVENT, update);
     window.addEventListener('storage', update);
     window.addEventListener('online', online);
+    const stopDeviceScope = subscribeDeviceScope((state) => {
+      if (state.scope !== scope) return;
+      setLoading(false);
+      setError('');
+      update();
+      if (!state.mutating && scope) resumeAccountUploads(scope);
+    });
     return () => {
       window.removeEventListener(ACCOUNT_DATA_EVENT, update);
       window.removeEventListener('storage', update);
       window.removeEventListener('online', online);
+      stopDeviceScope();
     };
   }, [scope, user, publish, refresh]);
 
@@ -155,7 +185,8 @@ export function useAccountData(user: User | null) {
     async (change: AccountChange, baseRevision?: number) => {
       if (!scope || !current || !user || !isSelectedAccount(scope))
         throw new Error('Your account must be loaded before saving this edit.');
-      const item = queueAccountChange(current, change, { baseRevision });
+      requireCurrentDeviceScope(scope, deviceToken);
+      const item = queueAccountChange(current, change, { baseRevision, deviceToken });
       setVersion((value) => value + 1);
       let receiptTimer: ReturnType<typeof setTimeout> | undefined;
       const acknowledged = await Promise.race([
@@ -164,6 +195,7 @@ export function useAccountData(user: User | null) {
           receiptTimer = setTimeout(() => resolve(new Set()), 750);
         }),
       ]).finally(() => clearTimeout(receiptTimer));
+      requireCurrentDeviceScope(scope, deviceToken);
       return {
         destination: acknowledged.has(item.operation.id)
           ? ('server' as const)
@@ -171,23 +203,25 @@ export function useAccountData(user: User | null) {
         operation: item.operation,
       };
     },
-    [scope, current, user, flush],
+    [scope, current, user, flush, deviceToken],
   );
 
   const retry = useCallback(async () => {
     if (!scope) return;
+    requireCurrentDeviceScope(scope, deviceToken);
     retryAccountOperations(scope, true);
     await flush(scope);
-  }, [scope, flush]);
+  }, [scope, flush, deviceToken]);
 
   const resolve = useCallback(
     async (id: string, resolution: 'discard' | 'reapply') => {
       if (!scope || !current) throw new Error('Reload your account before resolving this edit.');
+      requireCurrentDeviceScope(scope, deviceToken);
       resolveAccountConflict(scope, id, resolution, current);
       setVersion((value) => value + 1);
       if (resolution === 'reapply') await flush(scope);
     },
-    [scope, current, flush],
+    [scope, current, flush, deviceToken],
   );
 
   return {

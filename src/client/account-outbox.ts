@@ -8,6 +8,12 @@ import {
   type AccountSnapshot,
 } from '../shared/account-sync';
 import { api, ApiError, type User } from './api';
+import {
+  getDeviceScopeToken,
+  isDeviceScopeCurrent,
+  requireCurrentDeviceScope,
+  subscribeDeviceScope,
+} from './device-scope';
 
 export const ACCOUNT_DATA_EVENT = 'cwa:account-data';
 const ACTIVE_ACCOUNT_KEY = 'cwa:account:active:v1';
@@ -39,7 +45,7 @@ export interface QueuedAccountOperation {
   error?: string;
   failure?: 'network' | 'auth' | 'permanent';
 }
-const volatileFailures = new Map<string, QueuedAccountOperation>();
+const volatileFailures = new Map<string, { item: QueuedAccountOperation; deviceToken: string }>();
 const operationIdentity = (item: QueuedAccountOperation) =>
   JSON.stringify({ operation: item.operation, order: item.order });
 
@@ -137,6 +143,7 @@ export function loadSelectedAccountIdentity(): User | null {
 }
 
 export function rememberAccount(user: User, input: AccountSnapshot, select = true): void {
+  if (!isDeviceScopeCurrent(user.id, getDeviceScopeToken(user.id))) return;
   const state = validateAccountSnapshot(input);
   if (state.accountId !== user.id) throw new Error('The account state belongs to another account.');
   if (select) selectAccountIdentity(user);
@@ -301,7 +308,11 @@ export function loadAccountOperations(scope: string): QueuedAccountOperation[] {
           }
           const failure = volatileFailures.get(name);
           operations.push(
-            failure && operationIdentity(failure) === operationIdentity(item) ? failure : item,
+            failure &&
+              isDeviceScopeCurrent(scope, failure.deviceToken) &&
+              operationIdentity(failure.item) === operationIdentity(item)
+              ? failure.item
+              : item,
           );
         }
       } catch {
@@ -411,8 +422,12 @@ function writeOperation(item: QueuedAccountOperation): void {
 export function queueAccountChange(
   state: AccountSnapshot,
   input: AccountChange,
-  options: { baseRevision?: number; generation?: number; id?: string } = {},
+  options: { baseRevision?: number; generation?: number; id?: string; deviceToken?: string } = {},
 ): QueuedAccountOperation {
+  requireCurrentDeviceScope(
+    state.accountId,
+    options.deviceToken ?? getDeviceScopeToken(state.accountId),
+  );
   const operations = loadAccountOperations(state.accountId);
   const frozen = options.id
     ? operations.find((item) => item.operation.id === options.id)
@@ -466,7 +481,10 @@ function setFailure(item: QueuedAccountOperation, error: unknown): boolean {
     ),
     failure,
   };
-  volatileFailures.set(operationKey(item.operation.accountId, item.operation.id), failed);
+  volatileFailures.set(operationKey(item.operation.accountId, item.operation.id), {
+    item: failed,
+    deviceToken: getDeviceScopeToken(item.operation.accountId),
+  });
   try {
     return writeStatus(failed);
   } catch {
@@ -480,18 +498,54 @@ interface Upload {
   controller: AbortController;
   promise: Promise<Set<string>>;
   epoch: number;
+  deviceToken: string;
+  operationId?: string;
 }
 const uploads = new Map<string, Upload>();
 const suspended = new Set<string>();
 const epochs = new Map<string, number>();
+let observedWindow: Window | undefined;
+function observeDeviceScope() {
+  if (observedWindow === window || typeof window.addEventListener !== 'function') return;
+  observedWindow = window;
+  subscribeDeviceScope(({ scope, mutating }) => {
+    if (mutating) suspendAccountUploads(scope);
+    invalidateAccountMemory(scope);
+  });
+}
+export function listInFlightAccountOperationIds(scope: string): string[] {
+  const id = uploads.get(scope)?.operationId;
+  return id ? [id] : [];
+}
+export function invalidateAccountMemory(scope: string): void {
+  for (const name of volatileFailures.keys())
+    if (name.startsWith(operationPrefix(scope))) {
+      volatileFailures.delete(name);
+    }
+}
+/** Internal rollback retains failures that had no durable status sidecar. */
+export function restoreAccountMemory(scope: string, items: QueuedAccountOperation[]): void {
+  invalidateAccountMemory(scope);
+  for (const input of items) {
+    const item = validateQueued(input);
+    if (item.operation.accountId === scope && operationOwnership(item) === 'same') {
+      volatileFailures.set(operationKey(scope, item.operation.id), {
+        item,
+        deviceToken: getDeviceScopeToken(scope),
+      });
+    }
+  }
+}
 
 /** Stop real requests and fence their late acknowledgements without deleting pending work. */
 export function suspendAccountUploads(scope: string): void {
   suspended.add(scope);
   epochs.set(scope, (epochs.get(scope) ?? 0) + 1);
   uploads.get(scope)?.controller.abort(new Error('The selected account changed.'));
+  uploads.delete(scope);
 }
 export function resumeAccountUploads(scope: string): void {
+  if (!isDeviceScopeCurrent(scope, getDeviceScopeToken(scope))) return;
   suspended.delete(scope);
 }
 
@@ -500,14 +554,17 @@ export async function flushAccountOperations(
   onState: (state: AccountSnapshot) => void = () => {},
   accountIsCurrent: () => boolean = () => true,
 ): Promise<Set<string>> {
-  const isCurrentAccount = () => accountIsCurrent() && isSelectedAccount(scope);
+  observeDeviceScope();
+  const deviceToken = getDeviceScopeToken(scope);
+  const isCurrentAccount = () =>
+    accountIsCurrent() && isSelectedAccount(scope) && isDeviceScopeCurrent(scope, deviceToken);
   if (suspended.has(scope) || !isCurrentAccount()) return new Set();
   const previous = uploads.get(scope);
-  if (previous) return previous.promise;
+  if (previous?.deviceToken === deviceToken) return previous.promise;
   const controller = new AbortController();
   const epoch = epochs.get(scope) ?? 0;
   const acknowledged = new Set<string>();
-  const upload: Upload = { controller, epoch, promise: Promise.resolve(acknowledged) };
+  const upload: Upload = { controller, epoch, deviceToken, promise: Promise.resolve(acknowledged) };
   upload.promise = (async () => {
     while (true) {
       const item = loadAccountOperations(scope)[0];
@@ -515,6 +572,7 @@ export async function flushAccountOperations(
       if (!isCurrentAccount() || suspended.has(scope) || epoch !== (epochs.get(scope) ?? 0))
         return acknowledged;
       if (item.status !== 'pending') return acknowledged;
+      upload.operationId = item.operation.id;
       const timeout = setTimeout(
         () => controller.abort(new Error('The account upload timed out. Try again.')),
         10_000,
@@ -581,6 +639,7 @@ export async function flushAccountOperations(
 
 /** Reconnect/auth retry retains the original operation body, including its revision. */
 export function retryAccountOperations(scope: string, includePermanent = false): void {
+  requireCurrentDeviceScope(scope, getDeviceScopeToken(scope));
   for (const item of loadAccountOperations(scope)) {
     if (item.status === 'failed' && (includePermanent || item.failure !== 'permanent'))
       writeStatus({ operation: item.operation, order: item.order, status: 'pending' });
@@ -593,6 +652,7 @@ export function resolveAccountConflict(
   resolution: 'discard' | 'reapply',
   state: AccountSnapshot,
 ): QueuedAccountOperation | undefined {
+  requireCurrentDeviceScope(scope, getDeviceScopeToken(scope));
   if (state.accountId !== scope) throw new Error('Choose the account that owns this edit.');
   const item = loadAccountOperations(scope).find((item) => item.operation.id === id);
   if (!item) return;

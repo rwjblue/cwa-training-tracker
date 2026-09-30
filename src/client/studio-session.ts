@@ -6,6 +6,7 @@ import { WORD_LISTS } from './word-content';
 import { QSO_TEMPLATES } from './qso-content';
 import { recordingSpeeds } from './recording-variants';
 import { formatPracticeDuration } from './practice-duration';
+import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 
 export const STUDIO_AUTOSAVE_SECONDS = 30;
 const duration = (seconds: number) => formatPracticeDuration(seconds / 60).padStart(5, '0');
@@ -143,12 +144,73 @@ export class StudioSaveCoordinator {
 
 type NotesStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 const notesMemory = new Map<string, string>();
+const notesMemoryTokens = new Map<string, string>();
 const notesKey = (scope: string, context: string) =>
   `cwa.studio.scratchpad.v1:${JSON.stringify([scope, context])}`;
+
+function scopedNotesContext(name: string, scope: string): string | undefined {
+  if (!name.startsWith('cwa.studio.scratchpad.v1:')) return;
+  try {
+    const tuple = JSON.parse(name.slice('cwa.studio.scratchpad.v1:'.length)) as unknown;
+    if (
+      Array.isArray(tuple) &&
+      tuple.length === 2 &&
+      tuple[0] === scope &&
+      typeof tuple[1] === 'string'
+    )
+      return tuple[1];
+  } catch {
+    /* Unregistered keys cannot claim a scope. */
+  }
+}
+
+/** Includes notes kept in memory when optional persistence failed. */
+export function captureStudioNotes(scope: string): { context: string; text: string }[] {
+  const notes = new Map<string, string>();
+  for (let index = 0; index < localStorage.length; index++) {
+    const name = localStorage.key(index);
+    if (!name) continue;
+    const context = scopedNotesContext(name, scope);
+    if (context !== undefined) notes.set(context, localStorage.getItem(name) ?? '');
+  }
+  for (const [name, text] of notesMemory) {
+    const context = scopedNotesContext(name, scope);
+    if (context !== undefined && notesMemoryTokens.get(name) === getDeviceScopeToken(scope))
+      notes.set(context, text);
+  }
+  return [...notes]
+    .filter(([, text]) => text.length > 0)
+    .map(([context, text]) => ({ context, text }))
+    .sort((a, b) => a.context.localeCompare(b.context));
+}
+export function invalidateScratchpadMemory(scope: string): void {
+  for (const name of notesMemory.keys())
+    if (scopedNotesContext(name, scope) !== undefined) {
+      notesMemory.delete(name);
+      notesMemoryTokens.delete(name);
+    }
+}
+
+/** Internal rollback restores memory-only notes after the original storage is coherent. */
+export function restoreScratchpadMemory(
+  scope: string,
+  notes: { context: string; text: string }[],
+): void {
+  invalidateScratchpadMemory(scope);
+  for (const { context, text } of notes) {
+    const name = notesKey(scope, context);
+    notesMemory.set(name, text);
+    notesMemoryTokens.set(name, getDeviceScopeToken(scope));
+  }
+}
 
 /** Short sessions do not become log entries; their notes remain scoped to their tool. */
 export function loadStudioNotes(scope: string, context: string, storage?: NotesStorage): string {
   const key = notesKey(scope, context);
+  if (notesMemory.has(key) && notesMemoryTokens.get(key) !== getDeviceScopeToken(scope)) {
+    notesMemory.delete(key);
+    notesMemoryTokens.delete(key);
+  }
   if (notesMemory.has(key)) return notesMemory.get(key)!;
   try {
     const value = (storage ?? localStorage).getItem(key);
@@ -164,10 +226,13 @@ export function saveStudioNotes(
   context: string,
   value: string,
   storage?: NotesStorage,
+  deviceToken = getDeviceScopeToken(scope),
 ): boolean {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
   const key = notesKey(scope, context);
   const notes = value.slice(0, 10000);
   notesMemory.set(key, notes);
+  notesMemoryTokens.set(key, deviceToken);
   try {
     const target = storage ?? localStorage;
     if (notes) target.setItem(key, notes);
@@ -183,6 +248,7 @@ export function clearSavedStudioNotes(
   scope: string,
   entry: PracticeSession,
   storage?: NotesStorage,
+  deviceToken = getDeviceScopeToken(scope),
 ): boolean {
   const metadata = entry.metadata;
   const taskId = metadata?.plannedTaskId;
@@ -197,5 +263,5 @@ export function clearSavedStudioNotes(
           ? explicitContext
           : undefined;
   if (!context) return false;
-  return saveStudioNotes(scope, context, '', storage);
+  return saveStudioNotes(scope, context, '', storage, deviceToken);
 }

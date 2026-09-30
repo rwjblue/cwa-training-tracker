@@ -1,11 +1,8 @@
-import {
-  validateCopyAttempt,
-  validateCopyRecipe,
-  type CopyAttempt,
-  type CopyRecipe,
-} from '../shared/copy-practice';
-import { validatePlannedTask, type PlannedTask } from '../shared/plan';
-import { validatePracticeSession, type PracticeSession } from '../shared/training';
+import { validateCopyRecipe, type CopyAttempt, type CopyRecipe } from '../shared/copy-practice';
+import type { PlannedTask } from '../shared/plan';
+import type { PracticeSession } from '../shared/training';
+import { validateCopyDraft } from './copy-draft-validator';
+import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 
 export interface CopyDraft {
   attempt: CopyAttempt;
@@ -27,62 +24,34 @@ export function loadCopyDraft(scope: string): CopyDraft | undefined {
   try {
     const raw = localStorage.getItem(copyStorageKey(scope));
     if (!raw || raw.length > 300000) return;
-    const value = JSON.parse(raw) as CopyDraft;
-    const attempt = validateCopyAttempt(value.attempt);
-    if (
-      typeof value.answer !== 'string' ||
-      value.answer.length > 2000 ||
-      typeof value.notes !== 'string' ||
-      value.notes.length > 10000
-    )
-      return;
-    if (
-      ![value.position, value.replayCount, value.trialAnswerStartedAt].every(
-        (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0,
-      )
-    )
-      return;
-    if (
-      value.position > 1220 ||
-      !Number.isInteger(value.replayCount) ||
-      value.replayCount > 1000 ||
-      value.trialAnswerStartedAt > attempt.answerSeconds
-    )
-      return;
-    if (
-      value.autoSkipAt !== undefined &&
-      (typeof value.autoSkipAt !== 'number' ||
-        !Number.isFinite(value.autoSkipAt) ||
-        value.autoSkipAt < 0 ||
-        value.autoSkipAt > 7260)
-    )
-      return;
-    const pending = value.pending ? validatePracticeSession(value.pending) : undefined;
-    if (pending && JSON.stringify(pending.metadata?.copyAttempt) !== JSON.stringify(attempt))
-      return;
-    return {
-      ...value,
-      attempt,
-      pending,
-      task: value.task ? validatePlannedTask(value.task) : undefined,
-      heard: value.heard === true,
-    };
+    return validateCopyDraft(JSON.parse(raw));
   } catch {
     return;
   }
 }
 
-export function saveCopyDraft(scope: string, draft: CopyDraft): boolean {
+export function saveCopyDraft(
+  scope: string,
+  draft: CopyDraft,
+  deviceToken = getDeviceScopeToken(scope),
+): boolean {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
   try {
-    localStorage.setItem(copyStorageKey(scope), JSON.stringify(draft));
-    return true;
+    const raw = JSON.stringify(draft);
+    localStorage.setItem(copyStorageKey(scope), raw);
+    return localStorage.getItem(copyStorageKey(scope)) === raw;
   } catch {
     return false;
   }
 }
 
 /** Never remove another account's or another attempt's recovery record. */
-export function clearCopyDraft(scope: string, attemptId: string) {
+export function clearCopyDraft(
+  scope: string,
+  attemptId: string,
+  deviceToken = getDeviceScopeToken(scope),
+) {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return;
   try {
     if (loadCopyDraft(scope)?.attempt.id === attemptId)
       localStorage.removeItem(copyStorageKey(scope));
@@ -112,7 +81,12 @@ export function loadCopyPreferences(
     return;
   }
 }
-export function saveCopyPreferences(scope: string, recipe: CopyRecipe) {
+export function saveCopyPreferences(
+  scope: string,
+  recipe: CopyRecipe,
+  deviceToken = getDeviceScopeToken(scope),
+) {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return;
   try {
     localStorage.setItem(
       `${copyStorageKey(scope)}:settings:${recipe.mode}`,
@@ -139,7 +113,13 @@ export function copyLease(scope: string): Lease | undefined {
     return;
   }
 }
-export function claimCopyLease(scope: string, owner: string, force = false): boolean {
+export function claimCopyLease(
+  scope: string,
+  owner: string,
+  force = false,
+  deviceToken = getDeviceScopeToken(scope),
+): boolean {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
   const current = copyLease(scope);
   if (!force && current && current.owner !== owner && current.expires > Date.now()) return false;
   try {
@@ -149,11 +129,21 @@ export function claimCopyLease(scope: string, owner: string, force = false): boo
   }
   return true;
 }
-export function ownsCopyLease(scope: string, owner: string) {
+export function ownsCopyLease(
+  scope: string,
+  owner: string,
+  deviceToken = getDeviceScopeToken(scope),
+) {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
   const current = copyLease(scope);
   return !current || current.owner === owner;
 }
-export function releaseCopyLease(scope: string, owner: string) {
+export function releaseCopyLease(
+  scope: string,
+  owner: string,
+  deviceToken = getDeviceScopeToken(scope),
+) {
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return;
   try {
     if (copyLease(scope)?.owner === owner) localStorage.removeItem(leaseKey(scope));
   } catch {

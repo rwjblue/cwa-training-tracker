@@ -4422,3 +4422,92 @@ body {
   text-decoration: none;
   white-space: normal;
 }
+
+.device-data {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1.5rem 1.5rem;
+  overflow-wrap: anywhere;
+}
+.device-data p {
+  margin: 0;
+}
+.device-scope-id {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #58635a;
+}
+.device-inventory {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.device-inventory section {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.device-inventory h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+.device-inventory dl {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.device-inventory dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.device-inventory dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.device-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.device-data .button,
+.device-choice,
+.device-request-identities summary {
+  min-height: 44px;
+}
+.device-data .button {
+  white-space: normal;
+}
+.device-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+}
+.device-choice input {
+  flex: 0 0 auto;
+}
+.device-restore-review,
+.device-clear-review {
+  display: grid;
+  gap: 1rem;
+}
+.device-request-identities summary {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.device-request-identities ul {
+  max-height: 10rem;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .device-data {
+    padding: 0 1rem 1rem;
+  }
+  .device-inventory {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,6 +1,12 @@
 import { validatePracticeSession, type PracticeSession } from '../shared/training';
 import { api, ApiError } from './api';
 import { getSelectedAccountId, loadAccountOperations, loadCachedAccount } from './account-outbox';
+import {
+  getDeviceScopeToken,
+  isDeviceScopeCurrent,
+  requireCurrentDeviceScope,
+  subscribeDeviceScope,
+} from './device-scope';
 
 export const PRACTICE_SAVED_EVENT = 'cwa:practice-saved';
 export const PRACTICE_UPLOADED_EVENT = 'cwa:practice-uploaded';
@@ -11,7 +17,10 @@ const stateKey = (scope: string, id: string) =>
 const originKey = (scope: string, id: string) =>
   `cwa:practice:origin:v1:${encodeURIComponent(scope)}:${encodeURIComponent(id)}`;
 const changed = () => window.dispatchEvent(new Event(PRACTICE_SAVED_EVENT));
-const volatileStates = new Map<string, { state: PracticeSaveState; body: string | null }>();
+const volatileStates = new Map<
+  string,
+  { state: PracticeSaveState; body: string | null; deviceToken: string }
+>();
 
 /** Guest history and signed-in uploads waiting for acknowledgement stay account scoped. */
 export function loadLocalPractice(scope: string): PracticeSession[] {
@@ -84,7 +93,11 @@ export function loadPracticeSaveStates(scope: string): PracticeSaveState[] {
   return loadLocalPractice(scope).map((entry) => {
     try {
       const volatile = volatileStates.get(stateKey(scope, entry.id));
-      if (volatile && volatile.body === localStorage.getItem(key(scope, entry.id)))
+      if (
+        volatile &&
+        isDeviceScopeCurrent(scope, volatile.deviceToken) &&
+        volatile.body === localStorage.getItem(key(scope, entry.id))
+      )
         return volatile.state;
       const raw = localStorage.getItem(stateKey(scope, entry.id));
       const value = raw ? (JSON.parse(raw) as PracticeSaveState) : undefined;
@@ -100,6 +113,7 @@ function setSaveState(scope: string, state: PracticeSaveState) {
     volatileStates.set(stateKey(scope, state.id), {
       state,
       body: localStorage.getItem(key(scope, state.id)),
+      deviceToken: getDeviceScopeToken(scope),
     });
     localStorage.setItem(stateKey(scope, state.id), JSON.stringify(state));
     if (localStorage.getItem(stateKey(scope, state.id)) !== JSON.stringify(state))
@@ -120,19 +134,57 @@ interface Upload {
   receipt: Promise<PracticeSaveReceipt>;
   completion: Promise<PracticeSaveReceipt>;
   controller: AbortController;
+  deviceToken: string;
+  id: string;
 }
 const uploads = new Map<string, Upload>();
 const suspended = new Set<string>();
 const epochs = new Map<string, number>();
+let observedWindow: Window | undefined;
+function observeDeviceScope() {
+  if (observedWindow === window || typeof window.addEventListener !== 'function') return;
+  observedWindow = window;
+  subscribeDeviceScope(({ scope, mutating }) => {
+    if (mutating) suspendPracticeUploads(scope);
+    invalidatePracticeMemory(scope);
+  });
+}
+export function listInFlightPracticeIds(scope: string): string[] {
+  return [...uploads.entries()]
+    .filter(([name]) => name.startsWith(prefix(scope)))
+    .map(([, upload]) => upload.id);
+}
+export function invalidatePracticeMemory(scope: string): void {
+  const statusPrefix = `cwa:practice:status:v1:${encodeURIComponent(scope)}:`;
+  for (const name of volatileStates.keys())
+    if (name.startsWith(statusPrefix)) volatileStates.delete(name);
+}
+/** Internal rollback retains a status whose optional sidecar could not be persisted. */
+export function restorePracticeMemory(scope: string, states: PracticeSaveState[]): void {
+  invalidatePracticeMemory(scope);
+  for (const state of states) {
+    const body = localStorage.getItem(key(scope, state.id));
+    if (body !== null)
+      volatileStates.set(stateKey(scope, state.id), {
+        state,
+        body,
+        deviceToken: getDeviceScopeToken(scope),
+      });
+  }
+}
 /** Account changes or lifecycle actions fence actual network work and late acknowledgements. */
 export function suspendPracticeUploads(scope: string) {
   suspended.add(scope);
   epochs.set(scope, (epochs.get(scope) ?? 0) + 1);
   for (const [name, upload] of uploads)
-    if (name.startsWith(prefix(scope)))
+    if (name.startsWith(prefix(scope))) {
       upload.controller.abort(new Error('The selected account changed.'));
+      // Restoring the same identity must start a fresh request, not join its canceled promise.
+      uploads.delete(name);
+    }
 }
 export function resumePracticeUploads(scope: string) {
+  if (!isDeviceScopeCurrent(scope, getDeviceScopeToken(scope))) return;
   suspended.delete(scope);
 }
 const UPLOAD_TIMEOUT_MS = 10_000;
@@ -142,10 +194,17 @@ const LOCAL_RECEIPT_DELAY_MS = 750;
 export async function autoSavePractice(
   scope: string,
   input: PracticeSession,
+  deviceToken = getDeviceScopeToken(scope),
 ): Promise<PracticeSaveReceipt> {
+  requireCurrentDeviceScope(scope, deviceToken);
+  observeDeviceScope();
   const entryKey = key(scope, input.id);
   const uploading = uploads.get(entryKey);
-  if (uploading) return uploading.receipt;
+  if (uploading && uploading.deviceToken === deviceToken) {
+    const receipt = await uploading.receipt;
+    requireCurrentDeviceScope(scope, deviceToken);
+    return receipt;
+  }
   let entry = validatePracticeSession(input);
   let durable = false;
   try {
@@ -221,7 +280,8 @@ export async function autoSavePractice(
       if (
         suspended.has(scope) ||
         (selected !== undefined && selected !== scope) ||
-        epoch !== (epochs.get(scope) ?? 0)
+        epoch !== (epochs.get(scope) ?? 0) ||
+        !isDeviceScopeCurrent(scope, deviceToken)
       )
         return { entry, destination: 'device' };
       // Clearing a newer replacement or publishing its old acknowledgement would lose work.
@@ -234,7 +294,11 @@ export async function autoSavePractice(
       return { entry: acknowledged, destination: 'history' };
     } catch (error) {
       if (!durable) throw error;
-      if (!suspended.has(scope) && epoch === (epochs.get(scope) ?? 0))
+      if (
+        !suspended.has(scope) &&
+        epoch === (epochs.get(scope) ?? 0) &&
+        isDeviceScopeCurrent(scope, deviceToken)
+      )
         setSaveState(scope, {
           id: entry.id,
           status: 'failed',
@@ -271,8 +335,10 @@ export async function autoSavePractice(
         }),
       ]).finally(() => clearTimeout(receiptTimer))
     : upload;
-  uploads.set(entryKey, { receipt, completion: upload, controller });
-  return receipt;
+  uploads.set(entryKey, { receipt, completion: upload, controller, deviceToken, id: entry.id });
+  const result = await receipt;
+  requireCurrentDeviceScope(scope, deviceToken);
+  return result;
 }
 
 export async function flushPracticeSaves(
@@ -282,12 +348,13 @@ export async function flushPracticeSaves(
   retryPermanent = false,
 ) {
   if (scope === 'guest') return;
+  const deviceToken = getDeviceScopeToken(scope);
   for (const entry of loadLocalPractice(scope)) {
-    if (!isCurrentAccount()) return;
+    if (!isCurrentAccount() || !isDeviceScopeCurrent(scope, deviceToken)) return;
     const state = loadPracticeSaveStates(scope).find((item) => item.id === entry.id);
     if (!retryPermanent && state?.failure === 'permanent') break;
-    const result = await autoSavePractice(scope, entry);
+    const result = await autoSavePractice(scope, entry, deviceToken);
     if (result.destination !== 'history') break;
-    if (isCurrentAccount()) onSaved(result.entry);
+    if (isCurrentAccount() && isDeviceScopeCurrent(scope, deviceToken)) onSaved(result.entry);
   }
 }

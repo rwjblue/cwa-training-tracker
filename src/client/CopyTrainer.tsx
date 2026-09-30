@@ -35,6 +35,12 @@ import {
 } from './copy-storage';
 import CopySettings from './CopySettings';
 import CopyResult, { COPY_LABELS, copyDuration, missedCopyCharacters } from './CopyResult';
+import {
+  DEVICE_CAPTURE_EVENT,
+  getDeviceScopeToken,
+  isDeviceScopeCurrent,
+  subscribeDeviceScope,
+} from './device-scope';
 import './copy-trainer.css';
 
 interface Props {
@@ -67,6 +73,8 @@ function CopyTrainerSession({
   onUnsavedChange,
 }: Props) {
   const scope = accountId ?? 'guest';
+  const [deviceToken] = useState(() => getDeviceScopeToken(scope));
+  const currentDevice = () => isDeviceScopeCurrent(scope, deviceToken);
   const [initial] = useState(() => loadCopyDraft(scope));
   const [draft, setDraft] = useState<CopyDraft | undefined>(() =>
     initial
@@ -123,7 +131,8 @@ function CopyTrainerSession({
   const submitRef = useRef<() => void>(() => {});
   const autoDeadline = useRef(initial?.autoSkipAt);
 
-  const hasControl = () => !blockedRef.current && ownsCopyLease(scope, leaseOwner.current);
+  const hasControl = () =>
+    currentDevice() && !blockedRef.current && ownsCopyLease(scope, leaseOwner.current, deviceToken);
   const loseControl = () => {
     blockedRef.current = true;
     player.current.pause();
@@ -135,8 +144,8 @@ function CopyTrainerSession({
     if (!hasControl()) return;
     draftRef.current = next;
     setDraft(next);
-    if (next && !savedRef.current && ownsCopyLease(scope, leaseOwner.current)) {
-      if (!saveCopyDraft(scope, next)) setStorageWarning(true);
+    if (next && !savedRef.current && ownsCopyLease(scope, leaseOwner.current, deviceToken)) {
+      if (!saveCopyDraft(scope, next, deviceToken)) setStorageWarning(true);
     }
   };
   const snapshot = (): CopyDraft | undefined => {
@@ -167,16 +176,16 @@ function CopyTrainerSession({
 
   useEffect(() => {
     mounted.current = true;
-    const owned = claimCopyLease(scope, leaseOwner.current);
+    const owned = claimCopyLease(scope, leaseOwner.current, false, deviceToken);
     blockedRef.current = !owned;
     setBlocked(!owned);
     const heartbeat = window.setInterval(() => {
       if (blockedRef.current) return;
-      if (!ownsCopyLease(scope, leaseOwner.current)) {
+      if (!ownsCopyLease(scope, leaseOwner.current, deviceToken)) {
         loseControl();
         return;
       }
-      claimCopyLease(scope, leaseOwner.current);
+      claimCopyLease(scope, leaseOwner.current, false, deviceToken);
       const next = snapshot();
       if (next && !savedRef.current) write(next);
       setTick((n) => n + 1);
@@ -194,11 +203,11 @@ function CopyTrainerSession({
     };
     const leave = () => {
       pause();
-      releaseCopyLease(scope, leaseOwner.current);
+      releaseCopyLease(scope, leaseOwner.current, deviceToken);
     };
     const returnToPage = (event: PageTransitionEvent) => {
       if (blockedRef.current) return;
-      if (!claimCopyLease(scope, leaseOwner.current)) {
+      if (!claimCopyLease(scope, leaseOwner.current, false, deviceToken)) {
         loseControl();
         return;
       }
@@ -214,7 +223,7 @@ function CopyTrainerSession({
       }
     };
     const storage = () => {
-      if (!ownsCopyLease(scope, leaseOwner.current)) {
+      if (!ownsCopyLease(scope, leaseOwner.current, deviceToken)) {
         loseControl();
       }
     };
@@ -222,6 +231,14 @@ function CopyTrainerSession({
     window.addEventListener('pagehide', leave);
     window.addEventListener('pageshow', returnToPage);
     window.addEventListener('storage', storage);
+    const stopDeviceScope = subscribeDeviceScope((state) => {
+      if (state.scope === scope && !currentDevice()) loseControl();
+    });
+    const capture = (event: Event) => {
+      if ((event as CustomEvent<{ scope: string }>).detail.scope === scope && currentDevice())
+        pause();
+    };
+    window.addEventListener(DEVICE_CAPTURE_EVENT, capture);
     return () => {
       mounted.current = false;
       window.clearInterval(heartbeat);
@@ -229,16 +246,18 @@ function CopyTrainerSession({
       window.removeEventListener('pagehide', leave);
       window.removeEventListener('pageshow', returnToPage);
       window.removeEventListener('storage', storage);
+      stopDeviceScope();
+      window.removeEventListener(DEVICE_CAPTURE_EVENT, capture);
       player.current.pause();
       clock.current.pause(performance.now());
       const next = snapshot();
-      if (next && !savedRef.current && hasControl()) saveCopyDraft(scope, next);
+      if (next && !savedRef.current && hasControl()) saveCopyDraft(scope, next, deviceToken);
       player.current.dispose();
-      releaseCopyLease(scope, leaseOwner.current);
+      releaseCopyLease(scope, leaseOwner.current, deviceToken);
     };
   }, [scope]);
   useEffect(() => {
-    if (savedEntry?.id === `copy:${draftRef.current?.attempt.id}`) {
+    if (currentDevice() && savedEntry?.id === `copy:${draftRef.current?.attempt.id}`) {
       setSaveReceipt({ entry: savedEntry, destination: 'history' });
     }
   }, [savedEntry]);
@@ -249,7 +268,11 @@ function CopyTrainerSession({
   useEffect(() => {
     const uploaded = (event: Event) => {
       const detail = (event as CustomEvent<{ scope: string; entry: PracticeSession }>).detail;
-      if (detail.scope === scope && detail.entry.id === `copy:${draftRef.current?.attempt.id}`) {
+      if (
+        currentDevice() &&
+        detail.scope === scope &&
+        detail.entry.id === `copy:${draftRef.current?.attempt.id}`
+      ) {
         setSaveReceipt({ entry: detail.entry, destination: 'history' });
       }
     };
@@ -377,7 +400,7 @@ function CopyTrainerSession({
     if (!hasControl()) return;
     try {
       const valid = validateCopyRecipe(copySetupRecipe(selected));
-      saveCopyPreferences(scope, valid);
+      saveCopyPreferences(scope, valid, deviceToken);
       const attempt = createCopyAttempt(valid, {
         id: crypto.randomUUID(),
         seed: crypto.randomUUID(),
@@ -481,12 +504,13 @@ function CopyTrainerSession({
   const newRound = async (nextRecipe = recipe, detachAssignment = false, play = false) => {
     if (!hasControl() || savingRef.current) return;
     if (draft && !savedRef.current && !(await save())) return;
+    if (!hasControl()) return;
     pause();
     player.current.clear();
     prepared.current = '';
     autoDeadline.current = undefined;
     nextTask.current = detachAssignment ? undefined : task;
-    if (draft) clearCopyDraft(scope, draft.attempt.id);
+    if (draft) clearCopyDraft(scope, draft.attempt.id, deviceToken);
     savedRef.current = false;
     setSaved(false);
     setSaveReceipt(undefined);
@@ -526,22 +550,23 @@ function CopyTrainerSession({
       player.current.clear();
       savingRef.current = true;
       setSaving(true);
-      const result = await autoSavePractice(scope, pending);
-      if (!mounted.current) return true;
+      const result = await autoSavePractice(scope, pending, deviceToken);
+      if (!mounted.current || !currentDevice()) return false;
       savedRef.current = true;
       setSaved(true);
       setSaveReceipt(result);
-      clearCopyDraft(scope, current.attempt.id);
+      clearCopyDraft(scope, current.attempt.id, deviceToken);
       if (result.destination === 'history') onSaved?.(result.entry);
       return true;
     } catch (reason) {
+      if (!mounted.current || !currentDevice()) return false;
       setError(
         `Your result has not been saved. Retry saving or download it before leaving. ${(reason as Error).message}`,
       );
       return false;
     } finally {
       savingRef.current = false;
-      setSaving(false);
+      if (mounted.current && currentDevice()) setSaving(false);
     }
   };
   useEffect(() => {
@@ -598,9 +623,10 @@ function CopyTrainerSession({
     URL.revokeObjectURL(url);
   };
   const takeOver = () => {
+    if (!currentDevice()) return;
     player.current.pause();
     player.current.clear();
-    claimCopyLease(scope, leaseOwner.current, true);
+    claimCopyLease(scope, leaseOwner.current, true, deviceToken);
     blockedRef.current = false;
     const recovered = loadCopyDraft(scope);
     if (recovered) {

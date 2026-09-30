@@ -18,7 +18,13 @@ import {
   loadSelectedAccountIdentity,
   isSelectedAccount,
   getAccountStorageStatus,
+  listInFlightAccountOperationIds,
 } from './account-outbox';
+import {
+  completeDeviceScopeMutation,
+  getDeviceScopeToken,
+  invalidateDeviceScope,
+} from './device-scope';
 
 const fetchMock = vi.fn();
 let values: Map<string, string>;
@@ -69,6 +75,51 @@ it('projects offline semantic edits in order and freezes each origin revision', 
   expect(loadCachedAccount()).toBeNull();
   expect(loadCachedAccount(scope)?.state).toEqual(state());
   expect(loadAccountOperations(scope)).toHaveLength(2);
+});
+
+it('does not join canceled account uploads or publish their acknowledgement after exact restore', async () => {
+  const token = getDeviceScopeToken(scope);
+  const item = queueAccountChange(
+    state(),
+    { type: 'settings', changes: { callsign: 'N0RESTORE' } },
+    { deviceToken: token },
+  );
+  const acknowledge: ((response: Response) => void)[] = [];
+  fetchMock.mockImplementation(() => new Promise<Response>((resolve) => acknowledge.push(resolve)));
+  const oldPublished = vi.fn();
+  const oldUpload = flushAccountOperations(scope, oldPublished);
+  expect(listInFlightAccountOperationIds(scope)).toEqual([item.operation.id]);
+  suspendAccountUploads(scope);
+  const next = invalidateDeviceScope(scope);
+  // Retaining the exact immutable operation represents its deterministic restoration.
+  completeDeviceScopeMutation(scope, next);
+  resumeAccountUploads(scope);
+  const newPublished = vi.fn();
+  const freshUpload = flushAccountOperations(scope, newPublished);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  const response = {
+    state: { ...applyAccountChange(state(), item.operation.change), revision: 1 },
+    operationId: item.operation.id,
+  };
+  acknowledge[0](Response.json(response));
+  await oldUpload;
+  expect(oldPublished).not.toHaveBeenCalled();
+  expect(loadCachedAccount(scope)?.state.revision).toBe(0);
+  expect(loadAccountOperations(scope)[0].operation.id).toBe(item.operation.id);
+  const joinedFresh = flushAccountOperations(scope, newPublished);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  acknowledge[1](Response.json(response));
+  await freshUpload;
+  await joinedFresh;
+  expect(newPublished).toHaveBeenCalledTimes(1);
+  expect(loadAccountOperations(scope)).toEqual([]);
+  expect(() =>
+    queueAccountChange(
+      state(1),
+      { type: 'settings', changes: { callsign: 'N0STALE' } },
+      { deviceToken: token },
+    ),
+  ).toThrow('device work changed');
 });
 
 it('retries a lost acknowledgement with the exact operation ID, body, owner and revision', async () => {

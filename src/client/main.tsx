@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import type {
@@ -65,6 +65,15 @@ import {
 } from './account-outbox';
 import { useAccountData } from './useAccountData';
 import AccountSyncStatus from './AccountSyncStatus';
+import Modal from './Modal';
+import DeviceData from './DeviceData';
+import {
+  DEVICE_SCOPE_EVENT,
+  deviceScopeKey,
+  getDeviceScopeToken,
+  isDeviceScopeCurrent,
+  isDeviceScopeMutating,
+} from './device-scope';
 import type { AccountChange } from '../shared/account-sync';
 import { MORSE } from './audio';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
@@ -248,6 +257,11 @@ function App() {
   const pendingDestination = useRef<Page | null>(null);
   const [startNewTask, setStartNewTask] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const scope = user?.id ?? 'guest';
+  const deviceToken = getDeviceScopeToken(scope);
+  const [deviceRevision, setDeviceRevision] = useState(0);
+  const [deviceMutating, setDeviceMutating] = useState(() => isDeviceScopeMutating('guest'));
+  const [deviceOpen, setDeviceOpen] = useState(false);
   const activeAccount = useRef(user?.id);
   activeAccount.current = user?.id;
   const [localHistory, setLocalHistory] = useState(() => ({
@@ -284,6 +298,35 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [demo, setDemo] = useState(true);
   const notify = (message: string) => setToast(message);
+  useEffect(() => {
+    setDeviceOpen(false);
+    setDeviceMutating(isDeviceScopeMutating(scope));
+    const changed = (event: Event) => {
+      if (event instanceof StorageEvent) {
+        if (event.key !== deviceScopeKey(scope)) return;
+      } else if ((event as CustomEvent<{ scope: string }>).detail?.scope !== scope) return;
+      // Disposing cleared work must not run ordinary navigation autosave.
+      beforeLeaveStudio.current = undefined;
+      studioUnsaved.current = false;
+      pendingLog.current = null;
+      pendingDestination.current = null;
+      setSessionEditor(null);
+      setPracticeLaunch(undefined);
+      setSavedPracticeEntry(undefined);
+      setToast('');
+      setDemo(false);
+      setLocalHistory({ scope, entries: loadLocalPractice(scope) });
+      setPracticeStates(loadPracticeSaveStates(scope));
+      setDeviceMutating(isDeviceScopeMutating(scope));
+      setDeviceRevision((revision) => revision + 1);
+    };
+    window.addEventListener(DEVICE_SCOPE_EVENT, changed);
+    window.addEventListener('storage', changed);
+    return () => {
+      window.removeEventListener(DEVICE_SCOPE_EVENT, changed);
+      window.removeEventListener('storage', changed);
+    };
+  }, [scope]);
   const load = async (signedInUser?: User) => {
     const requestVersion = ++identityLoad.current;
     let current: User | null;
@@ -457,15 +500,18 @@ function App() {
   };
   const navigate = async (next: Page): Promise<boolean> => {
     if (next !== 'practice' && !(await confirmLeaveStudio())) return false;
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
     showPage(next);
     return true;
   };
   const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
     if (currentPage.current === 'practice' && !(await confirmLeaveStudio())) return;
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     setPracticeLaunch({ id: crypto.randomUUID(), ...options });
     navigate('practice');
   };
   const openLog = (initial: Partial<PracticeSession> = {}) => {
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     if (
       !user &&
       initial.id &&
@@ -479,6 +525,7 @@ function App() {
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
   const acceptSavedPractice = (entry: PracticeSession) => {
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     removeLocalPractice('guest', entry.id);
     setSavedPracticeEntry(entry);
     setEntries((current) =>
@@ -496,6 +543,7 @@ function App() {
     }
   };
   const mergeSavedEntry = (entry: PracticeSession) => {
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     setEntries((current) =>
       [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
         b.date.localeCompare(a.date),
@@ -504,8 +552,9 @@ function App() {
   };
   const autoSave = async (entry: PracticeSession) => {
     const scope = user?.id ?? 'guest';
-    const result = await autoSavePractice(scope, entry);
-    if ((activeAccount.current ?? 'guest') !== scope) return;
+    const result = await autoSavePractice(scope, entry, deviceToken);
+    if ((activeAccount.current ?? 'guest') !== scope || !isDeviceScopeCurrent(scope, deviceToken))
+      return;
     if (result.destination === 'history') mergeSavedEntry(result.entry);
     notify(
       result.destination === 'history'
@@ -517,6 +566,7 @@ function App() {
   };
   useEffect(() => {
     const scope = user?.id ?? 'guest';
+    if (deviceMutating || !isDeviceScopeCurrent(scope, deviceToken)) return;
     resumePracticeUploads(scope);
     const refresh = () => {
       setLocalHistory({ scope, entries: loadLocalPractice(scope) });
@@ -531,7 +581,8 @@ function App() {
       void flushPracticeSaves(
         scope,
         mergeSavedEntry,
-        () => (activeAccount.current ?? 'guest') === scope,
+        () =>
+          (activeAccount.current ?? 'guest') === scope && isDeviceScopeCurrent(scope, deviceToken),
       );
     refresh();
     retry();
@@ -551,7 +602,7 @@ function App() {
       window.removeEventListener('storage', refresh);
       window.removeEventListener('online', retry);
     };
-  }, [user?.id]);
+  }, [user?.id, deviceRevision, deviceMutating]);
   useEffect(() => {
     if (!menuOpen) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -689,6 +740,16 @@ function App() {
             <ExternalLink size={14} />
           </a>
           <button
+            className="nav-item"
+            onClick={() => {
+              setMenuOpen(false);
+              setDeviceOpen(true);
+            }}
+          >
+            <Download size={18} />
+            <span>This device</span>
+          </button>
+          <button
             className={`nav-item ${page === 'settings' ? 'active' : ''}`}
             onClick={() => (user ? navigate('settings') : setAuthOpen(true))}
           >
@@ -774,13 +835,17 @@ function App() {
               </button>
             </div>
           )}
-          {booting ? (
+          {deviceMutating ? (
+            <p className="alert" role="status">
+              Updating device work. Practice and uploads are paused until storage is ready.
+            </p>
+          ) : booting ? (
             <div className="loading-workspace">
               <span className="loading-spinner" />
               <p>Tuning in to your workspace…</p>
             </div>
           ) : (
-            <>
+            <React.Fragment key={`${scope}:${deviceRevision}`}>
               {user && (
                 <AccountSyncStatus
                   operations={account.operations}
@@ -982,9 +1047,10 @@ function App() {
                   reload={load}
                   onReauth={() => setAuthOpen(true)}
                   onToday={() => navigate('overview')}
+                  onDeviceData={() => setDeviceOpen(true)}
                 />
               )}
-            </>
+            </React.Fragment>
           )}
           <footer className="page-footer">
             <span>CW ACADEMY COMPANION</span>
@@ -997,6 +1063,20 @@ function App() {
           </footer>
         </main>
       </div>
+      {deviceOpen && (
+        <DeviceData
+          key={scope}
+          scope={scope}
+          label={user?.email ?? 'Guest — this browser'}
+          onClose={() => {
+            setDeviceOpen(false);
+            if (window.matchMedia('(max-width: 1000px)').matches)
+              requestAnimationFrame(() =>
+                document.querySelector<HTMLElement>('.mobile-menu')?.focus(),
+              );
+          }}
+        />
+      )}
       {authOpen && (
         <AuthModal
           onClose={() => {
@@ -1014,9 +1094,11 @@ function App() {
           scope={user?.id ?? 'guest'}
           onClose={() => setSessionEditor(null)}
           onSaved={(entry, destination) => {
+            if (!isDeviceScopeCurrent(scope, deviceToken)) return;
             if ((activeAccount.current ?? 'guest') !== (user?.id ?? 'guest')) return;
             const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
-            if (!wasExisting) clearSavedStudioNotes(user?.id ?? 'guest', entry);
+            if (!wasExisting)
+              clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
             if (destination === 'history') acceptSavedPractice(entry);
             else {
               setSavedPracticeEntry(entry);
@@ -1859,85 +1941,6 @@ function Course({
   );
 }
 
-function Modal({
-  title,
-  onClose,
-  children,
-  wide = false,
-  initialFocus,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-  wide?: boolean;
-  initialFocus?: React.RefObject<HTMLElement | null>;
-}) {
-  const panel = useRef<HTMLDivElement>(null);
-  const titleId = React.useId();
-  useLayoutEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const elements = () =>
-      Array.from(
-        panel.current?.querySelectorAll<HTMLElement>(
-          'button:enabled, input:enabled, select:enabled, textarea:enabled, a[href], [tabindex="0"]',
-        ) ?? [],
-      );
-    // Establish focus before the dialog is painted. A delayed autofocus can
-    // steal focus from a field the user has already started filling.
-    const target =
-      initialFocus?.current ??
-      panel.current?.querySelector<HTMLElement>('[autofocus], input') ??
-      elements()[0];
-    target?.focus();
-    const handle = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'Tab') {
-        const all = elements();
-        const first = all[0];
-        const last = all[all.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last?.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first?.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', handle);
-    return () => {
-      document.removeEventListener('keydown', handle);
-      document.body.style.overflow = previousOverflow;
-      previous?.focus();
-    };
-  }, []);
-  return (
-    <div
-      className="modal-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className={`modal ${wide ? 'wide' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        ref={panel}
-      >
-        <div className="modal-heading">
-          <h2 id={titleId}>{title}</h2>
-          <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 function AuthModal({
   onClose,
   onSuccess,
@@ -2135,6 +2138,16 @@ function SessionModal({
 }) {
   const saveButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false);
+  const mounted = useRef(true);
+  const saveController = useRef<AbortController | undefined>(undefined);
+  const [capturedDeviceToken] = useState(() => getDeviceScopeToken(scope));
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      saveController.current?.abort(new Error('This device work changed.'));
+    };
+  }, []);
   const [identity] = useState(() => ({
     id: initial.id ?? crypto.randomUUID(),
     createdAt: initial.createdAt ?? new Date().toISOString(),
@@ -2246,25 +2259,32 @@ function SessionModal({
         data.metadata = { ...initial.metadata, scratchpad: form.scratchpad, evidence: corrected };
       }
       const validated = frozenEntry.current ?? validatePracticeSession(data);
+      if (!isDeviceScopeCurrent(scope, capturedDeviceToken))
+        throw new Error('This device work changed. Reopen the current work before saving again.');
       if (!isExisting) frozenEntry.current = validated;
       if (isExisting) {
+        const controller = new AbortController();
+        saveController.current = controller;
         const result = await api<{ entry: PracticeSession }>(
           `/entries/${initial.id}`,
           validated,
           'PUT',
-          AbortSignal.timeout(10_000),
+          AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]),
           { accountId: scope },
         );
-        onSaved(result.entry, 'history');
+        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
+          onSaved(result.entry, 'history');
       } else {
-        const result = await autoSavePractice(scope, validated);
-        onSaved(result.entry, result.destination);
+        const result = await autoSavePractice(scope, validated, capturedDeviceToken);
+        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
+          onSaved(result.entry, result.destination);
       }
     } catch (err) {
-      setError((err as Error).message);
+      if (mounted.current) setError((err as Error).message);
     } finally {
       saving.current = false;
-      setBusy(false);
+      saveController.current = undefined;
+      if (mounted.current) setBusy(false);
     }
   };
   return (
@@ -2496,6 +2516,7 @@ function Account({
   reload,
   onReauth,
   onToday,
+  onDeviceData,
 }: {
   user: User;
   profile: Profile;
@@ -2509,6 +2530,7 @@ function Account({
   reload: () => Promise<unknown>;
   onReauth: () => void;
   onToday: () => void;
+  onDeviceData: () => void;
 }) {
   const [form, setForm] = useState(profile);
   const baseline = useRef({ profile, revision });
@@ -2939,8 +2961,12 @@ function Account({
               import data as a JSON file. It contains only your account’s training data, never your
               passkeys.
             </p>
+            <p>Pending device saves, copy drafts and scratchpads need a separate device backup.</p>
             <button className="button outline" onClick={exportData} disabled={dataBusy}>
               <Download size={15} /> Export backup
+            </button>
+            <button className="text-button" onClick={onDeviceData}>
+              Back up this device
             </button>
           </div>
           <div>

@@ -144,7 +144,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 
 | ID / priority                                       | Current gap and concrete next behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Evidence                                                                                                                                                                                                                                                                                                                                                                                              |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **R1 · P1** Recoverable practice beyond native copy | Native copy has scoped drafts and paused restoration. The accepted remaining scope preserves the active block through in-app navigation, retained content/preferences and completed Runner results; reload/crash elapsed-time recovery is excluded. Finished copy, navigation-saved listening, manual and Runner sessions now use a durable upload queue with visible status. Issue #2 also adds semantic plan/settings outboxes and explicit revision conflicts; its review gate remains tracked below. Isolate device state by user and protect against conflicting tabs.                                                                                                                                                          | Personal [device state](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21); [planning P15–P17](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                            |
+| **R1 · P1** Recoverable practice beyond native copy | Native copy has scoped drafts and paused restoration. The accepted remaining scope preserves the active block through in-app navigation, retained content/preferences and completed Runner results; reload/crash elapsed-time recovery is excluded. Finished copy, navigation-saved listening, manual and Runner sessions now use a durable upload queue with visible status. Issue #2 adds semantic plan/settings outboxes and explicit revision conflicts. Issue #3 adds selected-scope device backup/restore/clear, separately labeled shared preferences and durable cross-tab lifecycle fencing. In-app active continuity remains later accepted work.                                                                                                                                                          | Personal [device state](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21); [planning P15–P17](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                            |
 | **R2 · P1/P2** Daily guidance                       | Offer resume/next eligible exercise; rotate familiar review without assignment credit; show the separate optional ten-minute word-listening suggestion. Earlier reminders now support dismissal and restoration independently of completion. Class time, Join class, rest-day goals, and saved/current-time breakdown still need explicit policy. | Personal [planner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L270); [planning P03–P11/P38](parity/planning.md#curriculum-and-the-daily-queue). |
 | **R3 · P1** Remaining typed results                 | Native copy saves validated attempts. Issue #1 adds validated Runner and timer/recording evidence, immutable measurements, explicit corrections, history/report details and account plan checks. Add performance ratings and structured CWT heard/worked observations for other practice. Imported LCWO history remains readable with source identity and overlap-safe estimated group minutes; optional per-account live LCWO linking remains accepted issue #35, separate from native practice.                                                                                                                                                                  | Personal [result fields](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/practice-results-form.ts#L3), [LCWO accounting](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/lcwo-practice.ts#L8); [planning P14/P18/P20–P24](parity/planning.md).                                      |
 | **R4 · P1** Advisor reports                         | Keep the generic printable report, then add configurable advisor fields, per-class windows, editable durable drafts, evidence-backed suggestions, refresh preserving edits, exact prefilled-form handoff, and confirmed submitted snapshots. Saved imported report snapshots are readable with original answers/evidence in Settings. New report authoring must use actual individual verified Runner results and practiced recording speeds; do not sum scores or infer learned words from exposure.                                          | Personal [report derivation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L196), [handoff](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L282); [planning P27–P31](parity/planning.md#reports-and-evidence).                                         |
@@ -273,3 +273,44 @@ a scoped storage notice explains recovery, and queued work remains retained.
 Preference fields pause editing during their short durable receipt window, then
 allow new drafts while old uploads finish. Merge imports preserve removed owned
 links, and linked-result placement is guarded atomically against course changes.
+
+## Accepted issue #3 delivery ledger
+
+“This device” is reachable to guests and account users. It identifies the selected
+scope and separates device-retained work from confirmed account backup. Version 1
+device files contain finished results with exact original retry bodies and
+origins/statuses, queued semantic account edits with original operation order,
+optional offline account context, retained copy drafts and four mode preferences,
+and scoped scratchpads including memory-only notes. Shared practice defaults and
+recording-speed preferences appear in a separate section and restore only by
+explicit choice. Authentication, active account selection, leases and lifecycle
+fences are excluded.
+
+Whole-file validation enforces a 16 MiB UTF-8 bound, store/item/count limits and
+exact guest/account scope before mutation. Repeated restore preserves immutable
+identities without duplicate work. Changed bodies or origins under the same ID
+are explicit conflicts; replacing a different copy draft requires a reviewed
+choice. Current colliding scratchpads and newer retained retry failures remain
+intact. Unknown historical result generations stay unknown, including finished
+copy saves retained only in their draft.
+
+Local clear offers a recoverable device download and affects only the selected
+scope. It stops affected practice and real uploads, preserves other scopes/shared
+defaults/confirmed server history, and fences stale mounted writers, delayed
+receipts, acknowledgements and copy cleanup across tabs. Staged local writes
+require readback; failed updates roll back original work. Failed rollback leaves
+uploads paused with recovery download and retry, including deliberate recovery of
+an interrupted update after reopening. The UI identifies retained request IDs
+whose server outcome may be uncertain; local clear cannot erase an already
+committed server write. Reset/replacement dataset invalidation remains issue #4.
+
+Evidence: [device inventory and strict restore](../src/client/device-backup.ts),
+[scope ownership fence](../src/client/device-scope.ts),
+[device controls](../src/client/DeviceData.tsx),
+[synthetic download/restore/clear workflow](../e2e/device-data.spec.ts).
+Validation and independent gate status belong in
+[execution progress](parity/execution-progress-2026-09-30.md).
+The app shell must load; no service-worker shell, new active non-copy elapsed
+reload/crash recovery or physical-device verification is claimed. Later native
+report drafts, lists and sending takes must extend the explicit device inventory
+and its coverage test as their issues land.

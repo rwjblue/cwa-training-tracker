@@ -252,3 +252,33 @@ rechecks the unchanged frozen result, with retryable failure if it persists.
 Earlier saved progress remains intact when a course is reselected. These changes
 use the existing outboxes, revision guard and evidence model. Independent recheck
 and publication status remain in the execution journal.
+
+### Issue #3 — device backup, restore and local-only clear
+
+P33 now has a native, versioned selected-scope device file distinct from server
+account export. Its explicit inventory covers completed retry bodies/origins,
+semantic plan/settings operations/order, offline account context, existing copy
+recovery/preferences and scoped scratchpads. Shared defaults are labeled
+separately and restored only by choice. Strict bounded validation rejects an
+incompatible version, wrong scope, malformed work and changed immutable identities
+before writing. Repeated restore retains IDs and retry evidence; it does not
+rebase account edits or grant authentication. Original archived report/material
+snapshots still do not become native authoring workflows through this feature.
+
+P36 now has a reachable export-first local-clear confirmation, cancellation and
+storage failure/recovery feedback. The original
+[device clear](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L2210)
+was rechecked as read-only evidence. Companion adds durable per-scope busy/ready
+ownership, actual upload cancellation and guarded receipts/cleanup so another tab
+or late acknowledgement cannot recreate deleted local work. Confirmed history,
+other accounts and shared preferences remain separate. Previously sent writes
+may already have committed; the UI lists uncertain request identities and directs
+the learner to confirmed account history. This is local device lifecycle
+protection, not issue #4's server dataset reset/replacement boundary.
+
+See [device inventory](../../src/client/device-backup.ts),
+[ownership fence](../../src/client/device-scope.ts),
+[controls](../../src/client/DeviceData.tsx), and
+[browser workflow](../../e2e/device-data.spec.ts). Future report/list/sending
+stores must join the same inventory. Approved scope excludes new elapsed-time
+reload/crash recovery for active non-copy practice; existing copy recovery stays.

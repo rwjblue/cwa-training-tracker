@@ -9,9 +9,16 @@ import {
   loadPracticeSaveStates,
   suspendPracticeUploads,
   loadPracticeSaveOrigin,
+  resumePracticeUploads,
+  listInFlightPracticeIds,
 } from './practice-autosave';
 import { queueAccountChange, rememberAccount } from './account-outbox';
 import { DEFAULT_PROFILE } from '../shared/training';
+import {
+  completeDeviceScopeMutation,
+  getDeviceScopeToken,
+  invalidateDeviceScope,
+} from './device-scope';
 
 const entry = (id = 'round-one') =>
   validatePracticeSession({
@@ -50,6 +57,47 @@ it('retains the local result unless the server acknowledges that exact entry', a
     expect((await autoSavePractice('account', entry())).destination).toBe('device');
     expect(loadLocalPractice('account')).toEqual([entry()]);
   }
+});
+
+it('suppresses a delayed device receipt and old acknowledgement across clear and exact-ID restore', async () => {
+  vi.useFakeTimers();
+  const scope = 'cleared-result-owner';
+  const original = entry('cleared-result');
+  const token = getDeviceScopeToken(scope);
+  const acknowledge: ((response: Response) => void)[] = [];
+  fetchMock.mockImplementation(() => new Promise<Response>((resolve) => acknowledge.push(resolve)));
+  const oldReceipt = autoSavePractice(scope, original, token);
+  const failedReceipt = expect(oldReceipt).rejects.toThrow('device work changed');
+  expect(listInFlightPracticeIds(scope)).toEqual([original.id]);
+  suspendPracticeUploads(scope);
+  const next = invalidateDeviceScope(scope);
+  removeLocalPractice(scope, original.id);
+  completeDeviceScopeMutation(scope, next);
+  resumePracticeUploads(scope);
+  const restored = autoSavePractice(scope, original, next);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock.mock.calls[1][1].body).toBe(fetchMock.mock.calls[0][1].body);
+  await vi.advanceTimersByTimeAsync(750);
+  await failedReceipt;
+  expect((await restored).destination).toBe('device');
+  acknowledge[0](Response.json({ entry: original }));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(loadLocalPractice(scope)).toEqual([original]);
+  expect(listInFlightPracticeIds(scope)).toEqual([original.id]);
+  await autoSavePractice(scope, original, next);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  acknowledge[1](Response.json({ entry: original }));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(loadLocalPractice(scope)).toEqual([]);
+  expect(
+    vi
+      .mocked(window.dispatchEvent)
+      .mock.calls.filter(([event]) => event.type === PRACTICE_UPLOADED_EVENT),
+  ).toHaveLength(1);
+  await expect(autoSavePractice(scope, entry('stale-new-result'), token)).rejects.toThrow(
+    'device work changed',
+  );
+  expect(loadLocalPractice(scope)).toEqual([]);
 });
 
 it('returns a durable device receipt promptly, shares the background upload, and publishes its late acknowledgement', async () => {

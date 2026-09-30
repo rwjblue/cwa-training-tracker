@@ -108,11 +108,47 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   The app shell must load; no service-worker shell or physical-device verification
   is claimed. Device backup/clear and reset/replacement fencing remain #3/#4.
 
+## Issue #3 — implemented and validated; independent gate pending
+
+- Fresh live body/comments/dependencies rechecked after #2 closed; only #2 is
+  required. Original pinned device schema and export/clear remain read-only
+  evidence. No original-site files or personal records were changed/read.
+- Public “This device” and account backup links expose selected guest/account
+  work separately from shared preferences and confirmed server backup.
+- Strict 16 MiB version 1 files preserve exact finished-result bodies/IDs and
+  origins/statuses, semantic account edits/order, offline context, copy drafts,
+  four copy preferences and scoped scratchpads, including memory-only notes.
+  Authentication, active selection, leases and lifecycle fences are excluded.
+- Complete validation precedes local writes. Repeated restore preserves IDs and
+  newer retry state; immutable-body conflicts block writes, a different copy
+  draft requires explicit replacement, shared defaults require an opt-in, and
+  colliding current notes remain intact. No result generation is restamped.
+- Local clear offers backup and cancellation, preserves other scopes/shared
+  preferences/server history, aborts real uploads and invalidates mounted owners
+  across tabs. Old receipts, cleanup and acknowledgements cannot recreate work.
+  Previously sent uncertain request IDs remain visible; a committed server write
+  can only be handled through account history and the separate #4 boundary.
+- Staged storage writes/readback roll back on failure. Failed rollback remains
+  paused with recovery download and exact original-work retry; fresh-app recovery
+  requires an explicit full validated restore or selected clear after closing
+  other pages. Future report/list/sending stores must extend this inventory.
+- Check, all 361 tests across 33 files and production build pass. Focused browser
+  journeys pass actual download/restore/twice-restore, validation rejection,
+  storage retry, clear cancellation, cross-tab copy shutdown and account privacy
+  at desktop keyboard/mobile emulated touch widths. A real committed POST with
+  held acknowledgement confirms local clear does not erase server history or
+  revive local work when its response arrives. Desktop contrast was corrected
+  and rechecked. All 39 standard browser journeys passed on the final tree.
+- No Worker/config/binding changes or migrations. Independent review begins
+  after the implementation commit; publication/deployment/closure remain pending.
+  No service-worker shell, active non-copy crash/reload elapsed recovery or
+  physical-device verification is claimed.
+
 ## Remaining queue
 
-Issue #3 begins next, following the completed #2 gate. Issues #3–#46 remain pending.
-No external blockers remain. Read-only maps for #3–#16, lifecycle hooks and source
-evidence remain in ignored queue notes; no future issue implementation has begun.
+Issue #3 is in its validation/review loop. Issues #4–#46 remain pending.
+No external blockers remain. Read-only source/dependency maps remain in ignored
+queue notes; no future issue implementation has begun.
 
 ## Concurrent work to preserve
 

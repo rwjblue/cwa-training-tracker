@@ -14,6 +14,11 @@ import {
   saveCopyPreferences,
   type CopyDraft,
 } from './copy-storage';
+import {
+  completeDeviceScopeMutation,
+  getDeviceScopeToken,
+  invalidateDeviceScope,
+} from './device-scope';
 
 function draft(id = 'recovery'): CopyDraft {
   const attempt = createCopyAttempt(
@@ -44,6 +49,7 @@ beforeEach(() => {
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
   });
+  vi.stubGlobal('window', { dispatchEvent: vi.fn() });
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -170,5 +176,25 @@ describe('native copy recovery', () => {
     expect(saveCopyDraft('guest', draft())).toBe(false);
     expect(claimCopyLease('guest', 'tab')).toBe(true);
     expect(() => clearCopyDraft('guest', 'recovery')).not.toThrow();
+  });
+
+  it('prevents a stale copy owner or its cleanup from resurrecting a cleared draft', () => {
+    const token = getDeviceScopeToken('cleared-account');
+    const original = draft('cleared-copy');
+    claimCopyLease('cleared-account', 'old-tab', false, token);
+    saveCopyDraft('cleared-account', original, token);
+    const next = invalidateDeviceScope('cleared-account');
+    localStorage.removeItem(copyStorageKey('cleared-account'));
+    localStorage.removeItem(`${copyStorageKey('cleared-account')}:lease`);
+    completeDeviceScopeMutation('cleared-account', next);
+    expect(ownsCopyLease('cleared-account', 'old-tab', token)).toBe(false);
+    expect(claimCopyLease('cleared-account', 'old-tab', true, token)).toBe(false);
+    expect(saveCopyDraft('cleared-account', original, token)).toBe(false);
+    expect(loadCopyDraft('cleared-account')).toBeUndefined();
+    const restored = { ...original, notes: 'Restored copy notes' };
+    saveCopyDraft('cleared-account', restored, next);
+    clearCopyDraft('cleared-account', original.attempt.id, token);
+    expect(loadCopyDraft('cleared-account')?.notes).toBe(restored.notes);
+    expect(saveCopyDraft('another-account', draft('other'))).toBe(true);
   });
 });

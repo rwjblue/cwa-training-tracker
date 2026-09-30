@@ -48,6 +48,7 @@ import {
   StudioSaveCoordinator,
 } from './studio-session';
 import './practice-studio.css';
+import { getDeviceScopeToken, isDeviceScopeCurrent, subscribeDeviceScope } from './device-scope';
 
 const duration = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -79,6 +80,9 @@ export default function PracticeStudio({
   onTaskCompletion?: (task: PlannedTask, done: boolean) => Promise<void>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
 }) {
+  const notesScope = accountId ?? 'guest';
+  const [deviceToken] = useState(() => getDeviceScopeToken(notesScope));
+  const currentDevice = () => isDeviceScopeCurrent(notesScope, deviceToken);
   const activity = launch?.activity;
   const assigned = Boolean(activity);
   const [selectedRecording, setSelectedRecording] = useState(() =>
@@ -154,7 +158,6 @@ export default function PracticeStudio({
   const seconds = Math.floor(timer.seconds);
   const running = timer.running;
   const [scratchpad, setScratchpad] = useState('');
-  const notesScope = accountId ?? 'guest';
   const notesContext =
     launch?.task?.id ?? (assigned ? (launch?.id ?? 'assigned') : `public:${tool}`);
   const [notesRemembered, setNotesRemembered] = useState(true);
@@ -175,8 +178,9 @@ export default function PracticeStudio({
       createdAt: new Date().toISOString(),
     });
   const changeScratchpad = (value: string) => {
+    if (!currentDevice()) return;
     setScratchpad(value);
-    setNotesRemembered(saveStudioNotes(notesScope, notesContext, value));
+    setNotesRemembered(saveStudioNotes(notesScope, notesContext, value, undefined, deviceToken));
   };
   const [timerMinutes, setTimerMinutes] = useState<number | undefined>(launch?.task?.targetMinutes);
   const timerDone = timerMinutes !== undefined && seconds >= timerMinutes * 60;
@@ -192,7 +196,7 @@ export default function PracticeStudio({
   }, []);
   const trainer = useRef<ListeningTrainerHandle>(null);
   useEffect(() => {
-    setRemembered(savePracticePreferences(preferences));
+    if (currentDevice()) setRemembered(savePracticePreferences(preferences));
   }, [preferences]);
   useEffect(() => {
     if (previousSaved.current !== savedVersion) {
@@ -245,13 +249,24 @@ export default function PracticeStudio({
     trainer.current?.stop();
     setPlaying(false);
   };
+  useEffect(
+    () =>
+      subscribeDeviceScope((state) => {
+        if (state.scope === notesScope && !currentDevice()) {
+          navigationLocked.current = true;
+          timer.pause();
+          stopPlayback();
+        }
+      }),
+    [notesScope, deviceToken],
+  );
   const pauseTimer = () => {
     const elapsed = timer.pause();
     stopPlayback();
     return Math.floor(elapsed.seconds);
   };
   const startTimer = () => {
-    if (isRunner || isCopy || running || navigationLocked.current) return;
+    if (!currentDevice() || isRunner || isCopy || running || navigationLocked.current) return;
     identity();
     setConfirmReset(false);
     timer.startManual(activity?.type === 'audio');
@@ -276,12 +291,13 @@ export default function PracticeStudio({
       minimumSeconds,
     );
   const logTimedSession = () => {
-    if (navigationLocked.current) return;
+    if (!currentDevice() || navigationLocked.current) return;
     pauseTimer();
     const entry = captureSession(1);
     if (entry) onLog(entry);
   };
   const beforeLeave = (): Promise<boolean> => {
+    if (!currentDevice()) return Promise.resolve(false);
     if (completionFlight.current)
       return completionFlight.current.then((saved) => saved && beforeLeaveRef.current());
     if (navigationFlight.current) return navigationFlight.current;
@@ -304,6 +320,7 @@ export default function PracticeStudio({
     navigationFlight.current = (async () => {
       try {
         const outcome = await saveCoordinator.current.flush(captureSession(), onAutoSave);
+        if (!currentDevice()) return false;
         if (outcome === 'saved') changeScratchpad('');
         resetTimer();
         setError('');
@@ -311,6 +328,7 @@ export default function PracticeStudio({
         navigationLocked.current = false;
         return true;
       } catch (error) {
+        if (!currentDevice()) return false;
         saveRetryIntent.current = 'navigation';
         setError(
           `Your session is still here. ${error instanceof Error ? error.message : 'The session could not be saved.'} Try saving again before continuing.`,
@@ -318,13 +336,14 @@ export default function PracticeStudio({
         setSaveFailed(true);
         return false;
       } finally {
-        setSavingNavigation(false);
+        if (currentDevice()) setSavingNavigation(false);
         navigationFlight.current = undefined;
       }
     })();
     return navigationFlight.current;
   };
   const changeCompletion = (done: boolean) => {
+    if (!currentDevice()) return;
     const task = launch?.task;
     if (!task || !onTaskCompletion || completionFlight.current || navigationFlight.current) return;
     setSavingCompletion(true);
@@ -339,6 +358,7 @@ export default function PracticeStudio({
           pauseTimer();
           try {
             const outcome = await saveCoordinator.current.flush(captureSession(1), onAutoSave);
+            if (!currentDevice()) return false;
             if (outcome === 'saved') changeScratchpad('');
             resetTimer();
             setSaveFailed(false);
@@ -350,16 +370,19 @@ export default function PracticeStudio({
             throw error;
           }
         }
+        if (!currentDevice()) return false;
         await onTaskCompletion(task, done);
+        if (!currentDevice()) return false;
         return true;
       } catch (error) {
+        if (!currentDevice()) return false;
         setCompletionError(
           `${done ? 'Could not confirm completion.' : 'Could not confirm reopening.'} ${error instanceof Error ? error.message : 'Please try again.'}`,
         );
         return false;
       } finally {
         navigationLocked.current = saveBlocked;
-        setSavingCompletion(false);
+        if (currentDevice()) setSavingCompletion(false);
         completionFlight.current = undefined;
       }
     })();
@@ -370,7 +393,7 @@ export default function PracticeStudio({
     return () => onBeforeLeaveChange?.(undefined);
   }, [onBeforeLeaveChange]);
   const changePreferences = (changes: Partial<PracticePreferences>, regenerate = false) => {
-    if (navigationLocked.current) return;
+    if (!currentDevice() || navigationLocked.current) return;
     if (!('hideTrainerText' in changes)) stopPlayback();
     setError('');
     const next = normalizePracticePreferences({ ...preferences, ...changes });
@@ -399,7 +422,7 @@ export default function PracticeStudio({
     setFreeTrack(next);
   };
   const seekFree = (index: number) => {
-    if (navigationLocked.current) return;
+    if (!currentDevice() || navigationLocked.current) return;
     try {
       prepareFree();
       player.current.seekWord(index);
@@ -415,7 +438,7 @@ export default function PracticeStudio({
     setFreeWord(-1);
   }, [text, characterWpm, effectiveWpm, tone, volume, tool]);
   const play = async () => {
-    if (navigationLocked.current) return;
+    if (!currentDevice() || navigationLocked.current) return;
     identity();
     if (playing) {
       stopPlayback();
@@ -447,7 +470,7 @@ export default function PracticeStudio({
     }
   };
   const startPractice = async () => {
-    if (navigationLocked.current) return;
+    if (!currentDevice() || navigationLocked.current) return;
     if (activity?.type === 'audio' && !recordingUrl) {
       setError(activity.unresolved ?? 'This recording is unavailable.');
       return;
@@ -458,7 +481,7 @@ export default function PracticeStudio({
     if (!playing) await play();
   };
   const generate = () => {
-    if (navigationLocked.current) return;
+    if (!currentDevice() || navigationLocked.current) return;
     stopPlayback();
     if (mode !== 'custom') setText(generatePractice(mode, preferences));
   };

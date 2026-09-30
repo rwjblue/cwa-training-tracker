@@ -5,9 +5,16 @@ import {
   saveStudioNotes,
   studioSession,
   StudioSaveCoordinator,
+  captureStudioNotes,
+  invalidateScratchpadMemory,
   type StudioSessionInput,
 } from './studio-session';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
+import {
+  completeDeviceScopeMutation,
+  getDeviceScopeToken,
+  invalidateDeviceScope,
+} from './device-scope';
 
 function input(seconds = 30): StudioSessionInput {
   return {
@@ -18,6 +25,65 @@ function input(seconds = 30): StudioSessionInput {
     timezone: 'America/New_York',
   };
 }
+
+it('clears scoped notes memory and rejects a delayed old save without erasing restored notes', () => {
+  const values = new Map<string, string>();
+  const storage = {
+    get length() {
+      return values.size;
+    },
+    key: (index: number) => [...values.keys()][index] ?? null,
+    getItem: (name: string) => values.get(name) ?? null,
+    setItem: (name: string, value: string) => values.set(name, value),
+    removeItem: (name: string) => values.delete(name),
+  };
+  vi.stubGlobal('localStorage', storage);
+  vi.stubGlobal('window', { dispatchEvent: vi.fn() });
+  try {
+    const scope = 'notes-lifecycle-owner';
+    const old = getDeviceScopeToken(scope);
+    saveStudioNotes(scope, 'public:words', 'Original notes', undefined, old);
+    saveStudioNotes(`${scope}-other`, 'public:words', 'Other owner');
+    expect(captureStudioNotes(scope)).toEqual([
+      { context: 'public:words', text: 'Original notes' },
+    ]);
+    const token = invalidateDeviceScope(scope);
+    invalidateScratchpadMemory(scope);
+    storage.removeItem(`cwa.studio.scratchpad.v1:${JSON.stringify([scope, 'public:words'])}`);
+    completeDeviceScopeMutation(scope, token);
+    expect(loadStudioNotes(scope, 'public:words')).toBe('');
+    saveStudioNotes(scope, 'public:words', 'Restored notes', undefined, token);
+    const oldEntry = studioSession(input())!;
+    expect(clearSavedStudioNotes(scope, oldEntry, undefined, old)).toBe(false);
+    expect(saveStudioNotes(scope, 'public:words', 'Old cleanup', undefined, old)).toBe(false);
+    expect(loadStudioNotes(scope, 'public:words')).toBe('Restored notes');
+    expect(loadStudioNotes(`${scope}-other`, 'public:words')).toBe('Other owner');
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it('drops another tab’s stale notes memory before a lifecycle notification is delivered', () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (name: string) => values.get(name) ?? null,
+    setItem: (name: string, value: string) => values.set(name, value),
+    removeItem: (name: string) => values.delete(name),
+  };
+  vi.stubGlobal('localStorage', storage);
+  try {
+    const scope = 'other-tab-notes';
+    saveStudioNotes(scope, 'public:words', 'Old memory');
+    localStorage.setItem(
+      `cwa:device:scope:v1:${scope}`,
+      JSON.stringify({ version: 1, token: 'new-tab-token', mutating: false }),
+    );
+    localStorage.removeItem(`cwa.studio.scratchpad.v1:${JSON.stringify([scope, 'public:words'])}`);
+    expect(loadStudioNotes(scope, 'public:words')).toBe('');
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 
 it('auto-saves exact measured practice from 30 seconds, without rounding a short session up', () => {
   expect(studioSession(input(29.999))).toBeUndefined();
