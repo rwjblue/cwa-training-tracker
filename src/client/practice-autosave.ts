@@ -144,9 +144,9 @@ let observedWindow: Window | undefined;
 function observeDeviceScope() {
   if (observedWindow === window || typeof window.addEventListener !== 'function') return;
   observedWindow = window;
-  subscribeDeviceScope(({ scope, mutating }) => {
+  subscribeDeviceScope(({ scope, token, mutating }) => {
     if (mutating) suspendPracticeUploads(scope);
-    invalidatePracticeMemory(scope);
+    invalidatePracticeMemory(scope, mutating ? undefined : token);
   });
 }
 export function listInFlightPracticeIds(scope: string): string[] {
@@ -154,10 +154,11 @@ export function listInFlightPracticeIds(scope: string): string[] {
     .filter(([name]) => name.startsWith(prefix(scope)))
     .map(([, upload]) => upload.id);
 }
-export function invalidatePracticeMemory(scope: string): void {
+export function invalidatePracticeMemory(scope: string, preserveToken?: string): void {
   const statusPrefix = `cwa:practice:status:v1:${encodeURIComponent(scope)}:`;
-  for (const name of volatileStates.keys())
-    if (name.startsWith(statusPrefix)) volatileStates.delete(name);
+  for (const [name, value] of volatileStates)
+    if (name.startsWith(statusPrefix) && value.deviceToken !== preserveToken)
+      volatileStates.delete(name);
 }
 /** Internal rollback retains a status whose optional sidecar could not be persisted. */
 export function restorePracticeMemory(scope: string, states: PracticeSaveState[]): void {

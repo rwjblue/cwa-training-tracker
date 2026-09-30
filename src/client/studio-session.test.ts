@@ -6,6 +6,7 @@ import {
   studioSession,
   StudioSaveCoordinator,
   captureStudioNotes,
+  captureScratchpadMemory,
   invalidateScratchpadMemory,
   type StudioSessionInput,
 } from './studio-session';
@@ -15,6 +16,42 @@ import {
   getDeviceScopeToken,
   invalidateDeviceScope,
 } from './device-scope';
+
+it('snapshots only current scoped scratchpad memory, including empty tombstones and excluding malformed persisted data', () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (name: string) => values.get(name) ?? null,
+    setItem: (name: string, value: string) => values.set(name, value),
+    removeItem: (name: string) => values.delete(name),
+  };
+  vi.stubGlobal('localStorage', storage);
+  try {
+    const scope = 'rollback-memory-scope';
+    const old = getDeviceScopeToken(scope);
+    saveStudioNotes(scope, 'visible-memory', 'Learner notes');
+    saveStudioNotes(scope, 'empty-memory', '');
+    saveStudioNotes(`${scope}-other`, 'other-memory', 'Private other scope');
+    values.set(
+      `cwa.studio.scratchpad.v1:${JSON.stringify([scope, 'persisted-only'])}`,
+      'X'.repeat(10001),
+    );
+    expect(captureScratchpadMemory(scope)).toEqual([
+      { context: 'visible-memory', text: 'Learner notes' },
+      { context: 'empty-memory', text: '' },
+    ]);
+    values.set(
+      `cwa:device:scope:v1:${scope}`,
+      JSON.stringify({ version: 1, token: 'another-owner', mutating: false }),
+    );
+    expect(getDeviceScopeToken(scope)).not.toBe(old);
+    expect(captureScratchpadMemory(scope)).toEqual([]);
+    expect(captureScratchpadMemory(`${scope}-other`)).toEqual([
+      { context: 'other-memory', text: 'Private other scope' },
+    ]);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 
 function input(seconds = 30): StudioSessionInput {
   return {

@@ -144,6 +144,32 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   No service-worker shell, active non-copy crash/reload elapsed recovery or
   physical-device verification is claimed.
 
+- Implementation commit `e8deedc7` received fresh independent review. Twelve
+  independently authored desktop/mobile journeys completed across serialized
+  runs, including real timer/audio/Runner cross-tab clear and a committed POST
+  with its acknowledgement held. Four isolated fast probes confirm five P2
+  findings: coercible malformed enums, damaged-export rollback losing memory-only
+  notes, ready notification erasing volatile failure/conflict state, hidden file
+  input breaking initial focus/keyboard containment, and a retired copy lease
+  blocking same-tab restore. No additional privacy/timing/identity finding was
+  established. Corrections and independent recheck are in progress; the gate is
+  not accepted yet.
+
+- All five review findings are corrected within the existing inventory/queue
+  architecture. Strict file enums reject arrays; rollback independently captures
+  valid memory-only notes and queue failures/conflicts, and ready observers retain
+  the current-token rebound state. Mutations retire revoked Copy leases. The
+  shared modal focuses visible tabbable controls and contains forward/reverse Tab.
+  Root additionally reproduced a sixth scope boundary: after account-local clear,
+  a fresh disconnected Guest page retained the private selection pointer and
+  rejected its reviewed Guest file. Restore now uses the displayed Guest scope
+  without changing that pointer; private scope mismatches remain strict.
+- Final fast correction validation passes typecheck, all 369 tests in 33 files,
+  and production build. All four focused device browser journeys and all 40
+  standard browser journeys pass. Inspected desktop/mobile screenshots, Axe
+  results and overflow checks pass. The correction commit and independent recheck
+  are pending; this issue remains open and unpublished.
+
 ## Remaining queue
 
 Issue #3 is in its validation/review loop. Issues #4–#46 remain pending.

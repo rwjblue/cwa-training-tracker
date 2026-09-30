@@ -508,18 +508,18 @@ let observedWindow: Window | undefined;
 function observeDeviceScope() {
   if (observedWindow === window || typeof window.addEventListener !== 'function') return;
   observedWindow = window;
-  subscribeDeviceScope(({ scope, mutating }) => {
+  subscribeDeviceScope(({ scope, token, mutating }) => {
     if (mutating) suspendAccountUploads(scope);
-    invalidateAccountMemory(scope);
+    invalidateAccountMemory(scope, mutating ? undefined : token);
   });
 }
 export function listInFlightAccountOperationIds(scope: string): string[] {
   const id = uploads.get(scope)?.operationId;
   return id ? [id] : [];
 }
-export function invalidateAccountMemory(scope: string): void {
-  for (const name of volatileFailures.keys())
-    if (name.startsWith(operationPrefix(scope))) {
+export function invalidateAccountMemory(scope: string, preserveToken?: string): void {
+  for (const [name, value] of volatileFailures)
+    if (name.startsWith(operationPrefix(scope)) && value.deviceToken !== preserveToken) {
       volatileFailures.delete(name);
     }
 }

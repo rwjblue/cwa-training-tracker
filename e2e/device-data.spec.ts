@@ -52,6 +52,17 @@ for (const mobile of [false, true]) {
     await page.getByRole('button', { name: 'Save practice', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await navigate(page, 'This device', mobile);
+    const closeDialog = page.getByRole('button', { name: 'Close dialog', exact: true });
+    const clearLocal = page.getByRole('button', { name: 'Clear local device work', exact: true });
+    await expect(closeDialog).toBeFocused();
+    await expect(
+      page.getByRole('region', { name: 'Scoped device work', exact: true }),
+    ).toBeVisible();
+    await clearLocal.focus();
+    await page.keyboard.press('Tab');
+    await expect(closeDialog).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(clearLocal).toBeFocused();
     const guestFile = await downloadDevice(page);
     const guestBackup = JSON.parse(guestFile.bytes.toString());
     expect(guestBackup.scope.id).toBe('guest');
@@ -83,7 +94,9 @@ for (const mobile of [false, true]) {
     await context.route('**/api/entries', (route) =>
       route.request().method() === 'POST' ? route.abort('internetdisconnected') : route.continue(),
     );
-    await context.route('**/api/account-operations', (route) => route.abort('internetdisconnected'));
+    await context.route('**/api/account-operations', (route) =>
+      route.abort('internetdisconnected'),
+    );
     await page.getByRole('button', { name: 'Log practice', exact: true }).first().click();
     await page.getByLabel(/^Time practiced/).fill('1:17');
     await page.getByLabel(/^Notes/).fill('Pending device result retains exact identity');
@@ -298,6 +311,24 @@ for (const mobile of [false, true]) {
     });
     await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('ES');
+    await expect(
+      page.getByText('Copy practice is open in another tab.', { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Resume audio', exact: true })).toBeEnabled();
+    const restoredAudio = page.getByLabel('Copy practice audio', { exact: true });
+    const restoredPosition = await restoredAudio.evaluate(
+      (audio: HTMLAudioElement) => audio.currentTime,
+    );
+    const resumeAudio = page.getByRole('button', { name: 'Resume audio', exact: true });
+    if (mobile) await resumeAudio.tap();
+    else {
+      await resumeAudio.focus();
+      await page.keyboard.press('Enter');
+    }
+    await expect
+      .poll(() => restoredAudio.evaluate((audio: HTMLAudioElement) => audio.currentTime))
+      .toBeGreaterThan(restoredPosition);
+    await page.getByRole('button', { name: 'Pause audio', exact: true }).click();
     await context.unroute('**/api/entries');
     await context.unroute('**/api/account-operations');
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
@@ -357,4 +388,47 @@ test('local clear suppresses a lost acknowledgement and identifies its possible 
   await expect(
     page.getByText('Committed result with a held acknowledgement', { exact: true }),
   ).toBeVisible();
+});
+
+test('guest restore remains usable after clearing account context and reopening with disconnected APIs', async ({
+  page,
+  context,
+}) => {
+  await context.setExtraHTTPHeaders({ 'CF-Connecting-IP': '192.0.2.134' });
+  await page.goto('/#logbook');
+  await page.getByRole('button', { name: 'Log practice', exact: true }).click();
+  await page.getByLabel(/^Time practiced/).fill('0:42');
+  await page.getByLabel(/^Notes/).fill('Guest recovery is independent of account cache');
+  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await navigate(page, 'This device', false);
+  const guestFile = await downloadDevice(page);
+  await page.keyboard.press('Escape');
+  await signIn(page);
+  const accountId = (await (await context.request.get('/api/me')).json()).user.id as string;
+  await navigate(page, 'This device', false);
+  await page.getByRole('button', { name: 'Clear local device work', exact: true }).click();
+  await page.getByRole('button', { name: 'Clear device work', exact: true }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Device work cleared for' }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate((id) => localStorage.getItem(`cwa:account:identity:v1:${id}`), accountId),
+  ).toBeNull();
+  await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
+  const reopened = await context.newPage();
+  await reopened.goto('/#logbook');
+  await navigate(reopened, 'This device', false);
+  await expect(reopened.getByRole('dialog')).toContainText('Guest — this browser');
+  await chooseBackup(reopened, guestFile.bytes);
+  await expect(reopened.getByRole('region', { name: 'Review device restore' })).toBeVisible();
+  await reopened.getByRole('button', { name: 'Restore device work', exact: true }).click();
+  await expect(
+    reopened.getByRole('status').filter({ hasText: 'Device work restored for Guest' }),
+  ).toBeVisible();
+  expect(await reopened.evaluate(() => localStorage.getItem('cwa:account:active:v1'))).toBe(
+    accountId,
+  );
+  expect(JSON.parse(guestFile.bytes.toString()).scope.id).toBe('guest');
+  await reopened.close();
 });

@@ -282,3 +282,11 @@ See [device inventory](../../src/client/device-backup.ts),
 [browser workflow](../../e2e/device-data.spec.ts). Future report/list/sending
 stores must join the same inventory. Approved scope excludes new elapsed-time
 reload/crash recovery for active non-copy practice; existing copy recovery stays.
+
+The independent review required strict string enums throughout restored work,
+rollback memory independent of a valid export, current-token retry state surviving
+ready observers, visible modal focus containment and retirement of the old Copy
+lease. These corrections preserve the original IDs and measurements. A separately
+reproduced disconnected Guest reopen uses the displayed Guest scope without
+changing account selection; private account mismatches still reject before writes.
+Correction validation and the independent recheck remain in the execution journal.

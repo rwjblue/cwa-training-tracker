@@ -187,6 +187,7 @@ export default function DeviceData({
       const result =
         action === 'restore' && restore
           ? restoreDeviceBackup(restore.backup, {
+              expectedScope: scope,
               restoreSharedPreferences: restoreShared,
               replaceCopyDraft: replaceCopy,
               recoverInterrupted: interrupted && closedOtherPages,

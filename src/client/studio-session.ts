@@ -191,6 +191,17 @@ export function invalidateScratchpadMemory(scope: string): void {
     }
 }
 
+/** Internal rollback preserves only current owner memory, including empty tombstones. */
+export function captureScratchpadMemory(scope: string): { context: string; text: string }[] {
+  const token = getDeviceScopeToken(scope);
+  return [...notesMemory].flatMap(([name, text]) => {
+    const context = scopedNotesContext(name, scope);
+    return context !== undefined && notesMemoryTokens.get(name) === token
+      ? [{ context, text }]
+      : [];
+  });
+}
+
 /** Internal rollback restores memory-only notes after the original storage is coherent. */
 export function restoreScratchpadMemory(
   scope: string,

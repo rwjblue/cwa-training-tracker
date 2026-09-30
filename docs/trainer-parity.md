@@ -286,6 +286,11 @@ recording-speed preferences appear in a separate section and restore only by
 explicit choice. Authentication, active account selection, leases and lifecycle
 fences are excluded.
 
+Restore uses the scope displayed in the dialog. A disconnected Guest reopen can
+restore Guest work without changing a retained account selection; private restore
+still requires the exact selected account. File enums require their actual string
+types, including nested immutable operations and source evidence.
+
 Whole-file validation enforces a 16 MiB UTF-8 bound, store/item/count limits and
 exact guest/account scope before mutation. Repeated restore preserves immutable
 identities without duplicate work. Changed bodies or origins under the same ID
@@ -303,6 +308,14 @@ uploads paused with recovery download and retry, including deliberate recovery o
 an interrupted update after reopening. The UI identifies retained request IDs
 whose server outcome may be uncertain; local clear cannot erase an already
 committed server write. Reset/replacement dataset invalidation remains issue #4.
+
+Internal rollback preserves current memory-only notes and volatile failure/conflict
+states even when damaged retained work prevents a complete portable export. Ready
+observers retain those newly rebound states, so failed clear does not silently
+retry a permanent rejection. Actual mutations retire the revoked Copy lease,
+allowing the restored owner to resume; unchanged restore retains its current owner.
+The shared modal selects visible, enabled, tabbable controls and keeps keyboard
+focus inside the dialog, including forward/reverse wrap and explicit initial focus.
 
 Evidence: [device inventory and strict restore](../src/client/device-backup.ts),
 [scope ownership fence](../src/client/device-scope.ts),

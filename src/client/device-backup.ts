@@ -44,6 +44,7 @@ import {
 } from './practice-preferences';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
 import {
+  captureScratchpadMemory,
   captureStudioNotes,
   invalidateScratchpadMemory,
   restoreScratchpadMemory,
@@ -85,6 +86,8 @@ export interface DeviceBackup {
   shared: { practicePreferences?: PracticePreferences; recordingSpeed?: 'assigned' | 'next' };
 }
 export interface DeviceRestoreOptions {
+  /** Bind the file to the displayed scope; public Guest work grants no account authority. */
+  expectedScope?: string;
   restoreSharedPreferences?: boolean;
   replaceCopyDraft?: boolean;
   /** Explicit recovery after closing other pages; never silently unlock partial work. */
@@ -198,11 +201,11 @@ function validateStatus(
   );
   if (expectedId !== undefined && input.id !== expectedId)
     throw new Error(`${label} belongs to a different result.`);
-  if (!allowedStatuses.includes(String(input.status)))
+  if (typeof input.status !== 'string' || !allowedStatuses.includes(input.status))
     throw new Error(`${label} has an invalid status.`);
   if (
     input.failure !== undefined &&
-    !['network', 'auth', 'permanent'].includes(String(input.failure))
+    (typeof input.failure !== 'string' || !['network', 'auth', 'permanent'].includes(input.failure))
   )
     throw new Error(`${label} has an invalid failure reason.`);
   return {
@@ -239,6 +242,11 @@ function validateOperationBody(body: string, scope: string, expectedId: string) 
     'error',
     'failure',
   ]);
+  if (input.operation && typeof input.operation === 'object') {
+    const change = (input.operation as { change?: Record<string, unknown> }).change;
+    if (change?.type === 'task-create') strictTaskEnums(change.task);
+    if (change?.type === 'task-edit') strictTaskEnums(change.changes);
+  }
   const operation = validateAccountOperation(input.operation);
   if (operation.accountId !== scope || operation.id !== expectedId)
     throw new Error('A pending account edit belongs to a different account or ID.');
@@ -278,6 +286,9 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
   for (const key of Object.keys(DEFAULT_PRACTICE_PREFERENCES))
     if (input[key] === undefined)
       throw new Error(`Shared practice preferences are missing ${key}.`);
+  for (const key of ['tool', 'wordList', 'mode', 'qsoScenario'])
+    if (typeof input[key] !== 'string')
+      throw new Error(`Shared practice preference ${key} must be a supported string value.`);
   const normalized = normalizePracticePreferences(input);
   for (const [key, normalizedValue] of Object.entries(normalized))
     if (input[key] !== normalizedValue)
@@ -296,10 +307,47 @@ function validateCache(value: unknown, scope: string): CachedAccount {
   if (JSON.stringify(input).length > 4_000_000)
     throw new Error('The offline account cache is too large.');
   const user = validateIdentity(input.user, scope);
+  const rawState = input.state as { plan?: unknown } | undefined;
+  if (Array.isArray(rawState?.plan)) rawState.plan.forEach(strictTaskEnums);
   const state = validateAccountSnapshot(input.state);
   if (state.accountId !== scope)
     throw new Error('The cached account state does not match the backup scope.');
   return { user, state };
+}
+/** Domain loaders may normalize recipes; files cannot supply coerced discriminator values. */
+function strictTaskEnums(value: unknown): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const exercise = (value as { exercise?: unknown }).exercise;
+  if (
+    exercise &&
+    typeof exercise === 'object' &&
+    !Array.isArray(exercise) &&
+    typeof (exercise as { type?: unknown }).type !== 'string'
+  )
+    throw new Error('Exercise resource type must be a supported string value.');
+}
+function strictRunnerEnums(value: unknown): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const run = value as { status?: unknown; errorCode?: unknown };
+  if (
+    typeof run.status !== 'string' ||
+    (run.errorCode !== undefined && typeof run.errorCode !== 'string')
+  )
+    throw new Error('Runner result status and error code must be supported string values.');
+}
+function strictPracticeEnums(value: unknown): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const entry = value as { source?: unknown; metadata?: unknown };
+  if (entry.source !== undefined && typeof entry.source !== 'string')
+    throw new Error('Practice result source must be a supported string value.');
+  if (entry.metadata && typeof entry.metadata === 'object' && !Array.isArray(entry.metadata)) {
+    const metadata = entry.metadata as {
+      runner?: unknown;
+      evidence?: { type?: unknown; run?: unknown };
+    };
+    if (metadata.runner !== undefined) strictRunnerEnums(metadata.runner);
+    if (metadata.evidence?.type === 'runner') strictRunnerEnums(metadata.evidence.run);
+  }
 }
 function validatePracticeBody(body: string) {
   const value = object(
@@ -325,6 +373,7 @@ function validatePracticeBody(body: string) {
       'metadata',
     ],
   );
+  strictPracticeEnums(value);
   return validatePracticeSession(value);
 }
 
@@ -426,6 +475,15 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
   }
   if (scopeId === 'guest' && accountOperations.length)
     throw new Error('A guest device backup cannot contain account edits.');
+  if (
+    stores.copyDraft &&
+    typeof stores.copyDraft === 'object' &&
+    !Array.isArray(stores.copyDraft)
+  ) {
+    const draft = stores.copyDraft as { task?: unknown; pending?: unknown };
+    strictTaskEnums(draft.task);
+    strictPracticeEnums(draft.pending);
+  }
   const copyDraft =
     stores.copyDraft === undefined ? undefined : validateCopyDraft(stores.copyDraft);
   if (copyDraft?.pending) {
@@ -466,7 +524,8 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
   ]);
   if (
     shared.recordingSpeed !== undefined &&
-    !['assigned', 'next'].includes(String(shared.recordingSpeed))
+    (typeof shared.recordingSpeed !== 'string' ||
+      !['assigned', 'next'].includes(shared.recordingSpeed))
   )
     throw new Error('Choose a valid shared recording speed preference.');
   return {
@@ -795,6 +854,26 @@ function applyChanges(
   recovery?: DeviceBackup,
   recoverInterrupted = false,
 ): DeviceMutationResult {
+  // Runtime memory remains recoverable even when a damaged registered record
+  // prevents a complete, valid user export. Persistent originals stay opaque.
+  const rollbackMemory = {
+    scratchpads: captureScratchpadMemory(scope),
+    practiceStates: loadPracticeSaveStates(scope).flatMap((state) => {
+      try {
+        return [
+          validateStatus(
+            state,
+            ['pending', 'failed'],
+            'Practice state',
+            state.id,
+          ) as PracticeSaveState,
+        ];
+      } catch {
+        return [];
+      }
+    }),
+    accountOperations: loadAccountOperations(scope),
+  };
   const retainedIds = (prefix: string) =>
     names(localStorage)
       .filter((name) => name.startsWith(prefix))
@@ -824,7 +903,12 @@ function applyChanges(
     ],
   };
   const originals = new Map<string, string | null>();
-  for (const name of changes.keys()) originals.set(name, localStorage.getItem(name));
+  // The old copy owner loses its token. Its lease must not block a new owner
+  // after restore or a coherent rollback, and is never retained user work.
+  const retiredLease = `${copyStorageKey(scope)}:lease`;
+  changes.set(retiredLease, null);
+  for (const name of changes.keys())
+    originals.set(name, name === retiredLease ? null : localStorage.getItem(name));
   suspendPracticeUploads(scope);
   suspendAccountUploads(scope);
   let token: string;
@@ -858,22 +942,9 @@ function applyChanges(
     invalidateMemory(scope);
     if (!failed) {
       try {
-        if (recovery) {
-          restoreScratchpadMemory(scope, recovery.stores.scratchpads);
-          restorePracticeMemory(
-            scope,
-            recovery.stores.practice.map(
-              (item) => item.state ?? { id: item.id, status: 'pending' },
-            ),
-          );
-          restoreAccountMemory(
-            scope,
-            recovery.stores.accountOperations.map((item) => ({
-              ...validateOperationBody(item.body, scope, item.id),
-              ...(item.state ?? { status: 'pending' as const }),
-            })),
-          );
-        }
+        restoreScratchpadMemory(scope, rollbackMemory.scratchpads);
+        restorePracticeMemory(scope, rollbackMemory.practiceStates);
+        restoreAccountMemory(scope, rollbackMemory.accountOperations);
         completeDeviceScopeMutation(scope, token);
       } catch {
         failed = true;
@@ -922,7 +993,10 @@ export function restoreDeviceBackup(
 ): DeviceMutationResult {
   if (storage !== localStorage)
     throw new Error('Device updates must use this browser’s current storage.');
-  const currentScope = getSelectedAccountId() ?? 'guest';
+  const selectedScope = getSelectedAccountId() ?? 'guest';
+  const currentScope = options.expectedScope ?? selectedScope;
+  if (currentScope !== 'guest' && currentScope !== selectedScope)
+    throw new Error('The selected account changed. Reopen its device work before restoring.');
   const checked = validateDeviceBackup(JSON.stringify(backup), currentScope);
   const scope = checked.scope.id;
   if (isDeviceScopeMutating(scope) && !options.recoverInterrupted)

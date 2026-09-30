@@ -2,8 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
-import { loadAccountOperations, queueAccountChange, rememberAccount } from './account-outbox';
-import { copyStorageKey, type CopyDraft } from './copy-storage';
+import { validatePlannedTask, type PlannedTask } from '../shared/plan';
+import { RUNNER_REVISION } from '../shared/runner';
+import {
+  flushAccountOperations,
+  loadAccountOperations,
+  queueAccountChange,
+  rememberAccount,
+} from './account-outbox';
+import { claimCopyLease, copyStorageKey, ownsCopyLease, type CopyDraft } from './copy-storage';
 import {
   captureDeviceBackup,
   clearDeviceWork,
@@ -21,8 +28,15 @@ import {
   getDeviceScopeToken,
   invalidateDeviceScope,
   isDeviceScopeMutating,
+  subscribeDeviceScope,
 } from './device-scope';
-import { loadLocalPractice, loadPracticeSaveOrigin } from './practice-autosave';
+import {
+  autoSavePractice,
+  flushPracticeSaves,
+  loadLocalPractice,
+  loadPracticeSaveOrigin,
+  loadPracticeSaveStates,
+} from './practice-autosave';
 import { DEFAULT_PRACTICE_PREFERENCES, PRACTICE_PREFERENCES_KEY } from './practice-preferences';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
 import { loadStudioNotes, saveStudioNotes } from './studio-session';
@@ -203,6 +217,30 @@ describe('the explicit device inventory', () => {
     expect(values.has('cwa:account:active:v1')).toBe(false);
   });
 
+  it('restores the displayed Guest scope without changing a retained account selection and still rejects private scope mismatches', () => {
+    seed('guest');
+    const guest = captureDeviceBackup('guest', 'Guest');
+    clearDeviceWork('guest');
+    seed();
+    const privateBackup = captureDeviceBackup(scope, 'Synthetic learner');
+    const selected = values.get('cwa:account:active:v1');
+    const before = snapshot();
+    expect(() => restoreDeviceBackup(guest)).toThrow();
+    expect(snapshot()).toEqual(before);
+    expect(() => restoreDeviceBackup(privateBackup, { expectedScope: 'guest' })).toThrow();
+    expect(() => restoreDeviceBackup(privateBackup, { expectedScope: 'another-account' })).toThrow(
+      'The selected account changed',
+    );
+    expect(snapshot()).toEqual(before);
+
+    restoreDeviceBackup(guest, { expectedScope: 'guest' });
+    expect(loadLocalPractice('guest')).toEqual([session()]);
+    expect(values.get(copyStorageKey('guest'))).toBe(JSON.stringify(draft()));
+    expect(loadStudioNotes('guest', 'public:words')).toBe('Synthetic scratchpad');
+    expect(values.get('cwa:account:active:v1')).toBe(selected);
+    for (const [key, value] of before) expect(values.get(key)).toBe(value);
+  });
+
   it('captures scratchpad memory when browser persistence failed instead of silently omitting it', () => {
     const original = storage.setItem;
     vi.spyOn(storage, 'setItem').mockImplementation((key, value) => {
@@ -219,6 +257,151 @@ describe('the explicit device inventory', () => {
 });
 
 describe('strict complete file validation', () => {
+  it('rejects coerced nested exercise and Runner enums while the existing recipe validators reject coerced modes', () => {
+    seed();
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    const task = validatePlannedTask({
+      id: 'synthetic-task',
+      title: 'Synthetic linked exercise',
+      kind: 'other',
+      done: false,
+      notes: '',
+      createdAt: '2026-09-30T12:00:00.000Z',
+      exercise: { type: 'external', url: 'https://example.test/exercise' },
+    });
+    const malformedTask = () => {
+      const value = JSON.parse(JSON.stringify(task));
+      value.exercise.type = ['external'];
+      return value as PlannedTask;
+    };
+    const run = {
+      runId: 'synthetic-run',
+      revision: RUNNER_REVISION,
+      status: 'stopped',
+      elapsedSeconds: 1,
+      settings: {
+        mode: 'SingleCall',
+        wpm: 20,
+        durationSeconds: 60,
+        activity: 1,
+        conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+      },
+    };
+    const runnerBody = (metadata: Record<string, unknown>) =>
+      JSON.parse(JSON.stringify(validatePracticeSession({ ...session(), metadata })));
+    const replacements = [
+      (item: DeviceBackup) => {
+        const body = JSON.parse(item.stores.accountOperations[0].body);
+        body.operation.change = { type: 'task-create', task: malformedTask() };
+        item.stores.accountOperations[0].body = JSON.stringify(body);
+      },
+      (item: DeviceBackup) => {
+        const body = JSON.parse(item.stores.accountOperations[0].body);
+        body.operation.change = {
+          type: 'task-edit',
+          id: task.id,
+          changes: { exercise: malformedTask().exercise },
+        };
+        item.stores.accountOperations[0].body = JSON.stringify(body);
+      },
+      (item: DeviceBackup) => {
+        item.stores.accountContext!.cache!.state.plan = [malformedTask()];
+      },
+      (item: DeviceBackup) => {
+        item.stores.copyDraft!.task = malformedTask();
+      },
+      (item: DeviceBackup) => {
+        item.stores.copySettings[0].mode = ['groups'] as unknown as 'groups';
+      },
+      (item: DeviceBackup) => {
+        item.stores.copyDraft!.attempt.recipe.groupKind = ['letters'] as unknown as 'letters';
+      },
+      (item: DeviceBackup) => {
+        item.shared.practicePreferences!.tool = ['words'] as unknown as 'words';
+      },
+      (item: DeviceBackup) => {
+        item.shared.practicePreferences!.wordList = ['custom'] as unknown as 'custom';
+      },
+      (item: DeviceBackup) => {
+        item.shared.practicePreferences!.mode = ['words'] as unknown as 'words';
+      },
+      (item: DeviceBackup) => {
+        const body = runnerBody({ evidence: { version: 1, type: 'runner', run } });
+        body.metadata.evidence.run.status = ['stopped'];
+        item.stores.practice[0].body = JSON.stringify(body);
+      },
+      (item: DeviceBackup) => {
+        const body = runnerBody({ runner: { ...run, status: 'error', errorCode: 'engine' } });
+        body.metadata.runner.errorCode = ['engine'];
+        item.stores.practice[0].body = JSON.stringify(body);
+      },
+    ];
+    const before = snapshot();
+    const token = getDeviceScopeToken(scope);
+    for (const replacement of replacements) {
+      const raw = rewrite(backup, replacement);
+      expect(() => validateDeviceBackup(raw, scope)).toThrow();
+      expect(() => restoreDeviceBackup(JSON.parse(raw))).toThrow();
+      expect(snapshot()).toEqual(before);
+      expect(getDeviceScopeToken(scope)).toBe(token);
+    }
+  });
+  it('rejects coercible queue statuses, failures and recording speeds before changing storage or owner tokens', () => {
+    seed();
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    const before = snapshot();
+    const token = getDeviceScopeToken(scope);
+    const replacements = [
+      (item: DeviceBackup) => {
+        const body = JSON.parse(item.stores.practice[0].body);
+        body.source = ['manual'];
+        item.stores.practice[0].body = JSON.stringify(body);
+      },
+      (item: DeviceBackup) => {
+        const body = JSON.parse(item.stores.accountOperations[0].body);
+        body.status = ['pending'];
+        item.stores.accountOperations[0].body = JSON.stringify(body);
+        delete item.stores.accountOperations[0].state;
+      },
+      (item: DeviceBackup) => {
+        const body = JSON.parse(item.stores.accountOperations[0].body);
+        body.failure = ['auth'];
+        item.stores.accountOperations[0].body = JSON.stringify(body);
+      },
+      (item: DeviceBackup) => {
+        item.stores.accountOperations[0].state = { status: ['conflict'] as unknown as 'conflict' };
+      },
+      (item: DeviceBackup) => {
+        item.stores.accountOperations[0].state = {
+          status: 'failed',
+          failure: ['permanent'] as unknown as 'permanent',
+        };
+      },
+      (item: DeviceBackup) => {
+        item.stores.practice[0].state = {
+          id: item.stores.practice[0].id,
+          status: ['pending'] as unknown as 'pending',
+        };
+      },
+      (item: DeviceBackup) => {
+        item.stores.practice[0].state = {
+          id: item.stores.practice[0].id,
+          status: 'failed',
+          failure: ['network'] as unknown as 'network',
+        };
+      },
+      (item: DeviceBackup) => {
+        item.shared.recordingSpeed = ['next'] as unknown as 'next';
+      },
+    ];
+    for (const replacement of replacements) {
+      const raw = rewrite(backup, replacement);
+      expect(() => validateDeviceBackup(raw, scope)).toThrow();
+      expect(() => restoreDeviceBackup(JSON.parse(raw))).toThrow();
+      expect(snapshot()).toEqual(before);
+      expect(getDeviceScopeToken(scope)).toBe(token);
+    }
+  });
   it('rejects malformed, incompatible, duplicate and wrong-scope files before touching any owned data', () => {
     seed();
     const backup = captureDeviceBackup(scope, 'Synthetic learner');
@@ -287,6 +470,12 @@ describe('strict complete file validation', () => {
     });
     expect(validateDeviceBackup(JSON.stringify(backup), 'guest').stores.copyDraft?.pending).toEqual(
       current.pending,
+    );
+    const coercedPendingSource = rewrite(backup, (item) => {
+      item.stores.copyDraft!.pending!.source = ['morse'] as unknown as 'morse';
+    });
+    expect(() => validateDeviceBackup(coercedPendingSource, 'guest')).toThrow(
+      'supported string value',
     );
     const mismatched = rewrite(backup, (item) => {
       item.stores.copyDraft!.pending!.id = 'copy:different-attempt';
@@ -479,6 +668,174 @@ describe('identity-preserving restore', () => {
 });
 
 describe('local clear and storage recovery', () => {
+  it('restores memory-only notes and empty tombstones even when corrupt registered data prevents a valid backup', () => {
+    const originalSet = storage.setItem;
+    vi.spyOn(storage, 'setItem').mockImplementationOnce(() => {
+      throw new Error('quota');
+    });
+    expect(saveStudioNotes('guest', 'memory-only', 'Must survive failed clear')).toBe(false);
+    storage.setItem = originalSet;
+    saveStudioNotes('guest', 'emptied-note', 'Earlier stored note');
+    const originalRemove = storage.removeItem;
+    vi.spyOn(storage, 'removeItem').mockImplementationOnce(() => {
+      throw new Error('remove unavailable');
+    });
+    expect(saveStudioNotes('guest', 'emptied-note', '')).toBe(false);
+    storage.removeItem = originalRemove;
+    values.set(pendingKey('guest', 'damaged-result'), '{broken');
+    values.set('cwa.studio.scratchpad.v1:["guest","invalid-persisted"]', 'X'.repeat(10001));
+    let rejected = false;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key) => {
+      if (!rejected && key === pendingKey('guest', 'damaged-result')) {
+        rejected = true;
+        throw new Error('storage unavailable');
+      }
+      originalRemove(key);
+    });
+    let failure: DeviceMutationError | undefined;
+    try {
+      clearDeviceWork('guest');
+    } catch (error) {
+      failure = error as DeviceMutationError;
+    }
+    expect(failure?.rollbackFailed).toBe(false);
+    expect(failure?.recovery).toBeUndefined();
+    expect(values.get(pendingKey('guest', 'damaged-result'))).toBe('{broken');
+    expect(values.get('cwa.studio.scratchpad.v1:["guest","emptied-note"]')).toBe(
+      'Earlier stored note',
+    );
+    expect(loadStudioNotes('guest', 'memory-only')).toBe('Must survive failed clear');
+    expect(loadStudioNotes('guest', 'emptied-note')).toBe('');
+    expect(loadStudioNotes('guest', 'invalid-persisted')).toBe('');
+  });
+
+  it('preserves real observed volatile permanent failures and conflicts through rollback ready before any retry resumes', async () => {
+    rememberAccount({ id: scope, email: 'synthetic@example.test' }, account());
+    const originalSet = storage.setItem;
+    vi.spyOn(storage, 'setItem').mockImplementation((key, value) => {
+      if (key.startsWith('cwa:practice:status:') || key.startsWith('cwa:account:status:'))
+        throw new Error('quota');
+      originalSet(key, value);
+    });
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ error: 'Retain permanent failure' }, { status: 400 }));
+    vi.stubGlobal('fetch', fetch);
+    await autoSavePractice(scope, session('observed-result'));
+    const operation = queueAccountChange(account(), {
+      type: 'settings',
+      changes: { callsign: 'N0SYN' },
+    });
+    fetch.mockResolvedValueOnce(
+      Response.json({ error: 'Retain conflict', state: account(4) }, { status: 409 }),
+    );
+    await flushAccountOperations(scope);
+    expect(loadPracticeSaveStates(scope)[0].failure).toBe('permanent');
+    expect(loadAccountOperations(scope)[0].status).toBe('conflict');
+    storage.setItem = originalSet;
+    values.set(pendingKey(scope, 'damaged-result'), '{broken');
+    const body = values.get(pendingKey(scope, 'observed-result'))!;
+    const editKey = `cwa:account:operation:v1:${scope}:${encodeURIComponent(operation.operation.id)}`;
+    const editBody = values.get(editKey)!;
+    const readyViews: { practice: string | undefined; account: string | undefined }[] = [];
+    const unsubscribe = subscribeDeviceScope((state) => {
+      if (state.scope === scope && !state.mutating)
+        readyViews.push({
+          practice: loadPracticeSaveStates(scope).find((state) => state.id === 'observed-result')
+            ?.failure,
+          account: loadAccountOperations(scope)[0]?.status,
+        });
+    });
+    const originalRemove = storage.removeItem;
+    let rejected = false;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key) => {
+      if (!rejected && key === pendingKey(scope, 'observed-result')) {
+        rejected = true;
+        throw new Error('storage unavailable');
+      }
+      originalRemove(key);
+    });
+    expect(() => clearDeviceWork(scope)).toThrow('original stored work was restored');
+    expect(readyViews).toEqual([{ practice: 'permanent', account: 'conflict' }]);
+    expect(loadPracticeSaveStates(scope)).toContainEqual({
+      id: 'observed-result',
+      status: 'failed',
+      error: 'Retain permanent failure',
+      failure: 'permanent',
+    });
+    expect(loadAccountOperations(scope)[0]).toMatchObject({
+      operation: operation.operation,
+      order: operation.order,
+      status: 'conflict',
+      error: 'Retain conflict',
+    });
+    expect(values.get(pendingKey(scope, 'observed-result'))).toBe(body);
+    expect(values.get(editKey)).toBe(editBody);
+    await flushPracticeSaves(scope, vi.fn());
+    await flushAccountOperations(scope);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    unsubscribe();
+    clearDeviceWork(scope);
+    values.set(pendingKey(scope, 'observed-result'), body);
+    values.set(editKey, editBody);
+    expect(loadPracticeSaveStates(scope).find((state) => state.id === 'observed-result')).toEqual({
+      id: 'observed-result',
+      status: 'pending',
+    });
+    expect(loadAccountOperations(scope)[0].status).toBe('pending');
+  });
+
+  it('retires the invalidated copy lease after restore and after coherent rollback so the new owner can resume immediately', () => {
+    seed('guest');
+    const backup = captureDeviceBackup('guest', 'Guest');
+    backup.stores.copySettings[0].toneHz = 800;
+    const old = getDeviceScopeToken('guest');
+    expect(claimCopyLease('guest', 'old-owner', false, old)).toBe(true);
+    restoreDeviceBackup(backup);
+    expect(ownsCopyLease('guest', 'old-owner', old)).toBe(false);
+    expect(claimCopyLease('guest', 'restored-owner')).toBe(true);
+    const originalSet = storage.setItem;
+    let rejected = false;
+    vi.spyOn(storage, 'setItem').mockImplementation((key, value) => {
+      if (!rejected && key === `${copyStorageKey('guest')}:settings:groups`) {
+        rejected = true;
+        throw new Error('quota');
+      }
+      originalSet(key, value);
+    });
+    backup.stores.copySettings[0].toneHz = 900;
+    expect(() => restoreDeviceBackup(backup)).toThrow('original stored work was restored');
+    expect(values.get(`${copyStorageKey('guest')}:lease`)).toBeUndefined();
+    expect(claimCopyLease('guest', 'rollback-owner')).toBe(true);
+    expect(JSON.parse(values.get(`${copyStorageKey('guest')}:settings:groups`)!).toneHz).toBe(800);
+  });
+
+  it('does not report ready when invalidated lease removal fails, and exact-original recovery retires it before resuming', () => {
+    seed('guest');
+    const backup = captureDeviceBackup('guest', 'Guest');
+    backup.stores.copySettings[0].toneHz = 800;
+    claimCopyLease('guest', 'old-owner');
+    const originalRemove = storage.removeItem;
+    const lease = `${copyStorageKey('guest')}:lease`;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key) => {
+      if (key === lease) return; // Apparent success without durable readback.
+      originalRemove(key);
+    });
+    let failure: DeviceMutationError | undefined;
+    try {
+      restoreDeviceBackup(backup);
+    } catch (error) {
+      failure = error as DeviceMutationError;
+    }
+    expect(failure?.rollbackFailed).toBe(true);
+    expect(isDeviceScopeMutating('guest')).toBe(true);
+    expect(claimCopyLease('guest', 'new-owner')).toBe(false);
+    storage.removeItem = originalRemove;
+    failure!.retryRecovery!();
+    expect(isDeviceScopeMutating('guest')).toBe(false);
+    expect(values.get(lease)).toBeUndefined();
+    expect(claimCopyLease('guest', 'recovered-owner')).toBe(true);
+  });
   it('removes exactly the selected scope including orphans and notes memory, preserving other scopes/shared/runtime selection/server authority', () => {
     seed();
     values.set(
