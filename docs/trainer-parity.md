@@ -78,6 +78,10 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   pangram and original guidance rather than imported curriculum prose. Optional
   sending input/capture remains R5. [Reader](../src/client/SendingScales.tsx),
   [patterns](../src/client/sending-scales.ts), [journey](../e2e/sending.spec.ts).
+  A learner usability review adds a direct homepage entry, one compact sending
+  control bar, a full-width reader and session options below the material.
+  Warm-up notation is explained beside the targets; drills show repeated
+  `<SK>`, `<AR>` and `<BT>` targets with their meanings instead of symbol aliases.
 - **Public access and private accounts:** public practice, email codes, passkeys,
   per-user private storage, account settings, and export are intentional improvements
   over a single-owner site. [Architecture](architecture.md).

@@ -24,6 +24,10 @@ export interface SendingScaleDefinition {
 const groups = (text: string): SendingScaleGroup[] => text.split(' ').map((text) => ({ text }));
 const repeatedCharacters = (characters: string): SendingScaleGroup[] =>
   [...characters].map((character) => ({ text: character.repeat(5) }));
+const repeatedSymbol = (text: string, annotation?: string): SendingScaleGroup => ({
+  text: Array.from({ length: 5 }, () => text).join(' '),
+  ...(annotation ? { annotation } : {}),
+});
 
 const pangram = 'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG';
 const mixedNumbers = '7 0 3 6 4 5 1 2 8 9';
@@ -45,7 +49,7 @@ export const SENDING_SCALES: readonly SendingScaleDefinition[] = [
     id: 'warm-up',
     title: 'Warm-up',
     guidance:
-      'Settle into an even rhythm before your main practice. Repeat a group when it needs another try.',
+      'Begin here to settle into an even rhythm. Send each group or word cleanly; after a mistake, repeat that group or word before moving on.',
     rows: [
       { id: 'simple-rhythm', kind: 'groups', groups: repeatedCharacters('ETIMSOH05') },
       { id: 'mixed-rhythm', kind: 'groups', groups: repeatedCharacters('ANUDVB46') },
@@ -61,7 +65,7 @@ export const SENDING_SCALES: readonly SendingScaleDefinition[] = [
     id: 'exercise',
     title: 'Exercise',
     guidance:
-      'Work through letters and figures in groups of five. Give difficult characters another pass.',
+      'Work on individual letters and numbers in groups of five. After a mistake, repeat that group before moving on.',
     rows: [
       { id: 'letters-a-j', kind: 'groups', groups: repeatedCharacters('ABCDEFGHIJ') },
       { id: 'letters-k-r', kind: 'groups', groups: repeatedCharacters('KLMNOPQR') },
@@ -73,7 +77,7 @@ export const SENDING_SCALES: readonly SendingScaleDefinition[] = [
     id: 'drill',
     title: 'Drill',
     guidance:
-      'Practice smooth transitions through phrases, figures, and punctuation. Send prosigns as joined characters.',
+      'Work on smooth transitions through words, numbers, punctuation, and prosigns. After a mistake, repeat that group or word before moving on.',
     rows: [
       phrase('drill-phrase-first'),
       phrase('drill-phrase-second'),
@@ -86,13 +90,13 @@ export const SENDING_SCALES: readonly SendingScaleDefinition[] = [
         id: 'punctuation-and-prosigns',
         kind: 'groups',
         groups: [
-          { text: '/////', annotation: 'DN' },
-          { text: ',,,,,' },
-          { text: '.....' },
-          { text: '?????' },
-          { text: '*****', annotation: 'SK' },
-          { text: '+++++', annotation: 'AR' },
-          { text: '=====', annotation: 'BT' },
+          repeatedSymbol('/', 'Slash · DN joined'),
+          repeatedSymbol(',', 'Comma'),
+          repeatedSymbol('.', 'Period'),
+          repeatedSymbol('?', 'Question mark'),
+          repeatedSymbol('<SK>', 'End of contact'),
+          repeatedSymbol('<AR>', 'End of message'),
+          repeatedSymbol('<BT>', 'Separator'),
         ],
       },
     ],

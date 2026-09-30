@@ -2,7 +2,7 @@ import { ArrowRight, BookOpen, Headphones, Radio, ShieldCheck, Signal } from 'lu
 import './welcome-panel.css';
 
 interface WelcomePanelProps {
-  onPractice: (tool?: 'words' | 'qso' | 'free' | 'copy') => void;
+  onPractice: (tool?: 'words' | 'qso' | 'free' | 'copy' | 'sending') => void;
   onSignIn: () => void;
   onGuide: () => void;
 }
@@ -18,8 +18,8 @@ export default function WelcomePanel({ onPractice, onSignIn, onGuide }: WelcomeP
           Keep your progress.
         </h1>
         <p>
-          Copy drills, word listening, QSO practice, and a daily training log for CW Academy
-          students.
+          Copy drills, sending scales, word listening, QSO practice, and a daily training log for CW
+          Academy students.
         </p>
         <div className="welcome-actions">
           <button className="button cream" onClick={() => onPractice()}>
@@ -49,6 +49,18 @@ export default function WelcomePanel({ onPractice, onSignIn, onGuide }: WelcomeP
             </p>
             <span className="welcome-tool-action">
               Start copy practice <ArrowRight size={15} />
+            </span>
+          </button>
+          <button className="welcome-tool" onClick={() => onPractice('sending')}>
+            <span className="welcome-tool-icon welcome-tool-orange">
+              <Radio size={23} />
+            </span>
+            <h3>Sending practice</h3>
+            <p>
+              Use your key with readable sending scales and a timer that stays beside your practice.
+            </p>
+            <span className="welcome-tool-action">
+              Practice sending <ArrowRight size={15} />
             </span>
           </button>
           <button className="welcome-tool" onClick={() => onPractice('words')}>

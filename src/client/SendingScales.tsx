@@ -55,6 +55,14 @@ export default function SendingScales({ sections }: { sections?: SendingSection[
           <div className="sending-reading-heading">
             <h3>{current.title}</h3>
             <p>{current.guidance}</p>
+            {current.id !== 'exercise' && (
+              <p className="sending-notation">
+                <strong>Prosigns:</strong> Angle brackets mean send the letters as one joined
+                signal, without the usual pause between letters. For example, {'<AR>'} joins A and
+                R. Keep the short gaps between dots and dashes, and leave normal character spacing
+                between repeated signs.
+              </p>
+            )}
           </div>
           <div className="sending-rows">
             {current.rows.map((row) => (

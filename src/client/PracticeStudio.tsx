@@ -482,6 +482,7 @@ export default function PracticeStudio({
     setRunnerUnsaved(false);
     setPublicCopy(true);
   };
+  const SessionPanel = isSending ? 'details' : 'section';
   return (
     <>
       <div className="page-heading">
@@ -677,7 +678,11 @@ export default function PracticeStudio({
             disabled={savingNavigation || savingCompletion || saveFailed}
             aria-busy={savingNavigation || savingCompletion}
           >
-            <div className={`studio-quick-actions ${isSending ? 'is-sending' : ''}`}>
+            <div
+              className={`studio-quick-actions ${isSending ? 'is-sending' : ''}`}
+              role={isSending ? 'group' : undefined}
+              aria-label={isSending ? 'Sending practice controls' : undefined}
+            >
               <button
                 className="button dark"
                 disabled={activity?.type === 'audio' && !recordingUrl}
@@ -692,17 +697,28 @@ export default function PracticeStudio({
                       ? 'Resume practice'
                       : 'Start practice'}
               </button>
-              <span>
+              <span aria-label={isSending ? `${duration(seconds)} elapsed` : undefined}>
                 <strong>{duration(seconds)}</strong>{' '}
-                <span className="field-hint">
+                <span className={`field-hint ${isSending ? 'sending-timer-status' : ''}`}>
                   {running ? 'timing' : seconds > 0 ? 'unsaved' : 'elapsed'}
                 </span>
               </span>
-              <button className="button outline" disabled={seconds < 1} onClick={logTimedSession}>
+              <button
+                className="button outline"
+                disabled={seconds < 1}
+                onClick={logTimedSession}
+                aria-label={
+                  isSending
+                    ? `Review & save ${seconds > 0 ? duration(seconds) : 'session'}`
+                    : undefined
+                }
+              >
                 Review &amp; save <ArrowRight size={14} />
               </button>
             </div>
-            <div className={`practice-layout ${assigned ? 'is-assigned' : ''}`}>
+            <div
+              className={`practice-layout ${assigned ? 'is-assigned' : ''} ${isSending ? 'is-sending' : ''}`}
+            >
               <section
                 className="card studio-card"
                 onPlayingCapture={(event) => {
@@ -1068,6 +1084,13 @@ export default function PracticeStudio({
                       : 'Included with saved practice. Your browser cannot store notes; unsaved notes last until you reload.'}
                   </p>
                 </div>
+                {isSending && (
+                  <p className="sending-save-help">
+                    {automaticSave
+                      ? `Pause for a break, or Review & save when you finish. Switching tools or leaving the studio saves 30 seconds or more${accountId ? ' to your log' : ' on this device'}.`
+                      : 'Pause for a break, or Review & save when you finish. Save before leaving to keep your time linked to this exercise.'}
+                  </p>
+                )}
                 {!assigned && tool === 'free' && (
                   <ListeningSoundSettings
                     preferences={preferences}
@@ -1076,32 +1099,31 @@ export default function PracticeStudio({
                   />
                 )}
               </section>
-              <div className="practice-aside">
-                <section className="card timer-card">
-                  <div className="card-top">
-                    <span className="eyebrow">A MOMENT FOR MORSE</span>
-                    <Clock3 size={18} />
-                  </div>
-                  <h2>Time your practice.</h2>
-                  <p>
-                    {isSending ? (
-                      'Start the timer, send the patterns on your key, then review and save your time.'
-                    ) : (
-                      <>
+              <div className={`practice-aside ${isSending ? 'is-sending' : ''}`}>
+                <SessionPanel className={`card timer-card ${isSending ? 'is-sending' : ''}`}>
+                  {isSending && <summary>Session options and logging</summary>}
+                  {!isSending && (
+                    <>
+                      <div className="card-top">
+                        <span className="eyebrow">A MOMENT FOR MORSE</span>
+                        <Clock3 size={18} />
+                      </div>
+                      <h2>Time your practice.</h2>
+                      <p>
                         Audio playback counts automatically. Use the timer for{' '}
                         {activity?.type === 'audio' ? 'focused recall and notes' : 'other practice'}
                         , then review and save.
-                      </>
-                    )}
-                  </p>
-                  <div className="studio-timer-steps" aria-label="How to log timed practice">
-                    <span>{isSending ? '1. Start timer' : '1. Play or start timer'}</span>
-                    <span>2. Practice</span>
-                    <span>3. Save session</span>
-                  </div>
-                  <div className={`timer-readout ${running ? 'running' : ''}`} aria-live="off">
-                    {duration(seconds)}
-                  </div>
+                      </p>
+                      <div className="studio-timer-steps" aria-label="How to log timed practice">
+                        <span>1. Play or start timer</span>
+                        <span>2. Practice</span>
+                        <span>3. Save session</span>
+                      </div>
+                      <div className={`timer-readout ${running ? 'running' : ''}`} aria-live="off">
+                        {duration(seconds)}
+                      </div>
+                    </>
+                  )}
                   <details className="studio-time-goal">
                     <summary>
                       {timerMinutes === undefined
@@ -1143,51 +1165,55 @@ export default function PracticeStudio({
                         ))}
                     </div>
                   </details>
-                  <button
-                    className="button dark full"
-                    onClick={() => (running ? pauseTimer() : startTimer())}
-                  >
-                    {running ? <Square size={14} /> : <Play size={14} />}
-                    {running
-                      ? 'Pause timer'
-                      : activity?.type === 'audio'
-                        ? 'Start recall timer'
-                        : seconds > 0
-                          ? 'Resume timer'
-                          : 'Start timer'}
-                  </button>
-                  <p className="timer-elapsed">
-                    <strong>{duration(seconds)}</strong> practiced ·{' '}
-                    {running
-                      ? timer.recalling
-                        ? 'recall timer running'
-                        : playing
-                          ? 'listening'
-                          : 'timer running'
-                      : seconds > 0
-                        ? 'paused, not yet saved'
-                        : 'ready when you are'}
-                  </p>
-                  {timer.recallSeconds > 0 && (
-                    <p className="field-hint">
-                      Includes {duration(Math.floor(timer.recallSeconds))} of focused recall.
-                    </p>
+                  {!isSending && (
+                    <>
+                      <button
+                        className="button dark full"
+                        onClick={() => (running ? pauseTimer() : startTimer())}
+                      >
+                        {running ? <Square size={14} /> : <Play size={14} />}
+                        {running
+                          ? 'Pause timer'
+                          : activity?.type === 'audio'
+                            ? 'Start recall timer'
+                            : seconds > 0
+                              ? 'Resume timer'
+                              : 'Start timer'}
+                      </button>
+                      <p className="timer-elapsed">
+                        <strong>{duration(seconds)}</strong> practiced ·{' '}
+                        {running
+                          ? timer.recalling
+                            ? 'recall timer running'
+                            : playing
+                              ? 'listening'
+                              : 'timer running'
+                          : seconds > 0
+                            ? 'paused, not yet saved'
+                            : 'ready when you are'}
+                      </p>
+                      {timer.recallSeconds > 0 && (
+                        <p className="field-hint">
+                          Includes {duration(Math.floor(timer.recallSeconds))} of focused recall.
+                        </p>
+                      )}
+                      <button
+                        className="button outline full studio-save-session"
+                        disabled={seconds < 1}
+                        onClick={logTimedSession}
+                      >
+                        Review &amp; save {seconds > 0 ? duration(seconds) : 'session'}{' '}
+                        <ArrowRight size={14} />
+                      </button>
+                      <p className="studio-save-help">
+                        {automaticSave
+                          ? `Review a session whenever you like. Switching tools or leaving the studio automatically saves 30 seconds or more of practice${accountId ? ' to your log' : ' on this device'}.`
+                          : launch?.task && onTaskCompletion
+                            ? 'Review your measured time before saving, or choose Complete exercise to save it and mark this exercise done.'
+                            : 'This opens a practice entry for you to review. Nothing is added to your log until you choose Save practice.'}
+                      </p>
+                    </>
                   )}
-                  <button
-                    className="button outline full studio-save-session"
-                    disabled={seconds < 1}
-                    onClick={logTimedSession}
-                  >
-                    Review &amp; save {seconds > 0 ? duration(seconds) : 'session'}{' '}
-                    <ArrowRight size={14} />
-                  </button>
-                  <p className="studio-save-help">
-                    {automaticSave
-                      ? `Review a session whenever you like. Switching tools or leaving the studio automatically saves 30 seconds or more of practice${accountId ? ' to your log' : ' on this device'}.`
-                      : launch?.task && onTaskCompletion
-                        ? 'Review your measured time before saving, or choose Complete exercise to save it and mark this exercise done.'
-                        : 'This opens a practice entry for you to review. Nothing is added to your log until you choose Save practice.'}
-                  </p>
                   <div className="timer-secondary">
                     <button
                       className="text-button"
@@ -1228,16 +1254,15 @@ export default function PracticeStudio({
                       </div>
                     </div>
                   )}
-                  {timerDone && (
+                  {timerDone && !isSending && (
                     <div className="timer-complete" role="status">
                       <CheckCheck size={18} /> Suggested time reached. Keep practicing as long as
                       you need.
                     </div>
                   )}
                   <p className="studio-timer-scope">
-                    {isSending
-                      ? 'Keep the scales in view while you practice. '
-                      : 'Listening time follows the audio, including when your screen locks. '}
+                    {!isSending &&
+                      'Listening time follows the audio, including when your screen locks. '}
                     {automaticSave
                       ? 'Practice under 30 seconds is not logged automatically. Review and save before reloading to keep unfinished time.'
                       : 'Review and save before leaving to keep your practice time.'}
@@ -1275,20 +1300,28 @@ export default function PracticeStudio({
                       <Plus size={14} /> Log practice manually
                     </button>
                   </div>
-                </section>
-                <section className="practice-tip">
-                  <span className="eyebrow">A NOTE FROM THE SHACK</span>
-                  <h3>Listen for the music.</h3>
-                  <p>
-                    Try hearing each character as one complete sound, rather than counting dots and
-                    dashes. Leave a little space. Let it sink in.
-                  </p>
-                  <div className="morse-word" aria-label="73 in Morse code">
-                    − − · · · &nbsp; · · · − −
-                  </div>
-                </section>
+                </SessionPanel>
+                {!isSending && (
+                  <section className="practice-tip">
+                    <span className="eyebrow">A NOTE FROM THE SHACK</span>
+                    <h3>Listen for the music.</h3>
+                    <p>
+                      Try hearing each character as one complete sound, rather than counting dots
+                      and dashes. Leave a little space. Let it sink in.
+                    </p>
+                    <div className="morse-word" aria-label="73 in Morse code">
+                      − − · · · &nbsp; · · · − −
+                    </div>
+                  </section>
+                )}
               </div>
             </div>
+            {isSending && timerDone && (
+              <div className="timer-complete" role="status">
+                <CheckCheck size={18} /> Suggested time reached. Keep practicing as long as you
+                need.
+              </div>
+            )}
           </fieldset>
         </>
       )}

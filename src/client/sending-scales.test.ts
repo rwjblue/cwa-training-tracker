@@ -22,18 +22,25 @@ describe('native sending scales', () => {
     expect(targets.every((text) => /^([A-Z0-9])\1{4}$/.test(text))).toBe(true);
   });
 
-  it('retains the PDF warm-up prosigns and attaches each drill prosign to its own group', () => {
+  it('shows readable prosigns and five separate punctuation or prosign repetitions', () => {
     const [warmUp, drill] = sendingScalesForSections(['warm-up', 'drill']);
     const warmUpSymbols = warmUp.rows.find((row) => row.id === 'alphabet-and-symbols')!.groups;
     expect(warmUpSymbols.slice(-3).map((group) => group.text)).toEqual(['<SK>', '<AR>', '<BT>']);
     const drillSymbols = drill.rows.find((row) => row.id === 'punctuation-and-prosigns')!.groups;
-    expect(drillSymbols.filter((group) => group.annotation)).toEqual([
-      { text: '/////', annotation: 'DN' },
-      { text: '*****', annotation: 'SK' },
-      { text: '+++++', annotation: 'AR' },
-      { text: '=====', annotation: 'BT' },
+    expect(drillSymbols.map((group) => group.text.split(' '))).toEqual([
+      ['/', '/', '/', '/', '/'],
+      [',', ',', ',', ',', ','],
+      ['.', '.', '.', '.', '.'],
+      ['?', '?', '?', '?', '?'],
+      ['<SK>', '<SK>', '<SK>', '<SK>', '<SK>'],
+      ['<AR>', '<AR>', '<AR>', '<AR>', '<AR>'],
+      ['<BT>', '<BT>', '<BT>', '<BT>', '<BT>'],
     ]);
-    expect(drillSymbols.every((group) => group.text.length === 5)).toBe(true);
+    expect(drillSymbols.slice(-3).map((group) => group.annotation)).toEqual([
+      'End of contact',
+      'End of message',
+      'Separator',
+    ]);
   });
 
   it('keeps phrase repetitions distinct and links the public source PDF', () => {

@@ -16,8 +16,9 @@ test('sending scales stay in the studio and save assigned practice without openi
   const textSize = page.getByRole('combobox', { name: 'Practice text size', exact: true });
 
   // The sending material and its source are useful before creating an account.
-  await page.goto('/#practice');
-  await sending.click();
+  await page.goto('/');
+  await page.getByRole('button', { name: /Sending practice/ }).click();
+  await expect(page).toHaveURL(/#practice$/);
   await expect(sending).toHaveAttribute('aria-pressed', 'true');
   await expect(warmUp).toBeVisible();
   await expect(drill).toBeVisible();
@@ -28,10 +29,15 @@ test('sending scales stay in the studio and save assigned practice without openi
   await warmUp.click();
   await expect(warmUp).toHaveAttribute('aria-pressed', 'true');
   await expect(text).toContainText(/[A-Z0-9]{2}/);
+  await expect(text).toContainText('<SK>');
+  await expect(page.getByText(/prosigns.*joined|joined.*prosigns/i)).toBeVisible();
   const warmUpText = await text.innerText();
   await drill.click();
   await expect(drill).toHaveAttribute('aria-pressed', 'true');
   await expect(text).not.toHaveText(warmUpText);
+  await expect(text).toContainText('<SK> <SK> <SK> <SK> <SK>');
+  await expect(text).toContainText('<AR> <AR> <AR> <AR> <AR>');
+  await expect(text).toContainText('<BT> <BT> <BT> <BT> <BT>');
   const drillText = await text.innerText();
   await exercise.click();
   await expect(exercise).toHaveAttribute('aria-pressed', 'true');
@@ -121,6 +127,33 @@ test('sending scales stay in the studio and save assigned practice without openi
   await page.screenshot({ path: '.tmp/sending-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const controls = page.getByRole('group', { name: 'Sending practice controls', exact: true });
+  await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Review & save 01:17', exact: true })).toHaveCount(
+    1,
+  );
+  // Read down the page while retaining compact, reachable controls above the targets.
+  await text.getByText('<BT> <BT> <BT> <BT> <BT>', { exact: true }).scrollIntoViewIfNeeded();
+  const controlsBox = await controls.boundingBox();
+  expect(controlsBox).not.toBeNull();
+  expect(controlsBox!.height).toBeLessThanOrEqual(80);
+  expect(controlsBox!.y).toBeGreaterThanOrEqual(0);
+  expect(controlsBox!.y + controlsBox!.height).toBeLessThan(844);
+  for (const button of [
+    controls.getByRole('button', { name: 'Resume practice', exact: true }),
+    controls.getByRole('button', { name: 'Review & save 01:17', exact: true }),
+  ]) {
+    const box = await button.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      await button.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return element.contains(
+          document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+        );
+      }),
+    ).toBe(true);
+  }
   await expectAccessible(page, 'sending-mobile');
   await page.screenshot({ path: '.tmp/sending-mobile.png', fullPage: true });
 

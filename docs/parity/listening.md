@@ -29,6 +29,12 @@ patterns, a conventional pangram and original guidance; the original instruction
 prose remains at its source. This addresses readable material grouping below;
 optional adapter input, capture, replay and retained takes remain absent.
 
+A same-day review from a CW learner’s perspective removes the duplicate sending
+timer panel, keeps one compact control bar above the full-width reader, and adds
+a guest homepage shortcut. Prosigns are explained in context and shown explicitly
+in the drill targets. This improves ordinary practice on a key; it adds no input
+capture or automatic assessment.
+
 Read-only source audit, 2026-09-29. No personal data was opened, modified, exported, or imported. No implementation changes or tests were run for this audit. This is the detailed appendix to the canonical parity inventory; recorded-course audio, scratchpad/timer internals, LCWO, reports, course planning, and backend/export semantics are covered in the audio and planning appendices.
 
 Status: **present** means an active reachable equivalent; **partial** means a meaningful subset or different lifecycle; **missing** means no active equivalent found. P1 means a substantial training capability or work-loss gap; P2 means useful parity after those; P3 means a small refinement or deliberate product choice. These are parity priorities, not security severity.

@@ -158,6 +158,9 @@ covers public access, readable section selection, text size, Start without a
 popup, uninterrupted timer changes and a reviewed assignment-linked sending save.
 Check the large-text reader at desktop/mobile widths and keep the PDF link visible.
 Native patterns do not require fetching external reference material in CI.
+The learner journey starts from the guest homepage and checks understandable
+prosign targets, a single timer/save area, and compact, reachable controls while
+reading the lower rows at mobile width.
 
 For native copy, keep generation, full-text alignment, adaptive scoring, and
 evidence validation in the shared domain tests. Clock tests cover non-overlap,
