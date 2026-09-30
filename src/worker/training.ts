@@ -11,8 +11,10 @@ import {
 import { requireAuth } from './auth';
 import { HttpError, isRecord, json, readJson } from './http';
 import { hash, rateLimit } from './security';
-import { deletePlanStatement, planStatementsForImport } from './plan';
+import { deletePlanStatement, getPlanData, planStatementsForImport } from './plan';
 import type { PlannedTask } from '../shared/plan';
+import { mergeCurriculumPlan } from '../shared/curriculum';
+import { sessionEvidence } from '../shared/practice-evidence';
 
 const MAX_ENTRIES = 20_000;
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
@@ -59,7 +61,7 @@ async function entries(env: Env, userId: string): Promise<PracticeSession[]> {
   )
     .bind(userId)
     .all<{ entry_json: string }>();
-  return result.results.map((row) => JSON.parse(row.entry_json) as PracticeSession);
+  return result.results.map((row) => validatePracticeSession(JSON.parse(row.entry_json)));
 }
 
 export async function listEntries(request: Request, env: Env): Promise<Response> {
@@ -77,6 +79,40 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     id: id ?? input.id ?? crypto.randomUUID(),
     createdAt: input.createdAt ?? new Date().toISOString(),
   });
+  const original = id
+    ? await env.DB.prepare('SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?')
+        .bind(auth.user.id, id)
+        .first<{ entry_json: string }>()
+    : null;
+  if (id && !original) throw new HttpError(404, 'This practice entry was not found.');
+  const previous = original
+    ? validated(validatePracticeSession, JSON.parse(original.entry_json))
+    : undefined;
+  const previousEvidence = sessionEvidence(previous?.metadata);
+  const nextEvidence = sessionEvidence(entry.metadata);
+  // Notes, placement and declared corrections are editable. Raw source facts
+  // remain immutable even if a client removes or replaces the metadata object.
+  if (previousEvidence) {
+    const raw = (value: typeof previousEvidence | undefined) => {
+      if (value?.type === 'timed') {
+        const { correction: _correction, ...measurement } = value;
+        return measurement;
+      }
+      return value;
+    };
+    if (!equivalentEntry(raw(previousEvidence), raw(nextEvidence)))
+      throw new HttpError(
+        400,
+        'Measured source evidence cannot be changed or removed. Use a declared time correction.',
+      );
+  }
+  const taskId = entry.metadata?.plannedTaskId;
+  if (
+    typeof taskId === 'string' &&
+    taskId !== previous?.metadata?.plannedTaskId &&
+    !(await getPlanData(env, auth.user.id)).some((task) => task.id === taskId)
+  )
+    throw new HttpError(400, 'The linked exercise is not in your account’s plan.');
   if (id) {
     const updated = await env.DB.prepare(
       'UPDATE practice_entries SET date = ?, entry_json = ? WHERE user_id = ? AND id = ? RETURNING id',
@@ -101,7 +137,7 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
         .bind(auth.user.id, entry.id)
         .first<{ entry_json: string }>();
       if (row) {
-        const saved = JSON.parse(row.entry_json) as PracticeSession;
+        const saved = validated(validatePracticeSession, JSON.parse(row.entry_json));
         const retried =
           input.createdAt === undefined ? { ...entry, createdAt: saved.createdAt } : entry;
         if (equivalentEntry(saved, retried)) return json({ entry: saved, duplicate: true });
@@ -160,7 +196,9 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
     version: 1,
     exportedAt: new Date().toISOString(),
     profile: { ...DEFAULT_PROFILE, ...JSON.parse(settings.results[0].profile_json) },
-    sessions: sessions.results.map((row) => JSON.parse(row.entry_json) as PracticeSession),
+    sessions: sessions.results.map((row) =>
+      validated(validatePracticeSession, JSON.parse(row.entry_json)),
+    ),
     plan: plan.results.map((row) => JSON.parse(row.task_json) as PlannedTask),
     ...(archive.results.length
       ? {
@@ -170,7 +208,19 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
         }
       : {}),
   };
-  return json(exported, 200, {
+  // Deleted exercises and former course dates are historical provenance, not
+  // authority to credit a task absent from this portable account snapshot.
+  const availableTasks = new Set(
+    mergeCurriculumPlan(exported.profile!, exported.plan ?? []).map((task) => task.id),
+  );
+  for (const entry of exported.sessions) {
+    const taskId = entry.metadata?.plannedTaskId;
+    if (typeof taskId === 'string' && !availableTasks.has(taskId)) {
+      entry.metadata = { ...entry.metadata, historicalPlannedTaskId: taskId };
+      delete entry.metadata.plannedTaskId;
+    }
+  }
+  return json(validated(validateTrainingExport, exported), 200, {
     'Content-Disposition': `attachment; filename="cw-academy-backup-${new Date().toISOString().slice(0, 10)}.json"`,
   });
 }
@@ -188,6 +238,21 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     input.data,
   );
   const uniqueEntries = new Map(data.sessions.map((entry) => [entry.id, entry]));
+  const ownedPlan = input.mode === 'merge' ? await getPlanData(env, auth.user.id) : [];
+  const resultingProfile = data.profile ?? (await profile(env, auth.user.id));
+  const resultingPlan = mergeCurriculumPlan(resultingProfile, [
+    ...ownedPlan,
+    ...(data.plan ?? []).filter((task) => !ownedPlan.some((item) => item.id === task.id)),
+  ]);
+  const taskIds = new Set(resultingPlan.map((task) => task.id));
+  for (const entry of data.sessions) {
+    const taskId = entry.metadata?.plannedTaskId;
+    if (typeof taskId === 'string' && !taskIds.has(taskId))
+      throw new HttpError(
+        400,
+        'An imported practice entry links an exercise missing from the resulting account plan. Include that plan in the backup.',
+      );
+  }
   const current =
     input.mode === 'replace'
       ? []

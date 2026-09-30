@@ -166,3 +166,23 @@ Reviewed [C/src/client/practice-clock.ts](../../src/client/practice-clock.ts), [
 No blocking correctness findings. Actual media-position deltas determine credit; native Play is captured; pauses, waits, errors, explicit seeks and unobserved large jumps avoid idle/seek credit; playback-rate changes use the preceding sample's rate; resumed media commits and ends manual/recall timing; foreground recall pauses when hidden while external manual practice intentionally continues. The target does not cap elapsed time. Save now reads a fresh clock snapshot, so final recording totals and recall metadata are not lost through React's coarser rendered state. The interval's closed-over functions use stable refs and state setters safely.
 
 Known nonblocking edges: seeking/native-loop boundaries may lose a fraction of a second, and saved elapsed is floored to whole seconds. Generated tool/list/speed changes can still accumulate into one block labeled with only the final generated settings; this predates the new clock and belongs to result fidelity (P18/P29), not a media-clock regression. Source recording variants now retain their own measured URL/speed/time metadata. Unfinished reload recovery and full-pass/coverage/bookmarks remain explicitly separate parity work.
+
+## September 30 accepted issue ledger
+
+Issue #1 adds shared versioned Runner and timer/recording evidence, validates
+finite measurements, ordered Runner timestamps/speeds, score bounds, recording
+identity and recall within total time. Known recording timing uses the exact URL
+catalog; unknown files acquire no invented character timing. Worker saves and
+portable imports derive measured fields and check account plan references.
+Learner time corrections retain the immutable raw measurements and a reason;
+review, history and printable reports show both. Deleted-task links in new account
+exports become historical provenance, retaining the ID without assignment credit.
+
+Evidence: `src/shared/practice-evidence.ts`, `src/shared/practice-evidence.test.ts`,
+`src/worker/training.ts`, `src/worker/api.test.ts`, and
+`e2e/practice-evidence.spec.ts`. Historical archives retain their original schema
+and recall-inclusive audio accounting. Structured new CWT/LCWO entry and played
+configuration summaries remain the later accepted issues; client results are not
+independent proof of proficiency, simulator scores or on-air activity. Validation,
+independent review and publication status are tracked in
+`execution-progress-2026-09-30.md`.

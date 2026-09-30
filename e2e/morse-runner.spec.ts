@@ -28,7 +28,9 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await signIn(page);
-  await page.clock.setFixedTime(new Date('2026-10-07T16:00:00Z'));
+  // Keep the curriculum day deterministic while wall time advances alongside
+  // the real AudioWorklet clock and its start/end evidence.
+  await page.clock.setSystemTime(new Date('2026-10-07T16:00:00Z'));
   const settings = (await (await context.request.get('/api/settings')).json()).settings;
   const saved = await context.request.put('/api/settings', {
     headers: { Origin: 'http://localhost:8791' },

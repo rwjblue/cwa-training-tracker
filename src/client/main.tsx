@@ -49,7 +49,10 @@ import {
   dateInTimezone,
   addDays,
   summarizePractice,
+  validatePracticeSession,
 } from '../shared/training';
+import { evidenceTime, sessionEvidence, type PracticeEvidence } from '../shared/practice-evidence';
+import { EvidenceSummary, PracticeEvidenceDetails } from './PracticeEvidenceDetails';
 import { api, getEntries, getSettings, type Passkey, type User } from './api';
 import { MORSE } from './audio';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
@@ -1275,6 +1278,7 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
         )}
         <LegacyAttemptDetails entry={entry} />
         <CopyAttemptDetails entry={entry} />
+        <PracticeEvidenceDetails entry={entry} />
       </div>
       <span className="session-date">
         {entry.date === dateString() ? 'Today' : prettyDate(entry.date, true)}
@@ -1952,13 +1956,48 @@ function SessionModal({
     if (!saving.current) onClose();
   };
   const copyAttempt = savedCopyAttempt(initial);
+  let evidence: PracticeEvidence | undefined;
+  let measuredInitial = initial;
+  let evidenceError = '';
+  try {
+    evidence = sessionEvidence(initial.metadata);
+    if (evidence)
+      measuredInitial = validatePracticeSession({
+        ...initial,
+        ...identity,
+        date: initial.date ?? dateString(),
+        kind: initial.kind ?? 'listening',
+        minutes: initial.minutes ?? 0,
+      });
+  } catch (err) {
+    evidenceError = (err as Error).message;
+  }
+  const measuredSpeeds = Boolean(
+    copyAttempt ||
+    evidence?.type === 'runner' ||
+    (evidence?.type === 'timed' && evidence.recordings.length),
+  );
+  const [correctTime, setCorrectTime] = useState(
+    evidence?.type === 'timed' && Boolean(evidence.correction),
+  );
+  const [correction, setCorrection] = useState({
+    seconds:
+      evidence?.type === 'timed' ? formatPracticeDuration(evidenceTime(evidence).seconds / 60) : '',
+    recallSeconds:
+      evidence?.type === 'timed'
+        ? formatPracticeDuration(evidenceTime(evidence).recallSeconds / 60)
+        : '',
+    reason: evidence?.type === 'timed' ? (evidence.correction?.reason ?? '') : '',
+  });
   const [form, setForm] = useState({
     date: initial.date ?? dateString(),
-    kind: initial.kind ?? 'listening',
-    minutes: formatPracticeDuration(initial.minutes),
-    characterWpm: initial.characterWpm === undefined ? '' : String(initial.characterWpm),
-    effectiveWpm: initial.effectiveWpm === undefined ? '' : String(initial.effectiveWpm),
-    accuracy: initial.accuracy === undefined ? '' : String(initial.accuracy),
+    kind: measuredInitial.kind ?? 'listening',
+    minutes: formatPracticeDuration(measuredInitial.minutes),
+    characterWpm:
+      measuredInitial.characterWpm === undefined ? '' : String(measuredInitial.characterWpm),
+    effectiveWpm:
+      measuredInitial.effectiveWpm === undefined ? '' : String(measuredInitial.effectiveWpm),
+    accuracy: measuredInitial.accuracy === undefined ? '' : String(measuredInitial.accuracy),
     lesson: initial.lesson === undefined ? '' : String(initial.lesson),
     notes: initial.notes ?? '',
     scratchpad: typeof initial.metadata?.scratchpad === 'string' ? initial.metadata.scratchpad : '',
@@ -1966,7 +2005,7 @@ function SessionModal({
     qsoCount: initial.qsoCount === undefined ? '' : String(initial.qsoCount),
   });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(evidenceError);
   const update = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
   const save = async (event: React.FormEvent) => {
@@ -1996,9 +2035,31 @@ function SessionModal({
       else delete data[key];
     }
     try {
+      if (evidence?.type === 'timed') {
+        const corrected = { ...evidence };
+        if (correctTime) {
+          const seconds = practiceMinutesFromInput(
+            correction.seconds,
+            evidenceTime(evidence).seconds / 60,
+          );
+          const recallSeconds = practiceMinutesFromInput(
+            correction.recallSeconds,
+            evidenceTime(evidence).recallSeconds / 60,
+          );
+          if (seconds === null || recallSeconds === null)
+            throw new Error('Enter corrected time as minutes:seconds or minutes.');
+          corrected.correction = {
+            seconds: seconds * 60,
+            recallSeconds: recallSeconds * 60,
+            reason: correction.reason,
+          };
+        } else delete corrected.correction;
+        data.metadata = { ...initial.metadata, scratchpad: form.scratchpad, evidence: corrected };
+      }
+      const validated = validatePracticeSession(data);
       const result = await api<{ entry: PracticeSession }>(
         isExisting ? `/entries/${initial.id}` : '/entries',
-        data,
+        validated,
         isExisting ? 'PUT' : 'POST',
         AbortSignal.timeout(10_000),
       );
@@ -2018,17 +2079,22 @@ function SessionModal({
       initialFocus={saveButton}
     >
       <p className="modal-intro">
-        {copyAttempt
+        {copyAttempt || evidence
           ? 'Your measured time and results stay with this attempt. Add notes and choose where to record it.'
           : 'Capture what you practiced and how it felt. The details are up to you.'}
       </p>
       {copyAttempt && <CopyResult attempt={copyAttempt} />}
+      {evidence && <EvidenceSummary evidence={evidence} />}
       <form onSubmit={save} aria-busy={busy}>
         <fieldset className="session-form-fields" disabled={busy}>
           <div className="form-grid">
             <label className="field">
               Activity
-              <select value={form.kind} onChange={(e) => update('kind', e.target.value)}>
+              <select
+                value={form.kind}
+                disabled={evidence?.type === 'runner'}
+                onChange={(e) => update('kind', e.target.value)}
+              >
                 {kinds.map((kind) => (
                   <option key={kind.id} value={kind.id}>
                     {kind.label}
@@ -2052,7 +2118,7 @@ function SessionModal({
                 placeholder="m:ss or minutes"
                 required
                 value={form.minutes}
-                readOnly={Boolean(copyAttempt)}
+                readOnly={Boolean(copyAttempt || evidence)}
                 onChange={(e) => update('minutes', e.target.value)}
               />
             </label>
@@ -2078,7 +2144,7 @@ function SessionModal({
                 step="0.1"
                 placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
                 value={form.characterWpm}
-                readOnly={Boolean(copyAttempt)}
+                readOnly={measuredSpeeds}
                 onChange={(e) => update('characterWpm', e.target.value)}
               />
             </label>
@@ -2091,7 +2157,7 @@ function SessionModal({
                 step="0.1"
                 placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
                 value={form.effectiveWpm}
-                readOnly={Boolean(copyAttempt)}
+                readOnly={measuredSpeeds}
                 onChange={(e) => update('effectiveWpm', e.target.value)}
               />
             </label>
@@ -2104,11 +2170,58 @@ function SessionModal({
                 step="0.1"
                 placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
                 value={form.accuracy}
-                readOnly={Boolean(copyAttempt)}
+                readOnly={Boolean(copyAttempt || evidence?.type === 'runner')}
                 onChange={(e) => update('accuracy', e.target.value)}
               />
             </label>
           </div>
+          {evidence?.type === 'timed' && (
+            <>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={correctTime}
+                  onChange={(event) => setCorrectTime(event.target.checked)}
+                />{' '}
+                Correct measured time
+              </label>
+              {correctTime && (
+                <div className="form-grid">
+                  <label className="field">
+                    Corrected total time <span className="label-hint">minutes:seconds</span>
+                    <input
+                      value={correction.seconds}
+                      onChange={(event) =>
+                        setCorrection((value) => ({ ...value, seconds: event.target.value }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label className="field">
+                    Corrected recall time <span className="label-hint">minutes:seconds</span>
+                    <input
+                      value={correction.recallSeconds}
+                      onChange={(event) =>
+                        setCorrection((value) => ({ ...value, recallSeconds: event.target.value }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label className="field">
+                    Correction reason
+                    <input
+                      value={correction.reason}
+                      maxLength={1000}
+                      required
+                      onChange={(event) =>
+                        setCorrection((value) => ({ ...value, reason: event.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+            </>
+          )}
           {form.kind === 'on-air' && (
             <label className="field">
               QSO count <span className="label-hint">optional</span>

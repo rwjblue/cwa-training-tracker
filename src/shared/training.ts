@@ -1,6 +1,7 @@
 import { legacyPlan, validatePlan, type PlannedTask } from './plan.ts';
 import { validateCopyAttempt, type CopyAttempt } from './copy-practice.ts';
 import { copyAttemptSessionFields } from './copy-report.ts';
+import { evidenceTime, sessionEvidence, type PracticeEvidence } from './practice-evidence.ts';
 
 /** Public domain model. Course instructions and personal records stay private. */
 export type CourseLevel = 'beginner' | 'fundamental' | 'intermediate' | 'advanced';
@@ -37,7 +38,7 @@ export interface PracticeSession {
   sourceId?: string;
   createdAt: string;
   /** Validated native evidence and original imported metrics travel with backups. */
-  metadata?: Record<string, unknown> & { copyAttempt?: CopyAttempt };
+  metadata?: Record<string, unknown> & { copyAttempt?: CopyAttempt; evidence?: PracticeEvidence };
 }
 
 export interface TrainingExport {
@@ -386,6 +387,52 @@ export function validatePracticeSession(value: unknown): PracticeSession {
     const metadata = record(input.metadata, 'Session metadata');
     if (JSON.stringify(metadata).length > 200000) throw new Error('Session metadata is too large.');
     session.metadata = metadata;
+    if (
+      metadata.plannedTaskId !== undefined &&
+      (typeof metadata.plannedTaskId !== 'string' ||
+        metadata.plannedTaskId.length > 200 ||
+        !/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]*$/.test(metadata.plannedTaskId))
+    )
+      throw new Error('Planned task ID contains unsupported characters.');
+    // Imported archives remain historical source records. They are not upgraded
+    // to native measurements, whose recording/recall accounting differs.
+    const evidence = sessionEvidence(metadata);
+    if (evidence) {
+      session.metadata = { ...metadata, evidence };
+      if (evidence.type === 'runner') {
+        session.kind = 'simulator';
+        session.source = 'timer';
+        session.minutes = evidence.run.elapsedSeconds / 60;
+        delete session.characterWpm;
+        delete session.effectiveWpm;
+        delete session.accuracy;
+        delete session.qsoCount;
+        const speeds = evidence.run.speedHistory?.map((item) => item.wpm) ?? [
+          evidence.run.settings.wpm,
+        ];
+        if (
+          !evidence.run.speedChangeCount &&
+          speeds.every((wpm) => wpm === evidence.run.settings.wpm)
+        )
+          session.characterWpm = evidence.run.settings.wpm;
+        if (evidence.run.summary) session.qsoCount = evidence.run.summary.qsoCount;
+      } else {
+        session.minutes = evidenceTime(evidence).seconds / 60;
+        if (evidence.recordings.length) {
+          delete session.characterWpm;
+          delete session.effectiveWpm;
+          for (const key of ['characterWpm', 'effectiveWpm'] as const) {
+            const speed = evidence.recordings[0][key];
+            if (
+              speed !== undefined &&
+              speed <= 150 &&
+              evidence.recordings.every((item) => item[key] === speed)
+            )
+              session[key] = speed;
+          }
+        }
+      }
+    }
     if (metadata.copyAttempt !== undefined) {
       const attempt = validateCopyAttempt(metadata.copyAttempt);
       if (attempt.status === 'active')

@@ -1171,3 +1171,209 @@ describe('private training data', () => {
     expect(exported.legacy.data).toEqual({ note: 'second' });
   });
 });
+
+describe('validated non-copy evidence', () => {
+  const measured = () => ({
+    ...entry('native-timed'),
+    source: 'timer',
+    minutes: 900,
+    metadata: { elapsedSeconds: 90.25, recallSeconds: 10, practiceTool: 'sending' },
+  });
+  it('keeps a deleted exercise as portable historical provenance without claiming a current task', async () => {
+    const auth = await signIn('deleted-evidence@example.test');
+    const task = {
+      id: 'deleted-task',
+      title: 'Private exercise',
+      kind: 'sending',
+      notes: '',
+      done: false,
+      createdAt: entry().createdAt,
+    };
+    await request('/api/plan', 'POST', task, auth.cookie);
+    await request(
+      '/api/entries',
+      'POST',
+      { ...measured(), metadata: { ...measured().metadata, plannedTaskId: task.id } },
+      auth.cookie,
+    );
+    await request('/api/plan/deleted-task', 'DELETE', undefined, auth.cookie);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0].metadata?.plannedTaskId).toBeUndefined();
+    expect(exported.sessions[0].metadata?.historicalPlannedTaskId).toBe('deleted-task');
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+  });
+  it('derives source time, protects raw evidence on edits, and round trips a declared correction', async () => {
+    const auth = await signIn('evidence@example.test');
+    const response = await request('/api/entries', 'POST', measured(), auth.cookie);
+    expect(response.status).toBe(201);
+    const { entry: saved } = (await response.json()) as { entry: PracticeSession };
+    expect(saved.minutes).toBe(90.25 / 60);
+    expect((await request('/api/entries', 'POST', measured(), auth.cookie)).status).toBe(200);
+    expect(
+      (await request('/api/entries/native-timed', 'PUT', { ...saved, metadata: {} }, auth.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/entries/native-timed',
+          'PUT',
+          {
+            ...saved,
+            metadata: {
+              ...saved.metadata,
+              elapsedSeconds: 100,
+              evidence: {
+                version: 1,
+                type: 'timed',
+                measurement: { seconds: 100, recallSeconds: 10 },
+                recordings: [],
+              },
+            },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const corrected = {
+      ...saved,
+      metadata: {
+        ...saved.metadata,
+        evidence: {
+          ...saved.metadata!.evidence!,
+          correction: { seconds: 60, recallSeconds: 5, reason: 'Timer interruption' },
+        },
+      },
+    };
+    const updated = await request('/api/entries/native-timed', 'PUT', corrected, auth.cookie);
+    expect(updated.status).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0]).toMatchObject({
+      minutes: 1,
+      metadata: {
+        evidence: {
+          measurement: { seconds: 90.25, recallSeconds: 10 },
+          correction: { seconds: 60, recallSeconds: 5 },
+        },
+      },
+    });
+    const other = await signIn('other-evidence@example.test');
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, other.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    expect(
+      (
+        await request(
+          '/api/entries/native-timed',
+          'PUT',
+          corrected,
+          (await signIn('third-evidence@example.test')).cookie,
+        )
+      ).status,
+    ).toBe(404);
+  });
+  it('rejects invalid write/import evidence before replacement changes history', async () => {
+    const auth = await signIn('malformed-evidence@example.test');
+    await request('/api/entries', 'POST', entry(), auth.cookie);
+    const invalid = { ...measured(), metadata: { elapsedSeconds: 10, recallSeconds: 11 } };
+    const response = await request('/api/entries', 'POST', invalid, auth.cookie);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining('Recall') });
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: backup([invalid]) },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries.map((entry) => entry.id),
+    ).toEqual(['test-entry']);
+  });
+  it('accepts owned generated/imported tasks and rejects foreign links using the resulting plan', async () => {
+    const auth = await signIn('owned-evidence@example.test');
+    const other = await signIn('foreign-evidence@example.test');
+    const task = {
+      id: 'foreign-task',
+      title: 'Private exercise',
+      kind: 'sending',
+      notes: '',
+      done: false,
+      createdAt: entry().createdAt,
+    };
+    expect((await request('/api/plan', 'POST', task, other.cookie)).status).toBe(201);
+    const linked = { ...measured(), metadata: { ...measured().metadata, plannedTaskId: task.id } };
+    expect((await request('/api/entries', 'POST', linked, auth.cookie)).status).toBe(400);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: backup([linked]) }, auth.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...backup([linked]), plan: [task] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    await request(
+      '/api/settings',
+      'PUT',
+      { ...DEFAULT_PROFILE, level: 'intermediate', firstClassDate: '2026-09-28' },
+      auth.cookie,
+    );
+    const plan = (
+      (await (await request('/api/plan', 'GET', undefined, auth.cookie)).json()) as {
+        plan: PlannedTask[];
+      }
+    ).plan;
+    const generated = plan.find((item) => item.source === 'curriculum')!;
+    const next = {
+      ...measured(),
+      id: 'generated-evidence',
+      metadata: { ...measured().metadata, plannedTaskId: generated.id },
+    };
+    expect((await request('/api/entries', 'POST', next, auth.cookie)).status).toBe(201);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...backup([next]), profile: DEFAULT_PROFILE } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+  });
+});
