@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, signIn } from './helpers';
 
 test('assigned Morse Runner uses the real engine and saves one linked run', async ({
   page,
@@ -32,15 +32,12 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   // the real AudioWorklet clock and its start/end evidence.
   await page.clock.setSystemTime(new Date('2026-10-07T16:00:00Z'));
   const settings = (await (await context.request.get('/api/settings')).json()).settings;
-  const saved = await context.request.put('/api/settings', {
-    headers: { Origin: 'http://localhost:8791' },
-    data: {
-      settings: {
-        ...settings,
-        level: 'intermediate',
-        firstClassDate: '2026-10-08',
-        timezone: 'UTC',
-      },
+  const saved = await accountRequest(context, 'PUT', '/api/settings', {
+    settings: {
+      ...settings,
+      level: 'intermediate',
+      firstClassDate: '2026-10-08',
+      timezone: 'UTC',
     },
   });
   expect(saved.ok()).toBe(true);
@@ -102,8 +99,13 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   );
   await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
   await page.screenshot({ path: '.tmp/runner-review-desktop.png', fullPage: true });
-  // The server commits, but the acknowledgement is lost. Closing and reopening
-  // this same finished engine run must preserve its identity and retry once.
+  // The server commits, but the acknowledgement is lost. The durable device
+  // receipt releases review; retrying must preserve the engine result identity.
+  const submitted: unknown[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
+      submitted.push(request.postDataJSON());
+  });
   await page.route(
     '**/api/entries',
     async (route) => {
@@ -117,15 +119,25 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
     { times: 1 },
   );
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('alert')).toContainText('Synthetic lost Runner acknowledgement.');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
-  await page.getByRole('button', { name: 'Save practice', exact: true }).focus();
-  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
+  const retryAcknowledgement = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/entries' &&
+      response.request().method() === 'POST' &&
+      response.status() === 200,
+  );
+  await page.reload();
+  expect((await (await retryAcknowledgement).json()).duplicate).toBe(true);
+  await expect(
+    page.getByRole('heading', { name: 'Keep a record. See the progress.', exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => submitted.length).toBe(2);
+  await expect(page.getByText('Waiting to upload', { exact: true })).toHaveCount(0);
+  expect(submitted[1]).toEqual(submitted[0]);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0]).toMatchObject({

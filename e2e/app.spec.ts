@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, signIn } from './helpers';
 
 test('public practice is useful without signing in and fits a phone', async ({ page }) => {
   const failures: string[] = [];
@@ -36,8 +36,6 @@ test('email login, private records, backup controls, and passkeys work together'
   context,
 }, testInfo) => {
   await signIn(page);
-  const origin = 'http://localhost:8791';
-  const headers = { Origin: origin };
   await page.getByRole('button', { name: 'Log practice', exact: true }).click();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('');
   await page.getByLabel(/^Time practiced/).fill('15');
@@ -71,17 +69,14 @@ test('email login, private records, backup controls, and passkeys work together'
   );
   // Arrange one additional kind of private data; exercise backup operations
   // through the account UI rather than repeating Worker API import tests.
-  const planned = await context.request.post('/api/plan', {
-    headers,
-    data: {
-      id: 'backup-exercise',
-      title: 'A private exercise to restore',
-      kind: 'sending',
-      targetMinutes: 10,
-      done: false,
-      notes: 'Preserve the homework alongside practice.',
-      createdAt: savedEntry.createdAt,
-    },
+  const planned = await accountRequest(context, 'POST', '/api/plan', {
+    id: 'backup-exercise',
+    title: 'A private exercise to restore',
+    kind: 'sending',
+    targetMinutes: 10,
+    done: false,
+    notes: 'Preserve the homework alongside practice.',
+    createdAt: savedEntry.createdAt,
   });
   expect(planned.ok()).toBe(true);
   await page.getByRole('button', { name: 'Your account', exact: true }).click();

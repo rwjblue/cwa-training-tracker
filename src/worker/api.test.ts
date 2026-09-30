@@ -6,11 +6,14 @@ import { DEFAULT_PROFILE, type PracticeSession, type TrainingExport } from '../s
 import type { PlannedTask } from '../shared/plan';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
+import { getAuth } from './auth';
+import type { AccountChange, AccountOperation, AccountSnapshot } from '../shared/account-sync';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
 class SQLiteDatabase {
   sqlite = new DatabaseSync(':memory:');
+  private batches: Promise<void> = Promise.resolve();
   constructor() {
     const directory = new URL('../../migrations/', import.meta.url);
     for (const file of readdirSync(directory)
@@ -23,6 +26,13 @@ class SQLiteDatabase {
     return new SQLiteStatement(this.sqlite, sql);
   }
   async batch(statements: SQLiteStatement[]) {
+    // One SQLite connection serializes transactions, as D1 does for these batches.
+    const previous = this.batches;
+    let release!: () => void;
+    this.batches = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
     this.sqlite.exec('BEGIN');
     try {
       const results = [];
@@ -32,6 +42,8 @@ class SQLiteDatabase {
     } catch (error) {
       this.sqlite.exec('ROLLBACK');
       throw error;
+    } finally {
+      release();
     }
   }
   async exec(sql: string) {
@@ -94,13 +106,33 @@ let env: Env;
 let mail: Mail[];
 const origin = 'https://cwa.n1rwj.com';
 
-function request(
+async function request(
   path: string,
   method = 'GET',
   body?: unknown,
   cookies = '',
   headers: Record<string, string> = {},
 ) {
+  // Arrange legacy endpoint fixtures against an explicitly current snapshot.
+  // Boundary tests override these headers to exercise missing/stale authority.
+  const auth = cookies
+    ? await getAuth(new Request(`${origin}${path}`, { headers: { Cookie: cookies } }), env)
+    : null;
+  if (
+    auth &&
+    path === '/api/entries' &&
+    method === 'POST' &&
+    !Object.hasOwn(headers, 'X-CWA-Account')
+  )
+    headers['X-CWA-Account'] = auth.user.id;
+  if (
+    auth &&
+    ((path === '/api/settings' && method === 'PUT') ||
+      (path.startsWith('/api/plan') && method !== 'GET')) &&
+    !Object.hasOwn(headers, 'If-Match')
+  )
+    headers['If-Match'] =
+      `"${db.sqlite.prepare('SELECT account_revision FROM users WHERE id = ?').get(auth.user.id)?.account_revision}"`;
   return worker.fetch(
     new Request(`${origin}${path}`, {
       method,
@@ -713,10 +745,12 @@ describe('private training data', () => {
     const auth = await signIn('a@example.com');
     await request('/api/entries', 'POST', entry(), auth.cookie);
     const batch = db.batch.bind(db);
-    vi.spyOn(db, 'batch').mockImplementationOnce(async (statements) => {
-      db.sqlite.prepare('DELETE FROM practice_entries WHERE user_id = ?').run(auth.user.id);
-      return batch(statements);
-    });
+    vi.spyOn(db, 'batch')
+      .mockImplementationOnce(batch)
+      .mockImplementationOnce(async (statements) => {
+        db.sqlite.prepare('DELETE FROM practice_entries WHERE user_id = ?').run(auth.user.id);
+        return batch(statements);
+      });
     const data = { ...backup(), profile: DEFAULT_PROFILE };
     const response = await request('/api/import', 'POST', { data, mode: 'merge' }, auth.cookie);
     expect(await response.json()).toEqual({ imported: 1, skipped: 0 });
@@ -775,6 +809,8 @@ describe('private training data', () => {
     expect((await request('/api/plan', 'POST', task, a.cookie)).status).toBe(201);
     expect(await (await request('/api/plan', 'GET', undefined, b.cookie)).json()).toEqual({
       plan: [],
+      revision: 0,
+      generation: 0,
     });
     expect(
       (await request('/api/plan/private-exercise', 'PUT', { ...task, done: true }, b.cookie))
@@ -795,11 +831,15 @@ describe('private training data', () => {
     await request('/api/import', 'POST', { data: backup([]), mode: 'replace' }, a.cookie);
     expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
       plan: [],
+      revision: 3,
+      generation: 0,
     });
     await request('/api/plan', 'POST', task, a.cookie);
     await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie);
     expect(await (await request('/api/plan', 'GET', undefined, a.cookie)).json()).toEqual({
       plan: [],
+      revision: 5,
+      generation: 0,
     });
   });
 
@@ -997,6 +1037,8 @@ describe('private training data', () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
         tasks: selected.map((item) => ({ ...item, dismissedFromToday: true })),
+        revision: 4,
+        generation: 0,
       });
       expect(
         db.sqlite
@@ -1060,6 +1102,8 @@ describe('private training data', () => {
       );
       expect(await reopened.json()).toEqual({
         tasks: [{ ...generated, done: false, dismissedFromToday: true }],
+        revision: 2,
+        generation: 0,
       });
       const restored = await request(
         '/api/plan/status',
@@ -1072,6 +1116,8 @@ describe('private training data', () => {
       );
       expect(await restored.json()).toEqual({
         tasks: [{ ...generated, done: false, dismissedFromToday: false }],
+        revision: 3,
+        generation: 0,
       });
       expect((await plan(auth.cookie)).find((item) => item.id === generated.id)).toMatchObject({
         done: true,
@@ -1169,6 +1215,699 @@ describe('private training data', () => {
       await request('/api/export', 'GET', undefined, auth.cookie)
     ).json()) as { legacy: { data: unknown } };
     expect(exported.legacy.data).toEqual({ note: 'second' });
+  });
+});
+
+describe('account operation revisions and receipts', () => {
+  async function snapshot(cookie: string): Promise<AccountSnapshot> {
+    const response = await request('/api/account-state', 'GET', undefined, cookie);
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { state: AccountSnapshot }).state;
+  }
+  function operation(
+    state: AccountSnapshot,
+    change: AccountChange,
+    id: string = crypto.randomUUID(),
+  ): AccountOperation {
+    return {
+      version: 1,
+      id,
+      accountId: state.accountId,
+      baseRevision: state.revision,
+      generation: state.generation,
+      createdAt: '2026-09-30T12:00:00.000Z',
+      change,
+    };
+  }
+  const customTask = (): PlannedTask => ({
+    id: 'outbox-task',
+    title: 'Private sending',
+    kind: 'sending',
+    done: false,
+    targetMinutes: 17,
+    dueDate: '2026-10-01',
+    notes: 'Keep this reminder',
+    source: 'manual',
+    createdAt: '2026-09-30T12:00:00.000Z',
+  });
+  function send(cookie: string, operation: AccountOperation) {
+    return request('/api/account-operations', 'POST', operation, cookie, {
+      'X-CWA-Account': operation.accountId,
+    });
+  }
+
+  it('acknowledges exact lost-response retries without reapplying older settings', async () => {
+    const auth = await signIn('receipts@example.test');
+    const first = operation(
+      await snapshot(auth.cookie),
+      { type: 'settings', changes: { displayName: 'First confirmed name' } },
+      'stable-first',
+    );
+    expect((await send(auth.cookie, first)).status).toBe(200);
+    const second = operation(
+      await snapshot(auth.cookie),
+      { type: 'settings', changes: { displayName: 'Newer confirmed name' } },
+      'stable-second',
+    );
+    expect((await send(auth.cookie, second)).status).toBe(200);
+    const retry = await send(auth.cookie, first);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toMatchObject({
+      operationId: first.id,
+      state: { revision: 2, settings: { displayName: 'Newer confirmed name' } },
+    });
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(2);
+    const collision = await send(auth.cookie, {
+      ...first,
+      change: { type: 'settings', changes: { displayName: 'Different body' } },
+    });
+    expect(collision.status).toBe(409);
+    expect((await snapshot(auth.cookie)).settings.displayName).toBe('Newer confirmed name');
+    expect((await snapshot(auth.cookie)).revision).toBe(2);
+  });
+
+  it('atomically accepts one of two concurrent revisions and acknowledges concurrent exact retries once', async () => {
+    const auth = await signIn('concurrent@example.test');
+    const initial = await snapshot(auth.cookie);
+    const competing = await Promise.all([
+      send(
+        auth.cookie,
+        operation(initial, { type: 'settings', changes: { callsign: 'N1AAA' } }, 'concurrent-a'),
+      ),
+      send(
+        auth.cookie,
+        operation(initial, { type: 'settings', changes: { callsign: 'N1BBB' } }, 'concurrent-b'),
+      ),
+    ]);
+    expect(competing.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(await competing.find((response) => response.status === 409)!.json()).toMatchObject({
+      state: { accountId: auth.user.id, revision: 1 },
+    });
+    const current = await snapshot(auth.cookie);
+    const exact = operation(
+      current,
+      { type: 'settings', changes: { dailyGoalMinutes: 20 } },
+      'concurrent-exact',
+    );
+    const retried = await Promise.all([send(auth.cookie, exact), send(auth.cookie, exact)]);
+    expect(retried.map((response) => response.status)).toEqual([200, 200]);
+    expect((await snapshot(auth.cookie)).revision).toBe(2);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(2);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+  });
+
+  it('preserves unrelated current task fields through edit, completion, dismissal, and clear patches', async () => {
+    const auth = await signIn('patches@example.test');
+    const create = operation(await snapshot(auth.cookie), {
+      type: 'task-create',
+      task: customTask(),
+    });
+    expect((await send(auth.cookie, create)).status).toBe(200);
+    const edit = operation(await snapshot(auth.cookie), {
+      type: 'task-edit',
+      id: customTask().id,
+      changes: { notes: 'Newer notes' },
+    });
+    expect((await send(auth.cookie, edit)).status).toBe(200);
+    const status = operation(await snapshot(auth.cookie), {
+      type: 'task-status',
+      ids: [customTask().id],
+      done: true,
+      dismissedFromToday: true,
+    });
+    expect((await send(auth.cookie, status)).status).toBe(200);
+    expect((await snapshot(auth.cookie)).plan).toEqual([
+      { ...customTask(), notes: 'Newer notes', done: true, dismissedFromToday: true },
+    ]);
+    const clear = operation(await snapshot(auth.cookie), {
+      type: 'task-edit',
+      id: customTask().id,
+      changes: { targetMinutes: null, dueDate: null },
+    });
+    expect((await send(auth.cookie, clear)).status).toBe(200);
+    const task = (await snapshot(auth.cookie)).plan[0];
+    expect(task).not.toHaveProperty('targetMinutes');
+    expect(task).not.toHaveProperty('dueDate');
+    expect(task).toMatchObject({
+      notes: 'Newer notes',
+      done: true,
+      dismissedFromToday: true,
+      source: 'manual',
+    });
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.plan).toEqual([task]);
+    expect(exported).not.toHaveProperty('accountId');
+    expect(exported).not.toHaveProperty('generation');
+  });
+
+  it('protects curriculum facts and atomically materializes learner status and duration overrides', async () => {
+    const auth = await signIn('curriculum-patches@example.test');
+    await request(
+      '/api/settings',
+      'PUT',
+      { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' },
+      auth.cookie,
+    );
+    const before = await snapshot(auth.cookie);
+    const assigned = before.plan[0];
+    const invalid = operation(before, {
+      type: 'task-edit',
+      id: assigned.id,
+      changes: { kind: 'other' },
+    });
+    expect((await send(auth.cookie, invalid)).status).toBe(400);
+    expect((await snapshot(auth.cookie)).revision).toBe(before.revision);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM training_plan').get()?.count).toBe(0);
+    const status = operation(before, { type: 'task-status', ids: [assigned.id], done: true });
+    expect((await send(auth.cookie, status)).status).toBe(200);
+    const cleared = operation(await snapshot(auth.cookie), {
+      type: 'task-edit',
+      id: assigned.id,
+      changes: { targetMinutes: null, targetMinutesExplicit: true, notes: 'Learner reminder' },
+    });
+    expect((await send(auth.cookie, cleared)).status).toBe(200);
+    const saved = (await snapshot(auth.cookie)).plan.find((task) => task.id === assigned.id)!;
+    expect(saved).toMatchObject({
+      done: true,
+      notes: 'Learner reminder',
+      targetMinutesExplicit: true,
+      kind: assigned.kind,
+      curriculum: assigned.curriculum,
+      exercise: assigned.exercise,
+    });
+    expect(saved).not.toHaveProperty('targetMinutes');
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM training_plan').get()?.count).toBe(1);
+  });
+
+  it('rejects stale direct settings and every legacy plan mutation without conditional authority', async () => {
+    const auth = await signIn('conditional@example.test');
+    const before = await snapshot(auth.cookie);
+    expect(
+      (await request('/api/settings', 'PUT', DEFAULT_PROFILE, auth.cookie, { 'If-Match': '' }))
+        .status,
+    ).toBe(428);
+    expect(
+      (await request('/api/plan', 'POST', customTask(), auth.cookie, { 'If-Match': '' })).status,
+    ).toBe(428);
+    await request('/api/plan', 'POST', customTask(), auth.cookie);
+    const stale = await request(
+      '/api/settings',
+      'PUT',
+      { ...DEFAULT_PROFILE, callsign: 'N1OLD' },
+      auth.cookie,
+      { 'If-Match': `"${before.revision}"` },
+    );
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({ state: { revision: 1, settings: DEFAULT_PROFILE } });
+    for (const [path, method, body] of [
+      ['/api/plan/outbox-task', 'PUT', { ...customTask(), notes: 'Stale replacement' }],
+      ['/api/plan/outbox-task', 'DELETE', undefined],
+      ['/api/plan/status', 'POST', { ids: [customTask().id], done: true }],
+    ] as const)
+      expect((await request(path, method, body, auth.cookie, { 'If-Match': '"0"' })).status).toBe(
+        409,
+      );
+    expect((await snapshot(auth.cookie)).plan).toEqual([customTask()]);
+    const pending = operation(before, { type: 'settings', changes: { callsign: 'N1STALE' } });
+    expect((await send(auth.cookie, pending)).status).toBe(409);
+  });
+
+  it('makes import and reset revision transitions invalidate older mutable operations', async () => {
+    const auth = await signIn('lifecycle-revision@example.test');
+    const pending = operation(await snapshot(auth.cookie), {
+      type: 'settings',
+      changes: { callsign: 'N1STALE' },
+    });
+    await request('/api/import', 'POST', { mode: 'merge', data: backup([]) }, auth.cookie);
+    expect((await snapshot(auth.cookie)).revision).toBe(1);
+    expect((await send(auth.cookie, pending)).status).toBe(409);
+    const afterImport = operation(await snapshot(auth.cookie), {
+      type: 'task-create',
+      task: customTask(),
+    });
+    await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie);
+    expect((await snapshot(auth.cookie)).revision).toBe(2);
+    expect((await send(auth.cookie, afterImport)).status).toBe(409);
+    // Full dataset generation advancement and stale-result fencing belong to #4.
+    expect((await snapshot(auth.cookie)).generation).toBe(0);
+    const beforeUpload = (await snapshot(auth.cookie)).revision;
+    await request('/api/entries', 'POST', entry(), auth.cookie);
+    await request(
+      '/api/entries/test-entry',
+      'PUT',
+      { ...entry(), notes: 'Edited note' },
+      auth.cookie,
+    );
+    await request('/api/entries/test-entry', 'DELETE', undefined, auth.cookie);
+    expect((await snapshot(auth.cookie)).revision).toBe(beforeUpload);
+  });
+
+  it('checks owner headers and operation account IDs before reading or mutating private data', async () => {
+    const a = await signIn('scope-a@example.test');
+    const b = await signIn('scope-b@example.test');
+    const fromA = operation(
+      await snapshot(a.cookie),
+      { type: 'settings', changes: { displayName: 'Private A' } },
+      'same-id',
+    );
+    expect((await send(b.cookie, fromA)).status).toBe(409);
+    expect((await request('/api/account-operations', 'POST', fromA, b.cookie)).status).toBe(409);
+    for (const path of [
+      '/api/entries',
+      '/api/plan',
+      '/api/settings',
+      '/api/export',
+      '/api/account-state',
+    ])
+      expect(
+        (await request(path, 'GET', undefined, b.cookie, { 'X-CWA-Account': a.user.id })).status,
+      ).toBe(409);
+    const mismatched = await request('/api/entries', 'POST', entry(), b.cookie, {
+      'X-CWA-Account': a.user.id,
+    });
+    expect(mismatched.status).toBe(409);
+    const error = await mismatched.json();
+    expect(error).toEqual({
+      error: 'This request belongs to a different account. Sign in to that account to retry.',
+      code: 'account_changed',
+    });
+    expect(error).not.toHaveProperty('state');
+    const bare = await worker.fetch(
+      new Request(`${origin}/api/entries`, {
+        method: 'POST',
+        headers: { Origin: origin, 'Content-Type': 'application/json', Cookie: b.cookie },
+        body: JSON.stringify(entry()),
+      }),
+      env,
+    );
+    expect(bare.status).toBe(428);
+    expect((await snapshot(b.cookie)).revision).toBe(0);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      0,
+    );
+    expect((await send(a.cookie, fromA)).status).toBe(200);
+    const forB = {
+      ...fromA,
+      accountId: b.user.id,
+      change: { type: 'settings' as const, changes: { displayName: 'Private B' } },
+    };
+    expect((await send(b.cookie, forB)).status).toBe(200);
+    expect((await snapshot(a.cookie)).settings.displayName).toBe('Private A');
+    expect((await snapshot(b.cookie)).settings.displayName).toBe('Private B');
+    expect((await request('/api/account-state')).status).toBe(401);
+    const publicAsset = await request('/');
+    expect(await publicAsset.text()).not.toMatch(/Private A|Private B/);
+  });
+
+  it('rolls back task mutation, revision, receipt, and byte accounting when receipt quota fails', async () => {
+    const auth = await signIn('receipt-quota@example.test');
+    const before = await snapshot(auth.cookie);
+    const pending = operation(before, { type: 'task-create', task: customTask() }, 'quota-receipt');
+    const taskBytes = new TextEncoder().encode(JSON.stringify(customTask())).length;
+    const stored = 6 * 1024 * 1024 - taskBytes - pending.id.length - 64 + 1;
+    db.sqlite.prepare('UPDATE users SET storage_bytes = ? WHERE id = ?').run(stored, auth.user.id);
+    const response = await send(auth.cookie, pending);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: expect.stringContaining('storage limit'),
+    });
+    expect(await snapshot(auth.cookie)).toEqual(before);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM training_plan').get()?.count).toBe(0);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(0);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    ).toBe(stored);
+  });
+
+  it('keeps 2,000-item semantic status updates bounded and rolls back a task-count overflow', async () => {
+    const auth = await signIn('bulk-operations@example.test');
+    const tasks = Array.from({ length: 2000 }, (_, index) => ({
+      ...customTask(),
+      id: `bulk-${index}`,
+    }));
+    db.sqlite
+      .prepare(
+        `INSERT INTO training_plan (user_id,id,task_json)
+      SELECT ?,json_extract(value,'$.id'),value FROM json_each(?)`,
+      )
+      .run(auth.user.id, JSON.stringify(tasks));
+    const before = await snapshot(auth.cookie);
+    const batch = vi.spyOn(db, 'batch');
+    const status = operation(before, {
+      type: 'task-status',
+      ids: tasks.map((task) => task.id),
+      done: true,
+    });
+    expect((await send(auth.cookie, status)).status).toBe(200);
+    expect(batch.mock.calls.every(([statements]) => statements.length < 50)).toBe(true);
+    expect(
+      db.sqlite
+        .prepare(
+          "SELECT count(*) AS count FROM training_plan WHERE json_extract(task_json,'$.done') = 1",
+        )
+        .get()?.count,
+    ).toBe(2000);
+    const after = await snapshot(auth.cookie);
+    const overflow = operation(after, { type: 'task-create', task: customTask() });
+    expect((await send(auth.cookie, overflow)).status).toBe(400);
+    expect(await snapshot(auth.cookie)).toEqual(after);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(1);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+  });
+
+  it('rejects invalid payloads, nonexistent tasks, and wrong generations without revision or receipt writes', async () => {
+    const auth = await signIn('invalid-operations@example.test');
+    const before = await snapshot(auth.cookie);
+    const invalid = operation(before, { type: 'settings', changes: { dailyGoalMinutes: 1 } });
+    expect((await send(auth.cookie, invalid)).status).toBe(400);
+    const missing = operation(before, { type: 'task-status', ids: ['not-in-plan'], done: true });
+    expect((await send(auth.cookie, missing)).status).toBe(400);
+    const generation = {
+      ...operation(before, { type: 'settings', changes: { callsign: 'N1FUTURE' } }),
+      generation: 1,
+    };
+    const rejected = await send(auth.cookie, generation);
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toMatchObject({ state: before });
+    expect(await snapshot(auth.cookie)).toEqual(before);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(0);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+  });
+  const finished = (taskId: string, id = 'delayed-result') => ({
+    ...entry(id),
+    kind: 'sending',
+    source: 'timer',
+    minutes: 90.25 / 60,
+    notes: 'Frozen private result notes',
+    metadata: {
+      elapsedSeconds: 90.25,
+      recallSeconds: 5,
+      practiceTool: 'sending',
+      plannedTaskId: taskId,
+    },
+  });
+
+  it.each(['semantic', 'direct'] as const)(
+    'saves a delayed result after %s task deletion with scoped historical provenance and exact retries',
+    async (route) => {
+      const auth = await signIn(`retired-${route}@example.test`);
+      const other = await signIn(`foreign-retired-${route}@example.test`);
+      const task = customTask();
+      expect(
+        (
+          await send(
+            auth.cookie,
+            operation(await snapshot(auth.cookie), { type: 'task-create', task }),
+          )
+        ).status,
+      ).toBe(200);
+      // This exact body freezes offline; mutable create/delete uploads run before the result.
+      const frozen = finished(task.id);
+      const originalBody = JSON.stringify(frozen);
+      if (route === 'semantic')
+        expect(
+          (
+            await send(
+              auth.cookie,
+              operation(await snapshot(auth.cookie), { type: 'task-delete', id: task.id }),
+            )
+          ).status,
+        ).toBe(200);
+      else
+        expect(
+          (await request(`/api/plan/${task.id}`, 'DELETE', undefined, auth.cookie)).status,
+        ).toBe(200);
+      const afterDelete = await snapshot(auth.cookie);
+      expect(afterDelete.plan).toEqual([]);
+      expect(
+        db.sqlite
+          .prepare('SELECT task_id, generation FROM retired_plan_tasks WHERE user_id = ?')
+          .all(auth.user.id),
+      ).toEqual([{ task_id: task.id, generation: 0 }]);
+      expect((await request('/api/entries', 'POST', frozen, other.cookie)).status).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/entries',
+            'POST',
+            finished('never-owned', 'unknown-result'),
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      const response = await request('/api/entries', 'POST', frozen, auth.cookie);
+      expect(response.status).toBe(201);
+      const saved = ((await response.json()) as { entry: PracticeSession }).entry;
+      expect(saved).toMatchObject({
+        historicalPlannedTaskId: task.id,
+        notes: frozen.notes,
+        minutes: frozen.minutes,
+        source: 'timer',
+        metadata: {
+          elapsedSeconds: 90.25,
+          recallSeconds: 5,
+          evidence: { measurement: { seconds: 90.25, recallSeconds: 5 } },
+        },
+      });
+      expect(saved.metadata).not.toHaveProperty('plannedTaskId');
+      expect(await snapshot(auth.cookie)).toEqual(afterDelete);
+      expect(JSON.stringify(frozen)).toBe(originalBody);
+      const retry = await request('/api/entries', 'POST', frozen, auth.cookie);
+      expect(retry.status).toBe(200);
+      expect(await retry.json()).toEqual({ entry: saved, duplicate: true });
+      for (const changed of [
+        { ...frozen, notes: 'Changed retry notes' },
+        { ...frozen, metadata: { ...frozen.metadata, elapsedSeconds: 100 } },
+        { ...frozen, metadata: { ...frozen.metadata, plannedTaskId: 'other-task' } },
+        { ...frozen, historicalPlannedTaskId: 'other-task' },
+      ])
+        expect((await request('/api/entries', 'POST', changed, auth.cookie)).status).toBe(409);
+      expect(
+        db.sqlite
+          .prepare('SELECT count(*) AS count FROM practice_entries WHERE user_id = ?')
+          .get(auth.user.id)?.count,
+      ).toBe(1);
+      const exported = (await (
+        await request('/api/export', 'GET', undefined, auth.cookie)
+      ).json()) as TrainingExport;
+      expect(exported.sessions).toEqual([saved]);
+      expect(exported).not.toHaveProperty('retiredPlanTasks');
+      expect(exported).not.toHaveProperty('generation');
+      expect(
+        (await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie))
+          .status,
+      ).toBe(200);
+      const restored = (await (
+        await request('/api/entries', 'GET', undefined, other.cookie)
+      ).json()) as { entries: PracticeSession[] };
+      expect(restored.entries).toEqual([saved]);
+      expect(
+        db.sqlite
+          .prepare('SELECT count(*) AS count FROM retired_plan_tasks WHERE user_id = ?')
+          .get(other.user.id)?.count,
+      ).toBe(0);
+      // Portable provenance does not authorize a new result claiming the foreign task.
+      expect(
+        (
+          await request(
+            '/api/entries',
+            'POST',
+            { ...frozen, id: 'new-foreign-claim' },
+            other.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    },
+  );
+
+  it.each(['semantic', 'direct'] as const)(
+    'records course IDs removed by %s profile changes, retaining active ownership through rescheduling',
+    async (route) => {
+      const auth = await signIn(`retired-profile-${route}@example.test`);
+      const settings = { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' };
+      await request('/api/settings', 'PUT', settings, auth.cookie);
+      const assigned = (await snapshot(auth.cookie)).plan[0];
+      const frozen = finished(assigned.id, 'former-course-result');
+      const update = async (changes: Partial<typeof settings>) => {
+        if (route === 'semantic')
+          return send(
+            auth.cookie,
+            operation(await snapshot(auth.cookie), { type: 'settings', changes }),
+          );
+        return request(
+          '/api/settings',
+          'PUT',
+          { ...(await snapshot(auth.cookie)).settings, ...changes },
+          auth.cookie,
+        );
+      };
+      expect((await update({ firstClassDate: '2026-10-05' })).status).toBe(200);
+      expect((await snapshot(auth.cookie)).plan.some((task) => task.id === assigned.id)).toBe(true);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM retired_plan_tasks').get()?.count,
+      ).toBe(0);
+      const active = await request(
+        '/api/entries',
+        'POST',
+        { ...frozen, id: 'rescheduled-result' },
+        auth.cookie,
+      );
+      expect(active.status).toBe(201);
+      expect(await active.json()).toMatchObject({
+        entry: { metadata: { plannedTaskId: assigned.id } },
+      });
+      expect((await update({ level: 'fundamental' })).status).toBe(200);
+      expect(
+        db.sqlite
+          .prepare(
+            'SELECT count(*) AS count FROM retired_plan_tasks WHERE user_id = ? AND task_id = ?',
+          )
+          .get(auth.user.id, assigned.id)?.count,
+      ).toBe(1);
+      const delayed = await request('/api/entries', 'POST', frozen, auth.cookie);
+      expect(delayed.status).toBe(201);
+      const historical = ((await delayed.json()) as { entry: PracticeSession }).entry;
+      expect(historical.historicalPlannedTaskId).toBe(assigned.id);
+      expect(historical.metadata).not.toHaveProperty('plannedTaskId');
+      const fundamental = (await snapshot(auth.cookie)).plan[0];
+      expect((await update({ firstClassDate: '' })).status).toBe(200);
+      const cleared = await request(
+        '/api/entries',
+        'POST',
+        finished(fundamental.id, 'cleared-course-result'),
+        auth.cookie,
+      );
+      expect(cleared.status).toBe(201);
+      expect(await cleared.json()).toMatchObject({
+        entry: { historicalPlannedTaskId: fundamental.id },
+      });
+      expect((await update({ level: 'beginner', firstClassDate: '2026-10-05' })).status).toBe(200);
+      const retried = await request('/api/entries', 'POST', frozen, auth.cookie);
+      expect(retried.status).toBe(200);
+      expect(await retried.json()).toEqual({ entry: historical, duplicate: true });
+    },
+  );
+
+  it.each(['task-delete', 'settings'] as const)(
+    'rolls back %s and retirement ownership when its retirement transaction fails',
+    async (type) => {
+      const auth = await signIn(`retirement-rollback-${type}@example.test`);
+      await request(
+        '/api/settings',
+        'PUT',
+        { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' },
+        auth.cookie,
+      );
+      await request('/api/plan', 'POST', customTask(), auth.cookie);
+      const before = await snapshot(auth.cookie);
+      const bytes = db.sqlite
+        .prepare('SELECT storage_bytes FROM users WHERE id = ?')
+        .get(auth.user.id)?.storage_bytes;
+      db.sqlite.exec(
+        "CREATE TRIGGER reject_retirement BEFORE INSERT ON retired_plan_tasks BEGIN SELECT RAISE(ABORT, 'synthetic_retirement_failure'); END;",
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const change: AccountChange =
+        type === 'task-delete'
+          ? { type, id: customTask().id }
+          : { type, changes: { firstClassDate: '' } };
+      const response = await send(auth.cookie, operation(before, change));
+      expect(response.status).toBe(500);
+      expect(await snapshot(auth.cookie)).toEqual(before);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM retired_plan_tasks').get()?.count,
+      ).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+      ).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+          ?.storage_bytes,
+      ).toBe(bytes);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+      ).toBe(0);
+    },
+  );
+
+  it('bounds retirement metadata with the account byte budget and cannot use another dataset generation as proof', async () => {
+    const auth = await signIn('retirement-quota@example.test');
+    await request(
+      '/api/settings',
+      'PUT',
+      { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' },
+      auth.cookie,
+    );
+    const before = await snapshot(auth.cookie);
+    const storedBytes = 6 * 1024 * 1024 - 1;
+    db.sqlite
+      .prepare('UPDATE users SET storage_bytes = ? WHERE id = ?')
+      .run(storedBytes, auth.user.id);
+    const refused = await request(
+      '/api/settings',
+      'PUT',
+      { ...before.settings, firstClassDate: '' },
+      auth.cookie,
+    );
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({ error: expect.stringContaining('storage limit') });
+    expect(await snapshot(auth.cookie)).toEqual(before);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM retired_plan_tasks').get()?.count).toBe(
+      0,
+    );
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    ).toBe(storedBytes);
+    db.sqlite.prepare('UPDATE users SET storage_bytes = 0 WHERE id = ?').run(auth.user.id);
+    expect(
+      (
+        await request(
+          '/api/settings',
+          'PUT',
+          { ...before.settings, firstClassDate: '' },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const proofBytes = db.sqlite
+      .prepare(
+        'SELECT sum(length(CAST(task_id AS BLOB))) AS bytes FROM retired_plan_tasks WHERE user_id = ?',
+      )
+      .get(auth.user.id)?.bytes;
+    expect(
+      db.sqlite.prepare('SELECT storage_bytes FROM users WHERE id = ?').get(auth.user.id)
+        ?.storage_bytes,
+    ).toBe(proofBytes);
+    db.sqlite.prepare('UPDATE users SET dataset_generation = 1 WHERE id = ?').run(auth.user.id);
+    expect(
+      (await request('/api/entries', 'POST', finished(before.plan[0].id), auth.cookie)).status,
+    ).toBe(400);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      0,
+    );
   });
 });
 

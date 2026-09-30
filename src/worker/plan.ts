@@ -1,9 +1,15 @@
 import { validatePlannedTask, type PlannedTask } from '../shared/plan';
 import { curriculumPlan, mergeCurriculumPlan } from '../shared/curriculum';
-import { DEFAULT_PROFILE, type Profile } from '../shared/training';
+import { DEFAULT_PROFILE } from '../shared/training';
 import { requireAuth } from './auth';
 import { HttpError, isRecord, json, readJson } from './http';
 import { rateLimit } from './security';
+import {
+  getAccountSnapshot,
+  mutateAccount,
+  requireAccountRevision,
+  retiredTaskIds,
+} from './account-sync';
 
 export async function getPlanData(env: Env, userId: string): Promise<PlannedTask[]> {
   const [settings, rows] = await env.DB.batch<Record<string, string>>([
@@ -17,14 +23,6 @@ export async function getPlanData(env: Env, userId: string): Promise<PlannedTask
     profile,
     rows.results.map((row) => JSON.parse(row.task_json) as PlannedTask),
   );
-}
-
-async function assignedTasks(env: Env, userId: string): Promise<PlannedTask[]> {
-  const row = await env.DB.prepare('SELECT profile_json FROM users WHERE id = ?')
-    .bind(userId)
-    .first<{ profile_json: string }>();
-  const profile: Profile = { ...DEFAULT_PROFILE, ...JSON.parse(row?.profile_json ?? '{}') };
-  return curriculumPlan(profile);
 }
 
 export function deletePlanStatement(env: Env, userId: string): D1PreparedStatement {
@@ -64,11 +62,13 @@ export function planStatementsForImport(
 
 export async function listPlan(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
-  return json({ plan: await getPlanData(env, auth.user.id) });
+  const state = await getAccountSnapshot(env, auth.user.id);
+  return json({ plan: state.plan, revision: state.revision, generation: state.generation });
 }
 
 export async function updatePlanStatus(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const state = await requireAccountRevision(request, env, auth.user.id);
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   const body = await readJson(request, 420_000);
   if (Object.keys(body).some((key) => !['ids', 'done', 'dismissedFromToday'].includes(key)))
@@ -98,13 +98,13 @@ export async function updatePlanStatus(request: Request, env: Env): Promise<Resp
     throw new HttpError(400, 'Choose a completion or dismissal status to change.');
 
   const ids = new Set<string>(body.ids);
-  const selected = (await getPlanData(env, auth.user.id)).filter((task) => ids.has(task.id));
+  const selected = state.plan.filter((task) => ids.has(task.id));
   if (selected.length !== ids.size)
     throw new HttpError(404, 'One or more exercises were not found in your current plan.');
 
   // Materialize generated assignments and patch only status in the same transaction.
   // Existing task notes, duration overrides, and practice evidence are untouched.
-  await env.DB.batch([
+  const applied = await mutateAccount(env, state, [
     ...planStatementsForImport(
       env,
       auth.user.id,
@@ -117,12 +117,15 @@ export async function updatePlanStatus(request: Request, env: Env): Promise<Resp
     ).bind(JSON.stringify(changes), auth.user.id, JSON.stringify([...ids])),
   ]);
   return json({
-    tasks: (await getPlanData(env, auth.user.id)).filter((task) => ids.has(task.id)),
+    tasks: applied.state.plan.filter((task) => ids.has(task.id)),
+    revision: applied.state.revision,
+    generation: applied.state.generation,
   });
 }
 
 export async function savePlan(request: Request, env: Env, id?: string): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const state = await requireAccountRevision(request, env, auth.user.id);
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   const body = await readJson(request, 80_000);
   const input = isRecord(body.task) ? body.task : body;
@@ -139,7 +142,7 @@ export async function savePlan(request: Request, env: Env, id?: string): Promise
   if (task.source === 'curriculum' || task.id.startsWith('curriculum:')) {
     if (!id)
       throw new HttpError(400, 'Course exercises are added automatically from your schedule.');
-    const assigned = (await assignedTasks(env, auth.user.id)).find((item) => item.id === id);
+    const assigned = curriculumPlan(state.settings).find((item) => item.id === id);
     if (!assigned) throw new HttpError(404, 'This exercise is not in your current course.');
     task = {
       ...task,
@@ -151,42 +154,58 @@ export async function savePlan(request: Request, env: Env, id?: string): Promise
       exercise: assigned.exercise,
       link: assigned.link,
     };
-    await env.DB.prepare(
-      `INSERT INTO training_plan (user_id, id, task_json) VALUES (?, ?, ?)
+    const applied = await mutateAccount(env, state, [
+      env.DB.prepare(
+        `INSERT INTO training_plan (user_id, id, task_json) VALUES (?, ?, ?)
       ON CONFLICT(user_id, id) DO UPDATE SET task_json = excluded.task_json`,
-    )
-      .bind(auth.user.id, task.id, JSON.stringify(task))
-      .run();
-    return json({ task });
+      ).bind(auth.user.id, task.id, JSON.stringify(task)),
+    ]);
+    return json({ task, revision: applied.state.revision, generation: applied.state.generation });
   }
+  let statement: D1PreparedStatement;
   if (id) {
-    const result = await env.DB.prepare(
+    if (!state.plan.some((task) => task.id === id))
+      throw new HttpError(404, 'This exercise was not found.');
+    statement = env.DB.prepare(
       'UPDATE training_plan SET task_json = ? WHERE user_id = ? AND id = ? RETURNING id',
-    )
-      .bind(JSON.stringify(task), auth.user.id, id)
-      .first();
-    if (!result) throw new HttpError(404, 'This exercise was not found.');
+    ).bind(JSON.stringify(task), auth.user.id, id);
   } else {
-    const result = await env.DB.prepare(
+    if (state.plan.some((item) => item.id === task.id))
+      throw new HttpError(409, 'This exercise is already in your plan.');
+    statement = env.DB.prepare(
       `INSERT INTO training_plan (user_id, id, task_json) VALUES (?, ?, ?)
       ON CONFLICT(user_id, id) DO NOTHING RETURNING id`,
-    )
-      .bind(auth.user.id, task.id, JSON.stringify(task))
-      .first();
-    if (!result) throw new HttpError(409, 'This exercise is already in your plan.');
+    ).bind(auth.user.id, task.id, JSON.stringify(task));
   }
-  return json({ task }, id ? 200 : 201);
+  const applied = await mutateAccount(env, state, [statement]);
+  return json(
+    { task, revision: applied.state.revision, generation: applied.state.generation },
+    id ? 200 : 201,
+  );
 }
 
 export async function deletePlan(request: Request, env: Env, id: string): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const state = await requireAccountRevision(request, env, auth.user.id);
   if (id.startsWith('curriculum:'))
     throw new HttpError(
       400,
       'Course exercises follow your schedule. Mark an exercise complete or change your course dates.',
     );
-  await env.DB.prepare('DELETE FROM training_plan WHERE user_id = ? AND id = ?')
-    .bind(auth.user.id, id)
-    .run();
-  return json({ ok: true });
+  const applied = await mutateAccount(
+    env,
+    state,
+    [
+      env.DB.prepare('DELETE FROM training_plan WHERE user_id = ? AND id = ?').bind(
+        auth.user.id,
+        id,
+      ),
+    ],
+    undefined,
+    retiredTaskIds(
+      state,
+      state.plan.filter((task) => task.id !== id),
+    ),
+  );
+  return json({ ok: true, revision: applied.state.revision, generation: applied.state.generation });
 }

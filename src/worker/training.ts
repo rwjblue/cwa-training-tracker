@@ -5,7 +5,6 @@ import {
   validateProfile,
   validateTrainingExport,
   type PracticeSession,
-  type Profile,
   type TrainingExport,
 } from '../shared/training';
 import { requireAuth } from './auth';
@@ -15,6 +14,12 @@ import { deletePlanStatement, getPlanData, planStatementsForImport } from './pla
 import type { PlannedTask } from '../shared/plan';
 import { mergeCurriculumPlan } from '../shared/curriculum';
 import { sessionEvidence } from '../shared/practice-evidence';
+import {
+  getAccountSnapshot,
+  mutateAccount,
+  requireAccountRevision,
+  retiredTaskIds,
+} from './account-sync';
 
 const MAX_ENTRIES = 20_000;
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
@@ -40,19 +45,36 @@ function equivalentEntry(left: unknown, right: unknown): boolean {
   return true;
 }
 
+function historicalPlacement(entry: PracticeSession, taskId: string): PracticeSession {
+  const metadata = { ...entry.metadata };
+  delete metadata.plannedTaskId;
+  return { ...entry, metadata, historicalPlannedTaskId: taskId };
+}
+
+/** Retry normalization is justified only by this account's already saved provenance. */
+function equivalentRetry(
+  saved: PracticeSession,
+  candidate: PracticeSession,
+  omittedCreatedAt: boolean,
+): boolean {
+  let retried = omittedCreatedAt ? { ...candidate, createdAt: saved.createdAt } : candidate;
+  if (
+    saved.historicalPlannedTaskId &&
+    saved.metadata?.plannedTaskId === undefined &&
+    retried.metadata?.plannedTaskId === saved.historicalPlannedTaskId &&
+    (retried.historicalPlannedTaskId === undefined ||
+      retried.historicalPlannedTaskId === saved.historicalPlannedTaskId)
+  )
+    retried = historicalPlacement(retried, saved.historicalPlannedTaskId);
+  return equivalentEntry(saved, retried);
+}
+
 function validated<T>(validate: (value: unknown) => T, value: unknown): T {
   try {
     return validate(value);
   } catch (error) {
     throw new HttpError(400, error instanceof Error ? error.message : 'Invalid training data.');
   }
-}
-
-async function profile(env: Env, userId: string): Promise<Profile> {
-  const row = await env.DB.prepare('SELECT profile_json FROM users WHERE id = ?')
-    .bind(userId)
-    .first<{ profile_json: string }>();
-  return row ? { ...DEFAULT_PROFILE, ...JSON.parse(row.profile_json) } : { ...DEFAULT_PROFILE };
 }
 
 async function entries(env: Env, userId: string): Promise<PracticeSession[]> {
@@ -75,10 +97,12 @@ export async function listEntries(request: Request, env: Env): Promise<Response>
 
 export async function saveEntry(request: Request, env: Env, id?: string): Promise<Response> {
   const auth = await requireAuth(request, env);
+  if (!id && !request.headers.has('X-CWA-Account'))
+    throw new HttpError(428, 'Send the account that owns this practice result with X-CWA-Account.');
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   const body = await readJson(request, 250_000);
   const input = isRecord(body.entry) ? body.entry : body;
-  const entry = validated(validatePracticeSession, {
+  let entry = validated(validatePracticeSession, {
     ...input,
     id: id ?? input.id ?? crypto.randomUUID(),
     createdAt: input.createdAt ?? new Date().toISOString(),
@@ -96,9 +120,8 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       )
     : undefined;
   if (!id && previous) {
-    const retried =
-      input.createdAt === undefined ? { ...entry, createdAt: previous.createdAt } : entry;
-    if (equivalentEntry(previous, retried)) return json({ entry: previous, duplicate: true });
+    if (equivalentRetry(previous, entry, input.createdAt === undefined))
+      return json({ entry: previous, duplicate: true });
     throw new HttpError(409, 'A different practice entry already uses this session ID.');
   }
   const previousEvidence = sessionEvidence(previous?.metadata);
@@ -135,8 +158,19 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     typeof taskId === 'string' &&
     taskId !== previous?.metadata?.plannedTaskId &&
     !(await getPlanData(env, auth.user.id)).some((task) => task.id === taskId)
-  )
-    throw new HttpError(400, 'The linked exercise is not in your account’s plan.');
+  ) {
+    const retired = await env.DB.prepare(
+      `SELECT 1 AS owned FROM retired_plan_tasks
+      JOIN users ON users.id = retired_plan_tasks.user_id
+      WHERE user_id = ? AND task_id = ? AND generation = users.dataset_generation`,
+    )
+      .bind(auth.user.id, taskId)
+      .first();
+    if (!retired) throw new HttpError(400, 'The linked exercise is not in your account’s plan.');
+    if (entry.historicalPlannedTaskId !== undefined && entry.historicalPlannedTaskId !== taskId)
+      throw new HttpError(400, 'A practice entry can have only one historical exercise placement.');
+    entry = historicalPlacement(entry, taskId);
+  }
   if (id) {
     const updated = await env.DB.prepare(
       'UPDATE practice_entries SET date = ?, entry_json = ? WHERE user_id = ? AND id = ? RETURNING id',
@@ -162,9 +196,8 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
         .first<{ entry_json: string }>();
       if (row) {
         const saved = validated(validatePracticeSession, JSON.parse(row.entry_json));
-        const retried =
-          input.createdAt === undefined ? { ...entry, createdAt: saved.createdAt } : entry;
-        if (equivalentEntry(saved, retried)) return json({ entry: saved, duplicate: true });
+        if (equivalentRetry(saved, entry, input.createdAt === undefined))
+          return json({ entry: saved, duplicate: true });
       }
       throw new HttpError(
         409,
@@ -185,17 +218,28 @@ export async function deleteEntry(request: Request, env: Env, id: string): Promi
 
 export async function getSettings(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
-  return json({ settings: await profile(env, auth.user.id) });
+  const state = await getAccountSnapshot(env, auth.user.id);
+  return json({ settings: state.settings, revision: state.revision, generation: state.generation });
 }
 
 export async function saveSettings(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const state = await requireAccountRevision(request, env, auth.user.id);
   const body = await readJson(request);
   const settings = validated(validateProfile, body.settings ?? body);
-  await env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?')
-    .bind(JSON.stringify(settings), auth.user.id)
-    .run();
-  return json({ settings });
+  const applied = await mutateAccount(
+    env,
+    state,
+    [
+      env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
+        JSON.stringify(settings),
+        auth.user.id,
+      ),
+    ],
+    undefined,
+    retiredTaskIds(state, mergeCurriculumPlan(settings, state.plan)),
+  );
+  return json({ settings, revision: applied.state.revision, generation: applied.state.generation });
 }
 
 export async function exportData(request: Request, env: Env): Promise<Response> {
@@ -256,6 +300,7 @@ export async function exportData(request: Request, env: Env): Promise<Response> 
 
 export async function importData(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const state = await getAccountSnapshot(env, auth.user.id);
   await rateLimit(env, `import:${auth.user.id}`, 10, 60 * 60);
   const input = await readJson(request, MAX_IMPORT_BYTES);
   if (input.mode !== 'merge' && input.mode !== 'replace')
@@ -267,8 +312,8 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     input.data,
   );
   const uniqueEntries = new Map(data.sessions.map((entry) => [entry.id, entry]));
-  const ownedPlan = input.mode === 'merge' ? await getPlanData(env, auth.user.id) : [];
-  const resultingProfile = data.profile ?? (await profile(env, auth.user.id));
+  const ownedPlan = input.mode === 'merge' ? state.plan : [];
+  const resultingProfile = data.profile ?? state.settings;
   const resultingPlan = mergeCurriculumPlan(resultingProfile, [
     ...ownedPlan,
     ...(data.plan ?? []).filter((task) => !ownedPlan.some((item) => item.id === task.id)),
@@ -322,7 +367,7 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   if (data.profile) {
     const settings = { ...data.profile };
     if (!isRecord(input.data) || input.data.format !== 'cwa-training-tracker') {
-      const existing = await profile(env, auth.user.id);
+      const existing = state.settings;
       settings.callsign ||= existing.callsign;
       settings.displayName ||= existing.displayName;
     }
@@ -381,7 +426,8 @@ export async function importData(request: Request, env: Env): Promise<Response> 
       offset = end;
     }
   }
-  const results = statements.length ? await env.DB.batch(statements) : [];
+  const applied = await mutateAccount(env, state, statements);
+  const results = applied.results;
   // D1's meta.changes includes quota-accounting trigger writes. RETURNING counts
   // only actual new entries and also handles concurrent merge conflicts.
   const imported = entryStatementIndexes.reduce(
@@ -405,10 +451,11 @@ export async function importData(request: Request, env: Env): Promise<Response> 
 
 export async function resetData(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const state = await getAccountSnapshot(env, auth.user.id);
   const input = await readJson(request);
   if (input.confirmation !== 'RESET')
     throw new HttpError(400, 'Type RESET to confirm clearing your practice data.');
-  await env.DB.batch([
+  await mutateAccount(env, state, [
     env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
     env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
     deletePlanStatement(env, auth.user.id),

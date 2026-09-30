@@ -1,11 +1,17 @@
 import { validatePracticeSession, type PracticeSession } from '../shared/training';
-import { api } from './api';
+import { api, ApiError } from './api';
+import { getSelectedAccountId, loadAccountOperations, loadCachedAccount } from './account-outbox';
 
 export const PRACTICE_SAVED_EVENT = 'cwa:practice-saved';
 export const PRACTICE_UPLOADED_EVENT = 'cwa:practice-uploaded';
 const prefix = (scope: string) => `cwa:practice:pending:v1:${encodeURIComponent(scope)}:`;
 const key = (scope: string, id: string) => `${prefix(scope)}${encodeURIComponent(id)}`;
+const stateKey = (scope: string, id: string) =>
+  `cwa:practice:status:v1:${encodeURIComponent(scope)}:${encodeURIComponent(id)}`;
+const originKey = (scope: string, id: string) =>
+  `cwa:practice:origin:v1:${encodeURIComponent(scope)}:${encodeURIComponent(id)}`;
 const changed = () => window.dispatchEvent(new Event(PRACTICE_SAVED_EVENT));
+const volatileStates = new Map<string, { state: PracticeSaveState; body: string | null }>();
 
 /** Guest history and signed-in uploads waiting for acknowledgement stay account scoped. */
 export function loadLocalPractice(scope: string): PracticeSession[] {
@@ -29,9 +35,80 @@ export function loadLocalPractice(scope: string): PracticeSession[] {
 export function removeLocalPractice(scope: string, id: string) {
   try {
     localStorage.removeItem(key(scope, id));
+    localStorage.removeItem(stateKey(scope, id));
+    localStorage.removeItem(originKey(scope, id));
+    volatileStates.delete(stateKey(scope, id));
     changed();
   } catch {
     // A retained acknowledged record is safe to retry with the same id.
+  }
+}
+
+export interface PracticeSaveOrigin {
+  id: string;
+  accountId: string;
+  /** Missing means unknown historical origin, never the current dataset generation. */
+  generation?: number;
+}
+export function loadPracticeSaveOrigin(scope: string, id: string): PracticeSaveOrigin {
+  try {
+    const raw = localStorage.getItem(originKey(scope, id));
+    if (raw && raw.length <= 1000) {
+      const input = JSON.parse(raw) as PracticeSaveOrigin & { version?: number };
+      if (
+        input.version === 1 &&
+        input.id === id &&
+        input.accountId === scope &&
+        (input.generation === undefined ||
+          (Number.isSafeInteger(input.generation) && input.generation >= 0))
+      )
+        return {
+          id,
+          accountId: scope,
+          ...(input.generation === undefined ? {} : { generation: input.generation }),
+        };
+    }
+  } catch {
+    /* Unknown origins remain unknown through all retries. */
+  }
+  return { id, accountId: scope };
+}
+
+export interface PracticeSaveState {
+  id: string;
+  status: 'pending' | 'failed';
+  error?: string;
+  failure?: 'network' | 'auth' | 'permanent';
+}
+export function loadPracticeSaveStates(scope: string): PracticeSaveState[] {
+  return loadLocalPractice(scope).map((entry) => {
+    try {
+      const volatile = volatileStates.get(stateKey(scope, entry.id));
+      if (volatile && volatile.body === localStorage.getItem(key(scope, entry.id)))
+        return volatile.state;
+      const raw = localStorage.getItem(stateKey(scope, entry.id));
+      const value = raw ? (JSON.parse(raw) as PracticeSaveState) : undefined;
+      if (value?.id === entry.id && ['pending', 'failed'].includes(value.status)) return value;
+    } catch {
+      /* A damaged status never hides the retained result. */
+    }
+    return { id: entry.id, status: 'pending' };
+  });
+}
+function setSaveState(scope: string, state: PracticeSaveState) {
+  try {
+    volatileStates.set(stateKey(scope, state.id), {
+      state,
+      body: localStorage.getItem(key(scope, state.id)),
+    });
+    localStorage.setItem(stateKey(scope, state.id), JSON.stringify(state));
+    if (localStorage.getItem(stateKey(scope, state.id)) !== JSON.stringify(state))
+      throw new Error('The upload status was not retained.');
+    volatileStates.delete(stateKey(scope, state.id));
+    changed();
+  } catch {
+    /* Retained result remains authoritative. */
+    changed();
   }
 }
 
@@ -39,7 +116,25 @@ export interface PracticeSaveReceipt {
   entry: PracticeSession;
   destination: 'history' | 'device';
 }
-const uploads = new Map<string, Promise<PracticeSaveReceipt>>();
+interface Upload {
+  receipt: Promise<PracticeSaveReceipt>;
+  completion: Promise<PracticeSaveReceipt>;
+  controller: AbortController;
+}
+const uploads = new Map<string, Upload>();
+const suspended = new Set<string>();
+const epochs = new Map<string, number>();
+/** Account changes or lifecycle actions fence actual network work and late acknowledgements. */
+export function suspendPracticeUploads(scope: string) {
+  suspended.add(scope);
+  epochs.set(scope, (epochs.get(scope) ?? 0) + 1);
+  for (const [name, upload] of uploads)
+    if (name.startsWith(prefix(scope)))
+      upload.controller.abort(new Error('The selected account changed.'));
+}
+export function resumePracticeUploads(scope: string) {
+  suspended.delete(scope);
+}
 const UPLOAD_TIMEOUT_MS = 10_000;
 const LOCAL_RECEIPT_DELAY_MS = 750;
 
@@ -50,13 +145,35 @@ export async function autoSavePractice(
 ): Promise<PracticeSaveReceipt> {
   const entryKey = key(scope, input.id);
   const uploading = uploads.get(entryKey);
-  if (uploading) return uploading;
+  if (uploading) return uploading.receipt;
   let entry = validatePracticeSession(input);
   let durable = false;
   try {
     const previous = localStorage.getItem(entryKey);
     if (previous) entry = validatePracticeSession(JSON.parse(previous));
-    else localStorage.setItem(entryKey, JSON.stringify(entry));
+    else {
+      const frozen = JSON.stringify(entry);
+      localStorage.setItem(entryKey, frozen);
+      if (localStorage.getItem(entryKey) !== frozen)
+        throw new Error('The result was not retained.');
+      try {
+        if (localStorage.getItem(originKey(scope, entry.id)) === null) {
+          const generation =
+            scope === 'guest' ? undefined : loadCachedAccount(scope)?.state.generation;
+          localStorage.setItem(
+            originKey(scope, entry.id),
+            JSON.stringify({
+              version: 1,
+              id: entry.id,
+              accountId: scope,
+              ...(generation === undefined ? {} : { generation }),
+            }),
+          );
+        }
+      } catch {
+        /* The result stays durable; absent origin must never be restamped on retry. */
+      }
+    }
     durable = true;
     changed();
   } catch {
@@ -65,10 +182,25 @@ export async function autoSavePractice(
   if (scope === 'guest') {
     if (!durable)
       throw new Error(
-        'This browser could not save your result. Download it before starting another round.',
+        'This browser could not save your result. Keep it open and try again before starting another round.',
       );
     return { entry, destination: 'device' };
   }
+  const selected = getSelectedAccountId();
+  if (
+    suspended.has(scope) ||
+    (selected !== undefined && selected !== scope) ||
+    loadAccountOperations(scope).length
+  ) {
+    if (!durable)
+      throw new Error('This browser could not retain your result while account edits are waiting.');
+    setSaveState(scope, { id: entry.id, status: 'pending' });
+    return { entry, destination: 'device' };
+  }
+  const frozen = JSON.stringify(entry);
+  const origin = loadPracticeSaveOrigin(scope, entry.id);
+  const epoch = epochs.get(scope) ?? 0;
+  setSaveState(scope, { id: entry.id, status: 'pending' });
   const controller = new AbortController();
   const timeout = setTimeout(() => {
     controller.abort(new Error('The upload timed out. Please try saving again.'));
@@ -80,10 +212,21 @@ export async function autoSavePractice(
         entry,
         'POST',
         controller.signal,
+        { accountId: scope, generation: origin.generation },
       );
       const acknowledged = validatePracticeSession(response.entry);
       if (acknowledged.id !== entry.id)
         throw new Error('The server did not acknowledge this result.');
+      const selected = getSelectedAccountId();
+      if (
+        suspended.has(scope) ||
+        (selected !== undefined && selected !== scope) ||
+        epoch !== (epochs.get(scope) ?? 0)
+      )
+        return { entry, destination: 'device' };
+      // Clearing a newer replacement or publishing its old acknowledgement would lose work.
+      if (durable && localStorage.getItem(entryKey) !== frozen)
+        return { entry, destination: 'device' };
       removeLocalPractice(scope, entry.id);
       window.dispatchEvent(
         new CustomEvent(PRACTICE_UPLOADED_EVENT, { detail: { scope, entry: acknowledged } }),
@@ -91,10 +234,27 @@ export async function autoSavePractice(
       return { entry: acknowledged, destination: 'history' };
     } catch (error) {
       if (!durable) throw error;
+      if (!suspended.has(scope) && epoch === (epochs.get(scope) ?? 0))
+        setSaveState(scope, {
+          id: entry.id,
+          status: 'failed',
+          error: (error instanceof Error
+            ? error.message
+            : 'Your result could not be uploaded.'
+          ).slice(0, 1000),
+          failure:
+            error instanceof ApiError
+              ? error.code === 'account_changed' || [401, 403].includes(error.status)
+                ? 'auth'
+                : error.status >= 500
+                  ? 'network'
+                  : 'permanent'
+              : 'network',
+        });
       return { entry, destination: 'device' };
     } finally {
       clearTimeout(timeout);
-      uploads.delete(entryKey);
+      if (uploads.get(entryKey)?.controller === controller) uploads.delete(entryKey);
     }
   })();
   // Navigation need not wait for the network once its exact retry body is durable.
@@ -111,7 +271,7 @@ export async function autoSavePractice(
         }),
       ]).finally(() => clearTimeout(receiptTimer))
     : upload;
-  uploads.set(entryKey, receipt);
+  uploads.set(entryKey, { receipt, completion: upload, controller });
   return receipt;
 }
 
@@ -119,10 +279,13 @@ export async function flushPracticeSaves(
   scope: string,
   onSaved: (entry: PracticeSession) => void,
   isCurrentAccount: () => boolean = () => true,
+  retryPermanent = false,
 ) {
   if (scope === 'guest') return;
   for (const entry of loadLocalPractice(scope)) {
     if (!isCurrentAccount()) return;
+    const state = loadPracticeSaveStates(scope).find((item) => item.id === entry.id);
+    if (!retryPermanent && state?.failure === 'permanent') break;
     const result = await autoSavePractice(scope, entry);
     if (result.destination !== 'history') break;
     if (isCurrentAccount()) onSaved(result.entry);

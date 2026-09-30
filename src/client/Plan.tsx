@@ -29,7 +29,7 @@ import {
   weeklyReport,
   type PlannedTask,
 } from '../shared/plan';
-import { api } from './api';
+import type { AccountChange, AccountTaskChanges } from '../shared/account-sync';
 import './plan.css';
 import { curriculumForLevel } from '../shared/curriculum';
 
@@ -37,6 +37,13 @@ interface Props {
   startNewTask?: boolean;
   profile: Profile;
   entries: PracticeSession[];
+  tasks: PlannedTask[];
+  loading: boolean;
+  error: string;
+  onRetry: () => void;
+  onChange: (change: AccountChange, baseRevision?: number) => Promise<unknown>;
+  revision: number;
+  pendingIds?: string[];
   onLog: (initial?: Partial<PracticeSession>) => void;
   onPracticeTask?: (task: PlannedTask) => void;
   onSetupCourse?: () => void;
@@ -53,25 +60,41 @@ const dayLabel = (date: string) =>
 export default function Plan({
   profile,
   entries,
+  tasks,
+  loading,
+  error,
+  onRetry,
+  onChange,
+  revision,
+  pendingIds = [],
   onLog,
   onPracticeTask,
   onSetupCourse,
   startNewTask,
 }: Props) {
-  const [tasks, setTasks] = useState<PlannedTask[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [mutationError, setMutationError] = useState('');
   const [view, setView] = useState<'next' | 'week' | 'all'>('next');
   const [showDone, setShowDone] = useState(false);
-  const [editing, setEditing] = useState<Partial<PlannedTask> | null>(
-    startNewTask ? { dueDate: dateInTimezone(new Date(), profile.timezone) } : null,
+  const [editing, setEditing] = useState<{
+    initial: Partial<PlannedTask>;
+    baseRevision: number;
+  } | null>(
+    startNewTask
+      ? {
+          initial: { dueDate: dateInTimezone(new Date(), profile.timezone) },
+          baseRevision: revision,
+        }
+      : null,
   );
   const previousNewTask = useRef(startNewTask);
   useEffect(() => {
     if (startNewTask && !previousNewTask.current)
-      setEditing({ dueDate: dateInTimezone(new Date(), profile.timezone) });
+      setEditing({
+        initial: { dueDate: dateInTimezone(new Date(), profile.timezone) },
+        baseRevision: revision,
+      });
     previousNewTask.current = startNewTask;
-  }, [startNewTask, profile.timezone]);
+  }, [startNewTask, profile.timezone, revision]);
   const [deleting, setDeleting] = useState<PlannedTask | null>(null);
   const [busy, setBusy] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
@@ -87,39 +110,21 @@ export default function Plan({
       ?.lesson ??
     1;
 
-  async function load() {
-    setLoading(true);
-    setError('');
-    try {
-      setTasks((await api<{ plan: PlannedTask[] }>('/plan')).plan);
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
+  function openEditor(initial: Partial<PlannedTask>) {
+    setMutationError('');
+    setEditing({ initial: structuredClone(initial), baseRevision: revision });
   }
-  useEffect(() => {
-    void load();
-  }, []);
 
   async function updateTask(
     task: PlannedTask,
     changes: Partial<Pick<PlannedTask, 'done' | 'dismissedFromToday'>>,
   ) {
     setBusy(task.id);
-    setError('');
+    setMutationError('');
     try {
-      const result = await api<{ tasks: PlannedTask[] }>(
-        '/plan/status',
-        { ids: [task.id], ...changes },
-        'POST',
-        AbortSignal.timeout(10_000),
-      );
-      setTasks((current) =>
-        current.map((item) => result.tasks.find((updated) => updated.id === item.id) ?? item),
-      );
+      await onChange({ type: 'task-status', ids: [task.id], ...changes }, revision);
     } catch (error) {
-      setError((error as Error).message);
+      setMutationError((error as Error).message);
     } finally {
       setBusy('');
     }
@@ -181,7 +186,7 @@ export default function Plan({
           </button>
           <button
             className="button outline small"
-            onClick={() => setEditing({ lesson: nextLesson })}
+            onClick={() => openEditor({ lesson: nextLesson })}
           >
             <Plus size={15} /> Add exercise
           </button>
@@ -231,9 +236,14 @@ export default function Plan({
       {error && (
         <div className="alert error" role="alert">
           {error}{' '}
-          <button className="text-button" onClick={() => void load()}>
+          <button className="text-button" onClick={onRetry}>
             Reload plan
           </button>
+        </div>
+      )}
+      {mutationError && (
+        <div className="alert error" role="alert">
+          {mutationError}
         </div>
       )}
       {loading ? (
@@ -259,6 +269,11 @@ export default function Plan({
                     {overdue && <span className="plan-overdue">Earlier work</span>}
                     {task.dismissedFromToday && (
                       <span className="plan-dismissed">Dismissed from Today</span>
+                    )}
+                    {pendingIds.includes(task.id) && (
+                      <span className="plan-dismissed" role="status">
+                        Waiting to sync
+                      </span>
                     )}
                   </div>
                   <p className="plan-task-meta">
@@ -305,7 +320,7 @@ export default function Plan({
                   <button
                     className="icon-button"
                     aria-label={`Edit ${task.title}`}
-                    onClick={() => setEditing(task)}
+                    onClick={() => openEditor(task)}
                   >
                     <Pencil size={15} />
                   </button>
@@ -313,7 +328,10 @@ export default function Plan({
                     <button
                       className="icon-button danger-text"
                       aria-label={`Delete ${task.title}`}
-                      onClick={() => setDeleting(task)}
+                      onClick={() => {
+                        setMutationError('');
+                        setDeleting(task);
+                      }}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -341,7 +359,7 @@ export default function Plan({
           )}
           <button
             className="button outline small"
-            onClick={() => setEditing({ lesson: nextLesson })}
+            onClick={() => openEditor({ lesson: nextLesson })}
           >
             Add an exercise <Plus size={14} />
           </button>
@@ -353,22 +371,34 @@ export default function Plan({
       </p>
       {editing && (
         <TaskEditor
-          initial={editing}
+          initial={editing.initial}
+          baseRevision={editing.baseRevision}
+          onChange={onChange}
           onClose={() => setEditing(null)}
-          onSaved={(task) => {
-            setTasks((current) => [task, ...current.filter((item) => item.id !== task.id)]);
-            setEditing(null);
-          }}
+          onSaved={() => setEditing(null)}
         />
       )}
       {deleting && (
-        <PlanDialog title="Delete this exercise?" onClose={() => setDeleting(null)}>
+        <PlanDialog
+          title="Delete this exercise?"
+          onClose={() => setDeleting(null)}
+          dismissDisabled={busy === deleting.id}
+        >
           <p>
             “{deleting.title}” will be removed from your plan. Its saved practice entries will stay
             in your log.
           </p>
+          {mutationError && (
+            <div className="alert error" role="alert">
+              {mutationError}
+            </div>
+          )}
           <div className="plan-form-actions">
-            <button className="button outline" onClick={() => setDeleting(null)}>
+            <button
+              className="button outline"
+              disabled={busy === deleting.id}
+              onClick={() => setDeleting(null)}
+            >
               Keep exercise
             </button>
             <button
@@ -376,19 +406,18 @@ export default function Plan({
               disabled={busy === deleting.id}
               onClick={async () => {
                 setBusy(deleting.id);
+                setMutationError('');
                 try {
-                  await api(`/plan/${encodeURIComponent(deleting.id)}`, {}, 'DELETE');
-                  setTasks((current) => current.filter((task) => task.id !== deleting.id));
+                  await onChange({ type: 'task-delete', id: deleting.id }, revision);
                   setDeleting(null);
                 } catch (error) {
-                  setError((error as Error).message);
-                  setDeleting(null);
+                  setMutationError((error as Error).message);
                 } finally {
                   setBusy('');
                 }
               }}
             >
-              Delete exercise
+              {busy === deleting.id ? 'Saving…' : 'Delete exercise'}
             </button>
           </div>
         </PlanDialog>
@@ -411,11 +440,13 @@ function PlanDialog({
   onClose,
   children,
   className = '',
+  dismissDisabled = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  dismissDisabled?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -427,7 +458,7 @@ function PlanDialog({
       ref={dialog}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (!dismissDisabled) onClose();
       }}
       aria-label={title}
     >
@@ -437,6 +468,7 @@ function PlanDialog({
           className="icon-button plan-no-print"
           type="button"
           aria-label="Close dialog"
+          disabled={dismissDisabled}
           onClick={onClose}
         >
           <X size={19} />
@@ -449,12 +481,16 @@ function PlanDialog({
 
 function TaskEditor({
   initial,
+  baseRevision,
+  onChange,
   onClose,
   onSaved,
 }: {
   initial: Partial<PlannedTask>;
+  baseRevision: number;
+  onChange: Props['onChange'];
   onClose: () => void;
-  onSaved: (task: PlannedTask) => void;
+  onSaved: () => void;
 }) {
   const [task, setTask] = useState<PlannedTask>({
     id: crypto.randomUUID(),
@@ -474,12 +510,28 @@ function TaskEditor({
     setSaving(true);
     try {
       const valid = validatePlannedTask(task);
-      const result = await api<{ task: PlannedTask }>(
-        initial.id ? `/plan/${encodeURIComponent(initial.id)}` : '/plan',
-        { task: valid },
-        initial.id ? 'PUT' : 'POST',
-      );
-      onSaved(result.task);
+      if (initial.id) {
+        const fields = [
+          'title',
+          'kind',
+          'lesson',
+          'dueDate',
+          'link',
+          'targetMinutes',
+          'targetMinutesExplicit',
+          'notes',
+        ] as const;
+        const changes = Object.fromEntries(
+          fields
+            .filter((field) => valid[field] !== initial[field])
+            .map((field) => [field, valid[field] ?? null]),
+        ) as AccountTaskChanges;
+        if (Object.keys(changes).length)
+          await onChange({ type: 'task-edit', id: initial.id, changes }, baseRevision);
+      } else {
+        await onChange({ type: 'task-create', task: valid }, baseRevision);
+      }
+      onSaved();
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -490,8 +542,12 @@ function TaskEditor({
     <PlanDialog
       title={initial.id ? 'Edit your exercise' : 'Add a practice exercise'}
       onClose={onClose}
+      dismissDisabled={saving}
     >
       <form className="plan-form" onSubmit={save}>
+        <p className="plan-form-hint">
+          Changes are saved on this device first and synced to your account when available.
+        </p>
         <label>
           Exercise title
           <input
@@ -602,7 +658,7 @@ function TaskEditor({
           </div>
         )}
         <div className="plan-form-actions">
-          <button className="button outline" type="button" onClick={onClose}>
+          <button className="button outline" type="button" disabled={saving} onClick={onClose}>
             Cancel
           </button>
           <button className="button dark" type="submit" disabled={saving}>
@@ -620,7 +676,13 @@ function Report({
   fromDate,
   toDate,
   onClose,
-}: Omit<Props, 'onLog'> & { fromDate: string; toDate: string; onClose: () => void }) {
+}: {
+  entries: PracticeSession[];
+  profile: Profile;
+  fromDate: string;
+  toDate: string;
+  onClose: () => void;
+}) {
   const [from, setFrom] = useState(fromDate);
   const [to, setTo] = useState(toDate);
   const [copied, setCopied] = useState(false);

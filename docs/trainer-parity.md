@@ -236,3 +236,32 @@ validation. Preserve baseline evidence rather than rewriting history. Follow the
 whole path from reachable UI through timing/state, save, history, export/import,
 and reporting before calling a feature ported. Source availability alone does not
 establish redistribution permission or real-device behavior.
+
+## Accepted issue #2 delivery ledger
+
+Manual and terminal Runner review now share the stable-ID copy/listening result
+queue. A readable durable device receipt can release review; failed, expired-auth
+and uncertain uploads remain visible and retry the original payload. Guest work
+stays local until the learner explicitly selects a result for account saving.
+
+One account data owner now projects profile and plan semantic edits across Today,
+the course plan and practice completion. Bounded cached confirmed state and
+per-operation device records support offline reopening. Editors retain their
+original baseline and revision; atomic Worker compare-and-swap and exact operation
+receipts reject stale writes without duplicate effects. Conflicts show the online
+value and local intent, with deliberate keep-online or reapply choices. Queued
+result ownership is checked against the current authenticated account at the
+Worker; account switching hides other scopes and fences late acknowledgements.
+A delayed result whose previously owned task was removed retains historical
+placement and raw evidence; it cannot grant current assignment credit.
+
+Evidence: [shared protocol](../src/shared/account-sync.ts),
+[Worker revisions](../src/worker/account-sync.ts),
+[account outbox](../src/client/account-outbox.ts),
+[result queue](../src/client/practice-autosave.ts), and
+[offline workflow](../e2e/offline-sync.spec.ts). Fast checks and independent review
+status are recorded in [execution progress](parity/execution-progress-2026-09-30.md).
+Offline usability requires the app shell to load; this issue caches account data,
+not a service worker or an actively running timer. Device backup/clear and full
+reset/replacement generation enforcement remain the separate #3/#4 workflows.
+Browser mobile/touch emulation does not establish physical-device behavior.

@@ -4386,3 +4386,35 @@ body {
   padding: 0;
   border: 0;
 }
+
+.account-sync-status,
+.practice-sync-status {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.account-sync-status > ul {
+  display: grid;
+  gap: 0.75rem;
+  padding-left: 1.25rem;
+}
+.account-sync-status p,
+.practice-sync-status p {
+  margin: 0.35rem 0 0.65rem;
+}
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.account-sync-status > button + button,
+.practice-sync-status > button + button {
+  margin-left: 0.5rem;
+}
+.account-sync-status .button,
+.practice-sync-status .button {
+  min-height: 44px;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: normal;
+}

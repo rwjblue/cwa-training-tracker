@@ -202,3 +202,43 @@ History, review and reports explain this accounting; it is not current native
 evidence. Current writes enforce the size limit after all normalization. Exact
 owned retries acknowledge a saved record even after task deletion; Runner review
 retains a stable run-owned session identity, timestamp and date when reopened.
+
+### Issue #2 — completed-result and mutable account synchronization
+
+The original [device state](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21)
+and [synchronization](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L188)
+were rechecked as evidence. Companion now queues manual/finished Runner results
+with the same immutable account-scoped ID/body mechanism as copy and listening.
+A local receipt requires durable readback. History shows pending results and
+failed uploads; reconnect/auth retry preserves exact identities and evidence.
+Confirmed results continue through account export/import and printable reports.
+
+`account-outbox.ts` and `useAccountData.ts` own bounded cached confirmed snapshots
+and semantic profile/plan operations; Plan no longer maintains a separate fetched
+task array. Create/edit/delete, explicit complete/reopen and Today dismissal all
+project immediately after a durable receipt. Pending, failed and conflicted states
+remain visible. Dirty editors freeze their opening baseline/revision and patch
+only changed fields. Curriculum source facts remain protected. The Worker wraps
+conditional revision guard, mutations and compact idempotency receipt in one D1
+transaction. Existing direct mutable APIs require the current revision too.
+
+`X-CWA-Account` prevents stale account tabs from writing their queued results into
+a different authenticated account. Scope changes suspend real requests and fence
+late acknowledgements; cross-tab cache selection clears other private projections.
+Per-ID records prevent stale queue-array writes from dropping newer work. Explicit
+conflict comparison offers keep-online or a fresh semantic reapplication against
+the displayed online revision; reconnect does not silently overwrite newer data.
+Dependent result uploads wait for pending plan changes. Server-owned retired task
+IDs let delayed results retain historical placement after a queued deletion or
+course change without granting active assignment credit; unknown/foreign task IDs
+remain rejected. Device retry bodies and measured source facts remain unchanged.
+
+Validation: shared/client/real-SQL Worker cases cover exact uncertain retry,
+conditional and concurrent revisions, invalid/cross-account operations, immutable
+curriculum facts, quota rollback, storage readback failure and delayed acknowledgements.
+`e2e/offline-sync.spec.ts` uses actual engine time plus disconnected requests and
+real controls at desktop/mobile widths; a second tab verifies dirty-draft conflict
+resolution. Publication/review evidence is in the execution progress journal.
+Full device export/restore/clear and reset/replacement ordering remain #3/#4.
+Cached identity is labeled device data and grants no server authority; the app
+shell still needs to load. No active elapsed-time reload/crash recovery is claimed.

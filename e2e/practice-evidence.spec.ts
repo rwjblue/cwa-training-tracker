@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectAccessible, signIn } from './helpers';
+import { expectAccessible, scopedRequest, signIn } from './helpers';
 
 // These separate synthetic clients retain the production email-request limit;
 // adding a journey must not exhaust the existing suite's shared local IP quota.
@@ -25,14 +25,7 @@ for (const viewport of [
       createdAt: '2026-09-30T12:00:00Z',
       metadata: { elapsedSeconds: 90.25, recallSeconds: 10, practiceTool: 'sending' },
     };
-    expect(
-      (
-        await context.request.post('/api/entries', {
-          data: initial,
-          headers: { Origin: 'http://localhost:8791' },
-        })
-      ).status(),
-    ).toBe(201);
+    expect((await scopedRequest(context, 'POST', '/api/entries', initial)).status()).toBe(201);
     await page.reload();
     if (viewport.width < 600)
       await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();

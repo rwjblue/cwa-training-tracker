@@ -58,12 +58,14 @@ async function chooseCourse(page: Page, level: CourseLevel, firstClassDate = '20
   }
   const saved = page.waitForResponse(
     (response) =>
-      new URL(response.url()).pathname === '/api/settings' && response.request().method() === 'PUT',
+      new URL(response.url()).pathname === '/api/account-operations' &&
+      response.request().method() === 'POST' &&
+      response.request().postDataJSON().change.type === 'settings',
   );
   await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
   const response = await saved;
   expect(response.ok()).toBe(true);
-  expect((await response.json()).settings).toMatchObject({
+  expect((await response.json()).state.settings).toMatchObject({
     level,
     firstClassDate,
     timezone: 'UTC',

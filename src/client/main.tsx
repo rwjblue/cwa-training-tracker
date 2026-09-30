@@ -53,7 +53,18 @@ import {
 } from '../shared/training';
 import { evidenceTime, sessionEvidence, type PracticeEvidence } from '../shared/practice-evidence';
 import { EvidenceSummary, PracticeEvidenceDetails } from './PracticeEvidenceDetails';
-import { api, getEntries, getSettings, type Passkey, type User } from './api';
+import { api, ApiError, getEntries, setApiAccount, type Passkey, type User } from './api';
+import {
+  ACCOUNT_DATA_EVENT,
+  loadCachedAccount,
+  forgetActiveAccount,
+  selectAccountIdentity,
+  getSelectedAccountId,
+  loadSelectedAccountIdentity,
+} from './account-outbox';
+import { useAccountData } from './useAccountData';
+import AccountSyncStatus from './AccountSyncStatus';
+import type { AccountChange } from '../shared/account-sync';
 import { MORSE } from './audio';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
 import './styles.css';
@@ -75,6 +86,9 @@ import {
   autoSavePractice,
   flushPracticeSaves,
   loadLocalPractice,
+  loadPracticeSaveStates,
+  suspendPracticeUploads,
+  resumePracticeUploads,
   removeLocalPractice,
   PRACTICE_SAVED_EVENT,
   PRACTICE_UPLOADED_EVENT,
@@ -231,10 +245,6 @@ function App() {
   const [savedPracticeEntry, setSavedPracticeEntry] = useState<PracticeSession>();
   const pendingLog = useRef<Partial<PracticeSession> | null>(null);
   const pendingDestination = useRef<Page | null>(null);
-  const [tasks, setTasks] = useState<PlannedTask[]>([]);
-  const [planLoading, setPlanLoading] = useState(true);
-  const [planError, setPlanError] = useState('');
-  const [planVersion, setPlanVersion] = useState(0);
   const [startNewTask, setStartNewTask] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const activeAccount = useRef(user?.id);
@@ -245,13 +255,27 @@ function App() {
   }));
   const localEntries = localHistory.scope === (user?.id ?? 'guest') ? localHistory.entries : [];
   const [entries, setEntries] = useState<PracticeSession[]>([]);
-  const [profile, setProfile] = useState<Profile>({
+  const account = useAccountData(user);
+  const profile = account.state?.settings ?? {
     ...DEFAULT_PROFILE,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  });
-  const [profileAccountId, setProfileAccountId] = useState<string>();
+  };
+  const profileAccountId = account.state?.accountId;
+  const tasks = account.state?.plan ?? [];
+  const [offlineIdentity, setOfflineIdentity] = useState(false);
+  const [practiceStates, setPracticeStates] = useState(() => loadPracticeSaveStates('guest'));
+  const pendingTaskIds = account.operations.flatMap(({ operation }) =>
+    operation.change.type === 'settings'
+      ? []
+      : operation.change.type === 'task-status'
+        ? operation.change.ids
+        : operation.change.type === 'task-create'
+          ? [operation.change.task.id]
+          : [operation.change.id],
+  );
   const [booting, setBooting] = useState(true);
   const [appError, setAppError] = useState('');
+  const identityLoad = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [sessionEditor, setSessionEditor] = useState<Partial<PracticeSession> | null>(null);
   const [toast, setToast] = useState('');
@@ -259,23 +283,48 @@ function App() {
   const [demo, setDemo] = useState(true);
   const notify = (message: string) => setToast(message);
   const load = async (signedInUser?: User) => {
-    const current = signedInUser ?? (await api<{ user: User | null }>('/me')).user;
+    const requestVersion = ++identityLoad.current;
+    let current: User | null;
+    let identityConfirmed = false;
+    try {
+      current = signedInUser ?? (await api<{ user: User | null }>('/me')).user;
+      if (identityLoad.current !== requestVersion) return;
+      identityConfirmed = true;
+      setOfflineIdentity(false);
+    } catch (error) {
+      if (identityLoad.current !== requestVersion) return;
+      const cached = loadCachedAccount();
+      const identity = cached?.user ?? loadSelectedAccountIdentity();
+      if (!identity || (error instanceof ApiError && error.status < 500)) throw error;
+      current = identity;
+      setOfflineIdentity(true);
+    }
     activeAccount.current = current?.id;
+    if (current && identityConfirmed) selectAccountIdentity(current);
+    setApiAccount(current?.id);
     if (current?.id !== user?.id) {
       setEntries([]);
-      setProfile(DEFAULT_PROFILE);
-      setProfileAccountId(undefined);
+      setSessionEditor(null);
+      setPracticeLaunch(undefined);
+      setSavedPracticeEntry(undefined);
     }
     setUser(current);
-    if (current) {
-      const [sessionData, settingsData] = await Promise.all([getEntries(), getSettings()]);
+    if (!current) {
+      forgetActiveAccount();
+      return;
+    }
+    setDemo(false);
+    const cached = loadCachedAccount(current.id);
+    try {
+      const [sessionData, state] = await Promise.all([getEntries(), account.refresh(current)]);
       if (activeAccount.current !== current.id) return;
       setEntries(sessionData.entries);
-      setProfile(settingsData.settings);
-      setProfileAccountId(current.id);
-      setDemo(false);
-      setPlanVersion((version) => version + 1);
-      return settingsData.settings;
+      return state.settings;
+    } catch (error) {
+      if (activeAccount.current !== current.id || identityLoad.current !== requestVersion) return;
+      if (!cached || (error instanceof ApiError && error.status < 500)) throw error;
+      setOfflineIdentity(true);
+      return cached.state.settings;
     }
   };
   useEffect(() => {
@@ -283,57 +332,54 @@ function App() {
       .catch((error: Error) => setAppError(error.message))
       .finally(() => setBooting(false));
   }, []);
-  useEffect(() => {
-    if (!user) {
-      setTasks([]);
-      setPlanError('');
-      return;
-    }
-    if (page !== 'overview') return;
-    let cancelled = false;
-    setPlanLoading(true);
-    setPlanError('');
-    api<{ plan: PlannedTask[] }>('/plan')
-      .then(({ plan }) => {
-        if (!cancelled) setTasks(plan);
-      })
-      .catch((error: Error) => {
-        if (!cancelled) setPlanError(error.message);
-      })
-      .finally(() => {
-        if (!cancelled) setPlanLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    user?.id,
-    page,
-    planVersion,
-    profile.level,
-    profile.firstClassDate,
-    profile.classDays.join(','),
-  ]);
   const updateTaskStatus = async (
     selected: PlannedTask[],
     changes: { done?: boolean; dismissedFromToday?: boolean },
   ) => {
-    const accountId = activeAccount.current;
-    const result = await api<{ tasks: PlannedTask[] }>(
-      '/plan/status',
-      { ids: selected.map((task) => task.id), ...changes },
-      'POST',
-      AbortSignal.timeout(10_000),
-    );
-    if (activeAccount.current !== accountId) return;
-    const updated = new Map(result.tasks.map((task) => [task.id, task]));
-    setTasks((current) => current.map((task) => updated.get(task.id) ?? task));
+    const result = await account.mutate({
+      type: 'task-status',
+      ids: selected.map((task) => task.id),
+      ...changes,
+    });
     setPracticeLaunch((current) =>
-      current?.task && updated.has(current.task.id)
-        ? { ...current, task: updated.get(current.task.id)! }
+      current?.task && selected.some((task) => task.id === current.task!.id)
+        ? { ...current, task: { ...current.task, ...changes } }
         : current,
     );
+    if (result.destination === 'device')
+      notify('Exercise change saved on this device. Waiting to sync.');
   };
+  useEffect(() => {
+    const selectedChanged = (event: Event) => {
+      if (event instanceof StorageEvent && event.key !== 'cwa:account:active:v1') return;
+      const selectedId = getSelectedAccountId(event instanceof StorageEvent);
+      if (selectedId === activeAccount.current) return;
+      const cached = selectedId ? loadCachedAccount(selectedId) : null;
+      const next = cached?.user ?? (selectedId ? loadSelectedAccountIdentity() : null);
+      const previous = activeAccount.current;
+      activeAccount.current = next?.id;
+      if (previous) suspendPracticeUploads(previous);
+      setApiAccount(next?.id);
+      setUser(next ?? null);
+      setEntries([]);
+      setSessionEditor(null);
+      setPracticeLaunch(undefined);
+      setSavedPracticeEntry(undefined);
+      setOfflineIdentity(Boolean(next));
+      if (selectedId && !next) void load().catch((error: Error) => setAppError(error.message));
+    };
+    const online = () => {
+      void load().catch((error: Error) => setAppError(error.message));
+    };
+    window.addEventListener('online', online);
+    window.addEventListener('storage', selectedChanged);
+    window.addEventListener(ACCOUNT_DATA_EVENT, selectedChanged);
+    return () => {
+      window.removeEventListener('online', online);
+      window.removeEventListener('storage', selectedChanged);
+      window.removeEventListener(ACCOUNT_DATA_EVENT, selectedChanged);
+    };
+  }, []);
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(''), 5500);
@@ -402,7 +448,11 @@ function App() {
     navigate('practice');
   };
   const openLog = (initial: Partial<PracticeSession> = {}) => {
-    if (!user) {
+    if (
+      !user &&
+      initial.id &&
+      loadLocalPractice('guest').some((entry) => entry.id === initial.id)
+    ) {
       pendingLog.current = initial;
       setAuthOpen(true);
       return;
@@ -449,7 +499,11 @@ function App() {
   };
   useEffect(() => {
     const scope = user?.id ?? 'guest';
-    const refresh = () => setLocalHistory({ scope, entries: loadLocalPractice(scope) });
+    resumePracticeUploads(scope);
+    const refresh = () => {
+      setLocalHistory({ scope, entries: loadLocalPractice(scope) });
+      setPracticeStates(loadPracticeSaveStates(scope));
+    };
     const uploaded = (event: Event) => {
       const detail = (event as CustomEvent<{ scope: string; entry: PracticeSession }>).detail;
       if (detail.scope === scope && (activeAccount.current ?? 'guest') === scope)
@@ -463,13 +517,17 @@ function App() {
       );
     refresh();
     retry();
+    const accountChanged = retry;
+    window.addEventListener(ACCOUNT_DATA_EVENT, accountChanged);
     window.addEventListener(PRACTICE_SAVED_EVENT, refresh);
     window.addEventListener(PRACTICE_UPLOADED_EVENT, uploaded);
     window.addEventListener('storage', refresh);
     window.addEventListener('online', retry);
     const retryTimer = window.setInterval(retry, 30_000);
     return () => {
+      suspendPracticeUploads(scope);
       window.clearInterval(retryTimer);
+      window.removeEventListener(ACCOUNT_DATA_EVENT, accountChanged);
       window.removeEventListener(PRACTICE_SAVED_EVENT, refresh);
       window.removeEventListener(PRACTICE_UPLOADED_EVENT, uploaded);
       window.removeEventListener('storage', refresh);
@@ -523,11 +581,14 @@ function App() {
   };
   const logout = async () => {
     try {
+      identityLoad.current++;
       activeAccount.current = undefined;
       await api('/auth/logout', {});
       setUser(null);
       setEntries([]);
-      setProfile(DEFAULT_PROFILE);
+      setApiAccount(undefined);
+      forgetActiveAccount();
+      setOfflineIdentity(false);
       navigate('overview');
       setDemo(true);
       notify('You’ve been signed out.');
@@ -689,6 +750,52 @@ function App() {
             </div>
           ) : (
             <>
+              {user && (
+                <AccountSyncStatus
+                  operations={account.operations}
+                  confirmed={account.confirmed ?? undefined}
+                  cachedIdentity={offlineIdentity || account.cached}
+                  onRetry={async () => {
+                    await account.retry();
+                  }}
+                  onResolve={account.resolve}
+                  onSignIn={() => setAuthOpen(true)}
+                />
+              )}
+              {user && !!localEntries.length && (
+                <section className="alert practice-sync-status" aria-label="Practice upload status">
+                  <p role="status">
+                    <strong>
+                      {localEntries.length} practice{' '}
+                      {localEntries.length === 1 ? 'result' : 'results'} saved on this device.
+                    </strong>{' '}
+                    Waiting to upload to this account.
+                  </p>
+                  {practiceStates
+                    .filter((state) => state.status === 'failed')
+                    .map((state) => (
+                      <p key={state.id}>{state.error}</p>
+                    ))}
+                  <button
+                    className="button outline small"
+                    onClick={() =>
+                      void flushPracticeSaves(
+                        user.id,
+                        mergeSavedEntry,
+                        () => activeAccount.current === user.id,
+                        true,
+                      )
+                    }
+                  >
+                    Retry practice uploads
+                  </button>
+                  {practiceStates.some((state) => state.failure === 'auth') && (
+                    <button className="button outline small" onClick={() => setAuthOpen(true)}>
+                      Sign in to upload
+                    </button>
+                  )}
+                </section>
+              )}
               {!user && page === 'logbook' && (
                 <div className="demo-banner">
                   <span>
@@ -720,11 +827,13 @@ function App() {
                       user ? (
                         <TodayPlan
                           profile={profile}
-                          entries={entries}
+                          entries={visibleEntries}
                           tasks={tasks}
-                          loading={planLoading}
-                          error={planError}
-                          onRetry={() => setPlanVersion((version) => version + 1)}
+                          loading={account.loading}
+                          error={account.error}
+                          onRetry={() =>
+                            void account.refresh().catch((error: Error) => notify(error.message))
+                          }
                           onDismiss={(tasks) =>
                             updateTaskStatus(tasks, { dismissedFromToday: true })
                           }
@@ -758,6 +867,7 @@ function App() {
               {page === 'practice' && (
                 <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                   <PracticeStudio
+                    key={user?.id ?? 'guest'}
                     onLog={openLog}
                     onAutoSave={autoSave}
                     onTaskCompletion={(task: PlannedTask, done: boolean) =>
@@ -810,6 +920,15 @@ function App() {
                   onLog={openLog}
                   onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
                   startNewTask={startNewTask}
+                  tasks={tasks}
+                  planLoading={account.loading}
+                  planError={account.error}
+                  pendingTaskIds={pendingTaskIds}
+                  revision={account.state?.revision ?? 0}
+                  onPlanChange={account.mutate}
+                  onPlanRetry={() =>
+                    void account.refresh().catch((error: Error) => notify(error.message))
+                  }
                   user={user}
                   onSettings={() => {
                     if (user) navigate('settings');
@@ -825,7 +944,8 @@ function App() {
                   key={user.id}
                   user={user}
                   profile={profile}
-                  setProfile={setProfile}
+                  revision={account.state?.revision ?? 0}
+                  onChange={account.mutate}
                   notify={notify}
                   logout={logout}
                   reload={load}
@@ -860,12 +980,19 @@ function App() {
         <SessionModal
           initial={sessionEditor}
           isExisting={entries.some((entry) => entry.id === sessionEditor.id)}
+          scope={user?.id ?? 'guest'}
           onClose={() => setSessionEditor(null)}
-          onSaved={(entry) => {
-            if (activeAccount.current !== user?.id) return;
+          onSaved={(entry, destination) => {
+            if ((activeAccount.current ?? 'guest') !== (user?.id ?? 'guest')) return;
             const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
-            if (!wasExisting && user) clearSavedStudioNotes(user.id, entry);
-            acceptSavedPractice(entry);
+            if (!wasExisting) clearSavedStudioNotes(user?.id ?? 'guest', entry);
+            if (destination === 'history') acceptSavedPractice(entry);
+            else {
+              setSavedPracticeEntry(entry);
+              setSavedPracticeVersion((version) => version + 1);
+              const attempt = savedCopyAttempt(entry);
+              if (attempt) clearCopyDraft(user?.id ?? 'guest', attempt.id);
+            }
             setSessionEditor(null);
             if (
               !wasExisting &&
@@ -873,12 +1000,18 @@ function App() {
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
             ) {
               studioUnsaved.current = false;
-              // The paused studio snapshot was just acknowledged by the server.
+              // The paused studio snapshot was just durably saved.
               // Its reset effect has not run yet; asking it to leave would save
               // that same time again (or prompt to discard already-saved time).
               showPage('overview');
             }
-            notify('Practice logged. A little progress adds up.');
+            notify(
+              destination === 'history'
+                ? 'Practice logged. A little progress adds up.'
+                : user
+                  ? 'Practice saved on this device. Waiting to upload.'
+                  : 'Practice saved on this device. Find it in your logbook.',
+            );
           }}
         />
       )}
@@ -1495,7 +1628,21 @@ function Course({
   user,
   onSettings,
   startNewTask,
+  tasks,
+  planLoading,
+  planError,
+  revision,
+  onPlanChange,
+  onPlanRetry,
+  pendingTaskIds,
 }: {
+  tasks: PlannedTask[];
+  pendingTaskIds: string[];
+  planLoading: boolean;
+  planError: string;
+  revision: number;
+  onPlanChange: (change: AccountChange, baseRevision?: number) => Promise<unknown>;
+  onPlanRetry: () => void;
   startNewTask?: boolean;
   profile: Profile;
   entries: PracticeSession[];
@@ -1530,6 +1677,13 @@ function Course({
         <Plan
           profile={profile}
           entries={entries}
+          tasks={tasks}
+          loading={planLoading}
+          error={planError}
+          pendingIds={pendingTaskIds}
+          revision={revision}
+          onChange={onPlanChange}
+          onRetry={onPlanRetry}
           onLog={onLog}
           onPracticeTask={onPracticeTask}
           onSetupCourse={onSettings}
@@ -1938,13 +2092,15 @@ function AuthModal({
 function SessionModal({
   initial,
   isExisting,
+  scope,
   onClose,
   onSaved,
 }: {
   initial: Partial<PracticeSession>;
   isExisting: boolean;
+  scope: string;
   onClose: () => void;
-  onSaved: (entry: PracticeSession) => void;
+  onSaved: (entry: PracticeSession, destination: 'history' | 'device') => void;
 }) {
   const saveButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false);
@@ -1955,6 +2111,7 @@ function SessionModal({
   const close = () => {
     if (!saving.current) onClose();
   };
+  const frozenEntry = useRef<PracticeSession | undefined>(undefined);
   const copyAttempt = savedCopyAttempt(initial);
   let evidence: PracticeEvidence | undefined;
   let measuredInitial = initial;
@@ -2057,14 +2214,21 @@ function SessionModal({
         } else delete corrected.correction;
         data.metadata = { ...initial.metadata, scratchpad: form.scratchpad, evidence: corrected };
       }
-      const validated = validatePracticeSession(data);
-      const result = await api<{ entry: PracticeSession }>(
-        isExisting ? `/entries/${initial.id}` : '/entries',
-        validated,
-        isExisting ? 'PUT' : 'POST',
-        AbortSignal.timeout(10_000),
-      );
-      onSaved(result.entry);
+      const validated = frozenEntry.current ?? validatePracticeSession(data);
+      if (!isExisting) frozenEntry.current = validated;
+      if (isExisting) {
+        const result = await api<{ entry: PracticeSession }>(
+          `/entries/${initial.id}`,
+          validated,
+          'PUT',
+          AbortSignal.timeout(10_000),
+          { accountId: scope },
+        );
+        onSaved(result.entry, 'history');
+      } else {
+        const result = await autoSavePractice(scope, validated);
+        onSaved(result.entry, result.destination);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -2088,7 +2252,10 @@ function SessionModal({
       {evidence && <EvidenceSummary evidence={evidence} />}
       {!evidence && <PracticeEvidenceDetails entry={initial} expanded />}
       <form onSubmit={save} aria-busy={busy}>
-        <fieldset className="session-form-fields" disabled={busy}>
+        <fieldset
+          className="session-form-fields"
+          disabled={busy || (!isExisting && Boolean(frozenEntry.current))}
+        >
           <div className="form-grid">
             <label className="field">
               Activity
@@ -2265,21 +2432,24 @@ function SessionModal({
             />{' '}
             This was a class meeting <span>(kept separate from practice goals)</span>
           </label>
-          {error && (
-            <div className="alert error" role="alert">
-              {error}
-            </div>
-          )}
-          <div className="modal-actions">
-            <button className="button outline" type="button" onClick={close} disabled={busy}>
-              Cancel
-            </button>
-            <button ref={saveButton} className="button dark" disabled={busy} type="submit">
-              {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
-              <Check size={16} />
-            </button>
-          </div>
         </fieldset>
+        {error && (
+          <div className="alert error" role="alert">
+            {error}
+            {!isExisting && frozenEntry.current && (
+              <span>Your reviewed fields are retained for an exact retry.</span>
+            )}
+          </div>
+        )}
+        <div className="modal-actions">
+          <button className="button outline" type="button" onClick={close} disabled={busy}>
+            Cancel
+          </button>
+          <button ref={saveButton} className="button dark" disabled={busy} type="submit">
+            {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
+            <Check size={16} />
+          </button>
+        </div>
       </form>
     </Modal>
   );
@@ -2288,7 +2458,8 @@ function SessionModal({
 function Account({
   user,
   profile,
-  setProfile,
+  revision,
+  onChange,
   notify,
   logout,
   reload,
@@ -2297,7 +2468,11 @@ function Account({
 }: {
   user: User;
   profile: Profile;
-  setProfile: (profile: Profile) => void;
+  revision: number;
+  onChange: (
+    change: AccountChange,
+    baseRevision?: number,
+  ) => Promise<{ destination: 'server' | 'device' }>;
   notify: (message: string) => void;
   logout: () => void;
   reload: () => Promise<unknown>;
@@ -2305,6 +2480,13 @@ function Account({
   onToday: () => void;
 }) {
   const [form, setForm] = useState(profile);
+  const baseline = useRef({ profile, revision });
+  const dirty = useRef(false);
+  const editProfile = (value: Profile) => {
+    if (!dirty.current) baseline.current = { profile, revision };
+    dirty.current = true;
+    setForm(value);
+  };
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
@@ -2332,15 +2514,36 @@ function Account({
       .catch((e) => setError(e.message))
       .finally(() => setPasskeysLoading(false));
   }, []);
-  useEffect(() => setForm(profile), [profile]);
+  useEffect(() => {
+    if (!dirty.current) {
+      setForm(profile);
+      baseline.current = { profile, revision };
+    }
+  }, [profile, revision]);
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      const result = await api<{ settings: Profile }>('/settings', form, 'PUT');
-      setProfile(result.settings);
-      notify('Your preferences are saved.');
+      const changes = Object.fromEntries(
+        Object.entries(form).filter(
+          ([key, value]) =>
+            JSON.stringify(value) !==
+            JSON.stringify(baseline.current.profile[key as keyof Profile]),
+        ),
+      ) as Partial<Profile>;
+      if (!Object.keys(changes).length) {
+        dirty.current = false;
+        notify('Your preferences are unchanged.');
+        return;
+      }
+      const result = await onChange({ type: 'settings', changes }, baseline.current.revision);
+      dirty.current = false;
+      notify(
+        result.destination === 'server'
+          ? 'Your preferences are saved.'
+          : 'Preferences saved on this device. Waiting to sync.',
+      );
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -2490,7 +2693,7 @@ function Account({
                 <input
                   value={form.displayName}
                   maxLength={100}
-                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  onChange={(e) => editProfile({ ...form, displayName: e.target.value })}
                   placeholder="What should we call you?"
                 />
               </label>
@@ -2499,7 +2702,7 @@ function Account({
                 <input
                   value={form.callsign}
                   maxLength={30}
-                  onChange={(e) => setForm({ ...form, callsign: e.target.value.toUpperCase() })}
+                  onChange={(e) => editProfile({ ...form, callsign: e.target.value.toUpperCase() })}
                   placeholder="N0CALL"
                 />
               </label>
@@ -2507,7 +2710,7 @@ function Account({
                 Your course level
                 <select
                   value={form.level}
-                  onChange={(e) => setForm({ ...form, level: e.target.value as CourseLevel })}
+                  onChange={(e) => editProfile({ ...form, level: e.target.value as CourseLevel })}
                 >
                   {levels.map((level) => (
                     <option key={level.id} value={level.id}>
@@ -2524,7 +2727,9 @@ function Account({
                   max="480"
                   required
                   value={form.dailyGoalMinutes}
-                  onChange={(e) => setForm({ ...form, dailyGoalMinutes: Number(e.target.value) })}
+                  onChange={(e) =>
+                    editProfile({ ...form, dailyGoalMinutes: Number(e.target.value) })
+                  }
                 />
               </label>
               <label className="field">
@@ -2532,12 +2737,12 @@ function Account({
                 <input
                   type="date"
                   value={form.firstClassDate}
-                  onChange={(e) => setForm({ ...form, firstClassDate: e.target.value })}
+                  onChange={(e) => editProfile({ ...form, firstClassDate: e.target.value })}
                 />
               </label>
               <TimeZoneSelect
                 value={form.timezone}
-                onChange={(timezone) => setForm({ ...form, timezone })}
+                onChange={(timezone) => editProfile({ ...form, timezone })}
               />
             </div>
             <div className="avatar-preference">
@@ -2545,7 +2750,7 @@ function Account({
                 id="use-gravatar"
                 type="checkbox"
                 checked={form.useGravatar !== false}
-                onChange={(event) => setForm({ ...form, useGravatar: event.target.checked })}
+                onChange={(event) => editProfile({ ...form, useGravatar: event.target.checked })}
                 aria-describedby="gravatar-help"
               />
               <span>
@@ -2574,7 +2779,7 @@ function Account({
                       type="checkbox"
                       checked={form.classDays.includes(index)}
                       onChange={(e) =>
-                        setForm({
+                        editProfile({
                           ...form,
                           classDays: e.target.checked
                             ? [...form.classDays, index].sort()

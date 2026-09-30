@@ -36,6 +36,13 @@ export async function getAuth(request: Request, env: Env): Promise<AuthContext |
 export async function requireAuth(request: Request, env: Env): Promise<AuthContext> {
   const auth = await getAuth(request, env);
   if (!auth) throw new HttpError(401, 'Sign in to continue.');
+  const accountId = request.headers.get('X-CWA-Account');
+  if (accountId !== null && accountId !== auth.user.id)
+    throw new HttpError(
+      409,
+      'This request belongs to a different account. Sign in to that account to retry.',
+      { code: 'account_changed' },
+    );
   return auth;
 }
 

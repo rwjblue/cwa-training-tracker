@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { addDays, dateInTimezone } from '../src/shared/training';
-import { expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 
 test('Today brings personal assignments forward and keeps logging separate from completion', async ({
   page,
@@ -31,19 +31,17 @@ test('Today brings personal assignments forward and keeps logging separate from 
   const firstTask = (await (await context.request.get('/api/plan')).json()).plan[0];
   expect(firstTask.dueDate).toBe(today);
 
-  const future = await context.request.post('/api/plan', {
-    headers: { Origin: 'http://localhost:8791' },
-    data: {
-      task: {
-        ...firstTask,
-        id: 'tomorrow-exercise',
-        title: 'Tomorrow’s listening exercise',
-        dueDate: addDays(today, 1),
-        done: false,
-      },
+  const future = await accountRequest(context, 'POST', '/api/plan', {
+    task: {
+      ...firstTask,
+      id: 'tomorrow-exercise',
+      title: 'Tomorrow’s listening exercise',
+      dueDate: addDays(today, 1),
+      done: false,
     },
   });
   expect(future.ok()).toBe(true);
+  await page.reload();
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(
     panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true }),
@@ -348,15 +346,19 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
-  await page.route('**/api/plan/status', (route) =>
-    route.fulfill({
+  await page.route('**/api/account-operations', (route) => {
+    if (route.request().postDataJSON().change.type !== 'task-status') return route.continue();
+    return route.fulfill({
       status: 503,
       contentType: 'application/json',
       body: JSON.stringify({ error: 'Completion temporarily unavailable.' }),
-    }),
-  );
+    });
+  });
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Could not confirm completion.');
+  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Account sync status', exact: true }),
+  ).toContainText('Waiting to sync.');
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   const savedBeforeCompletion = (await (await context.request.get('/api/entries')).json()).entries;
   expect(savedBeforeCompletion).toHaveLength(2);
@@ -369,8 +371,11 @@ test('course dates populate Today with playable assignments and preserve linked 
       (task: { id: string }) => task.id === assigned.id,
     ).done,
   ).toBe(false);
-  await page.unroute('**/api/plan/status');
-  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await page.unroute('**/api/account-operations');
+  await page.getByRole('button', { name: 'Retry account sync', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Account sync status', exact: true })).toHaveCount(
+    0,
+  );
   await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   await expect(row).toHaveCount(0);
@@ -417,7 +422,16 @@ test('an exercise without a time target can be completed and reopened without lo
   const heldCompletion = new Promise<void>((resolve) => {
     releaseCompletion = resolve;
   });
-  await page.route('**/api/plan/status', async (route) => {
+  const statusBodies: unknown[] = [];
+  const failedCompletion = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/account-operations' &&
+      response.request().postDataJSON().change.type === 'task-status' &&
+      response.status() === 503,
+  );
+  await page.route('**/api/account-operations', async (route) => {
+    if (route.request().postDataJSON().change.type !== 'task-status') return route.continue();
+    statusBodies.push(route.request().postDataJSON());
     await heldCompletion;
     await route.fulfill({
       status: 503,
@@ -426,25 +440,39 @@ test('an exercise without a time target can be completed and reopened without lo
     });
   });
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Completing…', exact: true })).toBeVisible();
+  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Account sync status', exact: true }),
+  ).toContainText('Waiting to sync.');
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#overview$/);
   releaseCompletion();
-  await expect(page.getByRole('alert')).toContainText('Could not confirm completion.');
-  await expect(page).toHaveURL(/#practice$/);
+  await failedCompletion;
+  await expect(
+    page.getByRole('region', { name: 'Account sync status', exact: true }),
+  ).toContainText('Upload failed');
   expect((await (await context.request.get('/api/plan')).json()).plan[0].done).toBe(false);
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
-  await page.unroute('**/api/plan/status');
-  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page).toHaveURL(/#practice$/);
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeVisible();
+  await page.unroute('**/api/account-operations');
+  page.on('request', (request) => {
+    if (
+      new URL(request.url()).pathname === '/api/account-operations' &&
+      request.method() === 'POST' &&
+      request.postDataJSON().change.type === 'task-status'
+    )
+      statusBodies.push(request.postDataJSON());
+  });
+  await page.getByRole('button', { name: 'Retry account sync', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Account sync status', exact: true })).toHaveCount(
+    0,
+  );
+  expect(statusBodies).toHaveLength(2);
+  expect(statusBodies[1]).toEqual(statusBodies[0]);
   expect((await (await context.request.get('/api/plan')).json()).plan[0]).toMatchObject({
     id: original.id,
     done: true,
   });
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   await page.reload();
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
   await panel.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
@@ -504,22 +532,18 @@ test('earlier work can be dismissed in bulk and restored without completion or c
     },
   ];
   for (const task of fixtures) {
-    const response = await context.request.post('/api/plan', {
-      headers: { Origin: 'http://localhost:8791' },
-      data: { task: { ...task, kind: 'sending', notes: '', createdAt: new Date().toISOString() } },
+    const response = await accountRequest(context, 'POST', '/api/plan', {
+      task: { ...task, kind: 'sending', notes: '', createdAt: new Date().toISOString() },
     });
     expect(response.status()).toBe(201);
   }
-  const saved = await context.request.post('/api/entries', {
-    headers: { Origin: 'http://localhost:8791' },
-    data: {
-      date: addDays(today, -2),
-      kind: 'sending',
-      minutes: 2,
-      notes: 'Previously recorded practice stays intact.',
-      source: 'manual',
-      metadata: { plannedTaskId: 'earlier-started' },
-    },
+  const saved = await scopedRequest(context, 'POST', '/api/entries', {
+    date: addDays(today, -2),
+    kind: 'sending',
+    minutes: 2,
+    notes: 'Previously recorded practice stays intact.',
+    source: 'manual',
+    metadata: { plannedTaskId: 'earlier-started' },
   });
   expect(saved.status()).toBe(201);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
@@ -534,15 +558,19 @@ test('earlier work can be dismissed in bulk and restored without completion or c
   ).toBeVisible();
   const updates: unknown[] = [];
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname === '/api/plan/status' && request.method() === 'POST')
-      updates.push(request.postDataJSON());
+    if (
+      new URL(request.url()).pathname === '/api/account-operations' &&
+      request.method() === 'POST' &&
+      request.postDataJSON().change.type === 'task-status'
+    )
+      updates.push(request.postDataJSON().change);
   });
   await panel.getByRole('button', { name: 'Dismiss earlier work', exact: true }).click();
   await expect(
     panel.getByText(/2 earlier exercises are hidden from Today and still unfinished/),
   ).toBeVisible();
   expect(updates).toEqual([
-    { ids: ['earlier-started', 'earlier-ready'], dismissedFromToday: true },
+    { type: 'task-status', ids: ['earlier-started', 'earlier-ready'], dismissedFromToday: true },
   ]);
   const dismissed = (await (await context.request.get('/api/plan')).json()).plan;
   for (const fixture of fixtures) {
@@ -614,14 +642,7 @@ test('completion retries a failed measured sending save without discarding time 
     notes: '',
     createdAt: new Date().toISOString(),
   };
-  expect(
-    (
-      await context.request.post('/api/plan', {
-        headers: { Origin: 'http://localhost:8791' },
-        data: { task },
-      })
-    ).status(),
-  ).toBe(201);
+  expect((await accountRequest(context, 'POST', '/api/plan', { task })).status()).toBe(201);
   await page.reload();
   await page
     .getByRole('region', { name: 'What should I do today?' })

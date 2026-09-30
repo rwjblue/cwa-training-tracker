@@ -4,7 +4,9 @@ import { expectAccessible, signIn } from './helpers';
 async function savePreferences(page: Page) {
   const saved = page.waitForResponse(
     (response) =>
-      new URL(response.url()).pathname === '/api/settings' && response.request().method() === 'PUT',
+      new URL(response.url()).pathname === '/api/account-operations' &&
+      response.request().method() === 'POST' &&
+      response.request().postDataJSON().change.type === 'settings',
   );
   await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
   expect((await saved).ok()).toBe(true);
@@ -55,7 +57,7 @@ test('account identity and timezone stay readable with default avatars and persi
   await expect(account).toHaveText('N1RWJ');
   expect(avatarRequests).toHaveLength(1);
 
-  // Hold settings until the account button renders; opt-out must also hold during boot.
+  // Hold confirmed state during boot; cached preferences must preserve opt-out.
   let releaseSettings!: () => void;
   const heldSettings = new Promise<void>((resolve) => {
     releaseSettings = resolve;
@@ -65,7 +67,7 @@ test('account identity and timezone stay readable with default avatars and persi
     confirmSettingsRequest = resolve;
   });
   await page.route(
-    '**/api/settings',
+    '**/api/account-state',
     async (route) => {
       const response = await route.fetch();
       confirmSettingsRequest();
@@ -76,7 +78,7 @@ test('account identity and timezone stay readable with default avatars and persi
   );
   await page.reload();
   await settingsRequested;
-  await expect(account).toHaveText('Me');
+  await expect(account).toHaveText('N1RWJ');
   await expect(account.locator('img')).toHaveCount(0);
   expect(avatarRequests).toHaveLength(1);
   releaseSettings();

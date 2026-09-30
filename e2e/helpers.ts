@@ -1,6 +1,50 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
+
+type FixtureContext = APIRequestContext | BrowserContext;
+type WriteMethod = 'POST' | 'PUT' | 'DELETE';
+
+async function accountHeaders(context: FixtureContext) {
+  const request = 'request' in context ? context.request : context;
+  const response = await request.get('/api/account-state');
+  expect(response.ok()).toBe(true);
+  const { state } = await response.json();
+  return {
+    request,
+    headers: {
+      Origin: 'http://localhost:8791',
+      'X-CWA-Account': state.accountId as string,
+      'If-Match': `"${state.revision}"`,
+    },
+  };
+}
+
+/** Arrange mutable fixtures against a freshly confirmed account revision. */
+export async function accountRequest(
+  context: FixtureContext,
+  method: WriteMethod,
+  path: string,
+  data: unknown,
+) {
+  const { request, headers } = await accountHeaders(context);
+  return request.fetch(path, { method, headers, data });
+}
+
+/** Result fixture writes retain their expected account, like the production queue. */
+export async function scopedRequest(
+  context: FixtureContext,
+  method: WriteMethod,
+  path: string,
+  data: unknown,
+) {
+  const { request, headers } = await accountHeaders(context);
+  return request.fetch(path, {
+    method,
+    headers: { Origin: headers.Origin, 'X-CWA-Account': headers['X-CWA-Account'] },
+    data,
+  });
+}
 
 export async function expectAccessible(page: Page, label: string) {
   const result = await new AxeBuilder({ page })

@@ -19,11 +19,15 @@ import {
   saveSettings,
 } from './training';
 import { deletePlan, listPlan, savePlan, updatePlanStatus } from './plan';
+import { applyAccountOperation, getAccountState } from './account-sync';
 
 async function api(request: Request, env: Env, path: string): Promise<Response> {
   const method = request.method;
   if (!['GET', 'HEAD'].includes(method)) requireSameOrigin(request, env);
   if (method === 'GET' && path === '/api/health') return json({ ok: true });
+  if (method === 'GET' && path === '/api/account-state') return getAccountState(request, env);
+  if (method === 'POST' && path === '/api/account-operations')
+    return applyAccountOperation(request, env);
   if (method === 'GET' && path === '/api/me')
     return json({ user: (await getAuth(request, env))?.user ?? null });
   if (method === 'POST' && path === '/api/auth/email/request')
@@ -96,7 +100,7 @@ export default {
       if (error instanceof HttpError) {
         return securityHeaders(
           json(
-            { error: error.message },
+            { error: error.message, ...error.details },
             error.status,
             error.status === 429 ? { 'Retry-After': '60' } : undefined,
           ),

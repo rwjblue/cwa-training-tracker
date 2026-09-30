@@ -42,11 +42,45 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   posted; issue #1 is closed after publication and deployment. Mobile checks used
   browser emulation; client evidence remains source consistency, not proficiency.
 
+## Issue #2 — implementation validated; independent review pending
+
+- Fresh issue body/comments rechecked after #1 closed; only dependency #1.
+  Pinned original device persistence and synchronization remain read-only evidence.
+- Manual and finished real Runner reviews use the existing scoped stable-ID
+  result queue. Local receipts require successful durable readback; failed or
+  unauthenticated uploads retain results and display retry/sign-in feedback.
+- One account owner projects confirmed profile/plan plus bounded per-ID semantic
+  operations. Today, Plan and practice status agree; dirty editors retain their
+  opening baseline/revision. Offline cached account data is labeled explicitly.
+- Worker account revisions are atomically enforced inside D1 transactions;
+  exact operation receipts survive lost responses and reject changed-body reuse.
+  Direct plan/settings endpoints also require conditional revisions. Result
+  uploads require expected account identity; private reads check supplied scope.
+- Queued conflicts expose the newer online fields and retained intent. Discard
+  and explicit reapplication are separate choices; reconnect never blindly
+  rebases. Linked results wait for pending plan operations to settle.
+- Root browser checks passed desktop keyboard/mobile emulated touch offline
+  manual + actual AudioWorklet Runner save, account completion/reopening/settings,
+  fresh app reopen with disconnected APIs, and exact reconnect upload. A second
+  tab's dirty preference draft conflicts visibly and can keep the online value
+  or deliberately reapply only its changed fields. A guest storage-failure review
+  retains its exact frozen payload and succeeds once after storage is restored.
+  All 34 standard browser journeys passed. The final deleted-task/offline-result
+  regression passes at desktop/mobile, including original POST-body equality and
+  historical backup provenance. Final check, all 321 tests and production build
+  pass; the final complete browser suite passes all 34 journeys after the Worker
+  correction. Independent review remains pending.
+- Migrations `0004_account_sync.sql` and `0005_retired_plan_tasks.sql` add
+  revisions, generation protocol hooks, atomic guards, bounded-account-budget
+  acknowledgement hashes and retired task ownership proofs. Bindings and
+  configuration are unchanged. Device backup/clear and full reset/replacement
+  ordering remain #3/#4; no active elapsed-time crash/reload recovery is added.
+
 ## Remaining queue
 
-Issues #2–#46 have not been implemented by this execution. No external blockers
-have been established. Next: issue #2 source/acceptance recheck, existing result
-queue reuse, centralized account plan/settings outbox and server revisions.
+Issue #2 must pass its implementation commit, independent review/corrections,
+signed publication, production deployment and issue closure before #3 begins.
+Issues #3–#46 remain pending. No external blockers have been established.
 Read-only maps for #2 and #3/#4 lifecycle hooks remain in ignored queue notes.
 
 ## Concurrent work to preserve
@@ -56,4 +90,6 @@ At start, `implementation-issues-2026-09-30.md` and
 “Show Recording Time in Seconds”, is concurrently refining duration formatting,
 recording-speed labels and browser tests in the same checkout. Preserve its edits,
 keep commits focused, and serialize browser harnesses on port 8791. Its completed
-duration/speed commit is the implementation's parent; these changes preserve it.
+duration/speed commit remains an ancestor. A separate concurrent CSP commit
+allows the Cloudflare analytics beacon; it is preserved as the immediate parent
+of issue #2. Both improvements stay separate from this issue's implementation.

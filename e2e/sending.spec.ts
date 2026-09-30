@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { dateInTimezone } from '../src/shared/training';
-import { expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, signIn } from './helpers';
 
 test('sending scales stay in the studio and save assigned practice without opening the PDF', async ({
   page,
@@ -62,14 +62,7 @@ test('sending scales stay in the studio and save assigned practice without openi
     createdAt: now.toISOString(),
     exercise: { type: 'sending', url: scalesUrl, sections: ['warm-up', 'drill'] },
   };
-  expect(
-    (
-      await context.request.post('/api/plan', {
-        headers: { Origin: 'http://localhost:8791' },
-        data: { task },
-      })
-    ).status(),
-  ).toBe(201);
+  expect((await accountRequest(context, 'POST', '/api/plan', { task })).status()).toBe(201);
   await page.reload();
   const today = page.getByRole('region', { name: 'What should I do today?' });
   const row = today.getByRole('listitem').filter({

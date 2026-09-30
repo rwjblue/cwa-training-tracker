@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 import {
   createCopyAttempt,
   copyToneHz,
@@ -480,14 +480,11 @@ test('group feedback keeps adjacent columns and later matches after omissions an
     audioSeconds: 20,
     answerSeconds: 5,
   };
-  const response = await context.request.post('/api/entries', {
-    headers: { Origin: new URL(page.url()).origin },
-    data: {
-      ...copyAttemptSessionFields(attempt),
-      date: endedAt.slice(0, 10),
-      kind: 'icr',
-      notes: 'Whole middle group omitted.',
-    },
+  const response = await scopedRequest(context, 'POST', '/api/entries', {
+    ...copyAttemptSessionFields(attempt),
+    date: endedAt.slice(0, 10),
+    kind: 'icr',
+    notes: 'Whole middle group omitted.',
   });
   expect(response.status()).toBe(201);
   await page.goto('/#logbook');
@@ -557,14 +554,11 @@ test('group feedback keeps adjacent columns and later matches after omissions an
     audioSeconds: 20,
     answerSeconds: 5,
   };
-  const replacement = await context.request.put(`/api/entries/copy:${initial.id}`, {
-    headers: { Origin: new URL(page.url()).origin },
-    data: {
-      ...copyAttemptSessionFields(extraAttempt),
-      date: endedAt.slice(0, 10),
-      kind: 'icr',
-      notes: 'Excess copied text wraps.',
-    },
+  const replacement = await scopedRequest(context, 'PUT', `/api/entries/copy:${initial.id}`, {
+    ...copyAttemptSessionFields(extraAttempt),
+    date: endedAt.slice(0, 10),
+    kind: 'icr',
+    notes: 'Excess copied text wraps.',
   });
   expect(replacement.ok()).toBe(true);
   await page.reload();
@@ -614,20 +608,17 @@ test('assigned copy alternatives stay selected when a round is recovered and reo
     maxWordLength: 1,
     startDelaySeconds: 2,
   };
-  const response = await context.request.post('/api/plan', {
-    headers: { Origin: new URL(page.url()).origin },
-    data: {
-      task: {
-        id: crypto.randomUUID(),
-        title,
-        kind: 'icr',
-        targetMinutes: 3,
-        done: false,
-        dueDate: dateInTimezone(new Date(), settings.timezone),
-        notes: '',
-        createdAt: new Date().toISOString(),
-        exercise: { type: 'copy', recipe: defaultCopyRecipe(), alternatives: [words] },
-      },
+  const response = await accountRequest(context, 'POST', '/api/plan', {
+    task: {
+      id: crypto.randomUUID(),
+      title,
+      kind: 'icr',
+      targetMinutes: 3,
+      done: false,
+      dueDate: dateInTimezone(new Date(), settings.timezone),
+      notes: '',
+      createdAt: new Date().toISOString(),
+      exercise: { type: 'copy', recipe: defaultCopyRecipe(), alternatives: [words] },
     },
   });
   expect(response.ok()).toBe(true);

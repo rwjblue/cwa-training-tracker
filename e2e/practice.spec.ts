@@ -75,7 +75,8 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   page,
   context,
 }) => {
-  await page.goto('/#practice');
+  await signIn(page);
+  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Time your practice.' })).toBeVisible();
   await page.addStyleTag({
     content: '*,*::before,*::after{animation:none!important;transition:none!important}',
@@ -89,9 +90,8 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(
     page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
   ).toBeEnabled();
-  expect((await context.request.get('/api/entries')).status()).toBe(401);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
   await page.getByRole('button', { name: 'Review & save 01:23', exact: true }).click();
-  await signIn(page, { dialogAlreadyOpen: true });
   await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('1:23');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -109,16 +109,45 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByRole('button', { name: 'Log practice manually', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('2:05');
+  const submitted: unknown[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
+      submitted.push(request.postDataJSON());
+  });
+  let releaseUnavailable!: () => void;
+  const heldUnavailable = new Promise<void>((resolve) => {
+    releaseUnavailable = resolve;
+  });
   await page.route(
     '**/api/entries',
-    (route) =>
-      route.fulfill({ status: 503, json: { error: 'Please retry saving your practice.' } }),
+    async (route) => {
+      await heldUnavailable;
+      await route.fulfill({
+        status: 503,
+        json: { error: 'Please retry saving your practice.' },
+      });
+    },
     { times: 1 },
   );
+  const unavailable = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/entries' &&
+      response.request().method() === 'POST' &&
+      response.status() === 503,
+  );
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Please retry saving your practice.');
-  await expect(page).toHaveURL(/#practice$/);
-  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('2:05');
+  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  releaseUnavailable();
+  await unavailable;
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
   let releaseSave!: () => void;
   const heldSave = new Promise<void>((resolve) => {
     releaseSave = resolve;
@@ -137,19 +166,33 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
     },
     { times: 1 },
   );
-  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await committed;
-  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled();
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page).toHaveURL(/#practice$/);
+  expect(submitted).toHaveLength(2);
+  expect(submitted[1]).toEqual(submitted[0]);
+  await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Review & save session', exact: true }),
+  ).toBeDisabled();
+  const scratchpad = page.getByRole('textbox', { name: 'Scratchpad', exact: true });
+  await expect(scratchpad).toHaveValue('');
+  await scratchpad.fill('Notes for the next session');
+  const acknowledged = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/entries' &&
+      response.request().method() === 'POST' &&
+      response.status() === 201,
+  );
   releaseSave();
+  await acknowledged;
+  await expect(
+    page.getByRole('region', { name: 'Practice upload status', exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page).toHaveURL(/#overview$/);
-  await expect(page.getByRole('region', { name: 'What should I do today?' })).toBeVisible();
+  await expect(page).toHaveURL(/#practice$/);
+  await expect(scratchpad).toHaveValue('Notes for the next session');
   const afterSave = (await (await context.request.get('/api/entries')).json()).entries;
   expect(afterSave).toHaveLength(1);
   const timed = afterSave[0];
@@ -157,7 +200,6 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(timed.metadata.elapsedSeconds).toBe(125);
   expect(timed.metadata.scratchpad).toBe('Copied the final call.');
   expect(timed.source).toBe('morse');
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Review & save session', exact: true }),
   ).toBeDisabled();
