@@ -156,9 +156,9 @@ now integrated as described in the update ledger above.
 
 Now implemented: [recording-variants.ts](../../src/client/recording-variants.ts), [RecordingSpeedSelect.tsx](../../src/client/RecordingSpeedSelect.tsx),
 `recording-speed.css`, [recording-catalog.json](../../src/client/recording-catalog.json), and five focused tests. Default is
-device-local assigned/next; current selection is controlled by the parent. It does
-now persists exact scoped task choices across visits through the #11 workflow
-below; final regression and independent acceptance are still required.
+device-local assigned/next; current selection is controlled by the parent. Exact
+scoped task choices now persist across visits through the independently accepted
+#11 workflow below.
 
 ### P1 — playback-derived time: baseline missing; now addressed
 
@@ -532,5 +532,9 @@ validation, same-scope capture, current-wins collision feedback, repeatable
 transactional restore/rollback and exact scoped clear/lifecycle retirement.
 Old v1 files without this store remain compatible; shared restoration remains
 opt-in. No elapsed/coverage recovery, new Worker preference entity or restricted
-content is introduced. Pinned original behavior, synthetic validation and pending
-post-commit independent gate are recorded in the execution journal.
+content is introduced. Check, 829 tests/46 files, build and all 65 serialized
+browser journeys pass. Independent post-commit review accepts both desktop/mobile
+keyboard/touch student workflows, 167 focused checks and truthful failure/retry,
+private backup and played-file reporting, with no substantive finding. Production
+is deployed and exact asset/private access checks pass; latest no-push instruction
+leaves the commits local and #11 open. Exact evidence is in the execution journal.

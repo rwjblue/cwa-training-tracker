@@ -1062,3 +1062,39 @@ of issue #2. Both improvements stay separate from this issue's implementation.
 - Kept the independently found same-view mobile drawer correction in its own
   focused #6 commit; #11 implementation remains separate. Post-commit #11 review
   will also evaluate the combined reachable mobile task-launch workflow.
+
+
+### Issue #11 — accepted local delivery and production
+
+- Implementation `18f867ece62412353b29b02841ee58b29a17ab11`; separate focused
+  #6 drawer correction `d2aac5595c2d742aea6414967ae25b71caedc107`. Accepted
+  combined tree `efba9115c7a044689252827b2bc8175d9565e54d`; working copy clean.
+- Required check, all 829 tests/46 files and build pass before focused commits
+  and again in the deployment task. Complete serialized browser suite passes all
+  65 journeys in 11.6 minutes, including both task-choice and replay widths.
+  Earlier failed run and read-only native-event probe remain recorded above.
+- Fresh independent post-commit reviewer accepts the complete #11 workflow and
+  separate drawer fix with no substantive finding. Own 1366 keyboard/375 touch
+  journeys pass 2/2 in 40.7 seconds, including exact paused ownership, default/task
+  save/clear refusal/retry, frozen result 503/storage retry/server receipt, actual
+  backup chooser/clear/restore, A/Guest/B scope and invalid99 fallback. Focused
+  167 tests/four files pass; four Axe reports empty/four screenshots inspected.
+  Actual partial13-WPM/full18-WPM time remains 5.694750s desktop/5.861159s mobile,
+  zero partial13 passes and one observed4s18 pass; selected25 supplies no evidence.
+  Report/history show actual files and pass facts; history details/export retain
+  scratchpad. Existing generic report omits scratchpad, left for later advisor
+  work. Reviewer-only assumptions/selectors were corrected against actual source
+  and error contexts; no product credit/validation was weakened. Detailed ignored
+  `issue-11-independent-review.md` is mirrored in primary; runtime released.
+- `mise run deploy` succeeds with no pending migrations, production version
+  `da27e54a-ae21-4e7b-a555-84c0cdaa1659`. Fresh unique-nonce verification confirms
+  homepage/health200, three private endpoints401, exact hashes for all four built
+  JS/CSS assets plus public Runner integration module, and root entry references.
+  Evidence `issue-11-production-verification.json` is mirrored in primary.
+- No physical-device/OS lock-screen or restricted long recording verification
+  is claimed. Preferences remain device-local and do not restore unfinished
+  elapsed time. Strict malformed/removed preference exports can fail rather than
+  guess data; explicit scoped clear remains available by existing recovery policy.
+- Latest instruction forbids pushes. Implementation and correction remain local,
+  accepted and deployed; advance local main and leave #11 open/unpublished.
+  Comment with honest local references/evidence; no PR or push. Then continue #12.
