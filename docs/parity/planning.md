@@ -378,3 +378,55 @@ the reviewed trees; production root/health, anonymous privacy and asset-hash
 verification pass. Issue #5 is closed, with publication/deployment evidence in
 the execution journal. No broader parity, elapsed-time recovery or physical-device
 claim is made.
+
+### Issue #6 — current block across in-app views
+
+P11 and the accepted in-app subset of P15 now share one mounted current owner.
+Today, Week and Report inspection pauses the current block without a history
+entry, reset or replacement. Return reveals the same task/tool, captured
+assigned/review purpose, identity, time, source subtotals, notes, selected native
+recording/position and exact generated script. A visible current-block return
+action also appears outside Practice, and the existing Report modal can return
+directly to that owner. Playback and timers remain paused until explicitly
+started. The baseline table above remains historical evidence.
+
+One keyed navigation flight separates inspection from deliberate Finish,
+assignment/tool replacement and discard. It pauses before showing another view,
+joins the same pending intent, refuses competing intents and checks ownership
+again after asynchronous settlement. Hidden controls become inert immediately,
+including while awaiting the running Runner's bounded stop acknowledgement.
+Runner retains its acknowledged partial/terminal result rather than pretending
+the live contest can resume. Copy retains its existing draft and lease; finished
+queues continue using their immutable bodies without hidden focus or playback.
+
+Explicit Finish/switch retains the existing listening/public timed save policy
+for at least 30 credited seconds and the separate manual/Runner save/discard
+decision. Cancellation keeps the paused block. A reviewed save carries its
+originating launch and measured identity; editing another historical timer/Morse
+entry cannot clear current notes/time. Account selection, sign-out, device clear,
+restore and destructive lifecycle changes dispose the old owner and prevent a
+late navigation/save callback from reviving it in another scope.
+Refreshing the same account on reconnect retains the block. Copy/Runner receipts
+do not clear the listening owner's notes. Deferred view focus respects a newer
+learner focus; a restored device draft opens paused through the explicit fresh
+Start action after the retired owner has been disposed.
+
+This delivery does not add P38's saved/current daily-total breakdown or the
+eligible-next recommendation workflow. Existing time/result evidence,
+export/import and durable completed queues stay unchanged. Elapsed-time recovery
+after reload/crash is excluded; no non-copy elapsed draft or new Worker schema
+is added. Actual settings history, pass coverage, cumulative Runner and advisor
+draft/submission work remain separate issues.
+
+See [original view-only navigation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/navigation.ts#L6),
+[original active-block switching](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L506),
+[current coordinator](../../src/client/practice-navigation.ts),
+[mounted host](../../src/client/main.tsx),
+[Studio](../../src/client/PracticeStudio.tsx), and
+[Runner stop flight](../../src/client/runner-stop-flight.ts).
+Typecheck, all 508 tests across 39 files, production build and all 51 serialized
+browser journeys pass, including desktop keyboard/mobile touch continuity and
+exact retry boundaries. Post-commit independent review, signed publication and
+production verification remain pending in the
+[execution journal](execution-progress-2026-09-30.md). No reload/crash or
+physical-device continuity claim is made.

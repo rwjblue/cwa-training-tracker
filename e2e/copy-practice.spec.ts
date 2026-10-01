@@ -358,6 +358,10 @@ test('authenticated word round completes all trials and retries an uncertain sav
   test.setTimeout(90_000);
   await signIn(page);
   await openCopy(page);
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  const retainedNotes = 'Keep these word-listening notes when Copy saves its own result.';
+  await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill(retainedNotes);
+  await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
   await page.getByRole('button', { name: 'Word copy', exact: true }).click();
   await page.getByRole('spinbutton', { name: /^Minimum character speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: /^Starting effective speed/ }).fill('50');
@@ -393,12 +397,24 @@ test('authenticated word round completes all trials and retries an uncertain sav
     page.getByText('Saved on this device. Upload will retry when you reconnect.', { exact: true }),
   ).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+  const identityRefresh = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/me' && response.request().method() === 'GET',
+  );
+  const historyRefresh = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/entries' && response.request().method() === 'GET',
+  );
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await identityRefresh;
+  await historyRefresh;
   await expect(
     page.getByText('Saved to history. Included in your weekly report.', { exact: true }),
   ).toBeVisible();
   expect(postedBodies).toHaveLength(2);
   expect(postedBodies[1]).toBe(postedBodies[0]);
+  await expect(page.locator('.copy-result-stats')).toContainText('25/25');
+  await expect(page.getByRole('button', { name: 'Start next round', exact: true })).toBeEnabled();
   await page.getByText('Notes and more options', { exact: true }).click();
   await page.getByRole('button', { name: 'Add notes', exact: true }).click();
   await page
@@ -422,6 +438,10 @@ test('authenticated word round completes all trials and retries an uncertain sav
   await page.screenshot({ path: '.tmp/copy-words-mobile.png', fullPage: true });
 
   await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
+    retainedNotes,
+  );
   await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
   await page.getByRole('button', { name: 'Course settings', exact: true }).click();
   await page
@@ -594,75 +614,164 @@ test('group feedback keeps adjacent columns and later matches after omissions an
   }
 });
 
-test('copy review keeps its captured purpose and alternative when reopened as assigned practice', async ({
-  page,
-  context,
-}) => {
-  await signIn(page);
-  const { settings } = await (await context.request.get('/api/settings')).json();
-  const title = 'Choose groups or words';
-  const words = {
-    ...defaultCopyRecipe('words'),
-    characterWpm: 50,
-    effectiveWpm: 50,
-    maxWordLength: 1,
-    startDelaySeconds: 2,
-  };
-  const response = await accountRequest(context, 'POST', '/api/plan', {
-    task: {
-      id: crypto.randomUUID(),
-      title,
-      kind: 'icr',
-      targetMinutes: 3,
-      done: false,
-      dueDate: dateInTimezone(new Date(), settings.timezone),
-      notes: '',
-      createdAt: new Date().toISOString(),
-      exercise: { type: 'copy', recipe: defaultCopyRecipe(), alternatives: [words] },
-    },
+test.describe('copy review inspection and recovery', () => {
+  test.use({ hasTouch: true });
+  test('copy review keeps its captured purpose and alternative when reopened as assigned practice', async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page);
+    const { settings } = await (await context.request.get('/api/settings')).json();
+    const { state } = await (await context.request.get('/api/account-state')).json();
+    const title = 'Choose groups or words';
+    const words = {
+      ...defaultCopyRecipe('words'),
+      characterWpm: 50,
+      effectiveWpm: 50,
+      maxWordLength: 1,
+      startDelaySeconds: 2,
+    };
+    const response = await accountRequest(context, 'POST', '/api/plan', {
+      task: {
+        id: crypto.randomUUID(),
+        title,
+        kind: 'icr',
+        targetMinutes: 3,
+        done: false,
+        dueDate: dateInTimezone(new Date(), settings.timezone),
+        notes: '',
+        createdAt: new Date().toISOString(),
+        exercise: { type: 'copy', recipe: defaultCopyRecipe(), alternatives: [words] },
+      },
+    });
+    expect(response.ok()).toBe(true);
+    await page.reload();
+    const assigned = page
+      .getByRole('listitem')
+      .filter({ has: page.getByRole('heading', { name: title, exact: true }) });
+    await assigned.getByRole('button', { name: 'Extra review', exact: true }).click();
+    const option = page.getByRole('combobox', { name: 'Assignment option', exact: true });
+    await option.selectOption('1');
+    await expect(option.locator('option:checked')).toContainText('Word copy');
+    await page.getByRole('button', { name: 'Start word copy', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill('A');
+    const audio = page.getByLabel('Copy practice audio', { exact: true });
+    const originalAudio = (await audio.elementHandle())!;
+    await expect
+      .poll(() => originalAudio.evaluate((element: HTMLAudioElement) => element.currentTime))
+      .toBeGreaterThan(0);
+    const source = await originalAudio.evaluate((element: HTMLAudioElement) => element.src);
+    const roundState = () =>
+      page.evaluate((scope: string) => {
+        const key = `cwa:copy:v1:${encodeURIComponent(scope)}`;
+        return {
+          draft: JSON.parse(localStorage.getItem(key) ?? 'null'),
+          lease: JSON.parse(localStorage.getItem(`${key}:lease`) ?? 'null'),
+        };
+      }, state.accountId);
+    const original = await roundState();
+    expect(original.draft.purpose).toBe('review');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      const inspect = page.getByRole('button', { name: 'Inspect Today', exact: true });
+      if (width === 390) await inspect.tap();
+      else {
+        await inspect.focus();
+        await inspect.press('Enter');
+      }
+      const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
+      await expect(retained).toContainText('EXTRA REVIEW');
+      await expect(retained).toContainText(title);
+      const paused = await roundState();
+      expect(paused.draft).toMatchObject({
+        answer: 'A',
+        purpose: 'review',
+        task: original.draft.task,
+        attempt: {
+          id: original.draft.attempt.id,
+          targets: original.draft.attempt.targets,
+          recipe: original.draft.attempt.recipe,
+          interruptionCount: original.draft.attempt.interruptionCount,
+        },
+      });
+      expect(paused.lease.owner).toBe(original.lease.owner);
+      const pausedPosition = await originalAudio.evaluate((element: HTMLAudioElement) => {
+        if (!element.paused) throw new Error('Inspected Copy audio must be paused.');
+        return element.currentTime;
+      });
+      expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+      const returning = retained.getByRole('button', { name: 'Return to practice', exact: true });
+      if (width === 390) await returning.tap();
+      else {
+        await returning.focus();
+        await returning.press('Enter');
+      }
+      await expect(page.getByRole('region', { name: 'Copy practice', exact: true })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('A');
+      await expect(page.locator('#current-practice')).toBeFocused();
+      expect(
+        await originalAudio.evaluate(
+          (element) =>
+            element.isConnected &&
+            element === document.querySelector('audio[aria-label="Copy practice audio"]'),
+        ),
+      ).toBe(true);
+      expect(await originalAudio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(
+        true,
+      );
+      expect(await originalAudio.evaluate((element: HTMLAudioElement) => element.currentTime)).toBe(
+        pausedPosition,
+      );
+      expect(await originalAudio.evaluate((element: HTMLAudioElement) => element.src)).toBe(source);
+      const returned = await roundState();
+      expect(returned.lease.owner).toBe(original.lease.owner);
+      expect(returned.draft.attempt.audioSeconds).toBe(paused.draft.attempt.audioSeconds);
+      expect(returned.draft.attempt.answerSeconds).toBe(paused.draft.attempt.answerSeconds);
+      expect(returned.draft.attempt.reviewSeconds).toBe(paused.draft.attempt.reviewSeconds);
+      await expect(option).toHaveValue('1');
+      await page.screenshot({
+        path: `.tmp/copy-inspection-review-purpose-${width}.png`,
+        fullPage: true,
+      });
+    }
+    await originalAudio.dispose();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(option).toBeDisabled();
+    await expect(option).toHaveValue('1');
+    await page.reload();
+    await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+    const copy = page.getByRole('region', { name: 'Copy practice', exact: true });
+    await expect(
+      copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
+    ).toContainText(title);
+    await expect(page.getByRole('button', { name: 'Word copy', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await page.getByRole('button', { name: 'Today', exact: true }).click();
+    await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
+    await expect(option).toBeDisabled();
+    await expect(option).toHaveValue('1');
+    await expect(option.locator('option:checked')).toContainText('Word copy');
+    await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('A');
+    await expect(
+      copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
+    ).toContainText(title);
+    await expect(
+      copy.getByRole('status').filter({ hasText: 'Your recovered round keeps' }),
+    ).toContainText(`A new round will use assigned practice for ${title}`);
+    await page.screenshot({ path: '.tmp/copy-recovered-assignment-option.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await expectAccessible(page, 'copy-recovered-review-purpose-mobile');
+    await page.screenshot({
+      path: '.tmp/copy-recovered-review-purpose-mobile.png',
+      fullPage: true,
+    });
   });
-  expect(response.ok()).toBe(true);
-  await page.reload();
-  const assigned = page
-    .getByRole('listitem')
-    .filter({ has: page.getByRole('heading', { name: title, exact: true }) });
-  await assigned.getByRole('button', { name: 'Extra review', exact: true }).click();
-  const option = page.getByRole('combobox', { name: 'Assignment option', exact: true });
-  await option.selectOption('1');
-  await expect(option.locator('option:checked')).toContainText('Word copy');
-  await page.getByRole('button', { name: 'Start word copy', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill('A');
-  await page.getByRole('button', { name: 'Pause audio', exact: true }).click();
-  await expect(option).toBeDisabled();
-  await expect(option).toHaveValue('1');
-  await page.reload();
-  await expect(page.getByText(/Recovered on this device/)).toBeVisible();
-  const copy = page.getByRole('region', { name: 'Copy practice', exact: true });
-  await expect(
-    copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
-  ).toContainText(title);
-  await expect(page.getByRole('button', { name: 'Word copy', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
-  await expect(option).toBeDisabled();
-  await expect(option).toHaveValue('1');
-  await expect(option.locator('option:checked')).toContainText('Word copy');
-  await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('A');
-  await expect(
-    copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
-  ).toContainText(title);
-  await expect(
-    copy.getByRole('status').filter({ hasText: 'Your recovered round keeps' }),
-  ).toContainText(`A new round will use assigned practice for ${title}`);
-  await page.screenshot({ path: '.tmp/copy-recovered-assignment-option.png', fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expectAccessible(page, 'copy-recovered-review-purpose-mobile');
-  await page.screenshot({ path: '.tmp/copy-recovered-review-purpose-mobile.png', fullPage: true });
 });
 
 test('callsign controls protect replay and blind feedback, and plain text grades punctuation and exports', async ({

@@ -4399,6 +4399,43 @@ body {
   border: 0;
 }
 
+.practice-host[hidden] {
+  display: none;
+}
+
+.practice-view-actions,
+.retained-practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.practice-view-actions {
+  margin-bottom: 1.2rem;
+}
+
+.retained-practice {
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.retained-practice h2 {
+  margin: 0.45rem 0;
+  overflow-wrap: anywhere;
+}
+
+.retained-practice p {
+  margin: 0.5rem 0 1rem;
+}
+
+.retained-practice .button,
+.practice-view-actions .button {
+  min-height: 44px;
+}
+
 .account-sync-status,
 .account-storage-status,
 .practice-sync-status {

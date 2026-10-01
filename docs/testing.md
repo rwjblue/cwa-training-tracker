@@ -184,19 +184,37 @@ Never infer listening credit from a mocked timer. Corpus/generator versions are
 part of saved-result validation: a future revision must preserve validation of
 already-saved versions rather than silently regenerating different targets.
 
+For in-app practice continuity, test the shared pause/end navigation flight and
+stale-owner rejection below the browser. One representative desktop/mobile
+journey should inspect Today, Week and Report, then return by keyboard or touch
+to the same assigned recording, position, notes and measured source subtotals.
+Inspection must create no history entry or credit, and return must not autoplay.
+Use actual synthetic media movement for listening; fast-forward only manual or
+recall timers. Retain exact generated text/contact and Copy answers through the
+same boundary. Inspecting a running Runner requests its real stop and keeps the
+acknowledged result; returning must not start another run. Confirm that editing
+an unrelated historical timed entry does not reset the paused current block.
+Exercise deliberate Finish/switch cancellation and exact retry separately from
+inspection, and retain account/device disposal checks. This covers the running
+app only; it does not test or introduce elapsed-time restoration after reload.
+
 For automatic practice saves, test the queue below the browser: successive guest
 rounds, immutable retries after lost responses, storage/network failure, and
 stopping a flush when the authenticated account changes. Browser journeys prove
 automatic grading saves, immediate next-round focus, word progress and period
-replay, and listening navigation above/below the 30-second threshold with actual
-media movement. Guest local history must survive reload and support explicitly
-saving a selected result after sign-in; background upload acknowledgements must
-not reset a newly started session. Keep notes and report checks in those journeys.
+replay, and explicit listening Finish/tool switch above/below the 30-second
+threshold with actual media movement. Visiting another app view must only pause
+and retain the block, with no automatic save. Guest local history must survive
+reload and support explicitly saving a selected result after sign-in. Background
+upload acknowledgements must not reset a newly started session. Keep notes and
+report checks in those journeys.
 Use fake timers for the queue's 750ms local receipt and 10-second upload timeout,
 including a stalled response body. A local receipt requires durable storage; with
 storage unavailable, only server acknowledgement counts as success. Confirmed
 manual saves must clear the original scratchpad context even when navigation
 unmounts the studio before its effects run; canceled or failed saves retain notes.
 Hold a manual-save acknowledgement after the server commits it to verify that
-Escape, Close, and Cancel cannot dismiss the saving dialog. A confirmed save
-returns directly to Today without asking the old studio snapshot to save again.
+Escape, Close, and Cancel cannot dismiss the saving dialog. A confirmed studio
+manual/timed save retires only its originating block and returns directly to
+Today without asking that studio snapshot to save again. Historical edits must
+retain another active block's time, identity and scratchpad.

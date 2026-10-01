@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
@@ -63,25 +71,34 @@ interface Props {
   onSaved?: (entry: PracticeSession) => void;
   savedEntry?: PracticeSession;
   onUnsavedChange?: (unsaved: boolean) => void;
+  active?: boolean;
 }
 
-export default function CopyTrainer(props: Props) {
-  return <CopyTrainerSession key={props.accountId ?? 'guest'} {...props} />;
+export interface CopyTrainerHandle {
+  pauseForInspection(): void;
 }
 
-function CopyTrainerSession({
-  accountId,
-  timezone = 'UTC',
-  recipe: assignedRecipe,
-  alternatives,
-  task,
-  purpose,
-  requiresCharacterSelection,
-  onLog,
-  onSaved,
-  savedEntry,
-  onUnsavedChange,
-}: Props) {
+const CopyTrainer = forwardRef<CopyTrainerHandle, Props>(function CopyTrainer(props, ref) {
+  return <CopyTrainerSession key={props.accountId ?? 'guest'} {...props} ref={ref} />;
+});
+
+const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTrainerSession(
+  {
+    accountId,
+    timezone = 'UTC',
+    recipe: assignedRecipe,
+    alternatives,
+    task,
+    purpose,
+    requiresCharacterSelection,
+    onLog,
+    onSaved,
+    savedEntry,
+    onUnsavedChange,
+    active: studioActive = true,
+  },
+  ref,
+) {
   const scope = accountId ?? 'guest';
   const [deviceToken] = useState(() => getDeviceScopeToken(scope));
   const currentDevice = () => isDeviceScopeCurrent(scope, deviceToken);
@@ -121,6 +138,9 @@ function CopyTrainerSession({
   const autoSaveAttempted = useRef('');
   const [saveReceipt, setSaveReceipt] = useState<PracticeSaveReceipt>();
   const mounted = useRef(true);
+  const inspected = useRef(!studioActive);
+  const studioActiveRef = useRef(studioActive);
+  studioActiveRef.current = studioActive;
   const requestedPurpose = task ? (purpose ?? 'assigned') : undefined;
   const nextAttribution = useRef<{ task?: PlannedTask; purpose?: PracticePurpose }>({
     task: task ? structuredClone(task) : undefined,
@@ -139,6 +159,7 @@ function CopyTrainerSession({
   const nextRoundButton = useRef<HTMLButtonElement>(null);
   const answerHintId = useId();
   const focusAnswer = () => {
+    if (!canInteract()) return;
     answerInput.current?.focus({ preventScroll: true });
     answerInput.current?.scrollIntoView({ block: 'nearest' });
   };
@@ -147,6 +168,7 @@ function CopyTrainerSession({
 
   const hasControl = () =>
     currentDevice() && !blockedRef.current && ownsCopyLease(scope, leaseOwner.current, deviceToken);
+  const canInteract = () => studioActiveRef.current && !inspected.current && hasControl();
   const loseControl = () => {
     blockedRef.current = true;
     player.current.pause();
@@ -187,6 +209,15 @@ function CopyTrainerSession({
     if (next) write(next);
     setTick((n) => n + 1);
   };
+  const pauseForInspection = () => {
+    inspected.current = true;
+    pause();
+  };
+  useImperativeHandle(ref, () => ({ pauseForInspection }));
+  useLayoutEffect(() => {
+    if (studioActive) inspected.current = false;
+    else pauseForInspection();
+  }, [studioActive]);
 
   useEffect(() => {
     mounted.current = true;
@@ -204,6 +235,7 @@ function CopyTrainerSession({
       if (next && !savedRef.current) write(next);
       setTick((n) => n + 1);
       if (
+        canInteract() &&
         autoDeadline.current !== undefined &&
         clock.current.snapshot(performance.now()).thinking === 'answer' &&
         clock.current.snapshot(performance.now()).answerSeconds >= autoDeadline.current
@@ -295,7 +327,7 @@ function CopyTrainerSession({
   }, [scope]);
 
   const playTarget = (current: CopyDraft, replay = false, reviewIndex?: number) => {
-    if (!hasControl() || (reviewIndex === undefined && (current.pending || savedRef.current)))
+    if (!canInteract() || (reviewIndex === undefined && (current.pending || savedRef.current)))
       return;
     setError('');
     autoDeadline.current = undefined;
@@ -331,8 +363,9 @@ function CopyTrainerSession({
           },
           {
             title: `${COPY_LABELS[r.mode]} practice`,
+            canPlay: () => canInteract() && !document.hidden,
             onState: (state) => {
-              if (state === 'playing' && !hasControl()) {
+              if (state === 'playing' && (!canInteract() || document.hidden)) {
                 player.current.pause();
                 return;
               }
@@ -349,10 +382,9 @@ function CopyTrainerSession({
               if (state !== 'playing') clock.current.pauseAudio();
               playingRef.current = state === 'playing';
               setPlaying(state === 'playing');
-              if (state === 'playing' && (!hasControl() || document.hidden)) player.current.pause();
             },
             onProgress: (progress) => {
-              if (playingRef.current && !reviewAudio.current)
+              if (canInteract() && !document.hidden && playingRef.current && !reviewAudio.current)
                 clock.current.sampleAudio(
                   Math.max(0, progress.position - delay.current),
                   performance.now(),
@@ -367,11 +399,11 @@ function CopyTrainerSession({
                 next.pending ||
                 savedRef.current ||
                 !hasControl() ||
-                document.hidden ||
                 prepared.current !== key
               )
                 return;
-              clock.current.startThinking('answer', performance.now());
+              if (canInteract() && !document.hidden)
+                clock.current.startThinking('answer', performance.now());
               if (next.attempt.recipe.autoSkipSeconds > 0)
                 autoDeadline.current =
                   clock.current.snapshot(performance.now()).answerSeconds +
@@ -382,7 +414,7 @@ function CopyTrainerSession({
                 position: player.current.position,
                 autoSkipAt: autoDeadline.current,
               });
-              answerInput.current?.focus();
+              if (!document.hidden) focusAnswer();
             },
             onError: (message) => {
               clock.current.pause(performance.now());
@@ -411,7 +443,7 @@ function CopyTrainerSession({
   };
 
   const start = (selected = recipe) => {
-    if (!hasControl()) return;
+    if (!canInteract()) return;
     try {
       const valid = validateCopyRecipe(copySetupRecipe(selected));
       saveCopyPreferences(scope, valid, deviceToken);
@@ -456,7 +488,7 @@ function CopyTrainerSession({
       !current ||
       current.attempt.status !== 'active' ||
       !current.heard ||
-      !hasControl() ||
+      !canInteract() ||
       playingRef.current ||
       current.pending ||
       savedRef.current
@@ -502,7 +534,7 @@ function CopyTrainerSession({
   submitRef.current = submit;
 
   const endEarly = () => {
-    if (!hasControl() || draftRef.current?.pending || savedRef.current) return;
+    if (!canInteract() || draftRef.current?.pending || savedRef.current) return;
     if (
       !window.confirm(
         'End this round? Submitted answers and measured time will be kept. The current unsubmitted answer will not be scored.',
@@ -517,9 +549,9 @@ function CopyTrainerSession({
     player.current.clear();
   };
   const newRound = async (nextRecipe = recipe, detachAssignment = false, play = false) => {
-    if (!hasControl() || savingRef.current) return;
+    if (!canInteract() || savingRef.current) return;
     if (draft && !savedRef.current && !(await save())) return;
-    if (!hasControl()) return;
+    if (!canInteract()) return;
     pause();
     player.current.clear();
     prepared.current = '';
@@ -603,7 +635,7 @@ function CopyTrainerSession({
     void save();
   }, [draft?.attempt.id, draft?.attempt.status, blocked, saved]);
   useEffect(() => {
-    if (saved && !blocked && document.activeElement === document.body) {
+    if (saved && canInteract() && document.activeElement === document.body) {
       nextRoundButton.current?.focus({ preventScroll: true });
       nextRoundButton.current?.scrollIntoView({ block: 'nearest' });
     }
@@ -645,7 +677,7 @@ function CopyTrainerSession({
     URL.revokeObjectURL(url);
   };
   const takeOver = () => {
-    if (!currentDevice()) return;
+    if (!currentDevice() || inspected.current || !studioActiveRef.current) return;
     player.current.pause();
     player.current.clear();
     claimCopyLease(scope, leaseOwner.current, true, deviceToken);
@@ -695,7 +727,7 @@ function CopyTrainerSession({
   const replayWord = () => {
     const current = snapshot();
     if (
-      !hasControl() ||
+      !canInteract() ||
       current?.attempt.status !== 'active' ||
       current.attempt.recipe.mode !== 'words'
     )
@@ -718,7 +750,7 @@ function CopyTrainerSession({
     'aria-describedby': answerHintId,
     onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const current = snapshot();
-      if (!hasControl() || current?.attempt.status !== 'active') return;
+      if (!canInteract() || current?.attempt.status !== 'active') return;
       const input = event.nativeEvent as InputEvent;
       // Some mobile keyboards dispatch input without a keydown event.
       if (current.attempt.recipe.mode === 'words' && input.data === '.' && !input.isComposing) {
@@ -731,7 +763,7 @@ function CopyTrainerSession({
       write({ ...current, answer: event.target.value });
     },
     onKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      if (!active || event.nativeEvent.isComposing) return;
+      if (!active || !canInteract() || event.nativeEvent.isComposing) return;
       if (
         currentRecipe.mode === 'words' &&
         event.key === '.' &&
@@ -1042,7 +1074,7 @@ function CopyTrainerSession({
                     className="button outline"
                     disabled={blocked}
                     onClick={() => {
-                      if (!hasControl()) return;
+                      if (!canInteract()) return;
                       if (measured.thinking) pause();
                       else {
                         clock.current.startThinking('answer', performance.now());
@@ -1059,7 +1091,7 @@ function CopyTrainerSession({
                   disabled={!active || blocked}
                   onClick={() => {
                     const current = snapshot();
-                    if (!hasControl() || !current) return;
+                    if (!canInteract() || !current) return;
                     setRevealed(true);
                     write({
                       ...current,
@@ -1087,7 +1119,8 @@ function CopyTrainerSession({
             )}
             <p className="copy-timing-hint">
               Practice time excludes setup, countdown, pauses, and time away. Answer time pauses
-              after 30 seconds without input.
+              after 30 seconds without input. Visiting another view pauses this round; return and
+              resume when you’re ready.
             </p>
             {active && draft && (
               <details className="copy-result-options">
@@ -1101,7 +1134,8 @@ function CopyTrainerSession({
                     disabled={blocked}
                     onChange={(event) => {
                       const current = snapshot();
-                      if (hasControl() && current) write({ ...current, notes: event.target.value });
+                      if (canInteract() && current)
+                        write({ ...current, notes: event.target.value });
                     }}
                   />
                 </label>
@@ -1213,4 +1247,6 @@ function CopyTrainerSession({
       </footer>
     </section>
   );
-}
+});
+
+export default CopyTrainer;

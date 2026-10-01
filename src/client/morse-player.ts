@@ -12,6 +12,8 @@ export interface MorseProgress {
 export interface MorsePlayerOptions {
   title?: string;
   loop?: boolean;
+  /** The current in-app owner may pause transport without replacing this source. */
+  canPlay?: () => boolean;
   onProgress?: (progress: MorseProgress) => void;
   onState?: (state: MorsePlaybackState) => void;
   onFinish?: () => void;
@@ -53,6 +55,10 @@ export class MorsePlayer {
     audio.setAttribute('playsinline', '');
     this.listen('playing', () => {
       if (!this.recording || audio.paused) return;
+      if (this.options.canPlay?.() === false) {
+        this.pause();
+        return;
+      }
       this.claimMediaSession();
       this.setState('playing');
       this.startFrames();
@@ -128,6 +134,7 @@ export class MorsePlayer {
   /** Call directly from a click or media-session action to retain browser playback permission. */
   async resume(): Promise<void> {
     if (this.disposed || !this.audio || !this.recording) return;
+    if (this.options.canPlay?.() === false) return;
     if (this.position >= this.recording.duration || this.audio.ended) {
       // Replaying an ended recording is a new start, not a user pause. In
       // particular, foreground spoken sequences must survive this rewind.
@@ -148,6 +155,10 @@ export class MorsePlayer {
       throw new Error(message);
     }
     if (this.disposed || run !== this.generation || this.audio.paused) return;
+    if (this.options.canPlay?.() === false) {
+      this.pause();
+      return;
+    }
     this.claimMediaSession();
     this.setState('playing');
     this.startFrames();
@@ -330,8 +341,12 @@ export class MorsePlayer {
       title: this.options.title ?? 'Morse practice',
       onPlay: () => this.resume(),
       onPause: () => this.pause(),
-      onStop: () => this.stop(),
-      onSeek: (seconds) => this.seek(seconds),
+      onStop: () => {
+        if (this.options.canPlay?.() !== false) this.stop();
+      },
+      onSeek: (seconds) => {
+        if (this.options.canPlay?.() !== false) this.seek(seconds);
+      },
       getPosition: () =>
         this.recording
           ? {

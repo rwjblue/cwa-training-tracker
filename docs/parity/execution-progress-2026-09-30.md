@@ -363,11 +363,53 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 - No elapsed recovery or physical-device claim is made; the mobile workflow uses
   Chromium touch emulation.
 - No config/binding change is needed. The original remains read only and the
-  pre-existing user documents remain untouched. No issue after #5 is implemented.
+  pre-existing user documents remain untouched. No issue after #6 is implemented.
+
+## Issue #6 — retain the current block during in-app inspection
+
+- Fresh live issue body/comments/native dependencies rechecked after #5 closed;
+  no declared prerequisite adjustment. Original navigation and active-block
+  return were read at the pinned source commit; the original remains read only.
+- One launch owner remains mounted inside the account/device boundary. Today,
+  This Week, Report and ordinary view navigation pause transport without
+  finishing or replacing it. The visible Current block card and Report action
+  return to that same paused assignment/tool. Return never starts playback.
+- Native recording/source/position, measured time, scratchpad, exact generated
+  text/QSO copy checks and native Copy round/answers/lease stay with their owner.
+  Runner inspection uses the actual Stop protocol, retaining its acknowledged
+  partial result and iframe; the bounded existing fallback invents no time.
+- Root serializes inspection, Finish and deliberate assignment/tool replacement.
+  Repeated decisions share one flight; competing targets refuse to replace it.
+  Account/device invalidation disposes the old block before exposing new scope.
+  Save receipts reset only their originating launch, including zero-time forms;
+  unrelated historical timer edits cannot reset another retained owner.
+- Finish/switch retains existing >=30-second automatic listening saves and
+  explicit manual/Runner review/discard policy. Inspection adds no log entry.
+  Completed-result queues, immutable retry bodies, history, exports and reports
+  retain their existing validated account-scoped formats. No new backend entity,
+  schema, migration, configuration or binding is required.
+- Check, all 508 tests in 39 files and production build pass. Focused lifecycle
+  tests cover ownership, cancellation, competing replacements, retry and actual
+  shared-player platform guards. Four actual-audio/Runner focused journeys and
+  eight boundary rechecks pass at desktop/mobile widths with keyboard/touch,
+  accessibility and overflow checks. All 51 serialized browser journeys pass in the corrected full run (6.7 minutes);
+  post-commit independent review remains pending.
+- The initial complete browser run found a same-account reconnect disposal bug;
+  the identity decision now reads the actual account owner, while genuine scope
+  changes invalidate obsolete reads. Deferred view focus cannot steal a newer
+  learner focus. Copy/Runner receipts cannot clear another tool's scratchpad.
+  The existing 25-word native retry journey now waits for the app's reconnect
+  refresh and verifies result reachability, identical bodies, one saved result
+  and prior listening notes. Restore opens its validated Copy draft paused under
+  an explicitly started fresh owner after disposal. Initial failure traces and
+  exact correction evidence remain in ignored queue notes.
+- Page-reload/crash elapsed recovery, new spoken recognition, later pass coverage
+  and cumulative Runner credit are excluded from this issue. Existing durable
+  Copy drafts, content preferences and finished-result queues are preserved.
 
 ## Remaining queue
 
-Issues #1–#5 are complete; #6–#46 remain pending.
+Issues #1–#5 are complete; #6 is active and #7–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes.
 

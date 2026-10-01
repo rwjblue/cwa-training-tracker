@@ -81,7 +81,7 @@ test('listening tool changes save measured time once and recover a lost save res
   await page.screenshot({ path: '.tmp/listening-autosaved-history-desktop.png', fullPage: true });
 });
 
-test('guest navigation keeps long listening on this device and discards short listening', async ({
+test('guest inspection retains listening and explicit Finish saves it on this device', async ({
   page,
   context,
 }) => {
@@ -107,6 +107,18 @@ test('guest navigation keeps long listening on this device and discards short li
     .toBeGreaterThan(31);
   await navigateToLog(page);
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Custom word recognition', { exact: false })).toHaveCount(0);
+  const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
+  await expect(retained).toContainText('paused');
+  await retained.getByRole('button', { name: 'Return to practice', exact: true }).click();
+  await expect(audio).toBeVisible();
+  expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+  expect(await audio.evaluate((element: HTMLAudioElement) => element.currentTime)).toBeGreaterThan(
+    31,
+  );
+  await page.getByRole('button', { name: 'Finish practice', exact: true }).click();
+  await expect(retained).toHaveCount(0);
+  await navigateToLog(page);
   await expect(page.getByText('Custom word recognition', { exact: false })).toHaveCount(1);
   await page.reload();
   await expect(page.getByText('Custom word recognition', { exact: false })).toHaveCount(1);
@@ -117,7 +129,7 @@ test('guest navigation keeps long listening on this device and discards short li
   await page.screenshot({ path: '.tmp/listening-device-history-mobile.png', fullPage: true });
 
   // Choosing a device entry to keep in the account uses the normal sign-in and
-  // review flow; merely leaving practice never prompts for an account.
+  // review flow; inspecting or finishing practice never prompts for an account.
   await page.getByRole('button', { name: /^Edit Head copy on / }).click();
   await signIn(page, { dialogAlreadyOpen: true });
   await expect(page.getByRole('dialog')).toContainText('A little progress, worth recording.');

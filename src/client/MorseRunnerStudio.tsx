@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { ArrowRight, CheckCheck, ExternalLink, RotateCcw, Square } from 'lucide-react';
 import type { PlannedTask } from '../shared/plan';
 import { dateInTimezone, type PracticePurpose, type PracticeSession } from '../shared/training';
@@ -16,6 +23,7 @@ import {
   runnerSession,
   type RunnerPracticeAttribution,
 } from './runner-session';
+import { RunnerStopFlight } from './runner-stop-flight';
 import './morse-runner.css';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
@@ -31,25 +39,36 @@ const time = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
 /** Engine messages alone determine practiced time. The studio wall clock is never used here. */
-export default function MorseRunnerStudio({
-  settings,
-  timezone,
-  task,
-  purpose,
-  externalUrl = fallbackUrl,
-  savedEntry,
-  onLog,
-  onUnsavedChange,
-}: {
+export interface MorseRunnerStudioHandle {
+  pauseForInspection(): Promise<void>;
+}
+
+interface Props {
   settings: RunnerSettings;
   timezone?: string;
   task?: PlannedTask;
   purpose?: PracticePurpose;
   externalUrl?: string;
   savedEntry?: PracticeSession;
+  active?: boolean;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onUnsavedChange: (unsaved: boolean) => void;
-}) {
+}
+
+const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function MorseRunnerStudio(
+  {
+    settings,
+    timezone,
+    task,
+    purpose,
+    externalUrl = fallbackUrl,
+    savedEntry,
+    active = true,
+    onLog,
+    onUnsavedChange,
+  },
+  ref,
+) {
   const [run, setRun] = useState(() => createRunnerRun(crypto.randomUUID(), settings));
   const capturedAttribution = useRef<RunnerPracticeAttribution | undefined>(undefined);
   capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose);
@@ -59,9 +78,14 @@ export default function MorseRunnerStudio({
   const current = useRef(run);
   const frame = useRef<HTMLIFrameElement>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const stopFlight = useRef(new RunnerStopFlight());
+  const inspected = useRef(!active);
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const resize = useRef<ResizeObserver | null>(null);
   const [frameHeight, setFrameHeight] = useState(900);
   const [stopping, setStopping] = useState(false);
+  const [inspectionStopped, setInspectionStopped] = useState(false);
   const [savedRunId, setSavedRunId] = useState<string>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const callbacks = useRef({ onLog, onUnsavedChange });
@@ -76,6 +100,7 @@ export default function MorseRunnerStudio({
     setRun(next);
     if (terminal(next)) {
       clearTimeout(timeout.current);
+      stopFlight.current.settle(next.runId);
       setStopping(false);
     }
   };
@@ -96,16 +121,31 @@ export default function MorseRunnerStudio({
   };
   const stop = () => {
     const latest = current.current;
-    if (terminal(latest)) return;
+    if (terminal(latest)) return Promise.resolve();
     if (latest.status === 'loading') {
       fail(latest.runId);
-      return;
+      return Promise.resolve();
     }
-    setStopping(true);
-    frame.current?.contentWindow?.postMessage(runnerStopCommand(latest), location.origin);
-    clearTimeout(timeout.current);
-    timeout.current = setTimeout(() => fail(latest.runId), 2000);
+    return stopFlight.current.wait(
+      latest.runId,
+      () => {
+        setStopping(true);
+        frame.current?.contentWindow?.postMessage(runnerStopCommand(latest), location.origin);
+      },
+      () => fail(latest.runId),
+    );
   };
+  const pauseForInspection = () => {
+    inspected.current = true;
+    if (current.current.status !== 'running') return Promise.resolve();
+    setInspectionStopped(true);
+    return stop();
+  };
+  useImperativeHandle(ref, () => ({ pauseForInspection }));
+  useLayoutEffect(() => {
+    if (active) inspected.current = false;
+    else void pauseForInspection();
+  }, [active]);
 
   useEffect(() => {
     callbacks.current.onUnsavedChange(unsaved);
@@ -129,10 +169,16 @@ export default function MorseRunnerStudio({
       if (next === previous) return;
       if (previous.status === 'loading' && next.status === 'ready') clearTimeout(timeout.current);
       update(next);
-      if (next.status === 'running' && document.hidden) stop();
+      if (
+        next.status === 'running' &&
+        (document.hidden || inspected.current || !activeRef.current)
+      ) {
+        if (inspected.current || !activeRef.current) setInspectionStopped(true);
+        void stop();
+      }
     };
     const visibility = () => {
-      if (document.hidden && current.current.status === 'running') stop();
+      if (document.hidden && current.current.status === 'running') void stop();
     };
     window.addEventListener('message', receive);
     document.addEventListener('visibilitychange', visibility);
@@ -140,6 +186,7 @@ export default function MorseRunnerStudio({
       window.removeEventListener('message', receive);
       document.removeEventListener('visibilitychange', visibility);
       clearTimeout(timeout.current);
+      stopFlight.current.dispose();
       resize.current?.disconnect();
       frame.current?.contentWindow?.postMessage(
         runnerStopCommand(current.current),
@@ -176,6 +223,7 @@ export default function MorseRunnerStudio({
     }
   };
   const restart = () => {
+    if (inspected.current || !activeRef.current) return;
     if (unsaved && !confirmDiscard) {
       setConfirmDiscard(true);
       return;
@@ -184,6 +232,7 @@ export default function MorseRunnerStudio({
     resize.current?.disconnect();
     setConfirmDiscard(false);
     setStopping(false);
+    setInspectionStopped(false);
     setSavedRunId(undefined);
     const nextSettings = {
       ...current.current.settings,
@@ -193,6 +242,7 @@ export default function MorseRunnerStudio({
     update(createRunnerRun(crypto.randomUUID(), nextSettings));
   };
   const review = () => {
+    if (inspected.current || !activeRef.current) return;
     const latest = current.current;
     if (!terminal(latest) || latest.elapsedSeconds < 1 || savedRunId === latest.runId) return;
     if (resultIdentity.current?.runId !== latest.runId) {
@@ -211,7 +261,7 @@ export default function MorseRunnerStudio({
     loading: 'Loading the simulator and your settings…',
     ready:
       'Ready. Enter your station call and click Run inside the simulator. Setup time does not count.',
-    running: 'Run in progress. Keep this page visible; switching apps ends this run as partial.',
+    running: 'Run in progress. Visiting another view or switching apps stops this run as partial.',
     completed: 'Run complete. Review and save your results below.',
     stopped: 'Run stopped. Your confirmed practice time and results are ready to save.',
     error:
@@ -242,6 +292,12 @@ export default function MorseRunnerStudio({
             ? 'Stopping and collecting results…'
             : messages[run.status]}
       </p>
+      {inspectionStopped && (
+        <p className="field-hint">
+          Visiting another view stopped this run. Its confirmed partial result stays here until you
+          save it or start a new run.
+        </p>
+      )}
       <div className="runner-session-controls">
         <div className="runner-engine-time">
           <strong aria-label={`${time(run.elapsedSeconds)} engine time`}>
@@ -353,15 +409,16 @@ export default function MorseRunnerStudio({
       )}
       <div className="runner-footer">
         <p>
-          Leave this studio only after saving. Practice here uses synthetic calls and creates no
-          real radio contacts.
+          You can visit another view and return to these results. Save before finishing or starting
+          another practice block. Practice here uses synthetic calls and creates no real radio
+          contacts.
         </p>
         <a
           href={externalUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => {
-            if (run.status === 'running') stop();
+            if (run.status === 'running') void stop();
           }}
         >
           Open standalone runner <ExternalLink size={13} />
@@ -370,4 +427,6 @@ export default function MorseRunnerStudio({
       </div>
     </section>
   );
-}
+});
+
+export default MorseRunnerStudio;

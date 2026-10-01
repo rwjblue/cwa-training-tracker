@@ -18,6 +18,7 @@ import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
 export interface ListeningTrainerHandle {
   play: () => Promise<void>;
   stop: () => void;
+  pauseForInspection: () => void;
 }
 
 /** One native media track keeps words, seeking, and background playback in sync. */
@@ -25,15 +26,27 @@ export default forwardRef<
   ListeningTrainerHandle,
   {
     preferences: PracticePreferences;
+    active?: boolean;
     onChange: (changes: Partial<PracticePreferences>) => void;
     soundSettings?: ReactNode;
     onPlaying: (playing: boolean) => void;
     onError: (message: string) => void;
   }
 >(function ListeningTrainer(
-  { preferences: p, onChange, soundSettings, onPlaying: onPlayingChange, onError: onErrorMessage },
+  {
+    preferences: p,
+    active: visible = true,
+    onChange,
+    soundSettings,
+    onPlaying: onPlayingChange,
+    onError: onErrorMessage,
+  },
   ref,
 ) {
+  const visibleOwner = useRef(visible);
+  visibleOwner.current = visible;
+  const inspecting = useRef(!visible);
+  const canPlay = () => visibleOwner.current && !inspecting.current;
   const callbacks = useRef({ onPlaying: onPlayingChange, onError: onErrorMessage });
   callbacks.current = { onPlaying: onPlayingChange, onError: onErrorMessage };
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
@@ -75,6 +88,14 @@ export default forwardRef<
     setActive(false);
     onPlaying(false);
   };
+  const pauseForInspection = () => {
+    inspecting.current = true;
+    stop();
+  };
+  useEffect(() => {
+    if (visible) inspecting.current = false;
+    else if (!inspecting.current) pauseForInspection();
+  }, [visible]);
   const reset = () => {
     stop();
     prepared.current = null;
@@ -113,9 +134,10 @@ export default forwardRef<
   );
 
   const playSpoken = async () => {
+    if (!canPlay()) return;
     stop();
     const token = generation.current;
-    const valid = () => generation.current === token;
+    const valid = () => generation.current === token && canPlay();
     if (!round.current.length) {
       round.current = isWords ? wordPracticeRound(p.wordList, custom, p.shuffleWords) : qso.lines;
       if (isWords) setWords(round.current);
@@ -221,6 +243,7 @@ export default forwardRef<
         }),
         {
           title: listTitle,
+          canPlay,
           onFinish: finish,
           // Native/lock-screen pause must cancel the foreground speech sequence too.
           onState: (state) => {
@@ -270,6 +293,7 @@ export default forwardRef<
     const start = track.items[index.current]?.start ?? 0;
     player.current.prepare(track, {
       title: isWords ? listTitle : qso.title,
+      canPlay,
       loop: isWords && p.repeatList,
       onProgress: (progress) => {
         setActiveWord(progress.wordIndex);
@@ -285,6 +309,7 @@ export default forwardRef<
         if (playing) setComplete(false);
       },
       onFinish: () => {
+        if (!canPlay()) return;
         setComplete(true);
         setActiveWord(-1);
       },
@@ -295,6 +320,7 @@ export default forwardRef<
     player.current.seek(start);
   };
   const play = async () => {
+    if (!canPlay()) return;
     if (isWords && p.spokenAnswers) {
       prepared.current = null;
       setMediaReady(false);
@@ -305,6 +331,7 @@ export default forwardRef<
     await player.current.resume();
   };
   const replayQso = async () => {
+    if (!canPlay()) return;
     try {
       stop();
       prepare();
@@ -318,6 +345,7 @@ export default forwardRef<
     }
   };
   const seekWord = (word: number) => {
+    if (!canPlay()) return;
     if (isWords && p.spokenAnswers) {
       stop();
       index.current = track?.words[word]?.itemIndex ?? 0;
@@ -363,7 +391,7 @@ export default forwardRef<
     document.addEventListener('visibilitychange', visibility);
     return () => document.removeEventListener('visibilitychange', visibility);
   }, [isWords, p.spokenAnswers]);
-  useImperativeHandle(ref, () => ({ play, stop }));
+  useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
   const step = (delta: number) => {
     stop();
     const length = isWords ? round.current.length : qso.lines.length;

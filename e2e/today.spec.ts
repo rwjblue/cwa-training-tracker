@@ -71,8 +71,13 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
   await page.clock.fastForward(420_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
-  page.once('dialog', (dialog) => dialog.dismiss());
   await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(page).toHaveURL(/#overview$/);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  await page
+    .getByRole('region', { name: 'Current practice block', exact: true })
+    .getByRole('button', { name: 'Return to practice', exact: true })
+    .click();
   await expect(page).toHaveURL(/#practice$/);
   await page.getByRole('button', { name: 'Review & save 07:00', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
@@ -332,14 +337,21 @@ test('course dates populate Today with playable assignments and preserve linked 
   const nativeRecording = await audio.elementHandle();
   await audio.evaluate((element: HTMLAudioElement) => element.play());
   await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   expect(await nativeRecording!.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
-  expect(await page.evaluate(() => navigator.mediaSession.metadata)).toBeNull();
-  expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('none');
+  expect(await page.evaluate(() => navigator.mediaSession.metadata?.title)).toBe(
+    `Session ${assigned.lesson} · WD101-13`,
+  );
+  expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('paused');
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
-  await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
+  await page
+    .getByRole('region', { name: 'Current practice block', exact: true })
+    .getByRole('button', { name: 'Return to practice', exact: true })
+    .click();
+  expect(await nativeRecording!.evaluate((element: HTMLAudioElement) => element.isConnected)).toBe(
+    true,
+  );
   await expect(audio).toHaveAttribute('src', fasterUrl!); // remembered next-faster default
   await page.clock.resume();
   await audio.evaluate((element: HTMLAudioElement) => element.play());

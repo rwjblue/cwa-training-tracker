@@ -35,6 +35,8 @@ import './plan.css';
 import { curriculumForLevel } from '../shared/curriculum';
 
 interface Props {
+  inspection?: { id: string; view: 'week' | 'report' };
+  returnToPractice?: { label: string; onReturn: () => void };
   startNewTask?: boolean;
   profile: Profile;
   entries: PracticeSession[];
@@ -72,6 +74,8 @@ export default function Plan({
   onPracticeTask,
   onSetupCourse,
   startNewTask,
+  inspection,
+  returnToPractice,
 }: Props) {
   const [mutationError, setMutationError] = useState('');
   const [view, setView] = useState<'next' | 'week' | 'all'>('next');
@@ -99,6 +103,11 @@ export default function Plan({
   const [deleting, setDeleting] = useState<PlannedTask | null>(null);
   const [busy, setBusy] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
+  useEffect(() => {
+    if (!inspection) return;
+    setView('week');
+    if (inspection.view === 'report') setReportOpen(true);
+  }, [inspection]);
   const today = dateInTimezone(new Date(), profile.timezone);
   const meetings = courseMeetings(profile);
   const next = meetings.find((meeting) => meeting.date >= today);
@@ -438,6 +447,17 @@ export default function Plan({
           fromDate={weekStart}
           toDate={weekEnd}
           onClose={() => setReportOpen(false)}
+          returnToPractice={
+            returnToPractice
+              ? {
+                  label: returnToPractice.label,
+                  onReturn: () => {
+                    setReportOpen(false);
+                    returnToPractice.onReturn();
+                  },
+                }
+              : undefined
+          }
         />
       )}
     </section>
@@ -685,12 +705,14 @@ function Report({
   fromDate,
   toDate,
   onClose,
+  returnToPractice,
 }: {
   entries: PracticeSession[];
   profile: Profile;
   fromDate: string;
   toDate: string;
   onClose: () => void;
+  returnToPractice?: { label: string; onReturn: () => void };
 }) {
   const [from, setFrom] = useState(fromDate);
   const [to, setTo] = useState(toDate);
@@ -743,6 +765,15 @@ function Report({
         </p>
       )}
       <div className="plan-form-actions plan-no-print">
+        {returnToPractice && (
+          <button
+            className="button outline"
+            title={returnToPractice.label}
+            onClick={returnToPractice.onReturn}
+          >
+            Return to practice
+          </button>
+        )}
         <button
           className="button outline"
           onClick={() => {

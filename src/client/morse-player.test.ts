@@ -53,6 +53,80 @@ afterEach(() => {
 });
 
 describe('native media playback boundary', () => {
+  it('retains its source and position while an inspected owner rejects platform transport', async () => {
+    const handlers = new Map<string, MediaSessionActionHandler | null>();
+    vi.stubGlobal('navigator', {
+      mediaSession: {
+        playbackState: 'none',
+        metadata: null,
+        setPositionState: vi.fn(),
+        setActionHandler: (action: string, handler: MediaSessionActionHandler | null) =>
+          handlers.set(action, handler),
+      },
+    });
+    let visible = true;
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    const load = vi.spyOn(audio, 'load');
+    attach(player, audio);
+    player.prepare(track(), { canPlay: () => visible });
+    audio.metadata();
+    await player.resume();
+    audio.currentTime = 1.25;
+    const source = audio.src;
+    visible = false;
+    player.pause();
+
+    handlers.get('play')?.({ action: 'play' });
+    handlers.get('seekto')?.({ action: 'seekto', seekTime: 3 });
+    handlers.get('stop')?.({ action: 'stop' });
+    await player.resume();
+    expect(audio.play).toHaveBeenCalledOnce();
+    expect(audio.paused).toBe(true);
+    expect(player.position).toBe(1.25);
+    expect(audio.src).toBe(source);
+    expect(load).toHaveBeenCalledOnce();
+
+    visible = true;
+    expect(audio.paused).toBe(true); // Returning releases permission, not playback.
+    expect(audio.play).toHaveBeenCalledOnce();
+    await player.resume();
+    expect(audio.play).toHaveBeenCalledTimes(2);
+    expect(player.position).toBe(1.25);
+    expect(audio.src).toBe(source);
+    player.dispose();
+  });
+
+  it('pauses a late native playing event after inspection without reporting an active owner', async () => {
+    let visible = true;
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    const onState = vi.fn();
+    const onError = vi.fn();
+    attach(player, audio);
+    player.prepare(track(), { canPlay: () => visible, onState, onError });
+    audio.metadata();
+    let resolve!: () => void;
+    audio.play.mockImplementationOnce(
+      () =>
+        new Promise<void>((done) => {
+          resolve = done;
+        }),
+    );
+    const starting = player.resume();
+    visible = false;
+    player.pause();
+    audio.paused = false;
+    audio.dispatchEvent(new Event('playing'));
+    resolve();
+    await starting;
+    expect(audio.paused).toBe(true);
+    expect(onState).not.toHaveBeenCalledWith('playing');
+    expect(onError).not.toHaveBeenCalled();
+    expect(player.track).not.toBeNull();
+    player.dispose();
+  });
+
   it('replays a completed word without replacing its source or reporting a pause', async () => {
     const player = new MorsePlayer();
     const audio = new MediaElement();

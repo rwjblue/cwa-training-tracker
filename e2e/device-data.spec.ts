@@ -355,6 +355,11 @@ for (const mobile of [false, true]) {
       fullPage: true,
     });
     await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+    await activateDeviceControl(
+      page,
+      page.getByRole('button', { name: 'Start practice', exact: true }),
+      mobile,
+    );
     await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('ES');
     await expect(
       page.getByText('Copy practice is open in another tab.', { exact: true }),

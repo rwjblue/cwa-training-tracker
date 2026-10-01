@@ -97,6 +97,7 @@ import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
 import type { PlannedTask } from '../shared/plan';
 import { practiceLaunchForTask, type PracticeLaunch } from './practice-launch';
+import { PracticeNavigation } from './practice-navigation';
 import WelcomePanel from './WelcomePanel';
 import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './ImportedHistory';
 import CopyResult, { CopyAttemptDetails } from './CopyResult';
@@ -262,12 +263,23 @@ function App() {
   currentPage.current = page;
   const studioUnsaved = useRef(false);
   const beforeLeaveStudio = useRef<(() => Promise<boolean>) | undefined>(undefined);
+  const beforeInspectStudio = useRef<(() => Promise<void>) | undefined>(undefined);
+  const practiceNavigation = useRef(new PracticeNavigation());
+  const [navigationBusy, setNavigationBusy] = useState(false);
   const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
+  const currentLaunch = useRef(practiceLaunch);
+  currentLaunch.current = practiceLaunch;
+  const initiallyPractice = useRef(page === 'practice');
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const [savedPracticeEntry, setSavedPracticeEntry] = useState<PracticeSession>();
+  const [savedOwnerId, setSavedOwnerId] = useState<string>();
   const pendingLog = useRef<Partial<PracticeSession> | null>(null);
   const pendingDestination = useRef<Page | null>(null);
   const [startNewTask, setStartNewTask] = useState(false);
+  const [courseInspection, setCourseInspection] = useState<{
+    id: string;
+    view: 'week' | 'report';
+  }>();
   const [user, setUser] = useState<User | null>(null);
   const scope = user?.id ?? 'guest';
   const deviceToken = getDeviceScopeToken(scope);
@@ -309,10 +321,32 @@ function App() {
   const identityLoad = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [sessionEditor, setSessionEditor] = useState<Partial<PracticeSession> | null>(null);
+  const [sessionEditorOwner, setSessionEditorOwner] = useState<string>();
   const [toast, setToast] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [demo, setDemo] = useState(true);
   const notify = (message: string) => setToast(message);
+  const replaceStudio = (launch?: PracticeLaunch) => {
+    practiceNavigation.current.invalidate();
+    beforeLeaveStudio.current = undefined;
+    beforeInspectStudio.current = undefined;
+    studioUnsaved.current = false;
+    currentLaunch.current = launch;
+    setPracticeLaunch(launch);
+    setSavedOwnerId(undefined);
+    setCourseInspection(undefined);
+    setNavigationBusy(false);
+  };
+  const disposeStudio = () => {
+    // The handle gates playback synchronously, before an asynchronous Runner stop.
+    void beforeInspectStudio.current?.().catch(() => {});
+    replaceStudio();
+  };
+  useEffect(() => {
+    if (booting || !initiallyPractice.current) return;
+    initiallyPractice.current = false;
+    if (page === 'practice' && !currentLaunch.current) replaceStudio({ id: crypto.randomUUID() });
+  }, [booting]);
   useEffect(() => {
     setDeviceOpen(false);
     setLifecycleReview(null);
@@ -325,12 +359,11 @@ function App() {
       } else if ((event as CustomEvent<{ scope: string }>).detail?.scope !== scope) return;
       if (hasAccountLifecycleBoundary(scope)) lifecycleRefreshScope.current = scope;
       // Disposing cleared work must not run ordinary navigation autosave.
-      beforeLeaveStudio.current = undefined;
-      studioUnsaved.current = false;
+      disposeStudio();
       pendingLog.current = null;
       pendingDestination.current = null;
       setSessionEditor(null);
-      setPracticeLaunch(undefined);
+      setSessionEditorOwner(undefined);
       setSavedPracticeEntry(undefined);
       setToast('');
       setDemo(false);
@@ -365,14 +398,16 @@ function App() {
       current = identity;
       setOfflineIdentity(true);
     }
+    const previousAccount = activeAccount.current;
     activeAccount.current = current?.id;
     if (current && identityConfirmed) selectAccountIdentity(current);
     setApiAccount(current?.id);
-    if (current?.id !== user?.id) {
+    if (current?.id !== previousAccount) {
       setEntries([]);
       historyGeneration.current = null;
       setSessionEditor(null);
-      setPracticeLaunch(undefined);
+      setSessionEditorOwner(undefined);
+      disposeStudio();
       setSavedPracticeEntry(undefined);
     }
     setUser(current);
@@ -434,11 +469,14 @@ function App() {
     selected: PlannedTask[],
     changes: { done?: boolean; dismissedFromToday?: boolean },
   ) => {
+    const owner = scope;
+    const token = deviceToken;
     const result = await account.mutate({
       type: 'task-status',
       ids: selected.map((task) => task.id),
       ...changes,
     });
+    if ((activeAccount.current ?? 'guest') !== owner || !isDeviceScopeCurrent(owner, token)) return;
     setPracticeLaunch((current) =>
       current?.task && selected.some((task) => task.id === current.task!.id)
         ? { ...current, task: { ...current.task, ...changes } }
@@ -458,6 +496,7 @@ function App() {
         event instanceof StorageEvent && event.key === 'cwa:account:active:v1',
       );
       if (selectedId === activeAccount.current) return;
+      identityLoad.current++;
       const cached = selectedId ? loadCachedAccount(selectedId) : null;
       const next = cached?.user ?? (selectedId ? loadSelectedAccountIdentity() : null);
       const previous = activeAccount.current;
@@ -467,7 +506,8 @@ function App() {
       setUser(next ?? null);
       setEntries([]);
       setSessionEditor(null);
-      setPracticeLaunch(undefined);
+      setSessionEditorOwner(undefined);
+      disposeStudio();
       setSavedPracticeEntry(undefined);
       setOfflineIdentity(Boolean(next));
       if (selectedId && !next) void load().catch((error: Error) => setAppError(error.message));
@@ -503,13 +543,11 @@ function App() {
   useEffect(() => {
     const changed = async () => {
       const next = readPage();
-      if (next !== 'practice' && !(await confirmLeaveStudio())) {
-        window.history.replaceState(null, '', '#practice');
-        return;
+      if (!(await navigateView.current(next, true))) {
+        const url = new URL(window.location.href);
+        url.hash = currentPage.current;
+        window.history.replaceState(window.history.state, '', url);
       }
-      currentPage.current = next;
-      if (next !== 'practice') setPracticeLaunch(undefined);
-      setPage(next);
     };
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (!studioUnsaved.current) return;
@@ -517,9 +555,11 @@ function App() {
       event.returnValue = '';
     };
     window.addEventListener('hashchange', changed);
+    window.addEventListener('popstate', changed);
     window.addEventListener('beforeunload', beforeUnload);
     return () => {
       window.removeEventListener('hashchange', changed);
+      window.removeEventListener('popstate', changed);
       window.removeEventListener('beforeunload', beforeUnload);
     };
   }, []);
@@ -530,40 +570,120 @@ function App() {
     }
   }, [booting, user, page]);
   const confirmLeaveStudio = async () => {
-    if (currentPage.current !== 'practice') return true;
-    if (beforeLeaveStudio.current) return beforeLeaveStudio.current();
+    const ownerId = currentLaunch.current?.id;
+    if (!ownerId) return true;
+    const pause = beforeInspectStudio.current;
+    const finish = beforeLeaveStudio.current;
+    await pause?.();
+    if (
+      currentLaunch.current?.id !== ownerId ||
+      (activeAccount.current ?? 'guest') !== scope ||
+      !isDeviceScopeCurrent(scope, deviceToken)
+    )
+      return false;
+    if (finish) return finish();
     if (!studioUnsaved.current) return true;
     if (
       !window.confirm(
-        'Leave this practice? Copy practice can be recovered on this device. Unsaved time and notes from other tools will be discarded.',
+        'Finish this practice? Copy practice can be recovered on this device. Unsaved time and notes from other tools will be discarded.',
       )
     )
       return false;
     studioUnsaved.current = false;
     return true;
   };
-  const showPage = (next: Page) => {
+  const showPage = (next: Page, traversed = false) => {
     setStartNewTask(false);
     currentPage.current = next;
-    if (next !== 'practice') setPracticeLaunch(undefined);
-    window.location.hash = next;
+    const url = new URL(window.location.href);
+    url.hash = next;
+    if (window.location.hash !== url.hash) {
+      if (traversed) window.history.replaceState(window.history.state, '', url);
+      else window.history.pushState(window.history.state, '', url);
+    }
     setPage(next);
     setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const previousFocus = document.activeElement;
+    requestAnimationFrame(() => {
+      if (
+        currentPage.current === next &&
+        (activeAccount.current ?? 'guest') === scope &&
+        isDeviceScopeCurrent(scope, deviceToken) &&
+        (document.activeElement === document.body || document.activeElement === previousFocus)
+      )
+        document.getElementById(next === 'practice' ? 'current-practice' : 'main-content')?.focus();
+    });
   };
-  const navigate = async (next: Page): Promise<boolean> => {
-    if (next !== 'practice' && !(await confirmLeaveStudio())) return false;
-    if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
-    showPage(next);
-    return true;
+  const transitionOwned = (ownerId: string | undefined) =>
+    (activeAccount.current ?? 'guest') === scope &&
+    isDeviceScopeCurrent(scope, deviceToken) &&
+    currentLaunch.current?.id === ownerId;
+  const runPracticeTransition = async (
+    key: string,
+    prepare: () => Promise<boolean>,
+    apply: () => void,
+    ownerId = currentLaunch.current?.id,
+  ) => {
+    const host = document.getElementById('current-practice');
+    if (host) host.inert = true;
+    setNavigationBusy(true);
+    try {
+      return await practiceNavigation.current.transition(key, prepare, apply, () =>
+        transitionOwned(ownerId),
+      );
+    } catch (error) {
+      if (transitionOwned(ownerId)) notify((error as Error).message);
+      return false;
+    } finally {
+      const pending = practiceNavigation.current.pending;
+      setNavigationBusy(pending);
+      const currentHost = document.getElementById('current-practice');
+      if (currentHost) currentHost.inert = currentPage.current !== 'practice' || pending;
+    }
   };
+  const navigate = async (
+    next: Page,
+    traversed = false,
+    inspection?: 'week' | 'report',
+  ): Promise<boolean> => {
+    if (next === currentPage.current && (next !== 'practice' || currentLaunch.current)) {
+      if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
+      return true;
+    }
+    const ownerId = currentLaunch.current?.id;
+    const pauseForInspection = beforeInspectStudio.current;
+    const leavingPractice = currentPage.current === 'practice';
+    return runPracticeTransition(
+      `inspect:${ownerId ?? 'none'}:${next}`,
+      async () => {
+        if (leavingPractice && ownerId) await pauseForInspection?.();
+        return true;
+      },
+      () => {
+        if (next === 'practice' && !currentLaunch.current)
+          replaceStudio({ id: crypto.randomUUID() });
+        if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
+        showPage(next, traversed);
+      },
+      ownerId,
+    );
+  };
+  const navigateView = useRef(navigate);
+  navigateView.current = navigate;
+  const finishPractice = () =>
+    runPracticeTransition('finish', confirmLeaveStudio, () => {
+      replaceStudio();
+      showPage('overview');
+    });
   const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
-    if (currentPage.current === 'practice' && !(await confirmLeaveStudio())) return;
-    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
-    setPracticeLaunch({ id: crypto.randomUUID(), ...options });
-    navigate('practice');
+    const intent = `replace:${options.task?.id ?? 'public'}:${options.tool ?? 'default'}:${options.purpose ?? 'assigned'}`;
+    await runPracticeTransition(intent, confirmLeaveStudio, () => {
+      replaceStudio({ id: crypto.randomUUID(), ...options });
+      showPage('practice');
+    });
   };
-  const openLog = (initial: Partial<PracticeSession> = {}) => {
+  const openLog = (initial: Partial<PracticeSession> = {}, ownerId?: string) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     if (
       !user &&
@@ -575,21 +695,23 @@ function App() {
       return;
     }
     const latest = initial.id ? entries.find((entry) => entry.id === initial.id) : undefined;
+    setSessionEditorOwner(ownerId);
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
-  const acceptSavedPractice = (entry: PracticeSession) => {
+  const acceptSavedPractice = (entry: PracticeSession, ownerId?: string) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     const generation = user ? getConfirmedAccountGeneration(user.id) : undefined;
     if (user && generation !== undefined)
       historyGeneration.current = { accountId: user.id, generation };
     removeLocalPractice('guest', entry.id);
     setSavedPracticeEntry(entry);
+    setSavedOwnerId(ownerId);
     setEntries((current) =>
       [entry, ...current.filter((item) => item.id !== entry.id)].sort((a, b) =>
         b.date.localeCompare(a.date),
       ),
     );
-    if (entry.source === 'morse' || entry.source === 'timer') {
+    if (ownerId || entry.source === 'morse' || entry.source === 'timer') {
       setSavedPracticeVersion((version) => version + 1);
     }
     const attempt = savedCopyAttempt(entry);
@@ -710,6 +832,8 @@ function App() {
   const logout = async () => {
     try {
       identityLoad.current++;
+      disposeStudio();
+      showPage('overview');
       activeAccount.current = undefined;
       await api('/auth/logout', {});
       setUser(null);
@@ -753,6 +877,7 @@ function App() {
         <button
           className="brand"
           onClick={() => navigate('overview')}
+          disabled={navigationBusy}
           aria-label="CW Academy Companion home"
         >
           <img
@@ -772,6 +897,7 @@ function App() {
               key={item.page}
               className={`nav-item ${page === item.page ? 'active' : ''}`}
               onClick={() => navigate(item.page)}
+              disabled={navigationBusy}
               aria-current={page === item.page ? 'page' : undefined}
             >
               <item.icon size={19} strokeWidth={1.7} />
@@ -970,6 +1096,55 @@ function App() {
                   )}
                 </section>
               )}
+              {navigationBusy && <p role="status">Pausing or finishing your current practice…</p>}
+              {practiceLaunch && page !== 'practice' && (
+                <section className="retained-practice" aria-label="Current practice block">
+                  <div>
+                    <span className="eyebrow">
+                      CURRENT BLOCK{practiceLaunch.purpose === 'review' ? ' · EXTRA REVIEW' : ''}
+                    </span>
+                    <h2>{practiceLaunch.task?.title ?? 'Your current practice'}</h2>
+                    <p>
+                      Kept in this app while you look around. Return keeps playback and timers
+                      paused until you start them.
+                    </p>
+                  </div>
+                  <div className="retained-practice-actions">
+                    <button
+                      className="button"
+                      disabled={navigationBusy}
+                      onClick={() => navigate('practice')}
+                    >
+                      Return to practice <ArrowRight size={16} />
+                    </button>
+                    {user && (
+                      <>
+                        <button
+                          className="button outline"
+                          disabled={navigationBusy}
+                          onClick={() => navigate('course', false, 'week')}
+                        >
+                          Inspect this week
+                        </button>
+                        <button
+                          className="button outline"
+                          disabled={navigationBusy}
+                          onClick={() => navigate('course', false, 'report')}
+                        >
+                          Inspect report
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="button outline"
+                      disabled={navigationBusy}
+                      onClick={() => void finishPractice()}
+                    >
+                      Finish practice
+                    </button>
+                  </div>
+                </section>
+              )}
               {!user && page === 'logbook' && (
                 <div className="demo-banner">
                   <span>
@@ -1040,34 +1215,92 @@ function App() {
                     onGuide={() => navigate('course')}
                   />
                 ))}
-              {page === 'practice' && (
-                <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
-                  <PracticeStudio
-                    key={user?.id ?? 'guest'}
-                    onLog={openLog}
-                    onAutoSave={autoSave}
-                    onTaskCompletion={(task: PlannedTask, done: boolean) =>
-                      updateTaskStatus([task], { done })
-                    }
-                    onBeforeLeaveChange={(handler: (() => Promise<boolean>) | undefined) => {
-                      beforeLeaveStudio.current = handler;
-                    }}
-                    accountId={user?.id}
-                    timezone={profile.timezone}
-                    onSaved={(entry: PracticeSession) => {
-                      acceptSavedPractice(entry);
-                      studioUnsaved.current = false;
-                      notify('Copy result saved.');
-                    }}
-                    savedVersion={savedPracticeVersion}
-                    savedEntry={savedPracticeEntry}
-                    launch={practiceLaunch}
-                    onBack={() => navigate('overview')}
-                    onUnsavedChange={(unsaved: boolean) => {
-                      studioUnsaved.current = unsaved;
-                    }}
-                  />
-                </React.Suspense>
+              {practiceLaunch && (
+                <section
+                  id="current-practice"
+                  className="practice-host"
+                  aria-label="Current practice studio"
+                  tabIndex={-1}
+                  hidden={page !== 'practice'}
+                  inert={page !== 'practice' || navigationBusy}
+                >
+                  <div className="practice-view-actions" aria-label="Inspect other views">
+                    <button
+                      className="button outline small"
+                      disabled={navigationBusy}
+                      onClick={() => navigate('overview')}
+                    >
+                      {user ? 'Inspect Today' : 'Inspect Overview'}
+                    </button>
+                    {user && (
+                      <>
+                        <button
+                          className="button outline small"
+                          disabled={navigationBusy}
+                          onClick={() => navigate('course', false, 'week')}
+                        >
+                          Inspect this week
+                        </button>
+                        <button
+                          className="button outline small"
+                          disabled={navigationBusy}
+                          onClick={() => navigate('course', false, 'report')}
+                        >
+                          Inspect report
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
+                    <PracticeStudio
+                      key={practiceLaunch.id}
+                      active={page === 'practice' && !navigationBusy}
+                      onLog={(initial?: Partial<PracticeSession>) =>
+                        openLog(initial, practiceLaunch.id)
+                      }
+                      onAutoSave={autoSave}
+                      onTaskCompletion={(task: PlannedTask, done: boolean) =>
+                        updateTaskStatus([task], { done })
+                      }
+                      onBeforeLeaveChange={(handler: (() => Promise<boolean>) | undefined) => {
+                        if (currentLaunch.current?.id === practiceLaunch.id)
+                          beforeLeaveStudio.current = handler;
+                      }}
+                      onBeforeInspectChange={(handler: (() => Promise<void>) | undefined) => {
+                        if (currentLaunch.current?.id === practiceLaunch.id)
+                          beforeInspectStudio.current = handler;
+                      }}
+                      accountId={user?.id}
+                      timezone={profile.timezone}
+                      onSaved={(entry: PracticeSession) => {
+                        acceptSavedPractice(entry, practiceLaunch.id);
+                        studioUnsaved.current = false;
+                        notify('Copy result saved.');
+                      }}
+                      savedVersion={savedPracticeVersion}
+                      savedEntry={savedPracticeEntry}
+                      savedOwnerId={savedOwnerId}
+                      launch={practiceLaunch}
+                      onBack={() => navigate('overview')}
+                      onFinish={() => void finishPractice()}
+                      onToolChange={(tool: PracticeLaunch['tool']) => void openPractice({ tool })}
+                      onUnsavedChange={(unsaved: boolean) => {
+                        studioUnsaved.current = unsaved;
+                      }}
+                    />
+                  </React.Suspense>
+                </section>
+              )}
+              {page === 'practice' && !practiceLaunch && (
+                <section className="page-heading">
+                  <div>
+                    <h1>Your practice studio.</h1>
+                    <p>Start a fresh block when you are ready.</p>
+                  </div>
+                  <button className="button" onClick={() => openPractice()}>
+                    Start practice <Play size={16} />
+                  </button>
+                </section>
               )}
               {page === 'logbook' && (
                 <Logbook
@@ -1108,6 +1341,17 @@ function App() {
                     openPractice(practiceLaunchForTask(task, purpose))
                   }
                   startNewTask={startNewTask}
+                  inspection={courseInspection}
+                  returnToPractice={
+                    practiceLaunch
+                      ? {
+                          label: practiceLaunch.task?.title ?? 'Your current practice',
+                          onReturn: () => {
+                            void navigate('practice');
+                          },
+                        }
+                      : undefined
+                  }
                   tasks={tasks}
                   planLoading={account.loading}
                   planError={account.error}
@@ -1201,31 +1445,40 @@ function App() {
               ? historyGeneration.current.generation
               : undefined
           }
-          onClose={() => setSessionEditor(null)}
+          onClose={() => {
+            setSessionEditor(null);
+            setSessionEditorOwner(undefined);
+          }}
           onSaved={(entry, destination) => {
             if (!isDeviceScopeCurrent(scope, deviceToken)) return;
             if ((activeAccount.current ?? 'guest') !== (user?.id ?? 'guest')) return;
             const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
             if (!wasExisting)
               clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
-            if (destination === 'history') acceptSavedPractice(entry);
+            const matchingOwner =
+              !wasExisting &&
+              sessionEditorOwner &&
+              currentLaunch.current?.id === sessionEditorOwner;
+            if (destination === 'history') acceptSavedPractice(entry, sessionEditorOwner);
             else {
               setSavedPracticeEntry(entry);
+              setSavedOwnerId(sessionEditorOwner);
               setSavedPracticeVersion((version) => version + 1);
               const attempt = savedCopyAttempt(entry);
               if (attempt) clearCopyDraft(user?.id ?? 'guest', attempt.id);
             }
             setSessionEditor(null);
+            setSessionEditorOwner(undefined);
             if (
               !wasExisting &&
               !(entry.metadata?.practiceTool === 'copy' && currentPage.current === 'practice') &&
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
             ) {
-              studioUnsaved.current = false;
-              // The paused studio snapshot was just durably saved.
-              // Its reset effect has not run yet; asking it to leave would save
-              // that same time again (or prompt to discard already-saved time).
-              showPage('overview');
+              if (matchingOwner) {
+                // Retire only the block that opened this durable save review.
+                replaceStudio();
+                showPage('overview');
+              } else void navigate('overview');
             }
             notify(
               destination === 'history'
@@ -1860,9 +2113,13 @@ function Course({
   onPlanChange,
   onPlanRetry,
   pendingTaskIds,
+  inspection,
+  returnToPractice,
 }: {
   tasks: PlannedTask[];
   pendingTaskIds: string[];
+  inspection?: { id: string; view: 'week' | 'report' };
+  returnToPractice?: { label: string; onReturn: () => void };
   planLoading: boolean;
   planError: string;
   revision: number;
@@ -1913,6 +2170,8 @@ function Course({
           onPracticeTask={onPracticeTask}
           onSetupCourse={onSettings}
           startNewTask={startNewTask}
+          inspection={inspection}
+          returnToPractice={returnToPractice}
         />
       )}
       <div className="course-intro">

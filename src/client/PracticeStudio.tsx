@@ -33,8 +33,11 @@ import {
 import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTrainer';
 import ListeningSoundSettings from './ListeningSoundSettings';
 import MorseTranscript from './MorseTranscript';
-import MorseRunnerStudio, { DEFAULT_RUNNER_SETTINGS } from './MorseRunnerStudio';
-import CopyTrainer from './CopyTrainer';
+import MorseRunnerStudio, {
+  DEFAULT_RUNNER_SETTINGS,
+  type MorseRunnerStudioHandle,
+} from './MorseRunnerStudio';
+import CopyTrainer, { type CopyTrainerHandle } from './CopyTrainer';
 import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
@@ -57,9 +60,13 @@ const duration = (seconds: number) =>
 export default function PracticeStudio({
   onLog,
   savedVersion,
+  savedOwnerId,
   savedEntry,
   launch,
+  active = true,
   onBack,
+  onFinish,
+  onToolChange,
   onUnsavedChange,
   accountId,
   timezone,
@@ -67,12 +74,17 @@ export default function PracticeStudio({
   onAutoSave,
   onTaskCompletion,
   onBeforeLeaveChange,
+  onBeforeInspectChange,
 }: {
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
+  savedOwnerId?: string;
   savedEntry?: PracticeSession;
   launch?: PracticeLaunch;
+  active?: boolean;
   onBack?: () => void;
+  onFinish?: () => void;
+  onToolChange?: (tool: PracticeLaunch['tool']) => void;
   onUnsavedChange?: (unsaved: boolean) => void;
   accountId?: string;
   timezone?: string;
@@ -80,10 +92,14 @@ export default function PracticeStudio({
   onAutoSave: (entry: PracticeSession) => Promise<void>;
   onTaskCompletion?: (task: PlannedTask, done: boolean) => Promise<void>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
+  onBeforeInspectChange?: (handler: (() => Promise<void>) | undefined) => void;
 }) {
   const notesScope = accountId ?? 'guest';
   const [deviceToken] = useState(() => getDeviceScopeToken(notesScope));
   const currentDevice = () => isDeviceScopeCurrent(notesScope, deviceToken);
+  const visible = useRef(active);
+  visible.current = active;
+  const inspecting = useRef(!active);
   const activity = launch?.activity;
   const assigned = Boolean(activity);
   const extraReview = launch?.purpose === 'review';
@@ -97,7 +113,7 @@ export default function PracticeStudio({
   const recordingWpm =
     activity?.type === 'audio' ? (selectedRecording?.speedWpm ?? activity.characterWpm) : undefined;
   const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
-  const [publicRunner, setPublicRunner] = useState(false);
+  const [publicRunner, setPublicRunner] = useState(launch?.tool === 'runner');
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const [publicCopy, setPublicCopy] = useState(
     () =>
@@ -121,14 +137,16 @@ export default function PracticeStudio({
     session.claim({
       title: `${launch?.task?.lesson ? `Session ${launch.task.lesson} · ` : ''}${selectedRecording?.title ?? launch?.task?.title ?? 'Assigned recording'}`,
       album: `CW Academy practice${recordingWpm ? ` · ${recordingWpm} WPM` : ''}`,
-      onPlay: () => audio.play(),
+      onPlay: () => (canPractice() ? audio.play() : undefined),
       onPause: () => audio.pause(),
       onStop: () => {
+        if (!canPractice()) return;
         audio.pause();
         audio.currentTime = 0;
         session.release();
       },
       onSeek: (position) => {
+        if (!canPractice()) return;
         audio.currentTime = position;
       },
       getPosition: () => ({
@@ -143,7 +161,9 @@ export default function PracticeStudio({
   const preparedFree = useRef('');
   const [preferences, setPreferences] = useState(() => ({
     ...loadPracticePreferences(),
-    ...(launch?.tool && launch.tool !== 'copy' ? { tool: launch.tool } : {}),
+    ...(launch?.tool && launch.tool !== 'copy' && launch.tool !== 'runner'
+      ? { tool: launch.tool }
+      : {}),
   }));
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
@@ -174,6 +194,9 @@ export default function PracticeStudio({
   const [completionError, setCompletionError] = useState('');
   const saveRetryIntent = useRef<'navigation' | 'completion'>('navigation');
   const beforeLeaveRef = useRef<() => Promise<boolean>>(async () => true);
+  const beforeInspectRef = useRef<() => Promise<void>>(async () => {});
+  const canPractice = () =>
+    currentDevice() && visible.current && !inspecting.current && !navigationLocked.current;
   const identity = () =>
     (sessionIdentity.current ??= {
       id: `studio:${crypto.randomUUID()}`,
@@ -197,19 +220,32 @@ export default function PracticeStudio({
     }
   }, []);
   const trainer = useRef<ListeningTrainerHandle>(null);
+  const copyTrainer = useRef<CopyTrainerHandle>(null);
+  const runner = useRef<MorseRunnerStudioHandle>(null);
   useEffect(() => {
     if (currentDevice()) setRemembered(savePracticePreferences(preferences));
   }, [preferences]);
   useEffect(() => {
     if (previousSaved.current !== savedVersion) {
-      timer.reset();
-      changeScratchpad('');
-      sessionIdentity.current = undefined;
-      saveCoordinator.current.reset();
-      setConfirmReset(false);
       previousSaved.current = savedVersion;
+      // History edits and late receipts from a former block must not finish the
+      // current owner. Zero-time manual entries have an owner but no timer ID.
+      if (
+        !isCopy &&
+        !isRunner &&
+        savedOwnerId &&
+        savedOwnerId === launch?.id &&
+        (!sessionIdentity.current || savedEntry?.id === sessionIdentity.current.id)
+      ) {
+        pauseTimer();
+        timer.reset();
+        changeScratchpad('');
+        sessionIdentity.current = undefined;
+        saveCoordinator.current.reset();
+        setConfirmReset(false);
+      }
     }
-  }, [savedVersion]);
+  }, [savedVersion, savedOwnerId, savedEntry, launch?.id, isCopy, isRunner]);
   useEffect(() => () => player.current.dispose(), []);
   useEffect(() => {
     onUnsavedChange?.(
@@ -229,7 +265,7 @@ export default function PracticeStudio({
         ? preferredRecording(activity.url, activity.characterWpm)
         : undefined,
     );
-    setPublicRunner(false);
+    setPublicRunner(launch.tool === 'runner');
     setRunnerUnsaved(false);
     setPublicCopy(
       launch.tool === 'copy' || (!launch.tool && Boolean(loadCopyDraft(accountId ?? 'guest'))),
@@ -238,7 +274,7 @@ export default function PracticeStudio({
     setTimerMinutes(launch.task?.targetMinutes);
     setCompletionError('');
     const nextTool = launch.tool;
-    if (nextTool && nextTool !== 'copy')
+    if (nextTool && nextTool !== 'copy' && nextTool !== 'runner')
       setPreferences((current) => ({ ...current, tool: nextTool }));
   }, [launch?.id]);
   useEffect(() => {
@@ -251,13 +287,31 @@ export default function PracticeStudio({
     trainer.current?.stop();
     setPlaying(false);
   };
+  const pauseForInspection = async () => {
+    // Close the playback gate before any awaited engine acknowledgement or
+    // React view update. Retain every producer's existing in-memory owner.
+    inspecting.current = true;
+    timer.pause();
+    stopPlayback();
+    trainer.current?.pauseForInspection();
+    copyTrainer.current?.pauseForInspection();
+    await runner.current?.pauseForInspection();
+  };
+  beforeInspectRef.current = pauseForInspection;
+  useEffect(() => {
+    onBeforeInspectChange?.(() => beforeInspectRef.current());
+    return () => onBeforeInspectChange?.(undefined);
+  }, [onBeforeInspectChange]);
+  useEffect(() => {
+    if (active) inspecting.current = false;
+    else if (!inspecting.current) void pauseForInspection();
+  }, [active]);
   useEffect(
     () =>
       subscribeDeviceScope((state) => {
         if (state.scope === notesScope && !currentDevice()) {
           navigationLocked.current = true;
-          timer.pause();
-          stopPlayback();
+          void pauseForInspection();
         }
       }),
     [notesScope, deviceToken],
@@ -268,7 +322,7 @@ export default function PracticeStudio({
     return Math.floor(elapsed.seconds);
   };
   const startTimer = () => {
-    if (!currentDevice() || isRunner || isCopy || running || navigationLocked.current) return;
+    if (!canPractice() || isRunner || isCopy || running) return;
     identity();
     setConfirmReset(false);
     timer.startManual(activity?.type === 'audio');
@@ -293,7 +347,7 @@ export default function PracticeStudio({
       minimumSeconds,
     );
   const logTimedSession = () => {
-    if (!currentDevice() || navigationLocked.current) return;
+    if (!canPractice()) return;
     pauseTimer();
     const entry = captureSession(1);
     if (entry) onLog(entry);
@@ -307,13 +361,18 @@ export default function PracticeStudio({
     if (isRunner)
       return Promise.resolve(
         !runnerUnsaved ||
-          window.confirm('Leave Morse Runner? Your unsaved run and results will be discarded.'),
+          window.confirm(
+            'Finish or switch Morse Runner? Your unsaved run and results will be discarded.',
+          ),
       );
     if (!automaticSave) {
-      const unsaved = timer.snapshot().seconds > 0 || running || scratchpad.length > 0;
+      pauseTimer();
+      const unsaved = timer.snapshot().seconds > 0 || scratchpad.length > 0;
       return Promise.resolve(
         !unsaved ||
-          window.confirm('Leave this practice? Unsaved time and notes will be discarded.'),
+          window.confirm(
+            'Finish or switch this practice? Unsaved time and notes will be discarded.',
+          ),
       );
     }
     navigationLocked.current = true;
@@ -395,7 +454,7 @@ export default function PracticeStudio({
     return () => onBeforeLeaveChange?.(undefined);
   }, [onBeforeLeaveChange]);
   const changePreferences = (changes: Partial<PracticePreferences>, regenerate = false) => {
-    if (!currentDevice() || navigationLocked.current) return;
+    if (!canPractice()) return;
     if (!('hideTrainerText' in changes)) stopPlayback();
     setError('');
     const next = normalizePracticePreferences({ ...preferences, ...changes });
@@ -413,6 +472,7 @@ export default function PracticeStudio({
     });
     player.current.prepare(next, {
       title: 'Free Morse practice',
+      canPlay: canPractice,
       onProgress: (progress) => setFreeWord(progress.wordIndex),
       onState: (state) => setPlaying(state === 'playing'),
       onError: (message) => {
@@ -424,7 +484,7 @@ export default function PracticeStudio({
     setFreeTrack(next);
   };
   const seekFree = (index: number) => {
-    if (!currentDevice() || navigationLocked.current) return;
+    if (!canPractice()) return;
     try {
       prepareFree();
       player.current.seekWord(index);
@@ -440,7 +500,7 @@ export default function PracticeStudio({
     setFreeWord(-1);
   }, [text, characterWpm, effectiveWpm, tone, volume, tool]);
   const play = async () => {
-    if (!currentDevice() || navigationLocked.current) return;
+    if (!canPractice()) return;
     identity();
     if (playing) {
       stopPlayback();
@@ -472,7 +532,7 @@ export default function PracticeStudio({
     }
   };
   const startPractice = async () => {
-    if (!currentDevice() || navigationLocked.current) return;
+    if (!canPractice()) return;
     if (activity?.type === 'audio' && !recordingUrl) {
       setError(activity.unresolved ?? 'This recording is unavailable.');
       return;
@@ -483,30 +543,29 @@ export default function PracticeStudio({
     if (!playing) await play();
   };
   const generate = () => {
-    if (!currentDevice() || navigationLocked.current) return;
+    if (!canPractice()) return;
     stopPlayback();
     if (mode !== 'custom') setText(generatePractice(mode, preferences));
   };
-  const chooseListeningTool = async (nextTool: PracticePreferences['tool']) => {
-    if (!publicRunner && !publicCopy && tool === nextTool) return;
-    if (!(await beforeLeave())) return;
-    setPublicRunner(false);
-    setRunnerUnsaved(false);
-    setPublicCopy(false);
-    changePreferences({ tool: nextTool });
+  const chooseTool = (nextTool: PracticeLaunch['tool']) => {
+    const current = publicCopy ? 'copy' : publicRunner ? 'runner' : tool;
+    if (nextTool === current || !canPractice()) return;
+    // App owns the same pause/finish/replacement flight as assignment switches.
+    // A deliberate tool change receives a fresh owner; view inspection does not.
+    onToolChange?.(nextTool);
   };
-  const chooseRunner = async () => {
-    if (publicRunner || !(await beforeLeave())) return;
-    setError('');
-    setPublicRunner(true);
-    setPublicCopy(false);
-  };
-  const chooseCopy = async () => {
-    if (publicCopy || !(await beforeLeave())) return;
-    setError('');
-    setPublicRunner(false);
-    setRunnerUnsaved(false);
-    setPublicCopy(true);
+  const onMedia = (event: React.SyntheticEvent) => {
+    if (
+      !canPractice() &&
+      (event.type === 'playing' || event.type === 'seeked') &&
+      event.target instanceof HTMLAudioElement
+    ) {
+      event.target.pause();
+      timer.pauseMedia();
+      return;
+    }
+    if (event.type === 'playing') identity();
+    timer.onMedia(event);
   };
   const SessionPanel = isSending ? 'details' : 'section';
   return (
@@ -535,6 +594,21 @@ export default function PracticeStudio({
           <span className="status-dot" /> {assigned ? 'From your plan' : 'No sign-in needed'}
         </span>
       </div>
+      {onFinish && (
+        <div className="trainer-round-actions">
+          <button
+            className="button outline"
+            disabled={savingNavigation || savingCompletion}
+            onClick={onFinish}
+          >
+            Finish practice <ArrowRight size={14} />
+          </button>
+          <p className="field-hint">
+            Visiting another view pauses this block and keeps it here. Return when you’re ready;
+            playback stays paused.
+          </p>
+        </div>
+      )}
       {launch?.task && (
         <div className="studio-task-context">
           <div>
@@ -631,12 +705,12 @@ export default function PracticeStudio({
           )}
         </div>
       )}
-      {!assigned && (
+      {!assigned && onToolChange && (
         <div className="studio-tool-tabs" role="group" aria-label="Studio tools">
           <button
             className={publicCopy ? 'selected' : ''}
             aria-pressed={publicCopy}
-            onClick={chooseCopy}
+            onClick={() => chooseTool('copy')}
           >
             Copy practice
           </button>
@@ -652,7 +726,7 @@ export default function PracticeStudio({
               key={value}
               className={!publicRunner && !publicCopy && tool === value ? 'selected' : ''}
               aria-pressed={!publicRunner && !publicCopy && tool === value}
-              onClick={() => chooseListeningTool(value)}
+              onClick={() => chooseTool(value)}
             >
               {label}
             </button>
@@ -660,7 +734,7 @@ export default function PracticeStudio({
           <button
             className={publicRunner ? 'selected' : ''}
             aria-pressed={publicRunner}
-            onClick={chooseRunner}
+            onClick={() => chooseTool('runner')}
           >
             Morse Runner
           </button>
@@ -668,6 +742,8 @@ export default function PracticeStudio({
       )}
       {isCopy ? (
         <CopyTrainer
+          ref={copyTrainer}
+          active={active}
           key={`${accountId ?? 'guest'}:${launch?.id ?? 'public-copy'}`}
           accountId={accountId}
           timezone={timezone}
@@ -685,6 +761,8 @@ export default function PracticeStudio({
         />
       ) : isRunner ? (
         <MorseRunnerStudio
+          ref={runner}
+          active={active}
           timezone={timezone}
           key={launch?.id ?? 'public-runner'}
           settings={activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS}
@@ -763,23 +841,16 @@ export default function PracticeStudio({
             >
               <section
                 className="card studio-card"
-                onPlayingCapture={(event) => {
-                  if (navigationLocked.current && event.target instanceof HTMLAudioElement) {
-                    event.target.pause();
-                    return;
-                  }
-                  identity();
-                  timer.onMedia(event);
-                }}
-                onTimeUpdateCapture={timer.onMedia}
-                onPauseCapture={timer.onMedia}
-                onEndedCapture={timer.onMedia}
-                onSeekingCapture={timer.onMedia}
-                onSeekedCapture={timer.onMedia}
-                onWaitingCapture={timer.onMedia}
-                onEmptiedCapture={timer.onMedia}
-                onRateChangeCapture={timer.onMedia}
-                onErrorCapture={timer.onMedia}
+                onPlayingCapture={onMedia}
+                onTimeUpdateCapture={onMedia}
+                onPauseCapture={onMedia}
+                onEndedCapture={onMedia}
+                onSeekingCapture={onMedia}
+                onSeekedCapture={onMedia}
+                onWaitingCapture={onMedia}
+                onEmptiedCapture={onMedia}
+                onRateChangeCapture={onMedia}
+                onErrorCapture={onMedia}
               >
                 <div className="section-heading">
                   <div>
@@ -830,8 +901,14 @@ export default function PracticeStudio({
                               event.currentTarget.playbackRate = 1;
                             recordingSession.current.updatePosition();
                           }}
-                          onPlay={() => setPlaying(true)}
-                          onPlaying={(event) => claimRecordingSession(event.currentTarget)}
+                          onPlay={(event) => {
+                            if (canPractice()) setPlaying(true);
+                            else event.currentTarget.pause();
+                          }}
+                          onPlaying={(event) => {
+                            if (canPractice() && !event.currentTarget.paused)
+                              claimRecordingSession(event.currentTarget);
+                          }}
                           onTimeUpdate={() => recordingSession.current.updatePosition()}
                           onLoadedMetadata={() => recordingSession.current.updatePosition()}
                           onDurationChange={() => recordingSession.current.updatePosition()}
@@ -901,6 +978,7 @@ export default function PracticeStudio({
                 ) : tool !== 'free' ? (
                   <ListeningTrainer
                     ref={trainer}
+                    active={active}
                     key={tool}
                     preferences={preferences}
                     onChange={changePreferences}
@@ -1132,8 +1210,8 @@ export default function PracticeStudio({
                 {isSending && (
                   <p className="sending-save-help">
                     {automaticSave
-                      ? `Pause for a break, or Review & save when you finish. Switching tools or leaving the studio saves 30 seconds or more${accountId ? ' to your log' : ' on this device'}.`
-                      : 'Pause for a break, or Review & save when you finish. Save before leaving to keep your time linked to this exercise.'}
+                      ? `Inspect other views without saving. Finish practice or switch tools to save 30 seconds or more${accountId ? ' to your log' : ' on this device'}; Review & save includes shorter practice.`
+                      : 'Inspect other views without saving. Review & save before finishing or switching to keep your time linked to this exercise.'}
                   </p>
                 )}
                 {!assigned && tool === 'free' && (
@@ -1252,7 +1330,7 @@ export default function PracticeStudio({
                       </button>
                       <p className="studio-save-help">
                         {automaticSave
-                          ? `Review a session whenever you like. Switching tools or leaving the studio automatically saves 30 seconds or more of practice${accountId ? ' to your log' : ' on this device'}.`
+                          ? `Inspect other views without saving. Finish practice or switch tools to save 30 seconds or more${accountId ? ' to your log' : ' on this device'}. Review & save includes shorter practice.`
                           : launch?.task && onTaskCompletion
                             ? 'Review your measured time before saving, or choose Complete exercise to save it and mark this exercise done.'
                             : 'This opens a practice entry for you to review. Nothing is added to your log until you choose Save practice.'}
@@ -1310,7 +1388,7 @@ export default function PracticeStudio({
                       'Listening time follows the audio, including when your screen locks. '}
                     {automaticSave
                       ? 'Practice under 30 seconds is not logged automatically. Review and save before reloading to keep unfinished time.'
-                      : 'Review and save before leaving to keep your practice time.'}
+                      : 'Review and save before finishing or switching to keep your practice time.'}
                   </p>
                   <div className="studio-manual-log">
                     <h3>Already practiced?</h3>

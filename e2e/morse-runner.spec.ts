@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { accountRequest, expectAccessible, signIn } from './helpers';
 
+test.use({ hasTouch: true });
+
 test('assigned Morse Runner uses the real engine and saves one linked run', async ({
   page,
   context,
@@ -82,17 +84,47 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   expect(await frame.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'runner-mobile');
   await page.screenshot({ path: '.tmp/runner-mobile.png', fullPage: true });
-  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   // AudioContext uses a real audio-engine clock, so do not fast-forward JS time.
   await run.click();
   await expect(runner.getByRole('button', { name: /Stop$/ })).toBeEnabled();
   await expect.poll(async () => await runner.locator('#clock').textContent()).not.toBe('00:00:00');
-  await page.getByRole('button', { name: 'Stop run', exact: true }).click();
-  await expect(runner.getByRole('button', { name: 'Run finished', exact: true })).toBeDisabled();
-  page.once('dialog', (dialog) => dialog.dismiss());
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.getByRole('button', { name: 'Inspect Today', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(
+    runner.getByRole('button', { name: 'Run finished', exact: true, includeHidden: true }),
+  ).toBeDisabled();
+  const stoppedClock = await runner.locator('#clock').textContent();
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
+  await retained.getByRole('button', { name: 'Return to practice', exact: true }).focus();
+  await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#practice$/);
+  expect(page.frames()).toContain(frame);
+  await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Inspect this week', exact: true }).tap();
+  await retained.getByRole('button', { name: 'Inspect report', exact: true }).tap();
+  const report = page.getByRole('dialog');
+  await expect(report).toBeVisible();
+  await expectAccessible(page, 'runner-retained-report-mobile');
+  await page.screenshot({ path: '.tmp/runner-retained-report-mobile.png', fullPage: true });
+  await report.getByRole('button', { name: 'Return to practice', exact: true }).tap();
+  await expect(page).toHaveURL(/#practice$/);
+  expect(page.frames()).toContain(frame);
+  await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
+  await expect(page.getByRole('button', { name: 'Stop run', exact: true })).toBeDisabled();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole('button', { name: 'Inspect Today', exact: true }).click();
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await row.getByRole('button', { name: 'Extra review', exact: true }).click();
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(retained).toContainText('Morse Runner: single calls');
+  await retained.getByRole('button', { name: 'Return to practice', exact: true }).click();
+  expect(page.frames()).toContain(frame);
+  await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
   await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'simulator',
