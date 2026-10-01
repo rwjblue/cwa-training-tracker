@@ -370,7 +370,13 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
     const corrected = evidenceTime(result);
     if (corrected.recallSeconds > corrected.seconds)
       throw new Error('Corrected recall time cannot exceed corrected total practice time.');
-    if (exceedsListening(corrected.seconds, corrected.recallSeconds))
+    // Preserve the addition order at the historical v1 correction boundary:
+    // subtraction can reject an older valid omitted/zero-pass measurement.
+    if (
+      hasCompletedPasses
+        ? exceedsListening(corrected.seconds, corrected.recallSeconds)
+        : corrected.seconds + 0.001 < recordingSeconds + corrected.recallSeconds
+    )
       throw new Error(
         'Corrected total must include the measured recording time and corrected recall.',
       );

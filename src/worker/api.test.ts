@@ -2969,6 +2969,74 @@ describe('assigned recording pass evidence', () => {
     expect((await exportFor(auth.cookie)).sessions).toEqual(exported.sessions);
   });
 
+  it.each(['omitted', 'zero'] as const)(
+    'preserves historical correction tolerance for %s passes through save and portable imports',
+    async (passState) => {
+      const auth = await signIn(`recording-pass-old-correction-${passState}@example.test`);
+      const recordingSeconds = 5 + 0.001 - 5;
+      // The previously accepted addition comparison retains this v1 rounding boundary.
+      expect(recordingSeconds).toBeGreaterThan(0.001);
+      const recording: RecordingEvidence = {
+        url: 'https://example.test/old.wav',
+        seconds: recordingSeconds,
+      };
+      if (passState === 'zero') {
+        recording.passes = {
+          version: 1,
+          method: 'native-1x',
+          durations: [{ durationSeconds: 1, completedPasses: 0 }],
+        };
+      }
+      const rawEvidence: Extract<PracticeEvidence, { type: 'timed' }> = {
+        version: 1,
+        type: 'timed',
+        measurement: { seconds: 5.001, recallSeconds: 5 },
+        recordings: [recording],
+      };
+      const input: PracticeSession = {
+        ...entry(`old-correction-${passState}`),
+        kind: 'listening',
+        source: 'timer',
+        minutes: 5.001 / 60,
+        metadata: { evidence: rawEvidence },
+      };
+      const created = await request('/api/entries', 'POST', input, auth.cookie);
+      expect(created.status).toBe(201);
+      const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+      expect(saved.metadata?.evidence).toEqual(rawEvidence);
+      const correction = { seconds: 5, recallSeconds: 5, reason: 'Historical correction' };
+      const updated = await request(
+        `/api/entries/${saved.id}`,
+        'PUT',
+        {
+          ...saved,
+          metadata: {
+            ...saved.metadata,
+            evidence: { ...rawEvidence, correction },
+          },
+        },
+        auth.cookie,
+      );
+      expect(updated.status).toBe(200);
+      const corrected = ((await updated.json()) as { entry: PracticeSession }).entry;
+      expect(corrected.id).toBe(input.id);
+      expect(corrected.minutes).toBe(5 / 60);
+      expect(corrected.metadata?.evidence).toEqual({ ...rawEvidence, correction });
+      if (passState === 'omitted') expect(recording).not.toHaveProperty('passes');
+      else expect(recording.passes?.durations[0].completedPasses).toBe(0);
+      const exported = await exportFor(auth.cookie);
+      expect(exported.version).toBe(1);
+      expect(exported.sessions).toEqual([corrected]);
+      for (const mode of ['merge', 'replace']) {
+        expect(
+          (await request('/api/import', 'POST', { mode, data: exported }, auth.cookie)).status,
+        ).toBe(200);
+        expect((await exportFor(auth.cookie)).sessions).toEqual([corrected]);
+        expect(stored(auth.user.id).map((row) => row.id)).toEqual([input.id]);
+      }
+    },
+  );
+
   it('scopes pass-bearing saves and task attribution to the authenticated owner without completing tasks', async () => {
     const owner = await signIn('recording-pass-owner@example.test');
     const foreign = await signIn('recording-pass-foreign@example.test');

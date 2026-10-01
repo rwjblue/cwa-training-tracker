@@ -251,6 +251,52 @@ describe('non-copy native evidence', () => {
     expect(recordingCompletedPasses(evidence.recordings[0])).toBeUndefined();
   });
 
+  it.each([
+    { label: 'unmeasured', passes: undefined },
+    {
+      label: 'measured zero',
+      passes: {
+        version: 1,
+        method: 'native-1x',
+        durations: [{ durationSeconds: 1, completedPasses: 0 }],
+      },
+    },
+  ])('preserves older $label corrected timing at the floating-point boundary', ({ passes }) => {
+    const rawSeconds = 5 + 0.001;
+    const recording = {
+      url: 'https://example.test/old.wav',
+      seconds: rawSeconds - 5,
+      ...(passes ? { passes } : {}),
+    };
+    // This exact source value was accepted by the original addition comparison.
+    expect(recording.seconds).toBeGreaterThan(0.001);
+    const correction = { seconds: 5, recallSeconds: 5, reason: 'Historical correction' };
+    const corrected = validatePracticeSession(
+      session({
+        ...timed(),
+        measurement: { seconds: rawSeconds, recallSeconds: 5 },
+        recordings: [recording],
+        correction,
+      }),
+    );
+    expect(corrected.minutes).toBe(5 / 60);
+    expect(corrected.metadata?.evidence).toMatchObject({
+      measurement: { seconds: rawSeconds, recallSeconds: 5 },
+      recordings: [recording],
+      correction,
+    });
+    const evidence = sessionEvidence(corrected.metadata)!;
+    if (evidence.type !== 'timed') throw new Error('Expected timed evidence.');
+    expect(recordingCompletedPasses(evidence.recordings[0])).toBe(passes ? 0 : undefined);
+    const backup = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: corrected.createdAt,
+      sessions: [corrected],
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(backup)))).toEqual(backup);
+  });
+
   it('retains changed-duration native pass groups through aliases, correction and old v1 backup', () => {
     const passes: RecordingPassEvidence = {
       version: 1,
