@@ -21,6 +21,14 @@ history, while unfinished scripts, custom lists, time and notes still have no du
 recovery. Runner's scratchpad-only switch guard and official-audio detach cleanup are
 fixed. See the [canonical inventory](../trainer-parity.md) for these cross-cutting updates.
 
+On 2026-09-30, a subsequent explicit spoken-audio request replaced device speech
+with checked-in generated answers, composing each complete round into one native
+WAV. All built-in words have clips; custom spoken lists require those words.
+Real browser playback covers progression, loop seams, seek/pause controls and
+hidden-page handling at desktop/mobile widths. Physical iPhone verification and
+prebuilt compact MP3 optimization remain outstanding. A shuffled round loops its
+current order; New round creates a fresh shuffle. See [provenance](../spoken-audio.md).
+
 On 2026-09-30, sending gained a native scales reader with selectable prescribed
 sections, adjustable text size, and Bob Carter WR7Q’s PDF link. Start no longer
 opens a tab for scales. The public studio also offers all three sections, and

@@ -96,7 +96,13 @@ behavior. Before claiming a release is verified for locked iOS playback, use a
 physical iPhone: start a Morse-only round in Safari, lock for at least one full
 word/transmission boundary, exercise the lock-screen pause/resume controls, then
 unlock and confirm the transcript follows the actual audio position. Repeat with
-an official recording. Test local spoken answers separately with the page open.
+an official recording. Repeat with Three repeats + spoken answer enabled,
+including the answer, next word, and list loop seam while locked. Checked-in
+speech tests validate vocabulary coverage, clip hashes/PCM format, three-repeat
+timing, silent gaps, answer samples, baked volume, duration limits, and fetch
+retry. Browser journeys use real prerecorded speech in the native WAV, with
+speechSynthesis unavailable, at desktop/mobile widths. Marking a document hidden
+checks our visibility handler; it does not prove OS background playback.
 Check the displayed lesson/selected recording title and CWA artwork on the phone
 as well. Browser journeys should inspect actual Media Session metadata and decode
 the artwork URLs; shared-controller tests cover platform actions and ownership

@@ -10,6 +10,8 @@ import {
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { buildMorseTrack, MorsePlayer, morseTimeline, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
+import { buildSpokenWordTrack } from './morse-track';
+import { loadWordSpeech } from './word-speech';
 import QsoCopy from './QsoCopy';
 import type { PracticePreferences } from './practice-preferences';
 import { WORD_LISTS, wordPracticeRound, type WordList } from './word-content';
@@ -66,11 +68,14 @@ export default forwardRef<
   const prepared = useRef<MorseTrack | null>(null);
   const [mediaReady, setMediaReady] = useState(false);
   const [activeWord, setActiveWord] = useState(-1);
-  const generation = useRef(0);
-  const waiting = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const index = useRef(0);
   const round = useRef<string[]>([]);
-  const speaking = useRef(false);
+  const [speech, setSpeech] = useState<{
+    words: string[];
+    clips?: Map<string, Float32Array>;
+    error?: string;
+  } | null>(null);
+  const [speechAttempt, setSpeechAttempt] = useState(0);
   const isWords = p.tool === 'words';
   const checkingCopy = !isWords && copyMode;
   // Object identity prevents a newly generated contact revealing old answers for one frame.
@@ -78,13 +83,7 @@ export default forwardRef<
   const hideTranscript = checkingCopy ? !copyRevealed : p.hideTrainerText && !answer;
   const listTitle = p.wordList === 'custom' ? 'Your word list' : WORD_LISTS[p.wordList].title;
   const stop = () => {
-    generation.current++;
-    clearTimeout(waiting.current);
     player.current.pause();
-    if (speaking.current) {
-      window.speechSynthesis?.cancel();
-      speaking.current = false;
-    }
     setActive(false);
     onPlaying(false);
   };
@@ -123,148 +122,45 @@ export default forwardRef<
   useEffect(() => {
     if (audio.current) player.current.attach(audio.current);
   }, []);
-  useEffect(
-    () => () => {
-      generation.current++;
-      clearTimeout(waiting.current);
-      player.current.dispose();
-      if (speaking.current) window.speechSynthesis?.cancel();
-    },
-    [],
-  );
+  useEffect(() => () => player.current.dispose(), []);
+  useEffect(() => {
+    if (!isWords || !p.spokenAnswers || !words.length) {
+      setSpeech(null);
+      return;
+    }
+    let cancelled = false;
+    setSpeech(null);
+    void loadWordSpeech(words).then(
+      (clips) => {
+        if (!cancelled) setSpeech({ words, clips });
+      },
+      (error: Error) => {
+        if (!cancelled) setSpeech({ words, error: error.message });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [words, isWords, p.spokenAnswers, speechAttempt]);
 
-  const playSpoken = async () => {
-    if (!canPlay()) return;
-    stop();
-    const token = generation.current;
-    const valid = () => generation.current === token && canPlay();
-    if (!round.current.length) {
-      round.current = isWords ? wordPracticeRound(p.wordList, custom, p.shuffleWords) : qso.lines;
-      if (isWords) setWords(round.current);
-    }
-    if (index.current >= round.current.length) index.current = 0;
-    setComplete(false);
-    setActive(true);
-    onPlaying(true);
-    const fail = (error: unknown) => {
-      if (!valid()) return;
-      stop();
-      onError(
-        error instanceof Error ? error.message : 'Audio was interrupted. Press Play to retry.',
-      );
-    };
-    const later = (fn: () => void, seconds: number) => {
-      if (valid())
-        waiting.current = setTimeout(() => {
-          if (valid()) fn();
-        }, seconds * 1000);
-    };
-    const send = async (): Promise<void> => {
-      if (!valid()) return;
-      let repeat = 0;
-      const word = round.current[index.current];
-      setPosition(index.current);
-      setAnswer(false);
-      const gap = isWords
-        ? morseTimeline(word, p.characterWpm, p.effectiveWpm).wordGap + p.wordGap
-        : 2;
-      const advance = () => {
-        if (!valid()) return;
-        index.current++;
-        if (index.current >= round.current.length) {
-          if (isWords && p.repeatList) {
-            round.current = wordPracticeRound(p.wordList, custom, p.shuffleWords);
-            setWords(round.current);
-            index.current = 0;
-          } else {
-            setComplete(true);
-            setActive(false);
-            onPlaying(false);
-            return;
-          }
-        }
-        void send().catch(fail);
-      };
-      const finish = () => {
-        if (!valid()) return;
-        if (isWords && p.spokenAnswers && repeat < 2) {
-          repeat++;
-          later(() => {
-            // Reuse the loaded word; replacing its source between repetitions can
-            // interrupt native playback even though the sequence is still active.
-            void player.current.resume().catch(fail);
-          }, gap);
-          return;
-        }
-        if (isWords && p.spokenAnswers) {
-          setAnswer(true);
-          const voice = window.speechSynthesis
-            ?.getVoices()
-            .find((voice) => voice.localService && /^en(?:-|_|$)/i.test(voice.lang));
-          if (!voice) {
-            fail(
-              new Error(
-                'No local English voice is available. Turn spoken answers off to continue in Morse.',
-              ),
-            );
-            return;
-          }
-          const utterance = new SpeechSynthesisUtterance(word);
-          utterance.voice = voice;
-          utterance.lang = 'en-US';
-          utterance.volume = p.volume / 100;
-          utterance.onend = () => {
-            if (!valid()) return;
-            speaking.current = false;
-            later(advance, gap);
-          };
-          utterance.onerror = () => {
-            if (!valid()) return;
-            speaking.current = false;
-            fail(new Error('Spoken answers are unavailable. Turn them off to continue in Morse.'));
-          };
-          later(
-            () => {
-              speaking.current = true;
-              window.speechSynthesis.speak(utterance);
-            },
-            morseTimeline(word, p.characterWpm, p.effectiveWpm).wordGap,
-          );
-        } else later(advance, gap);
-      };
-      // Alternating station pitches help distinguish turns while keeping your preferred sidetone.
-      const pitch = !isWords && index.current % 2 ? Math.min(1000, p.tone + 50) : p.tone;
-      player.current.prepare(
-        buildMorseTrack([{ text: word }], {
-          characterWpm: p.characterWpm,
-          effectiveWpm: p.effectiveWpm,
-          frequency: pitch,
-          volume: p.volume / 100,
-        }),
-        {
-          title: listTitle,
-          canPlay,
-          onFinish: finish,
-          // Native/lock-screen pause must cancel the foreground speech sequence too.
-          onState: (state) => {
-            if (state === 'paused' && valid()) stop();
-          },
-          onError: (message) => fail(new Error(message)),
-        },
-      );
-      await player.current.resume();
-    };
-    try {
-      await send();
-    } catch (error) {
-      fail(error);
-      throw error;
-    }
-  };
   const trackResult = useMemo(() => {
     const items = isWords ? words : qso.lines;
     if (!items.length) return { track: null, error: '' };
     try {
+      if (isWords && p.spokenAnswers) {
+        if (speech?.words !== words || !speech.clips)
+          return { track: null, error: speech?.words === words ? (speech.error ?? '') : '' };
+        return {
+          track: buildSpokenWordTrack(words, speech.clips, {
+            characterWpm: p.characterWpm,
+            effectiveWpm: p.effectiveWpm,
+            frequency: p.tone,
+            volume: p.volume / 100,
+            extraWordGap: p.wordGap,
+          }),
+          error: '',
+        };
+      }
       const track = buildMorseTrack(
         items.map((text, i) => ({
           text,
@@ -284,10 +180,30 @@ export default forwardRef<
     } catch (error) {
       return { track: null, error: (error as Error).message };
     }
-  }, [words, qso, isWords, p.characterWpm, p.effectiveWpm, p.tone, p.volume, p.wordGap]);
+  }, [
+    words,
+    qso,
+    isWords,
+    speech,
+    p.spokenAnswers,
+    p.characterWpm,
+    p.effectiveWpm,
+    p.tone,
+    p.volume,
+    p.wordGap,
+  ]);
   const { track } = trackResult;
   const prepare = () => {
-    if (!track) throw new Error(roundError || trackResult.error || 'Add some words to play.');
+    if (!track) {
+      if (isWords && p.spokenAnswers && words.length) {
+        if (speech?.error) setSpeechAttempt((attempt) => attempt + 1);
+        throw new Error(
+          trackResult.error ||
+            'Spoken answers are loading. Press Play when the recording is ready.',
+        );
+      }
+      throw new Error(roundError || trackResult.error || 'Add some words to play.');
+    }
     if (prepared.current === track) return;
     // Preparing reports position zero synchronously; preserve the requested item first.
     const start = track.items[index.current]?.start ?? 0;
@@ -297,6 +213,8 @@ export default forwardRef<
       loop: isWords && p.repeatList,
       onProgress: (progress) => {
         setActiveWord(progress.wordIndex);
+        const answerStart = track.words[progress.wordIndex]?.answerStart;
+        setAnswer(answerStart !== undefined && progress.position >= answerStart);
         if (progress.itemIndex >= 0) {
           index.current = progress.itemIndex;
           setPosition(progress.itemIndex);
@@ -321,11 +239,6 @@ export default forwardRef<
   };
   const play = async () => {
     if (!canPlay()) return;
-    if (isWords && p.spokenAnswers) {
-      prepared.current = null;
-      setMediaReady(false);
-      return playSpoken();
-    }
     prepare();
     setAnswer(false);
     await player.current.resume();
@@ -346,13 +259,6 @@ export default forwardRef<
   };
   const seekWord = (word: number) => {
     if (!canPlay()) return;
-    if (isWords && p.spokenAnswers) {
-      stop();
-      index.current = track?.words[word]?.itemIndex ?? 0;
-      setPosition(index.current);
-      void playSpoken().catch((error: Error) => onError(error.message));
-      return;
-    }
     try {
       prepare();
       player.current.seekWord(word);
@@ -361,9 +267,6 @@ export default forwardRef<
       onError((error as Error).message);
     }
   };
-  // Spoken rounds update words when they loop. That changes the transcript track,
-  // but must not clear the short recording that the new round has just started.
-  const nativeTrack = isWords && p.spokenAnswers ? null : track;
   // Never leave a native source with settings/text different from the visible transcript.
   useEffect(() => {
     stop();
@@ -374,7 +277,7 @@ export default forwardRef<
     setAnswer(false);
     setComplete(false);
   }, [
-    nativeTrack,
+    track,
     p.characterWpm,
     p.effectiveWpm,
     p.tone,
@@ -383,14 +286,6 @@ export default forwardRef<
     p.repeatList,
     p.spokenAnswers,
   ]);
-  useEffect(() => {
-    if (!(isWords && p.spokenAnswers)) return;
-    const visibility = () => {
-      if (document.hidden) stop();
-    };
-    document.addEventListener('visibilitychange', visibility);
-    return () => document.removeEventListener('visibilitychange', visibility);
-  }, [isWords, p.spokenAnswers]);
   useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
   const step = (delta: number) => {
     stop();
@@ -526,7 +421,6 @@ export default forwardRef<
             <input
               type="checkbox"
               checked={p.spokenAnswers}
-              disabled={typeof window.speechSynthesis === 'undefined'}
               onChange={(e) => onChange({ spokenAnswers: e.target.checked })}
             />{' '}
             Three repeats + spoken answer
@@ -535,11 +429,15 @@ export default forwardRef<
       )}
       {isWords && p.spokenAnswers && (
         <p className="field-hint">
-          Uses a local English voice on your device when available. Each word plays three times
-          before the answer. Keep this page open for spoken answers; Morse-only rounds use the
-          native audio player for background listening.
+          Each word plays three times, followed by a prerecorded answer. The whole round uses the
+          native audio player, including repeats and pauses, for background listening. Custom lists
+          can use words from either built-in list.
         </p>
       )}
+      {isWords && p.spokenAnswers && words.length > 0 && !track && !trackResult.error && (
+        <p role="status">Loading prerecorded answers…</p>
+      )}
+      {trackResult.error && <p role="alert">{trackResult.error}</p>}
       {soundSettings}
       <div className="transmission-panel trainer-transmission">
         <div className="transmission-label">
@@ -562,7 +460,7 @@ export default forwardRef<
                 ? 'Listen, then fill in the station details below. Answers stay hidden until you choose Show answers.'
                 : 'Listen first. Reveal when you’re ready.'}
             </p>
-          ) : track && !(isWords && p.spokenAnswers) ? (
+          ) : track ? (
             <MorseTranscript
               track={track}
               activeWord={activeWord}
@@ -605,14 +503,8 @@ export default forwardRef<
               : 'Pause keeps your place. Select any word to listen from there.'}
         </span>
       </div>
-      <div className="native-morse-player" hidden={!mediaReady || (isWords && p.spokenAnswers)}>
-        <audio
-          ref={audio}
-          controls
-          hidden={isWords && p.spokenAnswers}
-          preload="metadata"
-          aria-label="Practice audio"
-        />
+      <div className="native-morse-player" hidden={!mediaReady}>
+        <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
       </div>
       {!isWords && (
         <section

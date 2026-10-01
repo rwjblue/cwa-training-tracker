@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate checked-in spoken word answers with local Kokoro inference"
+set -euo pipefail
+uv run --project scripts/cw-training/speech python scripts/cw-training/speech/generate.py "$@"

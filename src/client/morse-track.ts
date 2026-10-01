@@ -9,6 +9,8 @@ export interface MorseWord {
   end: number;
   itemIndex: number;
   indexInItem: number;
+  /** Start of the prerecorded answer, when this word includes spoken recognition. */
+  answerStart?: number;
 }
 export interface MorseTrack {
   words: MorseWord[];
@@ -16,6 +18,7 @@ export interface MorseTrack {
   tones: { at: number; duration: number; frequency: number }[];
   duration: number;
   volume: number;
+  speech?: { at: number; samples: Float32Array }[];
 }
 export interface MorseTrackItem {
   text: string;
@@ -102,9 +105,12 @@ export function wordAtTime(track: MorseTrack, seconds: number): number {
   if (!Number.isFinite(seconds) || seconds < 0 || seconds >= track.duration) return -1;
   let low = 0;
   let high = track.words.length - 1;
+  // Native media can round currentTime to microseconds after a seek. Compare
+  // rendered PCM frames so seeking a word cannot select its preceding pause.
+  const frame = Math.round(seconds * MORSE_SAMPLE_RATE);
   while (low <= high) {
     const middle = (low + high) >>> 1;
-    if (track.words[middle].start <= seconds) low = middle + 1;
+    if (Math.round(track.words[middle].start * MORSE_SAMPLE_RATE) <= frame) low = middle + 1;
     else high = middle - 1;
   }
   return high;
@@ -156,5 +162,66 @@ export function renderMorseWav(track: MorseTrack): Blob {
       view.setInt16(44 + i * 2, Math.round(sample * envelope * track.volume * 0.2 * 32767), true);
     }
   }
+  for (const clip of track.speech ?? []) {
+    const start = Math.round(clip.at * MORSE_SAMPLE_RATE);
+    if (
+      !Number.isFinite(clip.at) ||
+      clip.at < 0 ||
+      !clip.samples.length ||
+      start + clip.samples.length > frames
+    )
+      throw new Error('This recording has invalid spoken answer timing.');
+    for (let i = 0; i < clip.samples.length; i++) {
+      const sample = clip.samples[i];
+      if (!Number.isFinite(sample)) throw new Error('This recording has invalid spoken audio.');
+      view.setInt16(
+        44 + (start + i) * 2,
+        Math.round(Math.max(-1, Math.min(1, sample)) * track.volume * 32767),
+        true,
+      );
+    }
+  }
   return new Blob([bytes], { type: 'audio/wav' });
+}
+
+/** Compose every repeat, answer, and pause before handing one recording to native media. */
+export function buildSpokenWordTrack(
+  words: readonly string[],
+  clips: ReadonlyMap<string, Float32Array>,
+  options: MorseTrackOptions,
+): MorseTrack {
+  // Shared validation also bounds the word list before constructing the longer round.
+  buildMorseTrack(
+    words.map((text) => ({ text })),
+    options,
+  );
+  const track: MorseTrack = {
+    words: [],
+    items: [],
+    tones: [],
+    speech: [],
+    duration: 0,
+    volume: options.volume,
+  };
+  for (const [itemIndex, text] of words.entries()) {
+    const samples = clips.get(text);
+    if (!samples?.length || samples.length > MORSE_SAMPLE_RATE * 10)
+      throw new Error(`No valid prerecorded answer for ${text}.`);
+    const timeline = morseTimeline(text, options.characterWpm, options.effectiveWpm);
+    const start = track.duration;
+    const gap = timeline.wordGap + (options.extraWordGap ?? 0);
+    for (let repeat = 0; repeat < 3; repeat++) {
+      for (const tone of timeline.tones)
+        track.tones.push({ ...tone, at: track.duration + tone.at, frequency: options.frequency });
+      track.duration += timeline.duration + (repeat < 2 ? gap : timeline.wordGap);
+    }
+    const answerStart = track.duration;
+    track.speech!.push({ at: answerStart, samples });
+    const end = answerStart + samples.length / MORSE_SAMPLE_RATE;
+    track.words.push({ text, start, end, itemIndex, indexInItem: 0, answerStart });
+    track.items.push({ text, start, end });
+    track.duration = end + gap;
+    if (track.duration > MAX_MORSE_SECONDS) throw tooLong();
+  }
+  return track;
 }

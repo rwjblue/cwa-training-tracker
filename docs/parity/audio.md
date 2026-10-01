@@ -30,10 +30,18 @@ session. The 192/512 PNGs are raster exports of `public/favicon.svg`. Browser
 journeys cover official speed switches, generated-track titles, artwork decoding,
 pause state, and teardown. This does not establish physical iPhone appearance.
 
+**Prerecorded spoken follow-up (2026-09-30):** both public word lists now have
+checked-in generated WAV answers. Three Morse plays, speech and all pauses are
+spliced into one native track; native looping, seeking, pause/resume and actual
+media-derived time work together. Browser speech and the hidden-page stop are
+removed. Custom spoken words require published clips. Tests use real recordings;
+physical iPhone lock-screen verification and prebuilt MP3 optimization remain
+outstanding. See [provenance](../spoken-audio.md).
+
 **Still missing or partial:** unfinished scratchpad/time recovery and offline saves,
 per-task remembered speed overrides, actual completed passes/coverage, difficult marks,
-short replay controls, full generated-player retiming continuity, background spoken
-answers, and complete advisor-report integration. Scratchpad is **in memory until saved**.
+short replay controls, full generated-player retiming continuity, and complete
+advisor-report integration. Scratchpad is **in memory until saved**.
 No physical locked-iOS verification is claimed.
 
 Updated source: [clock](../../src/client/practice-clock.ts),

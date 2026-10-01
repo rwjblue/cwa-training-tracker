@@ -11,8 +11,9 @@ CWops. Official course material stays at the
 
 - A word trainer with 70 common QSO words, 30 common English words, or your own
   list. Shuffle, repeat, adjust pauses, and optionally hear three Morse repeats
-  followed by an answer from a local English voice on your device (keep the page
-  open for spoken answers).
+  followed by a prerecorded answer. Repeats, answers, and pauses play as one
+  native recording for background listening. Custom spoken lists use the built-in
+  vocabulary.
 - Randomly generated contacts in four QSO scenarios: first contact,
   rigs/antennas/weather, POTA, and asking for repeats. Each New QSO combines
   different station details; replay keeps the same contact. Illustrative call-area

@@ -1,0 +1,508 @@
+{
+  "version": 1,
+  "generator": {
+    "engine": "kokoro-onnx",
+    "model": "kokoro-v1.0.onnx",
+    "voice": "af_heart",
+    "language": "en-us",
+    "speed": 1
+  },
+  "words": [
+    {
+      "word": "73",
+      "pronunciation": "seventy three",
+      "path": "public/audio/cw-training/words/73.wav"
+    },
+    {
+      "word": "88",
+      "pronunciation": "eighty eight",
+      "path": "public/audio/cw-training/words/88.wav"
+    },
+    {
+      "word": "A",
+      "pronunciation": "ay",
+      "path": "public/audio/cw-training/words/a.wav"
+    },
+    {
+      "word": "ABT",
+      "pronunciation": "about",
+      "path": "public/audio/cw-training/words/abt.wav"
+    },
+    {
+      "word": "AGE",
+      "pronunciation": "age",
+      "path": "public/audio/cw-training/words/age.wav"
+    },
+    {
+      "word": "AGN",
+      "pronunciation": "again",
+      "path": "public/audio/cw-training/words/agn.wav"
+    },
+    {
+      "word": "AN",
+      "pronunciation": "an",
+      "path": "public/audio/cw-training/words/an.wav"
+    },
+    {
+      "word": "AND",
+      "pronunciation": "and",
+      "path": "public/audio/cw-training/words/and.wav"
+    },
+    {
+      "word": "ANT",
+      "pronunciation": "A N T",
+      "path": "public/audio/cw-training/words/ant.wav"
+    },
+    {
+      "word": "AR",
+      "pronunciation": "A R",
+      "path": "public/audio/cw-training/words/ar.wav"
+    },
+    {
+      "word": "ARE",
+      "pronunciation": "are",
+      "path": "public/audio/cw-training/words/are.wav"
+    },
+    {
+      "word": "AS",
+      "pronunciation": "as",
+      "path": "public/audio/cw-training/words/as.wav",
+      "phonemes": "\u02c8\u00e6z"
+    },
+    {
+      "word": "AT",
+      "pronunciation": "at",
+      "path": "public/audio/cw-training/words/at.wav"
+    },
+    {
+      "word": "BE",
+      "pronunciation": "be",
+      "path": "public/audio/cw-training/words/be.wav"
+    },
+    {
+      "word": "BEAM",
+      "pronunciation": "beam",
+      "path": "public/audio/cw-training/words/beam.wav"
+    },
+    {
+      "word": "BK",
+      "pronunciation": "B K",
+      "path": "public/audio/cw-training/words/bk.wav"
+    },
+    {
+      "word": "BT",
+      "pronunciation": "B T",
+      "path": "public/audio/cw-training/words/bt.wav"
+    },
+    {
+      "word": "BUT",
+      "pronunciation": "but",
+      "path": "public/audio/cw-training/words/but.wav"
+    },
+    {
+      "word": "BY",
+      "pronunciation": "by",
+      "path": "public/audio/cw-training/words/by.wav"
+    },
+    {
+      "word": "CALL",
+      "pronunciation": "call",
+      "path": "public/audio/cw-training/words/call.wav"
+    },
+    {
+      "word": "CL",
+      "pronunciation": "closing station",
+      "path": "public/audio/cw-training/words/cl.wav"
+    },
+    {
+      "word": "CPY",
+      "pronunciation": "copy",
+      "path": "public/audio/cw-training/words/cpy.wav"
+    },
+    {
+      "word": "CQ",
+      "pronunciation": "C Q",
+      "path": "public/audio/cw-training/words/cq.wav"
+    },
+    {
+      "word": "CW",
+      "pronunciation": "C W",
+      "path": "public/audio/cw-training/words/cw.wav"
+    },
+    {
+      "word": "DE",
+      "pronunciation": "this is",
+      "path": "public/audio/cw-training/words/de.wav"
+    },
+    {
+      "word": "DIPOLE",
+      "pronunciation": "dipole",
+      "path": "public/audio/cw-training/words/dipole.wav"
+    },
+    {
+      "word": "DX",
+      "pronunciation": "D X",
+      "path": "public/audio/cw-training/words/dx.wav"
+    },
+    {
+      "word": "EL",
+      "pronunciation": "E L",
+      "path": "public/audio/cw-training/words/el.wav"
+    },
+    {
+      "word": "ES",
+      "pronunciation": "and",
+      "path": "public/audio/cw-training/words/es.wav"
+    },
+    {
+      "word": "FB",
+      "pronunciation": "F B",
+      "path": "public/audio/cw-training/words/fb.wav"
+    },
+    {
+      "word": "FOR",
+      "pronunciation": "for",
+      "path": "public/audio/cw-training/words/for.wav"
+    },
+    {
+      "word": "FROM",
+      "pronunciation": "from",
+      "path": "public/audio/cw-training/words/from.wav"
+    },
+    {
+      "word": "HAS",
+      "pronunciation": "has",
+      "path": "public/audio/cw-training/words/has.wav"
+    },
+    {
+      "word": "HAVE",
+      "pronunciation": "have",
+      "path": "public/audio/cw-training/words/have.wav"
+    },
+    {
+      "word": "HE",
+      "pronunciation": "he",
+      "path": "public/audio/cw-training/words/he.wav"
+    },
+    {
+      "word": "HI",
+      "pronunciation": "laughing",
+      "path": "public/audio/cw-training/words/hi.wav"
+    },
+    {
+      "word": "HIS",
+      "pronunciation": "his",
+      "path": "public/audio/cw-training/words/his.wav"
+    },
+    {
+      "word": "HR",
+      "pronunciation": "here",
+      "path": "public/audio/cw-training/words/hr.wav"
+    },
+    {
+      "word": "HW?",
+      "pronunciation": "how copy?",
+      "path": "public/audio/cw-training/words/hw-question.wav"
+    },
+    {
+      "word": "I",
+      "pronunciation": "eye",
+      "path": "public/audio/cw-training/words/i.wav"
+    },
+    {
+      "word": "IN",
+      "pronunciation": "in",
+      "path": "public/audio/cw-training/words/in.wav"
+    },
+    {
+      "word": "IS",
+      "pronunciation": "is",
+      "path": "public/audio/cw-training/words/is.wav"
+    },
+    {
+      "word": "IT",
+      "pronunciation": "it",
+      "path": "public/audio/cw-training/words/it.wav"
+    },
+    {
+      "word": "K",
+      "pronunciation": "K",
+      "path": "public/audio/cw-training/words/k.wav"
+    },
+    {
+      "word": "KN",
+      "pronunciation": "K N",
+      "path": "public/audio/cw-training/words/kn.wav"
+    },
+    {
+      "word": "LID",
+      "pronunciation": "lid",
+      "path": "public/audio/cw-training/words/lid.wav"
+    },
+    {
+      "word": "LOOP",
+      "pronunciation": "loop",
+      "path": "public/audio/cw-training/words/loop.wav"
+    },
+    {
+      "word": "NAME",
+      "pronunciation": "name",
+      "path": "public/audio/cw-training/words/name.wav"
+    },
+    {
+      "word": "NOT",
+      "pronunciation": "not",
+      "path": "public/audio/cw-training/words/not.wav"
+    },
+    {
+      "word": "NR",
+      "pronunciation": "number",
+      "path": "public/audio/cw-training/words/nr.wav"
+    },
+    {
+      "word": "OF",
+      "pronunciation": "of",
+      "path": "public/audio/cw-training/words/of.wav"
+    },
+    {
+      "word": "OM",
+      "pronunciation": "Old Man",
+      "path": "public/audio/cw-training/words/om.wav"
+    },
+    {
+      "word": "ON",
+      "pronunciation": "on",
+      "path": "public/audio/cw-training/words/on.wav"
+    },
+    {
+      "word": "OP",
+      "pronunciation": "operator",
+      "path": "public/audio/cw-training/words/op.wav"
+    },
+    {
+      "word": "OR",
+      "pronunciation": "or",
+      "path": "public/audio/cw-training/words/or.wav"
+    },
+    {
+      "word": "PKT",
+      "pronunciation": "packet",
+      "path": "public/audio/cw-training/words/pkt.wav"
+    },
+    {
+      "word": "PSE",
+      "pronunciation": "please",
+      "path": "public/audio/cw-training/words/pse.wav"
+    },
+    {
+      "word": "PWR",
+      "pronunciation": "P W R",
+      "path": "public/audio/cw-training/words/pwr.wav"
+    },
+    {
+      "word": "QRL",
+      "pronunciation": "Q R L",
+      "path": "public/audio/cw-training/words/qrl.wav"
+    },
+    {
+      "word": "QRM",
+      "pronunciation": "Q R M",
+      "path": "public/audio/cw-training/words/qrm.wav"
+    },
+    {
+      "word": "QRN",
+      "pronunciation": "Q R N",
+      "path": "public/audio/cw-training/words/qrn.wav"
+    },
+    {
+      "word": "QRP",
+      "pronunciation": "Q R P",
+      "path": "public/audio/cw-training/words/qrp.wav"
+    },
+    {
+      "word": "QRS",
+      "pronunciation": "Q R S",
+      "path": "public/audio/cw-training/words/qrs.wav"
+    },
+    {
+      "word": "QRT",
+      "pronunciation": "Q R T",
+      "path": "public/audio/cw-training/words/qrt.wav"
+    },
+    {
+      "word": "QRX",
+      "pronunciation": "Q R X",
+      "path": "public/audio/cw-training/words/qrx.wav"
+    },
+    {
+      "word": "QRZ",
+      "pronunciation": "Q R Z",
+      "path": "public/audio/cw-training/words/qrz.wav"
+    },
+    {
+      "word": "QSB",
+      "pronunciation": "Q S B",
+      "path": "public/audio/cw-training/words/qsb.wav"
+    },
+    {
+      "word": "QSL",
+      "pronunciation": "Q S L",
+      "path": "public/audio/cw-training/words/qsl.wav"
+    },
+    {
+      "word": "QSO",
+      "pronunciation": "Q S O",
+      "path": "public/audio/cw-training/words/qso.wav"
+    },
+    {
+      "word": "QSY",
+      "pronunciation": "Q S Y",
+      "path": "public/audio/cw-training/words/qsy.wav"
+    },
+    {
+      "word": "QTH",
+      "pronunciation": "Q T H",
+      "path": "public/audio/cw-training/words/qth.wav"
+    },
+    {
+      "word": "RIG",
+      "pronunciation": "rig",
+      "path": "public/audio/cw-training/words/rig.wav"
+    },
+    {
+      "word": "RPT",
+      "pronunciation": "R P T",
+      "path": "public/audio/cw-training/words/rpt.wav"
+    },
+    {
+      "word": "RR",
+      "pronunciation": "Roger Roger",
+      "path": "public/audio/cw-training/words/rr.wav"
+    },
+    {
+      "word": "RST",
+      "pronunciation": "R S T",
+      "path": "public/audio/cw-training/words/rst.wav"
+    },
+    {
+      "word": "RUNS",
+      "pronunciation": "runs",
+      "path": "public/audio/cw-training/words/runs.wav"
+    },
+    {
+      "word": "SK",
+      "pronunciation": "S K",
+      "path": "public/audio/cw-training/words/sk.wav"
+    },
+    {
+      "word": "TEMP",
+      "pronunciation": "temperature",
+      "path": "public/audio/cw-training/words/temp.wav"
+    },
+    {
+      "word": "TEST",
+      "pronunciation": "test",
+      "path": "public/audio/cw-training/words/test.wav"
+    },
+    {
+      "word": "THAT",
+      "pronunciation": "that",
+      "path": "public/audio/cw-training/words/that.wav"
+    },
+    {
+      "word": "THE",
+      "pronunciation": "the",
+      "path": "public/audio/cw-training/words/the.wav"
+    },
+    {
+      "word": "THEY",
+      "pronunciation": "they",
+      "path": "public/audio/cw-training/words/they.wav"
+    },
+    {
+      "word": "THIS",
+      "pronunciation": "this",
+      "path": "public/audio/cw-training/words/this.wav"
+    },
+    {
+      "word": "TKS",
+      "pronunciation": "thanks",
+      "path": "public/audio/cw-training/words/tks.wav"
+    },
+    {
+      "word": "TNX",
+      "pronunciation": "thanks",
+      "path": "public/audio/cw-training/words/tnx.wav"
+    },
+    {
+      "word": "TO",
+      "pronunciation": "to",
+      "path": "public/audio/cw-training/words/to.wav"
+    },
+    {
+      "word": "TU",
+      "pronunciation": "thank you",
+      "path": "public/audio/cw-training/words/tu.wav"
+    },
+    {
+      "word": "VERT",
+      "pronunciation": "vert",
+      "path": "public/audio/cw-training/words/vert.wav"
+    },
+    {
+      "word": "VVV",
+      "pronunciation": "V V V",
+      "path": "public/audio/cw-training/words/vvv.wav"
+    },
+    {
+      "word": "VY",
+      "pronunciation": "very",
+      "path": "public/audio/cw-training/words/vy.wav"
+    },
+    {
+      "word": "WAS",
+      "pronunciation": "was",
+      "path": "public/audio/cw-training/words/was.wav"
+    },
+    {
+      "word": "WATT",
+      "pronunciation": "watt",
+      "path": "public/audio/cw-training/words/watt.wav"
+    },
+    {
+      "word": "WIRE",
+      "pronunciation": "wire",
+      "path": "public/audio/cw-training/words/wire.wav"
+    },
+    {
+      "word": "WITH",
+      "pronunciation": "with",
+      "path": "public/audio/cw-training/words/with.wav"
+    },
+    {
+      "word": "WX",
+      "pronunciation": "weather",
+      "path": "public/audio/cw-training/words/wx.wav"
+    },
+    {
+      "word": "XYL",
+      "pronunciation": "X Y L",
+      "path": "public/audio/cw-training/words/xyl.wav"
+    },
+    {
+      "word": "YAGI",
+      "pronunciation": "yah ghee",
+      "path": "public/audio/cw-training/words/yagi.wav"
+    },
+    {
+      "word": "YL",
+      "pronunciation": "Y L",
+      "path": "public/audio/cw-training/words/yl.wav"
+    },
+    {
+      "word": "YRS",
+      "pronunciation": "years",
+      "path": "public/audio/cw-training/words/yrs.wav"
+    }
+  ]
+}
