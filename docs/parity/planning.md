@@ -372,6 +372,9 @@ Root typecheck, 496 tests across 37 files, build and all 49 serialized browser
 journeys passed before the implementation commit. Independent review passed five
 student workflows and 202 focused checks, and required the class-placement copy
 correction. Correction check, all 496 tests, build and all 49 browser journeys
-pass. Independent recheck and publication/deployment remain pending in the
-execution journal; no broader parity,
-elapsed-time recovery or physical-device claim is made.
+pass. Independent recheck accepted four fresh desktop/mobile workflows covering
+class save/edit and unavailable-storage exact retry. Both signed commits preserve
+the reviewed trees; production root/health, anonymous privacy and asset-hash
+verification pass. Issue #5 is closed, with publication/deployment evidence in
+the execution journal. No broader parity, elapsed-time recovery or physical-device
+claim is made.

@@ -296,9 +296,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   deployment and production checks. Bounded control admission, retained receipts,
   portable authority exclusion and browser-emulation limits remain documented.
 
-## Remaining queue
-
-### Issue #5 — review correction under validation
+## Issue #5 — captured extra review and required practice credit
 
 - Refreshed the live finding-10 body, comments and dependencies after #4 closed:
   OPEN, no comments, no native blocker; body dependency #1 is accepted/closed.
@@ -340,14 +338,36 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   class placement and restoration of ordinary review copy. Correction check,
   all 496 tests across 37 files and build pass; all 49 serialized browser journeys
   pass in 6.2 minutes. Root inspected the class-placement desktop/mobile captures;
-  Axe and overflow checks pass. A focused follow-up commit and independent
-  correction recheck are required before signed publication/deployment/closure.
+  Axe and overflow checks pass.
+- After correction commit, the reviewer accepted the exact tree
+  `2f9d6558992544b5d976d8a3dfca5e659f807408`. Four fresh independent browser
+  workflows pass in 40.9 seconds, including actual new class save, existing edit,
+  cancellation and frozen retry after unavailable storage and held 503. Class
+  stays `0 / 60`; deliberate practice placement becomes `1 / 60` while purpose,
+  ID, owned task and zero required credit remain intact. Eight additional captures
+  were inspected with the explanation visible, with passing Axe/overflow. All
+  substantive findings are resolved; the earlier 202 checks and actual native
+  Runner/Copy evidence remain applicable.
+- Published signed implementation `7f73db093449db4383e54ea82cbb66fbc0af2957`
+  and correction `a608fd37f4e0409edc888857d3d4267d6938fd8b` on `main`.
+  GitHub reports valid signatures, preserving both reviewed trees.
+- `mise run deploy` repeated check, all 496 tests and build, passed the Worker
+  dry run, found no pending migrations and deployed production version
+  `776cd10d-9ae4-46a4-ac43-02211b1faf1f`. Root/health return 200; anonymous
+  entries/account-state/lifecycle-backup return 401. All four deployed JS/CSS
+  SHA-256 hashes match the local build. No personal production record was used.
+- [Completion evidence and review outcome](https://github.com/rwjblue/cwa-training-tracker/issues/5#issuecomment-5922919780)
+  posted; #5 closed at `2026-10-01T01:32:58Z` after acceptance, signed publication,
+  deployment and production checks. Recommendation rotation, recording passes
+  and cumulative Runner completion remain their separate issues.
 - No elapsed recovery or physical-device claim is made; the mobile workflow uses
   Chromium touch emulation.
 - No config/binding change is needed. The original remains read only and the
   pre-existing user documents remain untouched. No issue after #5 is implemented.
 
-Issues #1–#4 are complete. Issue #5 is in progress; #6–#46 remain pending.
+## Remaining queue
+
+Issues #1–#5 are complete; #6–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes.
 

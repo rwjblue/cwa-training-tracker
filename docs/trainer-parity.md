@@ -109,7 +109,7 @@ These baseline gaps no longer describe the current implementation:
 | Foreground spoken repeats       | Each word reuses its loaded Morse recording for all three plays before the spoken answer. Repeating a list keeps the sequence active when its transcript refreshes; Stop cancels pending speech advancement. [Listening](../src/client/ListeningTrainer.tsx), [browser regression](../e2e/spoken-answers.spec.ts).                                                             | The regression uses real native Morse playback and simulated speech callbacks. An installed local English voice and an open page are still required; background spoken-audio parity remains R7.                                                      |
 | Duration and explicit completion | The universal 15-minute fallback is removed. Elapsed time and an optional goal are separate from an assigned exercise's explicit Complete/Reopen action; completion is available without starting audio or creating a practice entry. Unknown manual-entry durations require actual learner input. [Studio](../src/client/PracticeStudio.tsx), [plan model](../src/shared/plan.ts). | Completion is a learner decision, not proof of a full listening pass or attainment of a proficiency target. Practice credit continues to come from saved actual time. |
 | Earlier reminders and session links | Today has no completion checkboxes. Dismissal hides earlier unfinished items only, with restoration in the course plan; dates, completion and recorded practice remain intact. All four courses link to the selected session in the official syllabus. [Today](../src/client/TodayPlan.tsx), [course plan](../src/client/Plan.tsx), [curriculum links](../src/shared/curriculum.ts). | Dismissal is not deletion and does not hide a task rescheduled to today or a future date. The Beginner session 2 HTML bookmark is missing, so its link uses the official PDF's page 11. |
-| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Review counts once toward useful daily practice and supplies no required assignment credit. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation, pass coverage and cumulative Runner completion remain separate issues. Independent acceptance and deployment status are tracked in the issue #5 ledger below. |
+| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Independent review counts once toward useful daily practice and supplies no required assignment credit; class review stays separate. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation, pass coverage and cumulative Runner completion remain separate issues. Independent acceptance and production evidence are tracked in the issue #5 ledger below. |
 
 ## Accepted September 30 delivery ledger
 
@@ -433,7 +433,11 @@ browser journeys passed before the implementation commit. The independent
 post-commit review passed five student workflows and 202 focused checks, and
 required a correction to the class-placement explanation. Correction typecheck,
 all 496 tests, production build and all 49 serialized browser journeys pass.
-Independent recheck, signed publication and deployment remain pending in
+The independent reviewer accepted the correction after four fresh desktop/mobile
+workflows, including class save/edit and exact retry with storage unavailable;
+30 captures were inspected across review and recheck. Signed commits `7f73db09`
+and `a608fd37` preserve the reviewed trees. Production deployment and root/health,
+anonymous privacy and asset-hash checks pass; issue #5 is closed. Details are in
 [execution progress](parity/execution-progress-2026-09-30.md).
 This does not implement the separate review recommendation rotation, recording
 pass coverage or cumulative Runner completion issues.
