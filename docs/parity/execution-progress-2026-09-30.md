@@ -952,3 +952,50 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   both browser widths pass (1.0 minute); check/all 800 tests in 45 files/build
   pass. Final combined regression and independent post-commit recheck remain.
   This separate test correction preserves already delivered #9 integrity.
+
+
+## Issue #10 — final independent acceptance and local production delivery
+
+- Rechecked the live issue: OPEN, no comments, explicit #9 prerequisite. Original
+  pinned course/daily preference distinction and terminal policy remain intact.
+- Implementation `313fca74f8797de819b9a86e1a7ecf4a19424c99` preserves the useful
+  user session-attribution commit `3cd5a215`; its replay diff is byte-identical
+  to the independently accepted original `13710b48`. Focused local corrections:
+  #6 `60e60480ab84b327e7e2ac4a3e271ae17d95315a`, #7 fixture
+  `e605a833dafe14c3162907dc96a70a5a6219b2d3`, #9 fixtures
+  `d97e8c266efe3986ca0650eeac92fdb364717848`. Final accepted combined tree is
+  `5acc0bb2252cfe33c9ce06dc3cfb96fa5a31295e`; the working copy was clean.
+- Check, all 800 tests in 45 files and build pass before each focused correction
+  commit. The final complete serialized suite passes 63 journeys in 11.4 minutes,
+  including user session attribution, both replay paths, exact save/retry,
+  recording gaps/passes, real Runner and the formerly lost immediate tool switch.
+  Failed/interrupted earlier runs are explicitly recorded above, not counted.
+- Independent original post-commit review accepts replay with no substantive
+  finding. The final post-commit combined review accepts four own journeys in
+  37.4 seconds at 1366 keyboard/375 touch: actual two-pass replay, attribution,
+  Inspect/Return, cancel/save and held Runner bootstrap plus real Run/Call/Stop.
+  Actual saved D4/pass2/raw8.0 desktop and 7.999999999999998 mobile remain honest.
+  Its changed-clock run passes 98 tests; six fresh Axe summaries are empty.
+  The P2 Runner startup-focus finding is fixed and rechecked. Skip-link painting
+  reproduces only in full-page capture; actual viewport/focus/computed bounds
+  remain unobscured/hidden. Immediate entrance-animation Axe results disappear
+  when the actual animation ends; no rules or product contrast were weakened.
+  Detailed synthetic ignored reports: `issue-10-independent-review.md` and
+  `issue-10-combined-review.md`. Reviewer stopped runtime and released ownership.
+- `mise run deploy` succeeds after one transient D1 7403 migration-check failure
+  and complete task retry. No migrations are pending. Production version
+  `ca935f6a-2302-4575-85d2-245aeb8108ba` serves exact hashes for all four built
+  JS/CSS assets and `/vendor/web-morse-runner/integration/main.js`, with root
+  entry references verified, homepage/health200 and three private endpoints401.
+  Evidence is `issue-10-production-verification.json`; no physical iPhone, OS
+  lock-screen or restricted long-recording verification is claimed.
+- #9 publication was independently confirmed after a separate primary-workspace
+  signed push: final correction `452d8edb78f0c33cd9f9a14af7fe418b486a3cd1` has
+  the same accepted tree, and journal `b7dce45c` is signed/published. The verified
+  follow-up comment is https://github.com/rwjblue/cwa-training-tracker/issues/9#issuecomment-5931899511;
+  #9 is now closed. Root did not attempt that push or change signing.
+- The latest instruction prohibits pushes. #10 and these follow-up corrections
+  are accepted/committed locally and deployed, but remain unpublished. Advance
+  local main, preserve primary added scope docs, comment with this honest limit
+  and leave #10 open. This publication deferral does not block independent #11.
+  No PR was created. Continue ascending #11–#46; do not stop at #10.

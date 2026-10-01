@@ -669,11 +669,21 @@ recall or finish. Ended feedback supplies reachable another-pass/finish actions.
 Generated Repeat list remains independent; the future optional daily-listening
 loop is not introduced here. Suggested time cannot truncate ongoing native
 listening. No backend entity, schema, binding, restricted audio redistribution,
-spoken-recognition work or unfinished elapsed recovery is added. Check, all 799 tests in 45 files, build and all 62 serialized browser journeys
-pass; desktop/mobile keyboard/touch, actual device backup restore and exact
-save retry are verified. Independent review must pass after the implementation
-commit before this issue is recorded as accepted. Physical-device/lock-screen
-behavior remains unverified.
+spoken-recognition work or unfinished elapsed recovery is added. Check, all 800
+tests in 45 files, build and all 63 serialized browser journeys pass at the final
+combined candidate. Original post-commit independent replay review passes; the
+final combined desktop/mobile keyboard/touch recheck also accepts the preserved
+session-attribution change and focused corrections, with no substantive finding.
+Actual device backup restore, precise saved source/pass facts and exact durable
+save retry are verified. Physical-device/lock-screen behavior remains unverified.
+
+Implementation is local `313fca74`; focused corrections are `60e60480` (#6),
+`e605a833` (#7 tests) and `d97e8c26` (#9 tests). The independently accepted combined
+tree is `5acc0bb2252cfe33c9ce06dc3cfb96fa5a31295e`. Production version
+`ca935f6a-2302-4575-85d2-245aeb8108ba` passes homepage/health, unauthenticated
+private-endpoint rejection and exact built/public-bootstrap hash checks. The
+latest instruction prohibits pushes: local acceptance/deployment is complete,
+and #10 stays open pending publication rather than claiming GitHub delivery.
 
 
 ### Issue #6 follow-up — embedded Runner startup focus
@@ -689,5 +699,8 @@ setup and restores it in `finally`. Upstream and generated runtime files, bridge
 ownership, engine timing and deliberate Run/exchange focus remain unchanged.
 Held-bootstrap desktop/mobile checks preserve the focused outer control and
 parent scroll. Actual Run still focuses Call, and mobile tool switching works.
-The independent correction gate and final combined validation remain pending in
+The final 63-journey combined regression passes. Independent post-commit held
+bootstrap and actual-engine desktop/mobile keyboard/touch checks accept the
+correction. Production serves the verified bootstrap hash; evidence and local
+publication limits are recorded in
 [execution progress](parity/execution-progress-2026-09-30.md).

@@ -479,9 +479,17 @@ storage explains its current-session limit and offers retry. The optional public
 boolean joins strict device inventory, backup and opt-in restore; no source/task
 identity becomes a shared preference or private measurement.
 
-Validation and independent acceptance remain tracked in the execution journal.
-Browser fixtures use short synthetic WAV byte ranges and actual native movement;
-no physical-device/lock-screen or elapsed reload-recovery claim is made.
+Final check, all 800 tests in 45 files, build and 63 serialized browser journeys
+pass. Original independent replay review and final combined keyboard/touch recheck
+accept the implementation with no substantive finding left open. The latter
+preserves user session-attribution work and the focused Runner/fixture corrections.
+Actual saved D4/two-pass evidence contains 8.0 / 7.999999999999998 seconds at the
+independent desktop/mobile boundaries. Production version
+`ca935f6a-2302-4575-85d2-245aeb8108ba` serves exact built/public-module hashes;
+health/public access and private rejection pass. Detailed refs/review and the
+no-push publication limit remain in the execution journal. Browser fixtures use
+short synthetic Range WAVs and actual native movement; no physical-device,
+lock-screen or elapsed reload-recovery claim is made.
 
 
 ### Issue #9 follow-up — retain honest native gap boundaries in regression

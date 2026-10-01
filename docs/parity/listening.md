@@ -255,3 +255,14 @@ boundary. Both corrected synthetic native desktop/mobile journeys pass in
 40.3 seconds; exact played configuration/script/history/report checks remain.
 Check, all 800 tests and build pass; final combined regression and independent
 post-commit recheck are recorded in the execution journal.
+
+
+The #6 startup correction (`60e60480`) and #7 receipt fixture (`e605a833`) pass
+the final combined 63-journey regression. Independent post-commit desktop/mobile
+held bootstrap proves exact outer focus/scroll retention and deliberate real
+Run/Call/AudioWorklet/Stop; no substantive finding remains. The apparent Skip-link
+full-page paint is absent from actual viewport and computed focus/geometry. Six
+fresh combined Axe summaries are empty. The accepted production bootstrap hash
+serves in version `ca935f6a-2302-4575-85d2-245aeb8108ba`; original-source/upstream
+files remain unchanged. These focused local correction commits are unpublished
+under the no-push instruction, even though their reviewed behavior is deployed.
