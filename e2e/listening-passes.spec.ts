@@ -264,13 +264,36 @@ for (const viewport of [
       .toBeGreaterThan(0.8);
     await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
     expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+    const inspectedPosition = await audio.evaluate((item: HTMLAudioElement) => item.currentTime);
+    expect(inspectedPosition).toBeGreaterThan(0.8);
     await activate(
       page
         .getByRole('region', { name: 'Current practice block' })
         .getByRole('button', { name: 'Return to practice', exact: true }),
     );
     expect(await audio.evaluate((item: HTMLAudioElement) => item.paused)).toBe(true);
+    expect(await audio.evaluate((item: HTMLAudioElement) => item.currentTime)).toBeCloseTo(
+      inspectedPosition,
+      3,
+    );
     await expect(count('This block')).toHaveText('2');
+    // Rehear overlap after inspection. A native paused position can settle
+    // forward on resume beyond this short clip's honest gap allowance. Starting
+    // above zero still requires the pre-inspection coverage to complete a pass.
+    const overlapStart = inspectedPosition - 0.5;
+    expect(overlapStart).toBeGreaterThan(0);
+    await audio.evaluate((item: HTMLAudioElement, position) => {
+      item.currentTime = position;
+    }, overlapStart);
+    await expect
+      .poll(() =>
+        audio.evaluate(
+          (item: HTMLAudioElement, position) =>
+            item.paused && !item.seeking && Math.abs(item.currentTime - position) < 0.01,
+          overlapStart,
+        ),
+      )
+      .toBe(true);
     await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
     await expect(count('This block')).toHaveText('3', { timeout: 10_000 });
     await expectAccessible(page, `listening-passes-${viewport.width}`);

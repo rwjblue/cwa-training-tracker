@@ -936,3 +936,19 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   45 files and build pass at the combined candidate. Final serialized regression
   and post-commit independent recheck remain required. This is a separate test
   correction for already delivered #7, not a new issue #10 feature.
+
+
+### Issue #9 — observed gap and retained inspection test correction
+
+- The retained failed mobile full-run attachment establishes an actual resume
+  jump from 1.726185 to 1.984 seconds on a 3.6-second recording. This unobserved
+  0.257815-second interval exceeds the 0.18-second admitted bound; production
+  correctly refuses a complete pass. No product timing change is justified.
+- The journey now asserts retained paused position and deliberately re-hears
+  0.5 seconds of overlap, starting above zero so discarded earlier coverage
+  would still fail. Exact three-pass and saved per-file/raw facts remain strict.
+- A pure regression reproduces the captured native gap and expects 3.342185
+  observed seconds/coverage, incomplete and zero passes. All 98 clock tests and
+  both browser widths pass (1.0 minute); check/all 800 tests in 45 files/build
+  pass. Final combined regression and independent post-commit recheck remain.
+  This separate test correction preserves already delivered #9 integrity.

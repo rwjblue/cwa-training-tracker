@@ -482,3 +482,21 @@ identity becomes a shared preference or private measurement.
 Validation and independent acceptance remain tracked in the execution journal.
 Browser fixtures use short synthetic WAV byte ranges and actual native movement;
 no physical-device/lock-screen or elapsed reload-recovery claim is made.
+
+
+### Issue #9 follow-up — retain honest native gap boundaries in regression
+
+The native-pass journey first asserts that inspection retains its paused exact
+position and prior heard coverage. It then deliberately re-hears half a second
+of overlap before finishing, keeping the start above zero so lost earlier
+coverage cannot pass. App/native pause-resume coverage and saved per-file/raw
+pass facts remain unchanged.
+
+A separate clock regression reproduces the observed 3.6-second recording resume
+from 1.726185 to 1.984 seconds. The unobserved 0.257815-second gap exceeds the
+0.18-second admitted boundary: only 3.342185 seconds were observed, so completion
+and pass count remain zero. Production clock behavior is unchanged. The failed
+full-run native events remain evidence rather than an asserted successful pass.
+Both corrected desktop/mobile journeys pass (1.0 minute); 98 clock tests pass.
+Check, all 800 tests and build pass; final combined regression and independent
+post-commit recheck remain in the execution journal.

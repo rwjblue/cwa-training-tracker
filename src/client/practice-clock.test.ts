@@ -463,6 +463,27 @@ describe('practice time', () => {
     },
   );
 
+  it('rejects the observed oversized short-recording resume gap without inventing hearing', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/observed-gap.mp3', durationSeconds: 3.6 };
+    clock.startMedia(0, 13760.2, 1, recording);
+    clock.sample(1.726185, 15724.1);
+    clock.pause(15724.4);
+    clock.startMedia(1.984, 16193.3, 1, recording);
+    clock.sample(2.037538, 16436.3);
+    clock.sample(3.6, 18030);
+    const beforeEnd = clock.snapshot(18030);
+    expect(beforeEnd.seconds).toBeCloseTo(3.342185, 9);
+    expect(beforeEnd.recordingProgress?.coveredSeconds).toBeCloseTo(3.342185, 9);
+    expect(clock.finalizeRecording(recording, true)).toMatchObject({
+      completed: false,
+      reason: 'incomplete',
+    });
+    expect(clock.snapshot(18030).recordings[0].passes?.durations).toEqual([
+      { durationSeconds: 3.6, completedPasses: 0 },
+    ]);
+  });
+
   it('retains the credible first native resume tail from the independent mobile capture', () => {
     const clock = new PracticeClock();
     const recording = {
