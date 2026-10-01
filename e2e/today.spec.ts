@@ -7,8 +7,10 @@ test('Today brings personal assignments forward and keeps logging separate from 
   context,
 }) => {
   await signIn(page);
+  const now = new Date('2026-10-06T16:00:00Z');
+  await page.clock.setFixedTime(now);
   const settings = (await (await context.request.get('/api/settings')).json()).settings;
-  const today = dateInTimezone(new Date(), settings.timezone);
+  const today = dateInTimezone(now, settings.timezone);
   const panel = page.getByRole('region', { name: 'What should I do today?' });
   await expect(panel.getByRole('heading', { name: 'Set up your course.' })).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Restore backup', exact: true })).toBeVisible();
@@ -65,7 +67,6 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.addStyleTag({
     content: '*,*::before,*::after{animation:none!important;transition:none!important}',
   });
-  const now = new Date();
   await page.clock.install({ time: now });
   await page.clock.pauseAt(new Date(now.getTime() + 1000));
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
