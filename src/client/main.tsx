@@ -648,6 +648,7 @@ function App() {
     inspection?: 'week' | 'report',
   ): Promise<boolean> => {
     if (next === currentPage.current && (next !== 'practice' || currentLaunch.current)) {
+      setMenuOpen(false);
       if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
       return true;
     }
