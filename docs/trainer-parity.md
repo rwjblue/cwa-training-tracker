@@ -383,8 +383,12 @@ Evidence: [lifecycle protocol](../src/shared/account-lifecycle.ts),
 Validation and the independent review gate are recorded in
 [execution progress](parity/execution-progress-2026-09-30.md).
 Local validation passes 463 fast checks and 47 serialized browser journeys.
-The first independent review requires corrections to mobile pending/error layout
+The first independent review required corrections to mobile pending/error layout
 and recovery downloads that could omit newer server-only work. Both corrections
-pass complete local validation; their independent recheck, signed publication
-and deployment remain pending.
+passed complete local validation and independent recheck: 16 new browser probes,
+seven committed lifecycle journeys, 105 client/shared tests, 42 Worker tests and
+fresh production-migration SQL probes. The reviewer inspected 28 desktop/mobile
+captures and accepted the complete workflow with no remaining substantive finding.
+Signed publication and production migration/deployment are complete; their commit
+references and verification are recorded in the execution journal.
 It does not add active elapsed-time recovery or physical-device verification.

@@ -327,13 +327,16 @@ a full-width stack. The downloaded server file is bound to a coherent server
 snapshot and a separate history mutation counter; the actual destructive SQL
 rejects later unlinked entry changes as well as semantic changes. Safe stop and
 newer observed authority invalidate the old download permission. Portable files
-retain data/evidence without granting runtime authority. Corrections pass complete
-local validation and await the independent recheck before acceptance.
+retain data/evidence without granting runtime authority. Corrections passed complete
+local validation and independent desktop/mobile, keyboard/touch, file-recovery and
+SQL rechecks; both substantive findings are resolved.
 
 See [protocol](../../src/shared/account-lifecycle.ts),
 [Worker](../../src/worker/account-lifecycle.ts),
 [coordinator](../../src/client/account-lifecycle.ts), and
 [actual UI verification](../../e2e/account-lifecycle.spec.ts). Validation and the
 required fresh independent gate are in the execution journal. All 463 fast checks
-and 47 serialized browser journeys pass locally; this issue remains
-in progress until those gates, signed publication and deployment are complete.
+and 47 serialized browser journeys passed locally. The independent reviewer
+accepted 16 new and seven committed browser journeys, 28 inspected captures and
+fresh client/Worker/SQL checks. Signed publication, migration 6 and production
+verification are complete, and issue #4 is closed.

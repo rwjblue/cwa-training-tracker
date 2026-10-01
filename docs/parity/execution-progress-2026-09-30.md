@@ -208,9 +208,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   reset/replacement invalidation. Shell availability, browser emulation and future
   explicit inventory extensions remain the documented limits.
 
-## Remaining queue
-
-### Issue #4 — review corrections validated; independent recheck pending
+### Issue #4 — complete, independently accepted, signed and deployed
 
 - Rechecked the current issue, comments and dependencies after closing #3:
   unchanged approved finding 45, no comments, #2/#3 closed, no native blockers.
@@ -242,12 +240,11 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   shared checks passed 107 tests and client checks passed 112. Existing native
   listening, Runner, Copy, offline and spoken-answer workflows pass unchanged.
 - No binding/config change required generated types. No physical-device or active
-  elapsed-time reload recovery is claimed. Independent review, signed publication
-  and production deployment remain pending. The two user-owned documentation
-  files remain untouched.
-- Implementation commit `2bb3d74e` was independently reviewed after creation.
+  elapsed-time reload recovery is claimed. The two user-owned documentation files
+  remain untouched.
+- Implementation commit `c3dc06fc` was independently reviewed after creation.
   Seven fresh runtime probes passed, including two deliberate reproductions of
-  a Keep recoverability failure. The gate requires two corrections: full-width
+  a Keep recoverability failure. The gate required two corrections: full-width
   mobile pending/error instructions, and coherent server-backup authority covering
   ordinary unlinked history writes. The review also independently checked account
   switching, late actual SQL, applied cleanup retry, remote history fencing, exact
@@ -258,7 +255,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   semantic outbox revision behavior remains intact; portable files exclude
   runtime authority. New root browser scenarios cover post-download practice,
   safe stop, fresh recovery, delayed old downloads, desktop keyboard/mobile touch
-  and readable pending/error geometry. No acceptance or publication is claimed.
+  and readable pending/error geometry.
 - Final correction validation passed `mise run check`, `mise run test` (463
   tests / 35 files), `mise run build` and all 47 serialized browser journeys
   (6.4 minutes). All seven lifecycle journeys pass with desktop keyboard/mobile
@@ -271,9 +268,37 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   The rerun exposed an own-success stale-download warning, corrected by limiting
   download invalidation to an unsubmitted review and clearing feedback on success.
   Both affected keyboard journeys then passed; the full suite above includes
-  those corrections. Independent recheck is required after the follow-up commit.
+  those corrections.
+- After correction commit `954f6552`, the independent reviewer accepted the exact
+  tree `8ff7f031e787205f2d5f1d18885876aece3bbdb3`. Both substantive findings
+  are resolved. Fresh independent evidence passed 16 new desktop/mobile journeys
+  and seven committed lifecycle journeys; 28 captures were visually inspected
+  with zero axe violations and no overflow. Independent 105 client/shared tests,
+  42 Worker tests and fresh production-migration SQL probes also passed. The two
+  original loss reproductions now refuse stale history, preserve the evidence,
+  require fresh files and complete successfully. Delayed downloads cannot rearm
+  old permission. Initial ignored-probe synchronization failures were inspected:
+  the upload preceded application and the app safely refused destruction. The
+  corrected probes await the applied receipt/generation, then prove late 409.
+- Published signed commits `c3dc06fc3c77ce14e6e979e8ac24a1ff1db405a6` and
+  `954f6552420eaa70fb85096f3bff19932de2e19a` on `main`. GitHub reports both
+  signatures valid, and signing preserved both reviewed trees.
+- `mise run deploy` repeated check, all 463 tests and build, passed the Worker
+  dry run, applied `0006_account_lifecycle.sql`, and deployed production version
+  `68eb3b84-11dd-4971-9a8f-28ee9d69f37d`. The first migration API call returned
+  transient D1 code 7403; a complete deployment-task retry succeeded. Production
+  root/health return 200, anonymous entries/account-state/lifecycle-backup return
+  401, and all deployed JS/CSS hashes match the local build. An initial urllib
+  transport check returned 403; the established curl transport passed the actual
+  production checks. No production personal record was used or mutated.
+- [Completion evidence and review outcome](https://github.com/rwjblue/cwa-training-tracker/issues/4#issuecomment-5922278469)
+  posted; #4 closed at `2026-10-01T00:32:32Z` after acceptance, signed publication,
+  deployment and production checks. Bounded control admission, retained receipts,
+  portable authority exclusion and browser-emulation limits remain documented.
 
-Issues #1–#3 are complete. Issue #4 is in progress; #5–#46 remain pending.
+## Remaining queue
+
+Issues #1–#4 are complete. Issues #5–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes; no issue after #4 has been implemented.
 
