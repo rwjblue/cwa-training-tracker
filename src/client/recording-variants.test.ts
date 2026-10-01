@@ -143,5 +143,8 @@ describe('official recording choices', () => {
     };
     expect(loadRecordingSpeedPreference(blocked)).toBe('assigned');
     expect(saveRecordingSpeedPreference('next', blocked)).toBe(false);
+    expect(
+      saveRecordingSpeedPreference('next', { getItem: () => 'assigned', setItem: () => {} }),
+    ).toBe(false);
   });
 });

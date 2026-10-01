@@ -1,4 +1,5 @@
 import ListeningPassProgress from './ListeningPassProgress';
+import TaskRecordingChoiceHint from './TaskRecordingChoiceHint';
 import { useId, useState } from 'react';
 import {
   ArrowRight,
@@ -30,6 +31,7 @@ import './today-plan.css';
 import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
+  accountId?: string;
   profile: Profile;
   entries: PracticeSession[];
   tasks: PlannedTask[];
@@ -57,6 +59,7 @@ const minuteLabel = (minutes: number) => Number(minutes.toFixed(1));
 
 /** The parent owns private data, so course edits and journal saves stay in sync. */
 export default function TodayPlan({
+  accountId,
   profile,
   entries,
   tasks,
@@ -104,6 +107,7 @@ export default function TodayPlan({
     <ul className="today-plan-list">
       {items.map((item) => (
         <TodayTask
+          scope={accountId}
           key={item.task.id}
           item={item}
           today={today}
@@ -336,11 +340,13 @@ export default function TodayPlan({
 }
 
 function TodayTask({
+  scope,
   item,
   today,
   onLog,
   onPractice,
 }: {
+  scope?: string;
   item: DailyPlannedTask;
   today: string;
   onLog: () => void;
@@ -377,6 +383,7 @@ function TodayTask({
             minimumPasses={task.exercise.minimumPasses}
           />
         )}
+        <TaskRecordingChoiceHint scope={scope} task={task} />
         {task.notes && (
           <details className="today-plan-instructions">
             <summary>Instructions</summary>

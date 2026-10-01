@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import {
   eligibleRecordingVariants,
   loadRecordingSpeedPreference,
@@ -17,11 +17,13 @@ export default function RecordingSpeedSelect({
   assignedWpm,
   selectedUrl,
   onChange,
+  taskChoiceControls,
 }: {
   assignedUrl: string;
   assignedWpm?: number;
   selectedUrl: string;
   onChange: (variant: RecordingVariant) => void;
+  taskChoiceControls?: ReactNode;
 }) {
   const id = useId();
   const [preference, setPreference] = useState(loadRecordingSpeedPreference);
@@ -83,10 +85,17 @@ export default function RecordingSpeedSelect({
         </p>
         {!remembered && (
           <p role="status">
-            This browser couldn’t remember the default. Current speed choices still work.
+            This browser couldn’t remember the default. Current speed choices still work.{' '}
+            <button
+              className="text-button"
+              onClick={() => setRemembered(saveRecordingSpeedPreference(preference))}
+            >
+              Retry remembering recording default
+            </button>
           </p>
         )}
       </div>
+      {taskChoiceControls}
     </div>
   );
 }

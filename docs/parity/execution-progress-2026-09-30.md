@@ -999,3 +999,66 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   local main, preserve primary added scope docs, comment with this honest limit
   and leave #10 open. This publication deferral does not block independent #11.
   No PR was created. Continue ascending #11–#46; do not stop at #10.
+
+
+## Issue #11 — implementation and validation in progress
+
+- #10 is independently accepted/deployed and local main advanced to `d097d01d`.
+  Its delivery comment is https://github.com/rwjblue/cwa-training-tracker/issues/10#issuecomment-5932671851;
+  it remains open/unpublished under the latest no-push instruction. Prior #6/#7/#9
+  corrections also have honest follow-up comments. No root push was attempted.
+- Rechecked #11 live body/comments/native dependency endpoints and original pin
+  `3106c9b8`: separate default/task schema, exact same-group eligibility and active
+  settle/pause/new-file plus inactive reset. Implemented scoped exact task keys
+  with original assignment context, strict catalog/replacement normalization,
+  bounded storage, readback/reset/fencing and safe visible fallback.
+- Studio owns actual media/clock and future preferences separately. New visits
+  apply valid task override before shared default; source switches retain heard
+  time/passes/notes and pause at zero. Reset/default changes retain current file.
+  Task preview, explicit same-file remembering and honest retry are reachable.
+- Extended existing optional private device inventory, strict v1 validation,
+  capture/restore/current-wins collision preview/rollback/scoped clear/account
+  retirement. Old-v1 omission stays compatible; no Worker/schema/binding changes.
+- Focused pure scope/choice/backup tests pass. Check, all 829 tests in 46 files and
+  build pass before the final tiny control/fixture correction. Complete native
+  desktop1440 keyboard/mobile390 touch journey passed in 53.5 seconds before
+  adding explicit global-default failure retry; that mobile extension passes,
+  and final keyboard-picker interaction is being verified before full regression.
+  Actual two-file D3.6/pass1 facts exclude a third selected-but-unplayed file;
+  canceled review and frozen 503/storage-refusal retry preserve exact bodies.
+  Actual device download/chooser, cancel/clear/restore/collision/old-v1/stale
+  fallback and same-browser Guest/A/B boundaries are exercised. Root inspected
+  desktop/mobile controls; their geometry and Axe checks pass.
+- Fixture failures are not passing claims: custom task incorrectly retained the
+  curriculum source marker (Worker400 correctly rejected it); one exact-text
+  expectation omitted scope copy; desktop headless arrow/popup keys did not select the desired option.
+  Native type-ahead plus Tab emits real input/change events and passes the
+  complete desktop journey, including refused default storage and its retry.
+  Returning to account A within email's 60-second cooldown correctly yielded429;
+  the fixture now registers and uses actual WebAuthn with a virtual authenticator
+  for that return. No throttle/timeout/credit rule was weakened.
+- The mobile journey exposed a real same-view drawer bug: `navigate` returned
+  before dismissing the open menu, obscuring Today task controls. Dismissing that
+  drawer is a one-line presentation correction; it changes no practice owner or
+  measurements. The touch journey now exercises this reachable launch boundary.
+- Focused JJ implementation commit, fresh
+  independent student/ergonomics/maintainability review and production deployment
+  remain required. No physical-device/OS lock-screen or restricted recording claim
+  is made. Continue the queue only after acceptance; no push is authorized.
+
+- Final required pre-commit check, 829/46 tests and build pass. Both new task-choice
+  journeys pass in the complete regression (desktop17.6/mobile30.7 seconds).
+  That first run has 64 passes and one existing course-replay mobile failure:
+  an actual natural end remained incomplete and visibly reported skipped material.
+  Its exact retained trace is preserved; no stuck/pending replay or successful
+  full-pass claim is inferred. An ignored read-only same-assertion probe with
+  passive native-event capture passes the complete mobile replay journey in
+  1.2 minutes, including all six cancellation races and actual failure/retry.
+  No production clock, fixture assertion or timing bound was changed. A fresh
+  complete serialized regression then passes all 65 journeys in 11.6 minutes,
+  including desktop/mobile course replay and both task-choice journeys. The
+  earlier failure remains recorded; it is not counted as passing evidence.
+
+- Kept the independently found same-view mobile drawer correction in its own
+  focused #6 commit; #11 implementation remains separate. Post-commit #11 review
+  will also evaluate the combined reachable mobile task-launch workflow.

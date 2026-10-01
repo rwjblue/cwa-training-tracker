@@ -51,6 +51,12 @@ import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
 import { preferredRecording, recordingSpeeds } from './recording-variants';
+import {
+  clearTaskRecordingChoice,
+  resolveTaskRecordingChoice,
+  saveTaskRecordingChoice,
+  type TaskRecordingChoice,
+} from './task-recording-choice';
 import { usePracticeClock } from './usePracticeClock';
 import { MediaSessionController } from './media-session';
 import {
@@ -64,6 +70,11 @@ import { getDeviceScopeToken, isDeviceScopeCurrent, subscribeDeviceScope } from 
 
 const duration = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+interface TaskRecordingPreferenceState {
+  choice?: TaskRecordingChoice;
+  notice: string;
+  pending?: TaskRecordingChoice | null;
+}
 
 export default function PracticeStudio({
   onLog,
@@ -117,9 +128,22 @@ export default function PracticeStudio({
   const activity = launch?.activity;
   const assigned = Boolean(activity);
   const extraReview = launch?.purpose === 'review';
+  const recordingChoiceContext =
+    activity?.type === 'audio' && activity.url && launch?.task
+      ? { taskId: launch.task.id, assignedUrl: activity.url, assignedWpm: activity.characterWpm }
+      : undefined;
+  const [taskRecordingPreference, setTaskRecordingPreference] =
+    useState<TaskRecordingPreferenceState>(() => {
+      const resolved = recordingChoiceContext
+        ? resolveTaskRecordingChoice(notesScope, recordingChoiceContext)
+        : undefined;
+      return { choice: resolved?.choice, notice: '' };
+    });
   const [selectedRecording, setSelectedRecording] = useState(() =>
     activity?.type === 'audio'
-      ? preferredRecording(activity.url, activity.characterWpm)
+      ? recordingChoiceContext
+        ? resolveTaskRecordingChoice(notesScope, recordingChoiceContext).recording
+        : preferredRecording(activity.url, activity.characterWpm)
       : undefined,
   );
   const recordingUrl =
@@ -310,9 +334,26 @@ export default function PracticeStudio({
   useEffect(() => {
     if (!launch) return;
     resetTimer();
+    const resolved = recordingChoiceContext
+      ? resolveTaskRecordingChoice(notesScope, recordingChoiceContext)
+      : undefined;
+    const invalid = resolved?.status === 'invalid';
+    const cleared =
+      !invalid ||
+      (recordingChoiceContext &&
+        clearTaskRecordingChoice(notesScope, deviceToken, recordingChoiceContext.taskId));
+    setTaskRecordingPreference({
+      choice: resolved?.choice,
+      notice: invalid
+        ? `The remembered recording is invalid or unavailable for this task. This visit uses the recording default.${cleared ? ' The old choice was discarded.' : ' The old choice could not be cleared on this device.'}`
+        : '',
+      ...(cleared ? {} : { pending: null }),
+    });
     setSelectedRecording(
       activity?.type === 'audio'
-        ? preferredRecording(activity.url, activity.characterWpm)
+        ? recordingChoiceContext
+          ? resolved?.recording
+          : preferredRecording(activity.url, activity.characterWpm)
         : undefined,
     );
     setPublicRunner(launch.tool === 'runner');
@@ -327,6 +368,32 @@ export default function PracticeStudio({
     if (nextTool && nextTool !== 'copy' && nextTool !== 'runner')
       setPreferences((current) => ({ ...current, tool: nextTool }));
   }, [launch?.id]);
+  const rememberTaskRecording = (choice: TaskRecordingChoice | null) => {
+    if (!recordingChoiceContext || !canPractice()) return;
+    const success = choice
+      ? saveTaskRecordingChoice(notesScope, deviceToken, choice)
+      : clearTaskRecordingChoice(notesScope, deviceToken, recordingChoiceContext.taskId);
+    setTaskRecordingPreference((previous) => ({
+      choice: success ? (choice ?? undefined) : previous.choice,
+      notice: success
+        ? choice
+          ? ''
+          : 'This task will use the recording default next time. Current playback stays unchanged.'
+        : choice
+          ? 'Current playback works, but this task’s new choice could not be remembered on this device. Enable browser storage or free space, then retry.'
+          : 'This task’s remembered choice could not be cleared on this device. Enable browser storage or free space, then retry.',
+      ...(success ? {} : { pending: choice }),
+    }));
+  };
+  const currentTaskRecordingChoice = (): TaskRecordingChoice | undefined =>
+    recordingChoiceContext?.assignedWpm !== undefined && selectedRecording
+      ? {
+          ...recordingChoiceContext,
+          assignedWpm: recordingChoiceContext.assignedWpm,
+          version: 1,
+          selectedUrl: selectedRecording.url,
+        }
+      : undefined;
   useEffect(() => {
     setScratchpad(loadStudioNotes(notesScope, notesContext));
   }, [notesScope, notesContext]);
@@ -1273,12 +1340,76 @@ export default function PracticeStudio({
                             assignedWpm={activity.characterWpm}
                             selectedUrl={recordingUrl}
                             onChange={(variant) => {
-                              if (variant.url === recordingUrl) return;
-                              timer.discardRecording(recording.current ?? undefined);
-                              pauseTimer();
-                              setSelectedRecording(variant);
-                              setError('');
+                              if (!canPractice()) return;
+                              if (variant.url !== recordingUrl) {
+                                timer.discardRecording(recording.current ?? undefined);
+                                pauseTimer();
+                                setSelectedRecording(variant);
+                                setError('');
+                              }
+                              if (recordingChoiceContext?.assignedWpm !== undefined)
+                                rememberTaskRecording({
+                                  ...recordingChoiceContext,
+                                  assignedWpm: recordingChoiceContext.assignedWpm,
+                                  version: 1,
+                                  selectedUrl: variant.url,
+                                });
                             }}
+                            taskChoiceControls={
+                              recordingChoiceContext && (
+                                <div className="recording-task-choice">
+                                  <p>
+                                    {taskRecordingPreference.choice
+                                      ? `Remembered for this task: ${recordingSpeeds(taskRecordingPreference.choice.selectedUrl)?.effectiveWpm} WPM.`
+                                      : 'This task uses the recording default on its next visit.'}{' '}
+                                    Task choices are private to{' '}
+                                    {accountId ? 'this account' : 'Guest'} on this device.
+                                  </p>
+                                  <div className="playback-toolbar">
+                                    {currentTaskRecordingChoice() &&
+                                      taskRecordingPreference.pending === undefined &&
+                                      taskRecordingPreference.choice?.selectedUrl !==
+                                        recordingUrl && (
+                                        <button
+                                          className="button outline"
+                                          onClick={() => {
+                                            const choice = currentTaskRecordingChoice();
+                                            if (choice) rememberTaskRecording(choice);
+                                          }}
+                                        >
+                                          Remember current recording for this task
+                                        </button>
+                                      )}
+                                    <button
+                                      className="button outline"
+                                      disabled={
+                                        !taskRecordingPreference.choice &&
+                                        taskRecordingPreference.pending === undefined
+                                      }
+                                      onClick={() => rememberTaskRecording(null)}
+                                    >
+                                      Use recording default next time
+                                    </button>
+                                  </div>
+                                  {taskRecordingPreference.notice && (
+                                    <p role="status">{taskRecordingPreference.notice}</p>
+                                  )}
+                                  {taskRecordingPreference.pending !== undefined && (
+                                    <button
+                                      className="text-button"
+                                      onClick={() => {
+                                        const pending = taskRecordingPreference.pending;
+                                        if (pending !== undefined) rememberTaskRecording(pending);
+                                      }}
+                                    >
+                                      {taskRecordingPreference.pending === null
+                                        ? 'Retry clearing task choice'
+                                        : 'Retry remembering task choice'}
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            }
                           />
                         )}
                         <p className="field-hint">

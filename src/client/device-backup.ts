@@ -47,6 +47,13 @@ import {
 import { COURSE_REPLAY_STORAGE_KEY } from './course-replay';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
 import {
+  MAX_TASK_RECORDING_CHOICES,
+  taskRecordingChoiceKey,
+  taskRecordingChoiceTaskId,
+  validateTaskRecordingChoice,
+  type TaskRecordingChoice,
+} from './task-recording-choice';
+import {
   captureScratchpadMemory,
   captureStudioNotes,
   invalidateScratchpadMemory,
@@ -85,6 +92,7 @@ export interface DeviceBackup {
     copyDraft?: CopyDraft;
     copySettings: CopyRecipe[];
     scratchpads: { context: string; text: string }[];
+    recordingChoices?: TaskRecordingChoice[];
   };
   shared: {
     practicePreferences?: PracticePreferences;
@@ -104,6 +112,7 @@ export interface DeviceRestoreInspection {
   conflicts: string[];
   replaceCopyDraftRequired: boolean;
   retainedScratchpads: number;
+  retainedRecordingChoices: number;
 }
 export interface DeviceMutationResult {
   uncertain: { practice: string[]; accountOperations: string[] };
@@ -118,6 +127,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'copyDraft', label: 'Retained copy draft', shared: false },
   { id: 'copySettings', label: 'Copy exercise preferences', shared: false },
   { id: 'scratchpads', label: 'Scratchpads', shared: false },
+  { id: 'recordingChoices', label: 'Task recording choices', shared: false },
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
   { id: 'recordingSpeed', label: 'Shared recording speed preference', shared: true },
   { id: 'courseReplay', label: 'Shared course replay preference', shared: true },
@@ -413,6 +423,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     'copyDraft',
     'copySettings',
     'scratchpads',
+    'recordingChoices',
   ]);
   const practice: RetainedPractice[] = list(stores.practice, 'Finished results', MAX_RESULTS).map(
     (value) => {
@@ -526,6 +537,17 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     scratchpads.map((note) => note.context),
     'Scratchpads',
   );
+  const recordingChoices =
+    stores.recordingChoices === undefined
+      ? undefined
+      : list(stores.recordingChoices, 'Task recording choices', MAX_TASK_RECORDING_CHOICES).map(
+          validateTaskRecordingChoice,
+        );
+  if (recordingChoices)
+    unique(
+      recordingChoices.map((choice) => choice.taskId),
+      'Task recording choices',
+    );
   const shared = object(input.shared, 'Shared device preferences', [
     'practicePreferences',
     'recordingSpeed',
@@ -551,6 +573,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       ...(copyDraft ? { copyDraft } : {}),
       copySettings,
       scratchpads,
+      ...(recordingChoices === undefined ? {} : { recordingChoices }),
     },
     shared: {
       ...(shared.courseReplay === undefined
@@ -734,6 +757,16 @@ export function captureDeviceBackup(
   const preferencesRaw = storage.getItem(PRACTICE_PREFERENCES_KEY);
   const recordingSpeed = storage.getItem(RECORDING_SPEED_STORAGE_KEY);
   const courseReplay = storage.getItem(COURSE_REPLAY_STORAGE_KEY);
+  const recordingChoices = names(storage).flatMap((name) => {
+    const taskId = taskRecordingChoiceTaskId(name, scope);
+    if (taskId === undefined) return [];
+    const choice = validateTaskRecordingChoice(
+      parse(storage.getItem(name)!, 'Task recording choice', 6000),
+    );
+    if (choice.taskId !== taskId)
+      throw new Error('A remembered recording is stored under another task.');
+    return [choice];
+  });
   const backup: DeviceBackup = {
     format: 'cwa-device',
     version: 1,
@@ -748,6 +781,7 @@ export function captureDeviceBackup(
       ...(copyDraft ? { copyDraft } : {}),
       copySettings,
       scratchpads,
+      recordingChoices,
     },
     shared: {
       ...(courseReplay === null
@@ -839,6 +873,23 @@ export function inspectDeviceRestore(
       (note) => [note.context, note.text],
     ),
   );
+  const currentChoices = existingNames.flatMap((name) => {
+    const taskId = taskRecordingChoiceTaskId(name, scope);
+    return taskId === undefined ? [] : [taskId];
+  });
+  const retainedRecordingChoices = (checked.stores.recordingChoices ?? []).filter((choice) => {
+    const raw = storage.getItem(taskRecordingChoiceKey(scope, choice.taskId));
+    return raw !== null && raw !== JSON.stringify(choice);
+  }).length;
+  if (
+    new Set([
+      ...currentChoices,
+      ...(checked.stores.recordingChoices ?? []).map((choice) => choice.taskId),
+    ]).size > MAX_TASK_RECORDING_CHOICES
+  )
+    conflicts.push(
+      `Restoring would exceed ${MAX_TASK_RECORDING_CHOICES} task recording choices. Export and clear some device work first.`,
+    );
   if (
     new Set([...currentNotes.keys(), ...checked.stores.scratchpads.map((note) => note.context)])
       .size > MAX_SCRATCHPADS
@@ -856,6 +907,7 @@ export function inspectDeviceRestore(
       copy !== null &&
       copy !== JSON.stringify(checked.stores.copyDraft),
     retainedScratchpads,
+    retainedRecordingChoices,
   };
 }
 
@@ -1042,6 +1094,11 @@ export function restoreDeviceBackup(
     );
   const recovery = captureDeviceBackup(scope, checked.scope.label, storage);
   const changes = new Map<string, string | null>();
+  // Current task choices win: restoring an older file must not silently replace them.
+  for (const choice of checked.stores.recordingChoices ?? []) {
+    const key = taskRecordingChoiceKey(scope, choice.taskId);
+    if (storage.getItem(key) === null) changes.set(key, JSON.stringify(choice));
+  }
   for (const item of checked.stores.practice) {
     if (storage.getItem(practiceKey(scope, 'pending', item.id)) !== null) continue;
     // Origin is durable before the result is exposed, including explicitly unknown generations.
@@ -1112,6 +1169,7 @@ export function restoreDeviceBackup(
 
 /** Exact registered scope matching also removes orphan status/origin/lease records. */
 function isScopedStore(name: string, scope: string): boolean {
+  if (taskRecordingChoiceTaskId(name, scope) !== undefined) return true;
   if (
     name === copyStorageKey(scope) ||
     name === `${copyStorageKey(scope)}:lease` ||

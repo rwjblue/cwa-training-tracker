@@ -43,7 +43,7 @@ queues use the delivered device persistence and backup workflows. In-app inspect
 pauses and retains the block; canceled review and failed saves preserve its owner.
 Active elapsed-time recovery after reload/crash is excluded by the approved scope.
 
-**Still missing or partial:** per-task remembered speed overrides, difficult marks, short replay controls, full generated-player
+**Still missing or partial:** difficult marks, short replay controls, full generated-player
 retiming continuity, and remaining advisor-report integration. Later issue ledgers
 record their delivery; baseline findings below preserve the original audit.
 No physical locked-iOS verification is claimed.
@@ -134,7 +134,7 @@ Related test cases inspected for intended contracts:
 
 ## Findings by behavior
 
-### P1 — official recording speed choices: baseline missing; now partial parity
+### P1 — official recording speed choices: #11 workflow implemented; review pending
 
 Personal [audio-variants.ts:15](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-variants.ts#L15) identifies the exact official recording group by
 URL, not a guessed filename. `:20` selects assigned or next verified faster speed;
@@ -157,7 +157,8 @@ now integrated as described in the update ledger above.
 Now implemented: [recording-variants.ts](../../src/client/recording-variants.ts), [RecordingSpeedSelect.tsx](../../src/client/RecordingSpeedSelect.tsx),
 `recording-speed.css`, [recording-catalog.json](../../src/client/recording-catalog.json), and five focused tests. Default is
 device-local assigned/next; current selection is controlled by the parent. It does
-not yet persist per-task overrides across visits; that remains a parity gap.
+now persists exact scoped task choices across visits through the #11 workflow
+below; final regression and independent acceptance are still required.
 
 ### P1 — playback-derived time: baseline missing; now addressed
 
@@ -508,3 +509,28 @@ full-run native events remain evidence rather than an asserted successful pass.
 Both corrected desktop/mobile journeys pass (1.0 minute); 98 clock tests pass.
 Check, all 800 tests and build pass; final combined regression and independent
 post-commit recheck remain in the execution journal.
+
+
+### Issue #11 — remembered exact native files per task
+
+Separate scoped keys retain original assignment context and exact verified
+selected URLs. New task visits resolve a valid override before shared Assigned/Next;
+a different task using the same audio and another account/Guest never inherit it.
+Known explicit catalog replacements normalize safely; removed, malformed,
+wrong-group, below-assigned or changed-context choices visibly use the current
+default and discard stale retention with fenced/readback cleanup or retry.
+
+The player shows remembered/prescribed/current WPM distinctly. Explicit file
+changes pause at zero and preserve the existing clock's heard-time/source/pass
+facts and notes; selected-but-unplayed files never enter saved evidence. Reset
+and global changes affect future launches without changing current playback.
+Same-file remembering is explicit; save/reset/default failures have reachable
+retry. Today/Plan preview a future choice instead of relabeling history.
+
+The private optional device-backup store supports strict bounded/unique catalog
+validation, same-scope capture, current-wins collision feedback, repeatable
+transactional restore/rollback and exact scoped clear/lifecycle retirement.
+Old v1 files without this store remain compatible; shared restoration remains
+opt-in. No elapsed/coverage recovery, new Worker preference entity or restricted
+content is introduced. Pinned original behavior, synthetic validation and pending
+post-commit independent gate are recorded in the execution journal.

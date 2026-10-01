@@ -56,13 +56,14 @@ export function loadRecordingSpeedPreference(
 
 export function saveRecordingSpeedPreference(
   preference: RecordingSpeedPreference,
-  storage?: Pick<Storage, 'setItem'>,
+  storage?: Pick<Storage, 'setItem' | 'getItem'>,
 ): boolean {
   try {
     const saved = storage ?? (typeof window === 'undefined' ? undefined : window.localStorage);
     if (!saved) return false;
-    saved.setItem(RECORDING_SPEED_STORAGE_KEY, preference === 'next' ? 'next' : 'assigned');
-    return true;
+    const value = preference === 'next' ? 'next' : 'assigned';
+    saved.setItem(RECORDING_SPEED_STORAGE_KEY, value);
+    return saved.getItem(RECORDING_SPEED_STORAGE_KEY) === value;
   } catch {
     return false;
   }

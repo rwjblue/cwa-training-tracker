@@ -1176,6 +1176,7 @@ function App() {
                     todayPlan={
                       user ? (
                         <TodayPlan
+                          accountId={user.id}
                           profile={profile}
                           entries={visibleEntries}
                           tasks={tasks}
@@ -2161,6 +2162,7 @@ function Course({
       </div>
       {user && (
         <Plan
+          accountId={user.id}
           profile={profile}
           entries={entries}
           tasks={tasks}

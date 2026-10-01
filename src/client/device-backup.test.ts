@@ -40,10 +40,22 @@ import {
 import { DEFAULT_PRACTICE_PREFERENCES, PRACTICE_PREFERENCES_KEY } from './practice-preferences';
 import { COURSE_REPLAY_STORAGE_KEY } from './course-replay';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
+import {
+  saveTaskRecordingChoice,
+  taskRecordingChoiceKey,
+  type TaskRecordingChoice,
+} from './task-recording-choice';
 import { loadStudioNotes, saveStudioNotes } from './studio-session';
 
 let values: Map<string, string>;
 let storage: Storage;
+const recordingChoice = (taskId = 'task-a', wpm = 18): TaskRecordingChoice => ({
+  version: 1,
+  taskId,
+  assignedUrl: 'https://cwa.cwops.org/wp-content/uploads/WD101_10.mp3',
+  assignedWpm: 10,
+  selectedUrl: `https://cwa.cwops.org/wp-content/uploads/WD101_${wpm}.mp3`,
+});
 const scope = 'synthetic-account';
 const pendingKey = (scope: string, id: string) =>
   `cwa:practice:pending:v1:${encodeURIComponent(scope)}:${encodeURIComponent(id)}`;
@@ -149,6 +161,107 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe('private task recording preference inventory', () => {
+  it('captures exact selected scope and compatible old v1 files without shared restoration', () => {
+    seed();
+    saveTaskRecordingChoice(scope, 'initial', recordingChoice(), storage);
+    saveTaskRecordingChoice('guest', 'initial', recordingChoice('guest-task', 25), storage);
+    saveTaskRecordingChoice('another', 'initial', recordingChoice('another-task', 13), storage);
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(backup.stores.recordingChoices).toEqual([recordingChoice()]);
+    expect(summarizeDeviceBackup(backup)).toContainEqual({
+      id: 'recordingChoices',
+      label: 'Task recording choices',
+      count: 1,
+      shared: false,
+    });
+    const old = structuredClone(backup);
+    delete old.stores.recordingChoices;
+    expect(
+      validateDeviceBackup(JSON.stringify(old), scope).stores.recordingChoices,
+    ).toBeUndefined();
+    restoreDeviceBackup(old);
+    expect(values.get(taskRecordingChoiceKey(scope, 'task-a'))).toBe(
+      JSON.stringify(recordingChoice()),
+    );
+    expect(JSON.stringify(backup)).not.toContain('guest-task');
+    expect(JSON.stringify(backup)).not.toContain('another-task');
+  });
+  it('restores missing choices, keeps current collisions, fences old owners and clears only selected private scope', () => {
+    seed();
+    saveTaskRecordingChoice(scope, 'initial', recordingChoice(), storage);
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    backup.stores.recordingChoices!.push(recordingChoice('task-b', 13));
+    saveTaskRecordingChoice(scope, 'initial', recordingChoice('task-a', 25), storage);
+    saveTaskRecordingChoice('another', 'initial', recordingChoice(), storage);
+    expect(inspectDeviceRestore(backup).retainedRecordingChoices).toBe(1);
+    restoreDeviceBackup(backup);
+    expect(values.get(taskRecordingChoiceKey(scope, 'task-a'))).toBe(
+      JSON.stringify(recordingChoice('task-a', 25)),
+    );
+    expect(values.get(taskRecordingChoiceKey(scope, 'task-b'))).toBe(
+      JSON.stringify(recordingChoice('task-b', 13)),
+    );
+    expect(saveTaskRecordingChoice(scope, 'initial', recordingChoice(), storage)).toBe(false);
+    const restored = captureDeviceBackup(scope, 'Synthetic learner');
+    restoreDeviceBackup(backup);
+    expect(captureDeviceBackup(scope, 'Synthetic learner').stores.recordingChoices).toEqual(
+      restored.stores.recordingChoices,
+    );
+    values.set(taskRecordingChoiceKey(scope, 'damaged-task'), '{');
+    clearDeviceWork(scope);
+    expect(values.has(taskRecordingChoiceKey(scope, 'task-a'))).toBe(false);
+    expect(values.has(taskRecordingChoiceKey(scope, 'task-b'))).toBe(false);
+    expect(values.has(taskRecordingChoiceKey(scope, 'damaged-task'))).toBe(false);
+    expect(values.get(taskRecordingChoiceKey('another', 'task-a'))).toBe(
+      JSON.stringify(recordingChoice()),
+    );
+    expect(values.get(RECORDING_SPEED_STORAGE_KEY)).toBe('next');
+  });
+  it('rejects duplicate, malformed and wrong-group backup preferences before mutation', () => {
+    seed();
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    for (const choices of [
+      [recordingChoice(), recordingChoice()],
+      [
+        {
+          ...recordingChoice(),
+          selectedUrl: 'https://cwa.cwops.org/wp-content/uploads/QSO_203_18.mp3',
+        },
+      ],
+      [{ ...recordingChoice(), assignedWpm: 20 }],
+      [{ ...recordingChoice(), secret: 'excluded fixture' }],
+      ['18'],
+    ]) {
+      const invalid = {
+        ...backup,
+        stores: { ...backup.stores, recordingChoices: choices },
+      } as DeviceBackup;
+      const before = new Map(values);
+      expect(() => restoreDeviceBackup(invalid)).toThrow();
+      expect(values).toEqual(before);
+    }
+  });
+  it('rolls back a partially written preference restore and permits deliberate retry', () => {
+    seed();
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    backup.stores.recordingChoices = [recordingChoice(), recordingChoice('task-b', 25)];
+    const set = vi.spyOn(storage, 'setItem').mockImplementation((key, value) => {
+      if (key === taskRecordingChoiceKey(scope, 'task-b')) throw new Error('Synthetic quota');
+      values.set(key, value);
+    });
+    expect(() => restoreDeviceBackup(backup)).toThrow(DeviceMutationError);
+    expect(values.has(taskRecordingChoiceKey(scope, 'task-a'))).toBe(false);
+    expect(values.has(taskRecordingChoiceKey(scope, 'task-b'))).toBe(false);
+    expect(isDeviceScopeMutating(scope)).toBe(false);
+    set.mockRestore();
+    restoreDeviceBackup(backup);
+    expect(captureDeviceBackup(scope, 'Synthetic learner').stores.recordingChoices).toEqual(
+      backup.stores.recordingChoices,
+    );
+  });
 });
 
 describe('the explicit device inventory', () => {

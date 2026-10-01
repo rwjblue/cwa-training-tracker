@@ -1,4 +1,5 @@
 import ListeningPassProgress from './ListeningPassProgress';
+import TaskRecordingChoiceHint from './TaskRecordingChoiceHint';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   BookOpen,
@@ -37,6 +38,7 @@ import './plan.css';
 import { curriculumForLevel } from '../shared/curriculum';
 
 interface Props {
+  accountId?: string;
   inspection?: { id: string; view: 'week' | 'report' };
   returnToPractice?: { label: string; onReturn: () => void };
   startNewTask?: boolean;
@@ -63,6 +65,7 @@ const dayLabel = (date: string) =>
   });
 
 export default function Plan({
+  accountId,
   profile,
   entries,
   tasks,
@@ -305,6 +308,7 @@ export default function Plan({
                       minimumPasses={task.exercise.minimumPasses}
                     />
                   )}
+                  <TaskRecordingChoiceHint scope={accountId} task={task} />
                   {task.notes && (
                     <details className="plan-notes">
                       <summary>Instructions and notes</summary>

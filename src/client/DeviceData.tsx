@@ -344,6 +344,12 @@ export default function DeviceData({
                 will be kept.
               </p>
             )}
+            {!!inspection?.retainedRecordingChoices && (
+              <p>
+                {inspection.retainedRecordingChoices} existing task recording choices differ; your
+                current choices will be kept.
+              </p>
+            )}
             {!!inspection?.conflicts.length && (
               <div className="alert error" role="alert">
                 <p>
