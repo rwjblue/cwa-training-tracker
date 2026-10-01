@@ -8,7 +8,12 @@ import {
 import { validateRecordingEvidence } from './practice-evidence';
 import { validatePracticeSession, validateTrainingExport } from './training';
 import { validatePlannedTask } from './plan';
-import { recordingVariants, RECORDING_URL_REPLACEMENTS } from './recordings';
+import {
+  recordingVariants,
+  RECORDING_URL_REPLACEMENTS,
+  officialRecordingIdentity,
+  recordingSpeeds,
+} from './recordings';
 
 const url = (wpm: number) => `https://cwa.cwops.org/wp-content/uploads/WD101_${wpm}.mp3`;
 const marks = (wpm = 10): RecordingMarkSet => ({
@@ -159,3 +164,29 @@ it('bounds timestamps to verified file duration and refuses to transplant marks 
     }),
   ).toThrow(/exact verified/);
 });
+
+it.each([
+  ['https://cwa.cwops.org/wp-content/uploads/QSO101_07.mp3', 7],
+  ['https://cwops.org/wp-content/uploads/2022/07/ss-09.111.mp3', 9],
+  ['https://cwa.cwops.org/wp-content/uploads/PR303_30.mp3', 30],
+])(
+  'retains exact published curriculum file %s without inventing native timing',
+  (url, speedWpm) => {
+    expect(recordingVariants(url)).toEqual([]);
+    expect(officialRecordingIdentity(url)).toEqual({ url, speedWpm });
+    expect(recordingSpeeds(url)).toBeUndefined();
+    const set = {
+      taskId: 'task',
+      url,
+      speedWpm,
+      marks: [{ id: 'curriculum-only', positionSeconds: 3, label: 'Synthetic published file' }],
+    };
+    expect(validateRecordingMarkSet(set)).toEqual(set);
+    const evidence = validateRecordingEvidence({ url, speedWpm, seconds: 4, marks: set });
+    expect(evidence.marks).toEqual(set);
+    expect(evidence).not.toHaveProperty('characterWpm');
+    expect(evidence).not.toHaveProperty('effectiveWpm');
+    expect(() => validateRecordingEvidence({ ...evidence, speedWpm: 18 })).toThrow(/match/);
+    expect(() => validateRecordingMarkSet({ ...set, speedWpm: 18 })).toThrow(/exact verified/);
+  },
+);

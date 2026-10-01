@@ -1,4 +1,4 @@
-import { recordingVariants } from './recordings.ts';
+import { officialRecordingIdentity } from './recordings.ts';
 
 export interface RecordingMark {
   id: string;
@@ -34,10 +34,7 @@ function record(value: unknown, fields: string[], label: string): Record<string,
 
 export function validateRecordingMarkSet(value: unknown): RecordingMarkSet {
   const row = record(value, ['taskId', 'url', 'speedWpm', 'marks'], 'Difficult recording marks');
-  const variant =
-    typeof row.url === 'string'
-      ? recordingVariants(row.url).find((item) => item.url === row.url)
-      : undefined;
+  const variant = typeof row.url === 'string' ? officialRecordingIdentity(row.url) : undefined;
   if (!validId(row.taskId) || !variant || row.speedWpm !== variant.speedWpm)
     throw new Error('Difficult marks require their task and exact verified native recording/WPM.');
   if (!Array.isArray(row.marks) || !row.marks.length || row.marks.length > MAX_RECORDING_MARKS)

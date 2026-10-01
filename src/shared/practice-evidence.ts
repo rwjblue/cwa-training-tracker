@@ -1,5 +1,5 @@
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
-import { recordingSpeeds, recordingVariants } from './recordings.ts';
+import { recordingSpeeds, recordingVariants, officialRecordingIdentity } from './recordings.ts';
 import {
   validateRecordingMarkSet,
   recordingMarkSetDetails,
@@ -191,7 +191,11 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
   }
   if (row.marks !== undefined) {
     const marks = validateRecordingMarkSet(row.marks);
-    if (marks.url !== url || marks.speedWpm !== variant?.speedWpm)
+    if (
+      marks.url !== url ||
+      marks.speedWpm !== officialRecordingIdentity(url)?.speedWpm ||
+      (result.speedWpm !== undefined && result.speedWpm !== marks.speedWpm)
+    )
       throw new Error('Difficult marks must match this exact recording and native file WPM.');
     result.marks = marks;
   }

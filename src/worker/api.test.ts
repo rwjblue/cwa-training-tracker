@@ -1535,6 +1535,99 @@ describe('account operation revisions and receipts', () => {
     ).not.toHaveProperty('recordingMarks');
   });
 
+  it('saves and round-trips curriculum-only official marks without fabricating speed measurements', async () => {
+    const auth = await signIn('published-file-marks@example.test');
+    for (const [level, exerciseId, speedWpm] of [
+      ['fundamental', 's3-d1-t6', 7],
+      ['advanced', 's13-d1-t2', 30],
+    ] as const) {
+      expect(
+        (
+          await send(
+            auth.cookie,
+            operation(await snapshot(auth.cookie), {
+              type: 'settings',
+              changes: { level, firstClassDate: '2026-10-08', timezone: 'UTC' },
+            }),
+          )
+        ).status,
+      ).toBe(200);
+      const state = await snapshot(auth.cookie);
+      const task = state.plan.find((item) => item.curriculum?.exerciseId === exerciseId)!;
+      const url = (task.exercise as { url: string }).url;
+      const marks = [
+        {
+          taskId: task.id,
+          url,
+          speedWpm,
+          marks: [
+            {
+              id: `published-${speedWpm}`,
+              positionSeconds: 0,
+              label: 'Synthetic published source mark',
+            },
+          ],
+        },
+      ];
+      expect(
+        (
+          await send(
+            auth.cookie,
+            operation(state, {
+              type: 'task-edit',
+              id: task.id,
+              changes: { recordingMarks: marks },
+            }),
+          )
+        ).status,
+      ).toBe(200);
+      const value = {
+        ...entry(`published-${speedWpm}`),
+        minutes: 4 / 60,
+        metadata: {
+          plannedTaskId: task.id,
+          evidence: {
+            version: 1,
+            type: 'timed',
+            measurement: { seconds: 4, recallSeconds: 0 },
+            recordings: [{ url, speedWpm: Number(speedWpm), seconds: 4, marks: marks[0] }],
+          },
+        },
+      };
+      expect((await request('/api/entries', 'POST', { entry: value }, auth.cookie)).status).toBe(
+        201,
+      );
+      const invalid = structuredClone(value);
+      invalid.id += '-wrong-native';
+      invalid.metadata.evidence.recordings[0].speedWpm = 99;
+      expect((await request('/api/entries', 'POST', { entry: invalid }, auth.cookie)).status).toBe(
+        400,
+      );
+    }
+    const data = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(data.sessions).toHaveLength(2);
+    for (const session of data.sessions) {
+      const evidence = session.metadata?.evidence as { recordings: RecordingEvidence[] };
+      expect(evidence.recordings[0].marks?.marks[0].label).toBe('Synthetic published source mark');
+      expect(evidence.recordings[0]).not.toHaveProperty('characterWpm');
+      expect(evidence.recordings[0]).not.toHaveProperty('effectiveWpm');
+    }
+    const other = await signIn('published-file-import@example.test');
+    for (let n = 0; n < 2; n++)
+      expect(
+        (await request('/api/import', 'POST', { mode: 'merge', data }, other.cookie)).status,
+      ).toBe(200);
+    const copy = (await (
+      await request('/api/export', 'GET', undefined, other.cookie)
+    ).json()) as TrainingExport;
+    expect(copy.sessions).toEqual(data.sessions);
+    expect(copy.plan?.filter((item) => item.recordingMarks?.length)).toEqual(
+      data.plan?.filter((item) => item.recordingMarks?.length),
+    );
+  });
+
   it('acknowledges exact lost-response retries without reapplying older settings', async () => {
     const auth = await signIn('receipts@example.test');
     const first = operation(

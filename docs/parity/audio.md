@@ -591,3 +591,27 @@ with any dirty mark edit offers a deliberate discard or cancel before leaving.
 Required check/test/build still pass (842/47); both extended native journeys pass
 again in 27.4 seconds, including failed 10→18→10 retention and canceling Finish.
 Independent correction recheck and final regression/deployment remain pending.
+
+
+A second P2 emerged from the complete published-curriculum workflow: 8 Fundamental
+and 22 Advanced linked files have no speed-variant group. The enabled mark action
+rejected them indefinitely. Independent actual-course probes confirmed QSO07,
+story09 and Advanced30. `officialRecordingIdentity` now prioritizes exact native
+variant metadata, then uses exact published curriculum URL/file-WPM metadata.
+Direct public JSON imports avoid a curriculum/plan/marks cycle and include Node
+JSON attributes for the private legacy CLI. Conflicting labels and superseded
+URLs remain rejected. This supplies no guessed links, variants, duration or
+character/effective timing. Annotation-bearing evidence must match the parent's
+file WPM; old unmarked unknown recordings remain compatible. Unknown unpublished
+files no longer expose a mark action that cannot save.
+
+All 30 additional official URLs returned HTTP 200 with audio MIME types on a
+metadata-only HEAD recheck; no course audio was downloaded or copied into assets
+or fixtures. Native creation bounds positions to actual loaded duration; import
+uses known catalog duration when present and a 24-hour bound otherwise, with
+out-of-range actual-file replay visibly disabled. `mise run check`, all 846 tests
+in 47 files, and build pass. Four affected journeys pass in 54.8 seconds, including
+two new real-course desktop Space/mobile-touch journeys covering all three source
+families, saved actual partial hearing, task revisits, private snapshots and no
+invented timing. Six new-course Axe checks are empty; two screenshots inspected.
+The independent second-finding recheck and final full regression remain pending.

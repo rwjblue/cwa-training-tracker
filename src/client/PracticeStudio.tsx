@@ -1,3 +1,4 @@
+import { officialRecordingIdentity } from '../shared/recordings';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -162,7 +163,11 @@ export default function PracticeStudio({
   const recordingUrl =
     activity?.type === 'audio' ? (selectedRecording?.url ?? activity.url) : undefined;
   const recordingWpm =
-    activity?.type === 'audio' ? (selectedRecording?.speedWpm ?? activity.characterWpm) : undefined;
+    activity?.type === 'audio'
+      ? (officialRecordingIdentity(recordingUrl)?.speedWpm ??
+        selectedRecording?.speedWpm ??
+        activity.characterWpm)
+      : undefined;
   const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
   // Private, unsent edits live with this Studio owner, not a keyed file control.
   const [recordingReviewDrafts, setRecordingReviewDrafts] = useState<
@@ -1372,7 +1377,7 @@ export default function PracticeStudio({
                           onSeek={seekRecording}
                           onSave={
                             recordingMarksTask &&
-                            recordingWpm !== undefined &&
+                            officialRecordingIdentity(recordingUrl) !== undefined &&
                             onRecordingMarksChange
                               ? changeRecordingMarks
                               : undefined

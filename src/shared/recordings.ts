@@ -1,4 +1,8 @@
 import catalog from '../client/recording-catalog.json' with { type: 'json' };
+import beginner from './curriculum/beginner-v4.8.json' with { type: 'json' };
+import fundamental from './curriculum/fundamental-v2.0.json' with { type: 'json' };
+import intermediate from './curriculum/intermediate-v2.3.json' with { type: 'json' };
+import advanced from './curriculum/advanced-v2.1.json' with { type: 'json' };
 
 export interface RecordingVariant {
   title: string;
@@ -70,4 +74,44 @@ export function recordingSpeeds(
   return variant
     ? { characterWpm: variant.characterWpm, effectiveWpm: variant.effectiveWpm }
     : undefined;
+}
+
+const curriculumFileWpms = new Map<string, number>();
+const ambiguousCurriculumFiles = new Set<string>();
+for (const source of [beginner, fundamental, intermediate, advanced]) {
+  for (const row of source.exercises as { kind: string; url?: string; characterWpm?: number }[]) {
+    if (
+      row.kind !== 'audio' ||
+      !row.url ||
+      !Number.isFinite(row.characterWpm) ||
+      row.characterWpm! <= 0 ||
+      row.characterWpm! > 200
+    )
+      continue;
+    const previous = curriculumFileWpms.get(row.url);
+    if (previous !== undefined && previous !== row.characterWpm)
+      ambiguousCurriculumFiles.add(row.url);
+    curriculumFileWpms.set(row.url, row.characterWpm!);
+  }
+}
+
+/** Exact published file labels for annotations, not guessed character/effective timing.
+ * Some Fundamental and Advanced files are linked by the curriculum but have no
+ * speed-variant group. Keep those exact URLs usable without inventing alternatives.
+ */
+export function officialRecordingIdentity(
+  url: string | undefined,
+): Pick<RecordingVariant, 'url' | 'speedWpm' | 'durationSeconds'> | undefined {
+  if (!url || RECORDING_URL_REPLACEMENTS[url]) return;
+  const variant = recordingVariants(url).find((item) => item.url === url);
+  if (variant)
+    return {
+      url,
+      speedWpm: variant.speedWpm,
+      ...(variant.durationSeconds !== undefined
+        ? { durationSeconds: variant.durationSeconds }
+        : {}),
+    };
+  const speedWpm = curriculumFileWpms.get(url);
+  if (speedWpm !== undefined && !ambiguousCurriculumFiles.has(url)) return { url, speedWpm };
 }
