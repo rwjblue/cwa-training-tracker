@@ -500,6 +500,17 @@ export function validatePracticeSession(
     }
     session.metadata = metadata;
     if (evidence) {
+      if (
+        evidence.type === 'timed' &&
+        evidence.recordings.some(
+          (item) =>
+            item.marks &&
+            item.marks.taskId !== (metadata.plannedTaskId ?? session.historicalPlannedTaskId),
+        )
+      )
+        throw new Error(
+          'Difficult recording marks must retain this practice entry’s task identity.',
+        );
       session.metadata = { ...metadata, evidence };
       if (evidence.type === 'runner') {
         session.kind = 'simulator';

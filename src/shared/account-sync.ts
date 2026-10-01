@@ -55,6 +55,7 @@ const editFields = [
   'dismissedFromToday',
   'notes',
   'exercise',
+  'recordingMarks',
 ] as const;
 const clearFields = [
   'lesson',
@@ -64,6 +65,7 @@ const clearFields = [
   'targetMinutesExplicit',
   'dismissedFromToday',
   'exercise',
+  'recordingMarks',
 ];
 const curriculumEditFields = [
   'title',
@@ -72,6 +74,7 @@ const curriculumEditFields = [
   'done',
   'dismissedFromToday',
   'notes',
+  'recordingMarks',
 ];
 const taskFields = [
   'id',
@@ -89,6 +92,7 @@ const taskFields = [
   'source',
   'curriculum',
   'exercise',
+  'recordingMarks',
 ];
 
 function effectivePlan(value: unknown): PlannedTask[] {

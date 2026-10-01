@@ -257,13 +257,14 @@ remains. Signed publication matches the accepted tree, production is verified
 and #8 is closed. No elapsed-time reload/crash recovery or physical-device claim
 is added.
 
-### P2 — difficult marks and short replay: missing for official audio
+### P2 — difficult marks and short replay: delivered in issue #12
 
 Personal [cw-training.astro:184](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/pages/radio/cw-training.astro#L184) offers Replay 8 sec, Mark difficult here, and saved
 timestamp buttons. [client.ts:2069](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L2069) rewinds eight seconds and plays; `:2073` saves
 the current timestamp. Marks appear in saved notes and stay associated with their
-recording during speed switches ([audio-session.ts:81](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L81)). Tracker official audio
-has native scrubbing only. Generated QSO now has Replay QSO and previous/next
+recording during speed switches ([audio-session.ts:81](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L81)). The baseline Tracker had native scrubbing only. Issue #12 now adds Replay 8 sec,
+private named timestamps, exact-file task revisits and immutable saved annotations;
+see the delivery ledger below. Generated QSO now has Replay QSO and previous/next
 transmission, but no shared Back 10 sec button from personal [cw-listening/player.ts:48](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/player.ts#L48).
 
 ### P2 — actual recording speed metadata / 1x transport enforcement: partial
@@ -538,3 +539,42 @@ keyboard/touch student workflows, 167 focused checks and truthful failure/retry,
 private backup and played-file reporting, with no substantive finding. Production
 is deployed and exact asset/private access checks pass; latest no-push instruction
 leaves the commits local and #11 open. Exact evidence is in the execution journal.
+
+
+## Issue #12 implementation ledger
+
+The source actions at pinned `client.ts:2069–2077` and timestamp rendering at
+`:1224–1228` were rechecked. Companion implements deliberate native Replay 8 sec,
+clamp at zero, settlement before seek, and deliberate timestamp playback. It keeps
+existing actual hearing/coverage accounting and 1x native transport. Annotation
+state uses private plan task edits and existing account sync rather than a second
+queue or timer. Each exact file keeps bounded task/URL/WPM timestamps and optional
+labels; current speed switches cannot display/apply another file's timestamps.
+Mark-only saves do not invent a timed entry. Saved actual-file evidence freezes
+useful annotations for private history, reports, export/import and retry; selected
+unplayed files stay out of that evidence. Existing account lifecycle fences and
+revision conflicts govern these private fields.
+
+Implementation: [review controls](../../src/client/RecordingReviewControls.tsx),
+[Studio transport](../../src/client/PracticeStudio.tsx),
+[validation](../../src/shared/recording-marks.ts),
+[save snapshot](../../src/client/studio-session.ts), and
+[learner journey](../../e2e/recording-marks.spec.ts). The marks are account task
+annotations; generated Back 10 sec is #27 and reload/crash time recovery remains
+excluded. Validation/review/deployment evidence will be appended once verified.
+
+Validation before implementation commit: `mise run check`, `mise run test`
+(842 tests in 47 files), and `mise run build` pass. The full single-worker
+Wrangler/D1 browser suite passes all 67 checks in 12.0 minutes. After scoped
+44px input/16px mobile text and bounded mark-list styling, both changed journeys
+pass again in 26.7 seconds (1440px keyboard and 390px touch emulation); two Axe
+reports are empty and both screenshots were visually inspected. The journeys
+exercise native replay at 3→0 and 20→12 seconds, paused/playing marks, exact-file
+switches/revisits, inspection continuity, storage refusal with cancel/retry,
+503 device receipt with account retry, review cancellation, immutable history
+and reports, and Guest/second-account isolation. They retain partial actual
+hearing and zero completed passes; seeking creates no skipped-time credit.
+Worker tests cover private mark-only saves, idempotent operations, curriculum
+annotation retention, invalid-import atomicity, version 1 export/import and
+reset fencing. No binding/configuration change requires regeneration of types.
+Independent review and deployment remain pending at this implementation commit.

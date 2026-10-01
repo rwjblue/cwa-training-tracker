@@ -50,6 +50,14 @@ import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
+import RecordingReviewControls from './RecordingReviewControls';
+import {
+  MAX_TASK_RECORDING_MARKS,
+  recordingReplayPosition,
+  validateRecordingMarkSet,
+  type RecordingMark,
+  type RecordingMarkSet,
+} from '../shared/recording-marks';
 import { preferredRecording, recordingSpeeds } from './recording-variants';
 import {
   clearTaskRecordingChoice,
@@ -95,6 +103,7 @@ export default function PracticeStudio({
   onSaved,
   onAutoSave,
   onTaskCompletion,
+  onRecordingMarksChange,
   onBeforeLeaveChange,
   onBeforeInspectChange,
 }: {
@@ -116,6 +125,10 @@ export default function PracticeStudio({
   onSaved?: (entry: PracticeSession) => void;
   onAutoSave: (entry: PracticeSession) => Promise<void>;
   onTaskCompletion?: (task: PlannedTask, done: boolean) => Promise<void>;
+  onRecordingMarksChange?: (
+    task: PlannedTask,
+    marks: RecordingMarkSet[],
+  ) => Promise<'server' | 'device'>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
   onBeforeInspectChange?: (handler: (() => Promise<void>) | undefined) => void;
 }) {
@@ -193,7 +206,7 @@ export default function PracticeStudio({
       },
       onSeek: (position) => {
         if (!canPractice()) return;
-        audio.currentTime = position;
+        seekRecording(position, !audio.paused);
       },
       getPosition: () => ({
         duration: audio.duration,
@@ -252,6 +265,11 @@ export default function PracticeStudio({
         sessionIdentity.current?.id,
       ).get(launch.task.id)
     : undefined;
+  const recordingMarksTask = tasks.find((task) => task.id === launch?.task?.id) ?? launch?.task;
+  const taskRecordingMarks = recordingMarksTask?.recordingMarks ?? [];
+  const currentRecordingMarks = taskRecordingMarks.find(
+    (set) => set.url === recordingUrl && set.speedWpm === recordingWpm,
+  );
   const currentPasses = timer.recordings.reduce(
     (total, item) => total + (recordingCompletedPasses(item) ?? 0),
     0,
@@ -465,6 +483,7 @@ export default function PracticeStudio({
         measured: timer.snapshot(),
         preferences,
         generatedListening: generatedListening.current.snapshot(),
+        recordingMarks: taskRecordingMarks,
         scratchpad,
         timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
         launch,
@@ -683,6 +702,47 @@ export default function PracticeStudio({
         setRecordingPending(false);
       }
     }
+  };
+  const seekRecording = (position?: number, play = true): number | undefined => {
+    const audio = recording.current;
+    if (!audio || !canPractice() || audio.seeking || audio.error) return;
+    const replay = recordingReplayPosition(audio.currentTime, audio.duration);
+    if (
+      replay === undefined ||
+      (position !== undefined &&
+        (!Number.isFinite(position) || position < 0 || position > audio.duration))
+    )
+      return;
+    const target = position ?? replay;
+    // Settle the old heard interval before the native seeking event contains its destination.
+    pauseTimer();
+    audio.currentTime = target;
+    recordingSession.current.updatePosition();
+    if (play) void playRecording(audio);
+    return target;
+  };
+  const changeRecordingMarks = async (marks: RecordingMark[]): Promise<'server' | 'device'> => {
+    if (
+      !canPractice() ||
+      !recordingMarksTask ||
+      !onRecordingMarksChange ||
+      !recordingUrl ||
+      recordingWpm === undefined
+    )
+      throw new Error('Reopen the current account exercise before saving marks.');
+    const updated = marks.length
+      ? validateRecordingMarkSet({
+          taskId: recordingMarksTask.id,
+          url: recordingUrl,
+          speedWpm: recordingWpm,
+          marks,
+        })
+      : undefined;
+    const sets = [
+      ...taskRecordingMarks.filter((set) => set.url !== recordingUrl),
+      ...(updated ? [updated] : []),
+    ];
+    return onRecordingMarksChange(recordingMarksTask, sets);
   };
   const changeCourseReplay = (enabled: boolean) => {
     courseReplayChoice.current = enabled;
@@ -1258,6 +1318,24 @@ export default function PracticeStudio({
                             setPlaying(false);
                             recordingSession.current.release();
                           }}
+                        />
+                        <RecordingReviewControls
+                          key={`review:${launch?.id}:${recordingUrl}`}
+                          audioRef={recording}
+                          markSet={currentRecordingMarks}
+                          availableMarks={Math.max(
+                            0,
+                            MAX_TASK_RECORDING_MARKS -
+                              taskRecordingMarks.reduce((sum, set) => sum + set.marks.length, 0),
+                          )}
+                          onSeek={seekRecording}
+                          onSave={
+                            recordingMarksTask &&
+                            recordingWpm !== undefined &&
+                            onRecordingMarksChange
+                              ? changeRecordingMarks
+                              : undefined
+                          }
                         />
                         <label className="checkbox-label course-replay-choice">
                           <input

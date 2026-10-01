@@ -16,6 +16,7 @@ import {
   sessionEvidence,
 } from './practice-evidence.ts';
 import { recordingVariants } from './recordings.ts';
+import { validateTaskRecordingMarks, type RecordingMarkSet } from './recording-marks.ts';
 
 export type SendingSection = 'warm-up' | 'drill' | 'exercise';
 export type PracticeExercise =
@@ -61,6 +62,8 @@ export interface PlannedTask {
   source?: 'manual' | 'legacy' | 'curriculum';
   curriculum?: { id: string; exerciseId: string; day: 1 | 2 | 3; sourceUrl: string };
   exercise?: PracticeExercise;
+  /** Retained private review annotations, separate from listening measurements. */
+  recordingMarks?: RecordingMarkSet[];
 }
 
 export const MAX_PLAN_TASKS = 2000;
@@ -360,6 +363,8 @@ export function validatePlannedTask(value: unknown): PlannedTask {
       sourceUrl: exerciseUrl(reference.sourceUrl),
     };
   }
+  if (input.recordingMarks !== undefined)
+    task.recordingMarks = validateTaskRecordingMarks(input.recordingMarks, task.id);
   return task;
 }
 

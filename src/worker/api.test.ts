@@ -1346,6 +1346,195 @@ describe('account operation revisions and receipts', () => {
     });
   }
 
+  it('persists private mark-only edits with exact retry receipts, export/import fidelity and ownership fences', async () => {
+    const auth = await signIn('marks-a@example.test');
+    const other = await signIn('marks-b@example.test');
+    const url = 'https://cwa.cwops.org/wp-content/uploads/WD101_10.mp3';
+    const task = {
+      ...customTask(),
+      kind: 'listening' as const,
+      link: url,
+      exercise: { type: 'audio' as const, url, characterWpm: 10 },
+    };
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(await snapshot(auth.cookie), { type: 'task-create', task }),
+        )
+      ).status,
+    ).toBe(200);
+    const marks = [
+      {
+        taskId: task.id,
+        url,
+        speedWpm: 10,
+        marks: [{ id: 'difficult-1', positionSeconds: 3.25, label: 'Synthetic private mark' }],
+      },
+    ];
+    const edit = operation(
+      await snapshot(auth.cookie),
+      { type: 'task-edit', id: task.id, changes: { recordingMarks: marks } },
+      'stable-mark-edit',
+    );
+    expect((await send(other.cookie, edit)).status).toBe(409);
+    expect((await send('', edit)).status).toBe(401);
+    expect((await send(auth.cookie, edit)).status).toBe(200);
+    expect((await send(auth.cookie, edit)).status).toBe(200);
+    expect(
+      (await snapshot(auth.cookie)).plan.find((item) => item.id === task.id)?.recordingMarks,
+    ).toEqual(marks);
+    expect((await snapshot(other.cookie)).plan).not.toContainEqual(
+      expect.objectContaining({ recordingMarks: marks }),
+    );
+    let data = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(data.sessions).toHaveLength(0);
+    const heard = {
+      ...entry('heard-with-marks'),
+      minutes: 1,
+      metadata: {
+        plannedTaskId: task.id,
+        evidence: {
+          version: 1,
+          type: 'timed',
+          measurement: { seconds: 60, recallSeconds: 0 },
+          recordings: [{ url, speedWpm: 10, seconds: 20, marks: marks[0] }],
+        },
+      },
+    };
+    expect((await request('/api/entries', 'POST', { entry: heard }, auth.cookie)).status).toBe(201);
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(await snapshot(auth.cookie), {
+            type: 'task-edit',
+            id: task.id,
+            changes: { recordingMarks: [] },
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    data = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (data.sessions[0].metadata?.evidence as { recordings: { marks: unknown }[] }).recordings[0]
+        .marks,
+    ).toEqual(marks[0]);
+    data.plan!.find((item) => item.id === task.id)!.recordingMarks = marks;
+    for (let n = 0; n < 2; n++)
+      expect(
+        (await request('/api/import', 'POST', { mode: 'merge', data }, other.cookie)).status,
+      ).toBe(200);
+    const imported = (await (
+      await request('/api/export', 'GET', undefined, other.cookie)
+    ).json()) as TrainingExport;
+    expect(imported.sessions).toHaveLength(1);
+    expect(imported.sessions).toEqual(data.sessions);
+    expect(imported.plan?.find((item) => item.id === task.id)?.recordingMarks).toEqual(marks);
+    const invalid = structuredClone(data);
+    invalid.plan!.find((item) => item.id === task.id)!.recordingMarks![0].taskId = 'foreign';
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: invalid }, other.cookie)).status,
+    ).toBe(400);
+    expect((await snapshot(other.cookie)).plan).toEqual(imported.plan);
+    expect(
+      (await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie)).status,
+    ).toBe(200);
+    expect((await send(auth.cookie, { ...edit, id: 'delayed-old-mark' })).status).toBe(409);
+    expect((await snapshot(auth.cookie)).plan).not.toContainEqual(
+      expect.objectContaining({ recordingMarks: marks }),
+    );
+  });
+
+  it('retains private curriculum marks when the schedule refreshes and rejects malformed edits atomically', async () => {
+    const auth = await signIn('curriculum-marks@example.test');
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(await snapshot(auth.cookie), {
+            type: 'settings',
+            changes: { level: 'intermediate', firstClassDate: '2026-10-08', timezone: 'UTC' },
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    const before = await snapshot(auth.cookie);
+    const task = before.plan.find(
+      (item) => item.source === 'curriculum' && item.exercise?.type === 'audio',
+    )!;
+    expect(task).toBeDefined();
+    const exercise = task.exercise as { type: 'audio'; url: string; characterWpm?: number };
+    const marks = [
+      {
+        taskId: task.id,
+        url: exercise.url,
+        speedWpm: exercise.characterWpm!,
+        marks: [
+          { id: 'curriculum-mark', positionSeconds: 3, label: 'Synthetic curriculum annotation' },
+        ],
+      },
+    ];
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(before, { type: 'task-edit', id: task.id, changes: { recordingMarks: marks } }),
+        )
+      ).status,
+    ).toBe(200);
+    const saved = await snapshot(auth.cookie);
+    for (const positionSeconds of [-1, 86401]) {
+      const invalid = structuredClone(marks);
+      invalid[0].marks[0].positionSeconds = positionSeconds;
+      expect(
+        (
+          await send(
+            auth.cookie,
+            operation(saved, {
+              type: 'task-edit',
+              id: task.id,
+              changes: { recordingMarks: invalid },
+            }),
+          )
+        ).status,
+      ).toBe(400);
+      expect(await snapshot(auth.cookie)).toEqual(saved);
+    }
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(saved, { type: 'settings', changes: { displayName: 'Synthetic learner' } }),
+        )
+      ).status,
+    ).toBe(200);
+    expect((await snapshot(auth.cookie)).plan.find((item) => item.id === task.id)).toMatchObject({
+      recordingMarks: marks,
+      exercise: task.exercise,
+      curriculum: task.curriculum,
+    });
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(await snapshot(auth.cookie), {
+            type: 'task-edit',
+            id: task.id,
+            changes: { recordingMarks: null },
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await snapshot(auth.cookie)).plan.find((item) => item.id === task.id),
+    ).not.toHaveProperty('recordingMarks');
+  });
+
   it('acknowledges exact lost-response retries without reapplying older settings', async () => {
     const auth = await signIn('receipts@example.test');
     const first = operation(

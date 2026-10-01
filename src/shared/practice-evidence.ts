@@ -1,6 +1,11 @@
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
 import { recordingSpeeds, recordingVariants } from './recordings.ts';
 import {
+  validateRecordingMarkSet,
+  recordingMarkSetDetails,
+  type RecordingMarkSet,
+} from './recording-marks.ts';
+import {
   generatedListeningDetails,
   validateGeneratedListeningEvidence,
   type GeneratedListeningEvidence,
@@ -48,6 +53,8 @@ export interface RecordingEvidence {
   effectiveWpm?: number;
   seconds: number;
   passes?: RecordingPassEvidence;
+  /** Retained annotations copied at save time; not additional listening evidence. */
+  marks?: RecordingMarkSet;
 }
 export type PracticeEvidence =
   | {
@@ -106,7 +113,7 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
   const row = object(value, 'Recording evidence');
   keys(
     row,
-    ['url', 'speedWpm', 'characterWpm', 'effectiveWpm', 'seconds', 'passes'],
+    ['url', 'speedWpm', 'characterWpm', 'effectiveWpm', 'seconds', 'passes', 'marks'],
     'Recording evidence',
   );
   const url = text(row.url, 'Recording URL', 2000);
@@ -181,6 +188,12 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
     if (exceedsMeasuredTime(minimumHeard, result.seconds))
       throw new Error('Recording completed passes exceed its measured native-1x listening time.');
     result.passes = { version: 1, method: 'native-1x', durations };
+  }
+  if (row.marks !== undefined) {
+    const marks = validateRecordingMarkSet(row.marks);
+    if (marks.url !== url || marks.speedWpm !== variant?.speedWpm)
+      throw new Error('Difficult marks must match this exact recording and native file WPM.');
+    result.marks = marks;
   }
   return result;
 }
@@ -490,6 +503,13 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
             ? `${recordingCompletedPasses(item)} completed ${recordingCompletedPasses(item) === 1 ? 'pass' : 'passes'} (native 1x; ${item.passes.durations.map((duration) => `${duration.completedPasses} × ${duration.durationSeconds.toFixed(2)}s observed duration`).join('; ')})`
             : 'passes unmeasured'
         }: ${item.url}`,
+    ),
+    ...evidence.recordings.flatMap((item) =>
+      item.marks
+        ? [
+            `Retained difficult marks, ${recordingMarkSetDetails(item.marks)}. Review annotations, not extra time or proficiency.`,
+          ]
+        : [],
     ),
     ...(evidence.generatedListening ? generatedListeningDetails(evidence.generatedListening) : []),
     ...(evidence.correction

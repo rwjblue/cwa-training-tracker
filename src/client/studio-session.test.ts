@@ -583,3 +583,50 @@ it('clears only the saved practice context after confirmation without relying on
   expect(clearSavedStudioNotes(scope, tasklessSaved, storage)).toBe(true);
   expect(loadStudioNotes(scope, taskless.launch.id, storage)).toBe('');
 });
+
+it('snapshots difficult marks only for actual heard files and freezes them across save retries', async () => {
+  const url = (wpm: number) => `https://cwa.cwops.org/wp-content/uploads/WD101_${wpm}.mp3`;
+  const value = input(20);
+  value.launch = {
+    id: 'launch',
+    ...practiceLaunchForTask({
+      id: 'task',
+      title: 'Synthetic audio',
+      notes: '',
+      kind: 'listening',
+      done: false,
+      source: 'manual',
+      createdAt: '2026-09-30T12:00:00Z',
+      link: url(10),
+      exercise: { type: 'audio', url: url(10), characterWpm: 10 },
+    }),
+  };
+  value.measured.recordings = [{ url: url(10), speedWpm: 10, seconds: 20 }];
+  value.recordingMarks = [10, 18].map((wpm) => ({
+    taskId: 'task',
+    url: url(wpm),
+    speedWpm: wpm,
+    marks: [{ id: `mark-${wpm}`, positionSeconds: 3, label: 'Original synthetic label' }],
+  }));
+  const original = studioSession(value, 0)!;
+  const coordinator = new StudioSaveCoordinator();
+  await expect(
+    coordinator.flush(original, async () => {
+      throw new Error('Lost receipt');
+    }),
+  ).rejects.toThrow('Lost receipt');
+  value.recordingMarks[0].marks[0].label = 'Later edit';
+  const retry = vi.fn(async (_entry: PracticeSession) => {});
+  await coordinator.flush(studioSession(value, 0), retry);
+  expect(retry.mock.calls[0][0]).toEqual(original);
+  const evidence = original.metadata?.evidence as { recordings: { url: string; marks: unknown }[] };
+  expect(evidence.recordings).toHaveLength(1);
+  expect(evidence.recordings[0].marks).toMatchObject({
+    url: url(10),
+    marks: [{ label: 'Original synthetic label' }],
+  });
+  value.recordingMarks = [{ ...value.recordingMarks[0], taskId: 'other' }];
+  expect(
+    (studioSession(value, 0)?.metadata?.evidence as typeof evidence).recordings[0],
+  ).not.toHaveProperty('marks');
+});

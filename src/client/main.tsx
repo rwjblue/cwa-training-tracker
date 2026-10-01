@@ -1264,6 +1264,23 @@ function App() {
                       onTaskCompletion={(task: PlannedTask, done: boolean) =>
                         updateTaskStatus([task], { done })
                       }
+                      onRecordingMarksChange={async (task, recordingMarks) => {
+                        const owner = scope;
+                        const token = deviceToken;
+                        const result = await account.mutate({
+                          type: 'task-edit',
+                          id: task.id,
+                          changes: { recordingMarks },
+                        });
+                        if (
+                          (activeAccount.current ?? 'guest') !== owner ||
+                          !isDeviceScopeCurrent(owner, token)
+                        )
+                          throw new Error(
+                            'This exercise belongs to a previous account or device state.',
+                          );
+                        return result.destination;
+                      }}
                       onBeforeLeaveChange={(handler: (() => Promise<boolean>) | undefined) => {
                         if (currentLaunch.current?.id === practiceLaunch.id)
                           beforeLeaveStudio.current = handler;

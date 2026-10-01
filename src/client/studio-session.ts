@@ -10,6 +10,7 @@ import { formatPracticeDuration } from './practice-duration';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 import type { GeneratedListeningEvidence } from '../shared/generated-listening';
 import { recordingCompletedPasses } from '../shared/practice-evidence';
+import type { RecordingMarkSet } from '../shared/recording-marks';
 
 export const STUDIO_AUTOSAVE_SECONDS = 30;
 const duration = (seconds: number) => formatPracticeDuration(seconds / 60).padStart(5, '0');
@@ -22,6 +23,7 @@ export interface StudioSessionInput {
   scratchpad: string;
   timezone: string;
   launch?: PracticeLaunch;
+  recordingMarks?: readonly RecordingMarkSet[];
 }
 
 /** Capture the old source and its measured time before a tool/assignment changes. */
@@ -62,10 +64,17 @@ export function studioSession(
       ),
     ),
   ];
-  const recordings = measured.recordings.map((item) => ({
-    ...structuredClone(item),
-    ...recordingSpeeds(item.url),
-  }));
+  const recordings = measured.recordings.map((item) => {
+    const marks = input.recordingMarks?.find(
+      (set) =>
+        set.taskId === launch?.task?.id && set.url === item.url && set.speedWpm === item.speedWpm,
+    );
+    return {
+      ...structuredClone(item),
+      ...recordingSpeeds(item.url),
+      ...(marks ? { marks: structuredClone(marks) } : {}),
+    };
+  });
   const sharedSpeed = (key: 'characterWpm' | 'effectiveWpm') => {
     const speeds = new Set(recordings.map((item) => item[key]));
     return speeds.size === 1 ? [...speeds][0] : undefined;

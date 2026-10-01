@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { validateRecordingMarkSet, recordingMarkSetDetails } from '../shared/recording-marks';
 import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
 import type { QueuedAccountOperation } from './account-outbox';
 
@@ -22,6 +23,11 @@ const valueLabel = (value: unknown) =>
           ? 'Yes'
           : 'No'
         : String(value);
+const taskValueLabel = (key: string, value: unknown) => {
+  if (key !== 'recordingMarks') return valueLabel(value);
+  if (!Array.isArray(value) || !value.length) return 'None';
+  return value.map(validateRecordingMarkSet).map(recordingMarkSetDetails).join(' / ');
+};
 function title(change: AccountChange, state?: AccountSnapshot): string {
   if (change.type === 'settings') return 'Practice preferences';
   if (change.type === 'task-create') return `Add ${change.task.title}`;
@@ -40,7 +46,7 @@ function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
     if (!task) return ['This exercise is no longer in the online plan.'];
     return Object.entries(change.changes).map(
       ([key, value]) =>
-        `${key === 'targetMinutes' ? 'Suggested minutes' : key}: saved online ${valueLabel(task[key as keyof typeof task])}; your edit ${valueLabel(value)}.`,
+        `${key === 'targetMinutes' ? 'Suggested minutes' : key === 'recordingMarks' ? 'Difficult recording marks' : key}: saved online ${taskValueLabel(key, task[key as keyof typeof task])}; your edit ${taskValueLabel(key, value)}.`,
     );
   }
   if (change.type === 'task-create')
