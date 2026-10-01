@@ -4,6 +4,10 @@ import {
   practiceSessionEvidenceDetails,
   sessionEvidence,
   validatePracticeEvidence,
+  validateRecordingEvidence,
+  recordingCompletedPasses,
+  recordingPassTolerance,
+  type RecordingPassEvidence,
 } from './practice-evidence';
 import { validatePracticeSession, validateTrainingExport } from './training';
 import { RUNNER_REVISION } from './runner';
@@ -82,6 +86,179 @@ const generated = (): GeneratedListeningEvidence => ({
 });
 
 describe('non-copy native evidence', () => {
+  it.each([
+    { duration: 4, minimum: 3.8 },
+    { duration: 0.05, minimum: 0.0475 },
+    { duration: 100, minimum: 99 },
+  ])(
+    'validates only actual heard seconds against the $duration-second native pass floor',
+    ({ duration, minimum }) => {
+      expect(recordingPassTolerance(duration)).toBeCloseTo(duration - minimum, 8);
+      const measurement = {
+        url: 'https://example.org/native-pass.mp3',
+        seconds: minimum,
+        passes: {
+          version: 1,
+          method: 'native-1x',
+          durations: [{ durationSeconds: duration, completedPasses: 1 }],
+        },
+      };
+      expect(validateRecordingEvidence(measurement).seconds).toBe(minimum);
+      expect(() => validateRecordingEvidence({ ...measurement, seconds: minimum - 0.002 })).toThrow(
+        /exceed/,
+      );
+    },
+  );
+
+  it('retains changed-duration native pass groups through aliases, correction and old v1 backup', () => {
+    const passes: RecordingPassEvidence = {
+      version: 1,
+      method: 'native-1x',
+      durations: [
+        { durationSeconds: 10, completedPasses: 2 },
+        { durationSeconds: 12, completedPasses: 1 },
+      ],
+    };
+    const raw = { ...timed(), recordings: [{ ...timed().recordings[0], passes }] };
+    const metadata = {
+      elapsedSeconds: raw.measurement.seconds,
+      recallSeconds: raw.measurement.recallSeconds,
+      recordings: raw.recordings,
+      evidence: raw,
+    };
+    const result = sessionEvidence(metadata)!;
+    expect(result).toMatchObject({ recordings: [{ passes }] });
+    expect(recordingCompletedPasses(raw.recordings[0])).toBe(3);
+    expect(recordingCompletedPasses({})).toBeUndefined();
+    const corrected = validatePracticeSession({
+      ...session(raw),
+      metadata: {
+        ...metadata,
+        evidence: { ...raw, correction: { recallSeconds: 0, reason: 'Recall estimate corrected' } },
+      },
+    });
+    expect(corrected.minutes).toBe(raw.measurement.seconds / 60);
+    expect(corrected.metadata?.evidence).toMatchObject({ recordings: [{ passes }] });
+    const backup = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: corrected.createdAt,
+      sessions: [corrected, { ...validatePracticeSession(session(timed())), id: 'old-unmeasured' }],
+    });
+    const roundTrip = validateTrainingExport(JSON.parse(JSON.stringify(backup)));
+    expect(roundTrip).toEqual(backup);
+    const details = practiceSessionEvidenceDetails(roundTrip.sessions[0].metadata).join('\n');
+    expect(details).toContain(
+      '3 completed passes (native 1x; 2 × 10.00s observed duration; 1 × 12.00s observed duration)',
+    );
+    expect(details).toContain(raw.recordings[0].url);
+    expect(practiceSessionEvidenceDetails(roundTrip.sessions[1].metadata).join('\n')).toContain(
+      'passes unmeasured',
+    );
+    expect(() => sessionEvidence({ ...metadata, recordings: timed().recordings })).toThrow(
+      /disagree/,
+    );
+    passes.durations[0].completedPasses = 9;
+    expect(result).toMatchObject({
+      recordings: [{ passes: { durations: [{ completedPasses: 2 }, { completedPasses: 1 }] } }],
+    });
+  });
+  it('distinguishes zero observed passes from unmeasured recordings and permits repeated short files', () => {
+    const measured = validateRecordingEvidence({
+      ...timed().recordings[0],
+      seconds: 2,
+      passes: {
+        version: 1,
+        method: 'native-1x',
+        durations: [{ durationSeconds: 10, completedPasses: 0 }],
+      },
+    });
+    expect(recordingCompletedPasses(measured)).toBe(0);
+    expect(
+      practiceSessionEvidenceDetails({ elapsedSeconds: 2, recordings: [measured] }).join('\n'),
+    ).toContain('0 completed passes');
+    const repeats = validateRecordingEvidence({
+      ...timed().recordings[0],
+      seconds: 200,
+      passes: {
+        version: 1,
+        method: 'native-1x',
+        durations: [{ durationSeconds: 1, completedPasses: 200 }],
+      },
+    });
+    expect(recordingCompletedPasses(repeats)).toBe(200);
+    expect(recordingPassTolerance(0.5)).toBe(0.025);
+    expect(recordingPassTolerance(200)).toBe(1);
+  });
+  it.each([
+    { version: 2, method: 'native-1x', durations: [{ durationSeconds: 10, completedPasses: 1 }] },
+    { version: 1, method: 'timer', durations: [{ durationSeconds: 10, completedPasses: 1 }] },
+    { version: 1, method: 'native-1x', durations: [] },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: 0, completedPasses: 1 }] },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: -1, completedPasses: 1 }] },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: NaN, completedPasses: 1 }] },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [{ durationSeconds: Infinity, completedPasses: 1 }],
+    },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [{ durationSeconds: 86401, completedPasses: 0 }],
+    },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: 10, completedPasses: -1 }] },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: 10, completedPasses: 1.5 }] },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: 10, completedPasses: NaN }] },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [{ durationSeconds: 10, completedPasses: Infinity }],
+    },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [{ durationSeconds: 10, completedPasses: Number.MAX_SAFE_INTEGER + 1 }],
+    },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [{ durationSeconds: 10, completedPasses: 0, privateText: 'unsupported' }],
+    },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [{ durationSeconds: 10, completedPasses: 0 }],
+      coverage: [[0, 10]],
+    },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [
+        { durationSeconds: 10, completedPasses: 0 },
+        { durationSeconds: 10, completedPasses: 0 },
+      ],
+    },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: Array.from({ length: 101 }, (_, index) => ({
+        durationSeconds: index + 1,
+        completedPasses: 0,
+      })),
+    },
+    { version: 1, method: 'native-1x', durations: [{ durationSeconds: 20, completedPasses: 5 }] },
+    {
+      version: 1,
+      method: 'native-1x',
+      durations: [
+        { durationSeconds: Number.MIN_VALUE, completedPasses: Number.MAX_SAFE_INTEGER },
+        { durationSeconds: Number.MIN_VALUE * 2, completedPasses: 1 },
+      ],
+    },
+  ])('rejects malformed or impossible recording pass evidence %j', (passes) => {
+    expect(() => validateRecordingEvidence({ ...timed().recordings[0], passes })).toThrow();
+  });
   it('preserves bounded played configurations through canonical aliases, correction and v1 backup', () => {
     const raw = {
       version: 1,

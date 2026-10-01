@@ -498,6 +498,89 @@ describe('strict complete file validation', () => {
 });
 
 describe('identity-preserving restore', () => {
+  it('restores finished recording pass facts and retries their exact frozen body without portable active coverage', async () => {
+    rememberAccount({ id: scope, email: 'recording-backup@example.test' }, account());
+    const recordings = [
+      {
+        url: 'https://cwa.cwops.org/wp-content/uploads/WD101_10.mp3',
+        speedWpm: 10,
+        seconds: 24.25,
+        passes: {
+          version: 1,
+          method: 'native-1x',
+          durations: [{ durationSeconds: 12, completedPasses: 2 }],
+        },
+      },
+    ];
+    const finished = validatePracticeSession({
+      ...session('finished-recording-passes'),
+      kind: 'listening',
+      source: 'timer',
+      metadata: {
+        elapsedSeconds: 29.25,
+        recallSeconds: 5,
+        recordings,
+        evidence: {
+          version: 1,
+          type: 'timed',
+          measurement: { seconds: 29.25, recallSeconds: 5 },
+          recordings,
+        },
+      },
+    });
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: 'Temporary synthetic save failure' }), {
+          status: 503,
+        }),
+      );
+    vi.stubGlobal('fetch', fetch);
+    const receipt = await autoSavePractice(scope, finished);
+    expect(receipt.destination).toBe('device');
+    const frozen = values.get(pendingKey(scope, finished.id))!;
+    expect(JSON.parse(frozen)).toEqual(finished);
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(backup.stores.practice).toMatchObject([
+      {
+        id: finished.id,
+        body: frozen,
+        origin: { version: 1, id: finished.id, accountId: scope, generation: 0 },
+        state: { status: 'failed', failure: 'network' },
+      },
+    ]);
+    const before = snapshot();
+    const unfinishedCoverage = rewrite(backup, (item) => {
+      const body = JSON.parse(item.stores.practice[0].body);
+      body.metadata.evidence.recordings[0].passes.coverage = [[0, 6]];
+      item.stores.practice[0].body = JSON.stringify(body);
+    });
+    expect(() => validateDeviceBackup(unfinishedCoverage, scope)).toThrow('unsupported field');
+    expect(snapshot()).toEqual(before);
+    const checked = validateDeviceBackup(JSON.stringify(backup), scope);
+    expect(checked.stores.practice[0].body).toBe(frozen);
+    const raw = JSON.stringify(checked);
+    for (const excluded of ['coverage', 'position', 'mediaStartedAt', 'activeSeconds'])
+      expect(raw).not.toContain(`"${excluded}"`);
+
+    clearDeviceWork(scope);
+    rememberAccount({ id: scope, email: 'recording-backup@example.test' }, account());
+    restoreDeviceBackup(checked);
+    expect(values.get(pendingKey(scope, finished.id))).toBe(frozen);
+    expect(loadLocalPractice(scope)).toEqual([finished]);
+    expect(loadPracticeSaveStates(scope)).toMatchObject([
+      { id: finished.id, status: 'failed', failure: 'network' },
+    ]);
+    const restored = snapshot();
+    restoreDeviceBackup(checked);
+    expect(snapshot()).toEqual(restored);
+    await autoSavePractice(scope, { ...finished, notes: 'Later unsubmitted note' });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    for (const [, options] of fetch.mock.calls) expect(options.body).toBe(frozen);
+    expect(values.get(pendingKey(scope, finished.id))).toBe(frozen);
+    expect(loadLocalPractice(scope)[0].metadata?.evidence).toEqual(finished.metadata?.evidence);
+  });
+
   it('captures a finished copy retry retained only in its draft and restores an explicitly unknown origin', () => {
     seed();
     const current = draft();

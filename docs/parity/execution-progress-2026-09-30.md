@@ -604,3 +604,74 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   notes/queues and the approved exclusion of elapsed reload/crash recovery.
   Original source remains read-only; the two protected user documents stay outside
   these commits. Continue with #9, freshly rechecking its body and source.
+
+## Issue #9 — implementation and validation in progress
+
+- Fresh body/comments and both dependency directions show no prerequisite edge.
+  Original union/completion/per-file/prior-pass behavior was rechecked read-only.
+  The ascending queue remains at #9; #10 has not been implemented.
+- Typed optional native pass facts and one saved-progress projection carry actual
+  per-URL duration groups through immutable review/save/history/report/account
+  and device backups. Required progress excludes class/review/future/retired
+  provenance and gives exact owned task identity precedence over legacy aliases.
+- Shared/client author validates 111 focused tests; Worker/device author validates
+  150 tests, including real SQL rejection/rollback, ownership and portable fidelity.
+  Clock author validates 74 focused cases after tiny-duration and positive-wall
+  admission corrections. Root check, all 694 tests in 44 files and build pass
+  before the latest native pause-boundary correction.
+- Initial two-width browser probe failed seek-to-end: its synthetic WAV answered
+  a byte-range request with ordinary 200 and never asserted the actual destination.
+  Proper 206/Content-Range and a settled paused destination prove no seek credit.
+  A second probe's overlapping rewind needed the same settled-seek assertion;
+  overlap and a second whole replay then pass. Traces/native events are retained.
+- The next actual journey exposed native pause-position lag across inspection:
+  a four-second source paused at 0.852 seconds, resumed at 0.951 without seeking,
+  then ended. Exact adjacency and a 1% floor falsely rejected the full pass.
+  Physically pausing before final settlement alone still reproduced it. A bounded
+  known-suspension continuity rule is being added without crediting the gap;
+  explicit seeks remain ineligible and raw bounds share the completion budget.
+- Root synthetic browser journey covers desktop keyboard/mobile emulated touch,
+  native/app playback, overlapping rewind, files, inspection, canceled review,
+  storage/network failure, exact retry, saved reopen, independent completion,
+  review-purpose exclusion, history, actual backup download/import and reports.
+  Final full workflow, complete browser suite, commit and independent gate remain
+  pending. No restricted audio, new schema/config/binding or physical-device claim.
+
+- After known-boundary correction, root check/all 713 tests in 44 files/build pass.
+  Desktop actual native seek/overlap/repeat/mixed-file/inspection reaches three
+  passes and canceled review retains them. It then fails a test-only copied
+  `Notes` selector: the actual accessible label is `Notes optional`. That selector
+  is corrected; the original desktop trace remains. Root interrupted the mobile
+  repetition cleanly rather than waiting for the same selector. Its native trace
+  separately shows a 0.101846-second pause discontinuity, just beyond 0.1; the
+  known boundary cap is adjusted to one 0.25-second observation interval with
+  total actual missing coverage and deliberate-seek rejection unchanged. The
+  concrete mobile regression is added below the browser. Final validation is
+  still pending; neither failed nor interrupted probes are claimed as passing.
+
+- The next two-width probe reached save review but showed that exact wrapped
+  `Notes optional` labels include the textarea value. A bounded accessible textbox
+  role/name resolves the harness selector. A subsequent run exposed false tiny
+  coverage gaps: Playwright's calendar helper also installs a rounded performance
+  clock, producing zero wall-time samples during real audio movement. The native
+  journey now offsets only advancing `Date`; performance and timers stay native.
+  Original failures/traces are preserved and assertions remain unchanged.
+- With native timing preserved, the entire desktop keyboard and mobile emulated
+  touch journeys pass in 25.1 and 31.7 seconds (one minute total), covering actual
+  coverage, cancellation, exact failed-save retry, required/review separation,
+  history, actual backup download/import and reports. Temporary clock diagnostics
+  were then removed; all 330 affected tests pass after cleanup. Root previously
+  passed check/all 716 tests in 44 files/build. Fresh full validation, visual
+  inspection, implementation commit and independent review remain pending.
+
+- Clean implementation passes fresh `mise run check`, `mise run test` (716 tests
+  in 44 files) and `mise run build` through the file-based pre-commit task.
+  `mise run test-browser` passes all 60 serialized journeys in 8.6 minutes. The
+  #9 paths pass at 1440 px in 25.6 seconds and 390 px in 32.0 seconds with native
+  performance/timers and an advancing calendar offset. Root inspected opening,
+  pass-region, review and report captures at both widths; the totals wrap without
+  horizontal overflow and exact file evidence is readable. The desktop review
+  element capture shows a compositor/transparency artifact that the independent
+  reviewer must resolve against its own actual dialog inspection/captures.
+  No runtime remains on port 8791. Implementation commit and fresh review follow;
+  publication, production verification and issue closure are still pending.

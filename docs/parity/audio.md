@@ -43,8 +43,8 @@ queues use the delivered device persistence and backup workflows. In-app inspect
 pauses and retains the block; canceled review and failed saves preserve its owner.
 Active elapsed-time recovery after reload/crash is excluded by the approved scope.
 
-**Still missing or partial:** per-task remembered speed overrides, actual completed
-passes/coverage, difficult marks, short replay controls, full generated-player
+**Still missing or partial:** per-task remembered speed overrides, automatic
+course replay, difficult marks, short replay controls, full generated-player
 retiming continuity, and remaining advisor-report integration. Later issue ledgers
 record their delivery; baseline findings below preserve the original audit.
 No physical locked-iOS verification is claimed.
@@ -206,7 +206,7 @@ does not implement unfinished-draft persistence yet and clearly tells users to
 save before leaving/reloading. The new implementation therefore remains partial
 parity, not autosaved/recoverable scratchpad parity.
 
-### P2 — completed passes, partial listening, and replay policy: missing
+### P2 — completed passes and partial listening: delivered by #9; replay remains #10
 
 Personal [client.ts:1683](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L1683) merges coverage intervals; a pass counts only when coverage
 reaches duration minus one second (`:1705`). Skipping to the end does not complete
@@ -218,7 +218,8 @@ completion and listening time are separate concepts ([client.ts:1540](https://gi
 Course recording automatic replay defaults off, is remembered on the device, and
 continues only while completed whole passes are below this block's target
 ([daily-listening.ts:16](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/daily-listening.ts#L16), `:50`; [client.ts:1746](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L1746)). Tracker shows prescribed min/max
-passes but has no actual coverage/pass counter or course recording replay policy.
+passes at the baseline. Issue #9 adds actual coverage/pass evidence; the course
+recording replay policy remains issue #10.
 
 ### P2 — explicit recall timer: baseline missing; now implemented
 
@@ -408,3 +409,32 @@ The [execution journal](execution-progress-2026-09-30.md) records browser eviden
 and the accepted independent review, signed publication and production checks.
 Issue #7 is closed. Physical device/lock-screen
 verification is not implied by browser emulation.
+
+### Issue #9 — actual recording passes and task progress
+
+[RecordingCoverage](../../src/client/recording-coverage.ts) keeps an exact interval
+union per in-memory source owner. Completed facts use each observed finite
+duration and exact URL; speed-file changes cannot share partial coverage. Native
+ended/pause ordering settles once, and completed facts survive fresh replay.
+Actual time remains the existing media clock's measurement. Native pause/resume
+position lag can leave a bounded gap: only a known suspension authorizes that
+boundary, never explicit seeking; the gap adds no heard seconds or coverage.
+At least duration minus the smaller of one second and 5% must actually be covered.
+Each authorized boundary is at most the smaller of 0.25 second and 5%, and all
+missing material shares the total budget. This also protects very short sources
+from the original one-second denominator edge case.
+
+Today, Plan and the assigned Studio show saved/current/minimum-remaining passes.
+Extra review retains its own measured facts without required credit. Explicit
+completion remains available independently. Old records display unmeasured
+passes; imported explicit source totals are identified rather than estimated.
+Review, exact save retries, historical edits, generic reports and transactional
+account/device backups preserve typed per-file facts and raw measurement identity.
+Unknown/missing duration, unsupported rates and exhausted duration-group bounds
+retain heard time and readable limitations. Partial coverage is not portable.
+
+Check, all 716 tests in 44 files, build and all 60 serialized browser journeys
+pass. Independent acceptance and publication remain pending in the
+[execution journal](execution-progress-2026-09-30.md). Browser fixtures generate
+short synthetic WAVs and answer byte-range requests correctly; they never fetch
+restricted audio. Physical iPhone/lock-screen verification is not claimed.

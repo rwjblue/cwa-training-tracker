@@ -1,3 +1,4 @@
+import ListeningPassProgress from './ListeningPassProgress';
 import { useId, useState } from 'react';
 import {
   ArrowRight,
@@ -360,6 +361,13 @@ function TodayTask({
             {minuteLabel(item.loggedMinutes)} min practiced
             {item.todayMinutes > 0 ? ` · ${minuteLabel(item.todayMinutes)} today` : ''}
           </p>
+        )}
+        {task.exercise?.type === 'audio' && (
+          <ListeningPassProgress
+            savedPasses={item.completedPasses}
+            importedPasses={item.importedCompletedPasses}
+            minimumPasses={task.exercise.minimumPasses}
+          />
         )}
         {task.notes && (
           <details className="today-plan-instructions">

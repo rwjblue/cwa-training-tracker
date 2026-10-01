@@ -1,3 +1,4 @@
+import ListeningPassProgress from './ListeningPassProgress';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   BookOpen,
@@ -25,6 +26,7 @@ import {
 } from '../shared/training';
 import {
   practiceForTask,
+  savedTaskProgress,
   taskDueDate,
   validatePlannedTask,
   weeklyReport,
@@ -110,6 +112,7 @@ export default function Plan({
   }, [inspection]);
   const today = dateInTimezone(new Date(), profile.timezone);
   const meetings = courseMeetings(profile);
+  const passProgress = savedTaskProgress(tasks, entries, today);
   const next = meetings.find((meeting) => meeting.date >= today);
   const summary = summarizePractice(entries, today, profile.dailyGoalMinutes);
   const weekStart = summary.days[0].date;
@@ -295,6 +298,13 @@ export default function Plan({
                       : ''}
                     {due ? ` · ${dayLabel(due)}` : ''}
                   </p>
+                  {task.exercise?.type === 'audio' && (
+                    <ListeningPassProgress
+                      savedPasses={passProgress.get(task.id)?.completedPasses ?? 0}
+                      importedPasses={passProgress.get(task.id)?.importedCompletedPasses ?? 0}
+                      minimumPasses={task.exercise.minimumPasses}
+                    />
+                  )}
                   {task.notes && (
                     <details className="plan-notes">
                       <summary>Instructions and notes</summary>

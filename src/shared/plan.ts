@@ -10,7 +10,12 @@ import { taskPracticeMetadata } from './practice-attribution.ts';
 import { isRunnerSettings, type RunnerSettings } from './runner.ts';
 import { defaultCopyRecipe, validateCopyRecipe, type CopyRecipe } from './copy-practice.ts';
 import { copyAttemptReportDetails, savedCopyAttempt } from './copy-report.ts';
-import { practiceSessionEvidenceDetails } from './practice-evidence.ts';
+import {
+  practiceSessionEvidenceDetails,
+  recordingCompletedPasses,
+  sessionEvidence,
+} from './practice-evidence.ts';
+import { recordingVariants } from './recordings.ts';
 
 export type SendingSection = 'warm-up' | 'drill' | 'exercise';
 export type PracticeExercise =
@@ -381,22 +386,41 @@ export interface DailyPlannedTask {
   /** Only practice explicitly linked to this task, excluding class time. */
   loggedMinutes: number;
   todayMinutes: number;
+  /** Observed native passes plus separately labelled explicit imported source counts. */
+  completedPasses: number;
+  importedCompletedPasses: number;
+  remainingPasses?: number;
 }
 
-/** Keep today's assignments ahead of earlier work, without advancing future daily work. */
-export function dailyPlanSummary(
+export interface SavedTaskProgress {
+  loggedMinutes: number;
+  todayMinutes: number;
+  completedPasses: number;
+  importedCompletedPasses: number;
+  remainingPasses?: number;
+}
+
+/** Account-scoped finished entries only. The caller supplies the current owned plan. */
+export function savedTaskProgress(
   tasks: readonly PlannedTask[],
-  meetings: readonly { lesson: number; date: string }[],
   entries: readonly PracticeSession[],
   today: string,
+  excludedEntryId?: string,
 ) {
   if (!validDate(today)) throw new Error('Choose a valid date for today’s plan.');
-  const nextMeeting = [...meetings]
-    .filter((meeting) => meeting.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
-  const progress = new Map<string, { loggedMinutes: number; todayMinutes: number }>();
+  const progress = new Map<string, SavedTaskProgress>();
+  const ownedTasks = new Map(tasks.map((task) => [task.id, task]));
   const aliases = new Map<string, string>();
   for (const task of tasks) {
+    progress.set(task.id, {
+      loggedMinutes: 0,
+      todayMinutes: 0,
+      completedPasses: 0,
+      importedCompletedPasses: 0,
+      ...(task.exercise?.type === 'audio' && task.exercise.minimumPasses !== undefined
+        ? { remainingPasses: task.exercise.minimumPasses }
+        : {}),
+    });
     if (!task.curriculum) continue;
     aliases.set(`curriculum:${task.curriculum.id}:${task.curriculum.exerciseId}`, task.id);
     // Unqualified legacy IDs came from the Intermediate-only personal course.
@@ -406,14 +430,15 @@ export function dailyPlanSummary(
   }
   const seenEntries = new Set<string>();
   for (const entry of entries) {
-    if (seenEntries.has(entry.id)) continue;
+    if (entry.id === excludedEntryId || seenEntries.has(entry.id)) continue;
     seenEntries.add(entry.id);
     if (
       !isRequiredPractice(entry) ||
+      entry.historicalPlannedTaskId !== undefined ||
       !validDate(entry.date) ||
       entry.date > today ||
       !Number.isFinite(entry.minutes) ||
-      entry.minutes <= 0
+      entry.minutes < 0
     )
       continue;
     let taskId = entry.metadata?.plannedTaskId;
@@ -425,12 +450,61 @@ export function dailyPlanSummary(
       }
     }
     if (typeof taskId !== 'string') continue;
-    const progressId = aliases.get(taskId) ?? taskId;
-    const total = progress.get(progressId) ?? { loggedMinutes: 0, todayMinutes: 0 };
+    // A real current placement is authoritative; compatibility aliases only
+    // recover an otherwise unavailable ID and cannot redirect another owned task.
+    const progressId = ownedTasks.has(taskId) ? taskId : (aliases.get(taskId) ?? taskId);
+    const task = ownedTasks.get(progressId);
+    if (!task) continue;
+    const total = progress.get(progressId)!;
     total.loggedMinutes += entry.minutes;
     if (entry.date === today) total.todayMinutes += entry.minutes;
-    progress.set(progressId, total);
+    if (task.exercise?.type !== 'audio') continue;
+    const evidence = sessionEvidence(entry.metadata);
+    const url = task.exercise.url;
+    const allowedUrls = new Set([
+      ...(url ? [url] : []),
+      ...recordingVariants(url).map((item) => item.url),
+    ]);
+    if (evidence?.type === 'timed') {
+      if (entry.evidenceMode === 'historical') continue;
+      total.completedPasses += evidence.recordings
+        .filter((recording) => allowedUrls.has(recording.url))
+        .reduce((sum, recording) => sum + (recordingCompletedPasses(recording) ?? 0), 0);
+    } else if (entry.source === 'legacy') {
+      const original = entry.metadata?.legacyAttempt;
+      if (original && typeof original === 'object' && !Array.isArray(original)) {
+        const count = (original as Record<string, unknown>).completedPasses;
+        if (
+          typeof count === 'number' &&
+          Number.isSafeInteger(count) &&
+          count >= 0 &&
+          count <= 100
+        ) {
+          total.completedPasses += count;
+          total.importedCompletedPasses += count;
+        }
+      }
+    }
   }
+  for (const [id, total] of progress) {
+    const task = ownedTasks.get(id)!;
+    if (task.exercise?.type === 'audio' && task.exercise.minimumPasses !== undefined)
+      total.remainingPasses = Math.max(0, task.exercise.minimumPasses - total.completedPasses);
+  }
+  return progress;
+}
+
+/** Keep today's assignments ahead of earlier work, without advancing future daily work. */
+export function dailyPlanSummary(
+  tasks: readonly PlannedTask[],
+  meetings: readonly { lesson: number; date: string }[],
+  entries: readonly PracticeSession[],
+  today: string,
+) {
+  const progress = savedTaskProgress(tasks, entries, today);
+  const nextMeeting = [...meetings]
+    .filter((meeting) => meeting.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
   const assignedToday: DailyPlannedTask[] = [];
   const preparation: DailyPlannedTask[] = [];
   const earlier: DailyPlannedTask[] = [];
@@ -441,7 +515,7 @@ export function dailyPlanSummary(
     if (seenTasks.has(task.id)) continue;
     seenTasks.add(task.id);
     const dueDate = taskDueDate(task, meetings);
-    const minutes = progress.get(task.id) ?? { loggedMinutes: 0, todayMinutes: 0 };
+    const minutes = progress.get(task.id)!;
     const item: DailyPlannedTask = {
       task,
       dueDate,

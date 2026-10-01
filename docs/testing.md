@@ -257,3 +257,21 @@ Escape, Close, and Cancel cannot dismiss the saving dialog. A confirmed studio
 manual/timed save retires only its originating block and returns directly to
 Today without asking that studio snapshot to save again. Historical edits must
 retain another active block's time, identity and scratchpad.
+
+For assigned recording passes, use cheap interval/clock tests for overlap,
+terminal once-only outcomes, invalid/changing durations, short-source bounds,
+source replacement, native pause-boundary discontinuity, and deliberate seeks
+even while already paused. Gaps must add neither coverage nor heard seconds.
+Keep raw pass/time bounds, immutable corrections, exact retries, real SQL rollback
+and account isolation in shared/Worker tests. Older omission remains unmeasured
+and portable backups contain completed facts rather than unfinished coverage.
+One desktop/mobile journey should play actual synthetic audio, seek near the end,
+rewind overlapping material, replay, switch exact native files, inspect and return,
+cancel review, retry a frozen failed save, reopen, complete/reopen independently,
+and inspect history, an actual export/import and report. Synthetic WAV routes must
+honor byte ranges; assert the paused seek destination has settled before playing.
+Capture actual native events on failure rather than weakening credit assertions
+or using a fake clock for audio. If a native-audio journey needs a fixed calendar
+day, offset only `Date` after sign-in and keep it advancing. Playwright's
+`setSystemTime` also installs a rounded performance clock, which can create false
+gaps between positive native media movement and zero wall-time observations.

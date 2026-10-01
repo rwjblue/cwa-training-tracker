@@ -517,3 +517,29 @@
 .studio-scratchpad textarea {
   font-family: ui-monospace, monospace;
 }
+
+.listening-pass-progress {
+  border-top: 1px solid var(--border, #d5ddcd);
+  padding-top: 16px;
+  min-width: 0;
+}
+.listening-pass-progress h3 {
+  margin: 0 0 12px;
+}
+.listening-pass-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.listening-pass-totals dt {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted, #687360);
+}
+.listening-pass-totals dd {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

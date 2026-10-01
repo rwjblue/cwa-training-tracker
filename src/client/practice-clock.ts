@@ -1,7 +1,16 @@
+import type { RecordingPassEvidence } from '../shared/practice-evidence';
+import {
+  RecordingCoverage,
+  type RecordingOutcome,
+  type RecordingProgress,
+  type RecordingSource,
+} from './recording-coverage';
+
 export interface RecordingTime {
   url: string;
   speedWpm?: number;
   seconds: number;
+  passes?: RecordingPassEvidence;
 }
 
 export type RecallInterruption = 'hidden' | 'delayed' | 'invalid';
@@ -13,6 +22,9 @@ export interface PracticeClockSnapshot {
   recalling: boolean;
   recordings: RecordingTime[];
   recallInterruption?: RecallInterruption;
+  recordingRevision: number;
+  recordingProgress?: RecordingProgress;
+  recordingOutcome?: RecordingOutcome;
 }
 
 /** Count media movement, not a stopwatch left running beside paused audio. */
@@ -25,9 +37,11 @@ export class PracticeClock {
     position: number;
     at: number;
     rate: number;
-    recording?: Omit<RecordingTime, 'seconds'>;
+    recording?: RecordingSource;
   };
   private recordings = new Map<string, RecordingTime>();
+  private coverage = new RecordingCoverage();
+  private resume?: { position: number; rate: number; recording: RecordingSource };
 
   /** Every observer and mode boundary uses the same recall interruption rule. */
   private settleManual(now: number, visible: boolean) {
@@ -60,8 +74,12 @@ export class PracticeClock {
       recallSeconds: this.recallSeconds,
       running: Boolean(this.manual || this.media),
       recalling: this.manual?.recall === true,
-      recordings: [...this.recordings.values()].map((recording) => ({ ...recording })),
+      recordings: [...this.recordings.values()].map((recording) => {
+        const passes = this.coverage.measurements(recording.url);
+        return { ...recording, ...(passes ? { passes } : {}) };
+      }),
       recallInterruption: this.recallInterruption,
+      ...this.coverage.snapshot(),
     };
   }
 
@@ -71,8 +89,9 @@ export class PracticeClock {
     // A redundant Start must observe a stall, not silently resume after it.
     if (sameMode) return;
     this.manual = undefined;
-    this.media = undefined;
+    this.suspendMedia();
     if (interruption === 'invalid' || !Number.isFinite(now) || (recall && !visible)) {
+      this.resume = undefined;
       if (recall) this.recallInterruption = visible ? 'invalid' : 'hidden';
       return;
     }
@@ -80,14 +99,11 @@ export class PracticeClock {
     this.recallInterruption = undefined;
   }
 
-  startMedia(
-    position: number,
-    now: number,
-    rate = 1,
-    recording?: Omit<RecordingTime, 'seconds'>,
-    visible = true,
-  ) {
-    const interruption = this.pause(now, visible);
+  startMedia(position: number, now: number, rate = 1, recording?: RecordingSource, visible = true) {
+    const interruption = this.settleManual(now, visible);
+    this.manual = undefined;
+    // A repeated playing/seeked anchor is not itself a native pause boundary.
+    this.media = undefined;
     if (
       interruption === 'invalid' ||
       !Number.isFinite(position) ||
@@ -95,8 +111,25 @@ export class PracticeClock {
       !Number.isFinite(now) ||
       !Number.isFinite(rate) ||
       rate <= 0
-    )
+    ) {
+      this.resume = undefined;
       return;
+    }
+    const resume = this.resume;
+    this.resume = undefined;
+    if (recording) {
+      this.coverage.observe(recording, true);
+      if (
+        resume &&
+        rate === 1 &&
+        resume.rate === 1 &&
+        resume.recording.url === recording.url &&
+        (resume.recording.sourceId ?? resume.recording.url) ===
+          (recording.sourceId ?? recording.url) &&
+        resume.recording.durationSeconds === recording.durationSeconds
+      )
+        this.coverage.authorizeResumeGap(recording, resume.position, position);
+    } else this.coverage.discard();
     this.media = { position, at: now, rate, recording };
   }
 
@@ -115,6 +148,7 @@ export class PracticeClock {
       rate <= 0
     ) {
       this.media = undefined;
+      this.resume = undefined;
       return;
     }
     const wall = elapsed / 1000;
@@ -123,22 +157,65 @@ export class PracticeClock {
       const credit = Math.min(advance / previous.rate, wall + 0.1);
       if (!Number.isFinite(credit) || !Number.isFinite(this.seconds + credit)) {
         this.media = undefined;
+        this.resume = undefined;
         return;
       }
       this.seconds += credit;
       if (previous.recording && credit > 0) {
         const item = this.recordings.get(previous.recording.url) ?? {
-          ...previous.recording,
+          url: previous.recording.url,
+          ...(previous.recording.speedWpm !== undefined
+            ? { speedWpm: previous.recording.speedWpm }
+            : {}),
           seconds: 0,
         };
         this.recordings.set(item.url, { ...item, seconds: item.seconds + credit });
+        // Plausibility/time jitter allowances must not supply a whole tiny clip.
+        // Coverage requires positive observed wall time and caps its own jitter
+        // by 1% of the finite source duration, at most 0.1 source seconds.
+        const duration = previous.recording.durationSeconds;
+        const jitter =
+          duration !== undefined && Number.isFinite(duration) && duration > 0
+            ? Math.min(0.1, duration * 0.01)
+            : 0;
+        if (
+          wall > 0 &&
+          advance <= wall * previous.rate + jitter &&
+          advance <= credit * previous.rate + Number.EPSILON * Math.max(1, advance)
+        )
+          this.coverage.hear(previous.recording, previous.position, position, previous.rate);
       }
     }
     this.media = { ...previous, position, at: now, rate };
   }
 
-  suspendMedia() {
+  suspendMedia(allowResumeGap = true) {
+    if (!allowResumeGap) this.resume = undefined;
+    else if (this.media?.recording)
+      this.resume = {
+        position: this.media.position,
+        rate: this.media.rate,
+        recording: { ...this.media.recording },
+      };
     this.media = undefined;
+  }
+
+  observeRecording(source: RecordingSource) {
+    this.coverage.observe(source);
+  }
+
+  finalizeRecording(source: RecordingSource, ended: boolean) {
+    return this.coverage.finalize(source, ended);
+  }
+
+  discardRecording(source?: RecordingSource) {
+    this.coverage.discard(source);
+    if (
+      !source ||
+      (this.resume?.recording.url === source.url &&
+        (this.resume.recording.sourceId ?? source.url) === (source.sourceId ?? source.url))
+    )
+      this.resume = undefined;
   }
 
   /** A Play request stops recall without stopping intentional external practice. */
@@ -151,7 +228,7 @@ export class PracticeClock {
   pause(now: number, visible = true) {
     const interruption = this.settleManual(now, visible);
     this.manual = undefined;
-    this.media = undefined;
+    this.suspendMedia();
     return interruption;
   }
 
@@ -161,6 +238,8 @@ export class PracticeClock {
     this.recallInterruption = undefined;
     this.manual = undefined;
     this.media = undefined;
+    this.resume = undefined;
     this.recordings.clear();
+    this.coverage.reset();
   }
 }

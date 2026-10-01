@@ -25,6 +25,7 @@ import {
   GeneratedListeningCollector,
   type GeneratedListeningSummary,
 } from '../shared/generated-listening';
+import type { PracticeEvidence, RecordingEvidence } from '../shared/practice-evidence';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -2475,6 +2476,373 @@ describe('generated listening evidence', () => {
         ).json()) as TrainingExport
       ).sessions,
     ).toEqual(exported.sessions);
+  });
+});
+
+describe('assigned recording pass evidence', () => {
+  const firstUrl = 'https://cwa.cwops.org/wp-content/uploads/WD101_10.mp3';
+  const secondUrl = 'https://cwa.cwops.org/wp-content/uploads/WD101_13.mp3';
+  const measured = (id = 'recording-passes'): PracticeSession => {
+    // Synthetic observed durations deliberately differ from the catalog estimate.
+    const recordings: RecordingEvidence[] = [
+      {
+        url: firstUrl,
+        speedWpm: 10,
+        characterWpm: 25,
+        effectiveWpm: 10,
+        seconds: 36,
+        passes: {
+          version: 1,
+          method: 'native-1x',
+          durations: [
+            { durationSeconds: 12, completedPasses: 2 },
+            { durationSeconds: 6, completedPasses: 1 },
+          ],
+        },
+      },
+      {
+        url: secondUrl,
+        speedWpm: 13,
+        characterWpm: 25,
+        effectiveWpm: 13,
+        seconds: 20.25,
+        passes: {
+          version: 1,
+          method: 'native-1x',
+          durations: [{ durationSeconds: 20, completedPasses: 1 }],
+        },
+      },
+    ];
+    const evidence: Extract<PracticeEvidence, { type: 'timed' }> = {
+      version: 1,
+      type: 'timed',
+      measurement: { seconds: 66.25, recallSeconds: 10 },
+      recordings,
+    };
+    return {
+      ...entry(id),
+      kind: 'listening',
+      source: 'timer',
+      minutes: 66.25 / 60,
+      metadata: {
+        practiceTool: 'audio',
+        elapsedSeconds: 66.25,
+        recallSeconds: 10,
+        recordings,
+        evidence,
+      },
+    };
+  };
+  const alterRecording = (
+    input: PracticeSession,
+    change: (recording: RecordingEvidence) => void,
+  ): PracticeSession => {
+    const changed = structuredClone(input);
+    const evidence = changed.metadata!.evidence!;
+    if (evidence.type !== 'timed') throw new Error('Expected timed fixture.');
+    change(evidence.recordings[0]);
+    changed.metadata!.recordings = structuredClone(evidence.recordings);
+    return changed;
+  };
+  const stored = (owner: string) =>
+    db.sqlite
+      .prepare('SELECT id,entry_json FROM practice_entries WHERE user_id=? ORDER BY id')
+      .all(owner);
+  const exportFor = async (cookie: string) =>
+    (await (await request('/api/export', 'GET', undefined, cookie)).json()) as TrainingExport;
+  const task = (): PlannedTask => ({
+    id: 'owned-recording-task',
+    title: 'Assigned short words',
+    kind: 'listening',
+    done: false,
+    notes: '',
+    createdAt: '2026-09-28T12:00:00.000Z',
+    dueDate: entry().date,
+    exercise: { type: 'audio', url: firstUrl, minimumPasses: 4, maximumPasses: 5 },
+  });
+
+  it('retains mixed-file facts through exact retries, corrections, merge and replace backups', async () => {
+    const auth = await signIn('recording-pass-roundtrip@example.test');
+    const frozen = measured();
+    const frozenBody = JSON.stringify(frozen);
+    const created = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(saved.metadata?.evidence).toEqual(frozen.metadata?.evidence);
+    expect(saved.metadata?.recordings).toEqual(frozen.metadata?.recordings);
+    expect(saved.characterWpm).toBe(25);
+    expect(saved.effectiveWpm).toBeUndefined();
+    const originalSql = stored(auth.user.id);
+    const retried = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(retried.status).toBe(200);
+    expect(await retried.json()).toMatchObject({ duplicate: true, entry: saved });
+    expect(JSON.stringify(frozen)).toBe(frozenBody);
+    expect(stored(auth.user.id)).toEqual(originalSql);
+    const changedRetry = alterRecording(frozen, (recording) => {
+      recording.passes!.durations[0].completedPasses = 1;
+    });
+    expect((await request('/api/entries', 'POST', changedRetry, auth.cookie)).status).toBe(409);
+    expect(stored(auth.user.id)).toEqual(originalSql);
+
+    for (const change of [
+      (recording: RecordingEvidence) => {
+        recording.passes!.durations[0].durationSeconds = 13;
+      },
+      (recording: RecordingEvidence) => {
+        recording.passes!.durations[0].completedPasses = 1;
+      },
+      (recording: RecordingEvidence) => {
+        delete recording.passes;
+      },
+    ]) {
+      const rejected = await request(
+        `/api/entries/${saved.id}`,
+        'PUT',
+        alterRecording(saved, change),
+        auth.cookie,
+      );
+      expect(rejected.status).toBe(400);
+      expect(await rejected.json()).toMatchObject({
+        error: expect.stringContaining('Measured source evidence cannot be changed'),
+      });
+      expect(stored(auth.user.id)).toEqual(originalSql);
+    }
+    const edited = {
+      ...saved,
+      notes: 'Retained passes; corrected recall interruption',
+      metadata: {
+        ...saved.metadata,
+        evidence: {
+          ...frozen.metadata!.evidence!,
+          correction: { seconds: 61.25, recallSeconds: 5, reason: 'Recall interruption' },
+        },
+      },
+    };
+    const updated = await request(`/api/entries/${saved.id}`, 'PUT', edited, auth.cookie);
+    expect(updated.status).toBe(200);
+    const corrected = ((await updated.json()) as { entry: PracticeSession }).entry;
+    expect(corrected.minutes).toBe(61.25 / 60);
+    expect(corrected.metadata).toMatchObject({
+      elapsedSeconds: 66.25,
+      recallSeconds: 10,
+      recordings: frozen.metadata!.recordings,
+      evidence: {
+        measurement: { seconds: 66.25, recallSeconds: 10 },
+        recordings: frozen.metadata!.recordings,
+        correction: { seconds: 61.25, recallSeconds: 5 },
+      },
+    });
+    const exported = await exportFor(auth.cookie);
+    expect(exported.sessions).toEqual([corrected]);
+    for (const mode of ['merge', 'replace']) {
+      const restored = await request('/api/import', 'POST', { mode, data: exported }, auth.cookie);
+      expect(restored.status).toBe(200);
+      expect((await exportFor(auth.cookie)).sessions).toEqual(exported.sessions);
+    }
+    expect(stored(auth.user.id)).toHaveLength(1);
+  });
+
+  it('rejects malformed pass facts without writing entries or replacing private account data', async () => {
+    const auth = await signIn('recording-pass-invalid@example.test');
+    expect((await request('/api/plan', 'POST', task(), auth.cookie)).status).toBe(201);
+    expect((await request('/api/entries', 'POST', measured(), auth.cookie)).status).toBe(201);
+    const originalSql = stored(auth.user.id);
+    const originalAccount = await getAccountSnapshot(env, auth.user.id);
+    const originalExport = await exportFor(auth.cookie);
+    const valid = measured().metadata!.evidence!;
+    if (valid.type !== 'timed') throw new Error('Expected timed fixture.');
+    const passes = valid.recordings[0].passes!;
+    const malformed = [
+      { ...passes, coverage: [[0, 12]] },
+      { ...passes, method: 'wall-clock' },
+      { ...passes, version: 2 },
+      { ...passes, durations: [{ durationSeconds: 12, completedPasses: -1 }] },
+      { ...passes, durations: [{ durationSeconds: 12, completedPasses: 1.5 }] },
+      // Nonfinite values become null in HTTP JSON and must still be rejected.
+      { ...passes, durations: [{ durationSeconds: Infinity, completedPasses: 1 }] },
+      { ...passes, durations: [{ durationSeconds: 12, completedPasses: NaN }] },
+      { ...passes, durations: [{ durationSeconds: 0, completedPasses: 0 }] },
+      { ...passes, durations: [{ durationSeconds: 86401, completedPasses: 0 }] },
+      { ...passes, durations: [...passes.durations, passes.durations[0]] },
+      {
+        ...passes,
+        durations: Array.from({ length: 101 }, (_, index) => ({
+          durationSeconds: index + 1,
+          completedPasses: 0,
+        })),
+      },
+      { ...passes, durations: [{ durationSeconds: 12, completedPasses: 4 }] },
+    ];
+    for (const value of malformed) {
+      const invalid = {
+        ...measured('invalid-passes'),
+        metadata: {
+          evidence: { ...valid, recordings: [{ ...valid.recordings[0], passes: value }] },
+        },
+      };
+      const rejected = await request('/api/entries', 'POST', invalid, auth.cookie);
+      expect(rejected.status).toBe(400);
+      expect(await rejected.json()).toMatchObject({
+        error: expect.stringMatching(/pass|duration/i),
+      });
+      expect(stored(auth.user.id)).toEqual(originalSql);
+      expect(await getAccountSnapshot(env, auth.user.id)).toEqual(originalAccount);
+    }
+    const invalidReplacement = {
+      ...measured('bad-replacement'),
+      metadata: {
+        evidence: {
+          ...valid,
+          recordings: [{ ...valid.recordings[0], passes: malformed.at(-1) }],
+        },
+      },
+    };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'replace',
+            data: {
+              ...originalExport,
+              sessions: [measured('valid-replacement'), invalidReplacement],
+              plan: [],
+              profile: { ...DEFAULT_PROFILE, callsign: 'N0CHANGED' },
+            },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(stored(auth.user.id)).toEqual(originalSql);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(originalAccount);
+    const after = await exportFor(auth.cookie);
+    expect(after.sessions).toEqual(originalExport.sessions);
+    expect(after.plan).toEqual(originalExport.plan);
+    expect(after.profile).toEqual(originalExport.profile);
+  });
+
+  it('rolls back pass evidence, history and plan if a later replacement SQL write fails', async () => {
+    const auth = await signIn('recording-pass-sql-rollback@example.test');
+    await request('/api/plan', 'POST', task(), auth.cookie);
+    await request('/api/entries', 'POST', measured(), auth.cookie);
+    const originalSql = stored(auth.user.id);
+    const originalAccount = await getAccountSnapshot(env, auth.user.id);
+    const originalExport = await exportFor(auth.cookie);
+    db.sqlite.exec(
+      `CREATE TRIGGER pass_failure BEFORE INSERT ON practice_entries WHEN NEW.id = 'broken-passes' BEGIN SELECT RAISE(ABORT, 'pass_failure'); END;`,
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const response = await request(
+      '/api/import',
+      'POST',
+      {
+        mode: 'replace',
+        data: {
+          ...originalExport,
+          sessions: [measured('first-valid-passes'), measured('broken-passes')],
+          plan: [],
+          profile: { ...DEFAULT_PROFILE, callsign: 'N0CHANGED' },
+        },
+      },
+      auth.cookie,
+    );
+    expect(response.status).toBe(500);
+    expect(stored(auth.user.id)).toEqual(originalSql);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(originalAccount);
+    const after = await exportFor(auth.cookie);
+    expect(after.sessions).toEqual(originalExport.sessions);
+    expect(after.plan).toEqual(originalExport.plan);
+    expect(after.profile).toEqual(originalExport.profile);
+  });
+
+  it('keeps unmeasured old backups distinct from measured zero and admits more than 100 short passes', async () => {
+    const auth = await signIn('recording-pass-compatible@example.test');
+    const old = alterRecording(measured('old-unmeasured-passes'), (recording) => {
+      delete recording.passes;
+    });
+    const evidence = old.metadata!.evidence!;
+    if (evidence.type !== 'timed') throw new Error('Expected timed fixture.');
+    delete evidence.recordings[1].passes;
+    old.metadata!.recordings = structuredClone(evidence.recordings);
+    const zero = alterRecording(measured('observed-zero-passes'), (recording) => {
+      recording.passes!.durations = [{ durationSeconds: 12, completedPasses: 0 }];
+    });
+    const many = alterRecording(measured('many-short-passes'), (recording) => {
+      recording.passes!.durations = [{ durationSeconds: 0.25, completedPasses: 101 }];
+    });
+    const imported = await request(
+      '/api/import',
+      'POST',
+      { mode: 'merge', data: backup([old, zero, many]) },
+      auth.cookie,
+    );
+    expect(imported.status).toBe(200);
+    const exported = await exportFor(auth.cookie);
+    const firstRecording = (id: string) => {
+      const evidence = exported.sessions.find((session) => session.id === id)!.metadata!.evidence!;
+      if (evidence.type !== 'timed') throw new Error('Expected timed fixture.');
+      return evidence.recordings[0];
+    };
+    expect(firstRecording(old.id)).not.toHaveProperty('passes');
+    expect(firstRecording(zero.id).passes?.durations[0].completedPasses).toBe(0);
+    expect(firstRecording(many.id).passes?.durations[0].completedPasses).toBe(101);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect((await exportFor(auth.cookie)).sessions).toEqual(exported.sessions);
+  });
+
+  it('scopes pass-bearing saves and task attribution to the authenticated owner without completing tasks', async () => {
+    const owner = await signIn('recording-pass-owner@example.test');
+    const foreign = await signIn('recording-pass-foreign@example.test');
+    const ownedTask = task();
+    expect((await request('/api/plan', 'POST', ownedTask, owner.cookie)).status).toBe(201);
+    const measuredEntry = measured();
+    const linked = {
+      ...measuredEntry,
+      metadata: { ...measuredEntry.metadata, plannedTaskId: ownedTask.id },
+    };
+    expect((await request('/api/entries', 'POST', linked, foreign.cookie)).status).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...backup([linked]), evidenceVersion: 1 } },
+          foreign.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const created = await request('/api/entries', 'POST', linked, owner.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(saved.metadata?.plannedTaskId).toBe(ownedTask.id);
+    expect(stored(foreign.user.id)).toEqual([]);
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', saved, foreign.cookie)).status).toBe(
+      404,
+    );
+    const ownedSql = stored(owner.user.id);
+    // Delete is idempotent for the caller's dataset, including an absent ID.
+    expect(
+      (await request(`/api/entries/${saved.id}`, 'DELETE', undefined, foreign.cookie)).status,
+    ).toBe(200);
+    expect(stored(owner.user.id)).toEqual(ownedSql);
+    expect((await exportFor(foreign.cookie)).sessions).toEqual([]);
+    const exported = await exportFor(owner.cookie);
+    expect(exported.plan).toEqual([ownedTask]);
+    expect(exported.plan![0].done).toBe(false);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, foreign.cookie))
+        .status,
+    ).toBe(200);
+    const restored = await exportFor(foreign.cookie);
+    expect(restored.sessions).toEqual(exported.sessions);
+    expect(restored.plan).toEqual(exported.plan);
+    expect(stored(owner.user.id)).toHaveLength(1);
+    expect(stored(foreign.user.id)).toHaveLength(1);
   });
 });
 

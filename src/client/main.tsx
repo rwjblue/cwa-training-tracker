@@ -1272,6 +1272,9 @@ function App() {
                       }}
                       accountId={user?.id}
                       timezone={profile.timezone}
+                      entries={visibleEntries}
+                      tasks={tasks}
+                      today={dateInTimezone(new Date(), profile.timezone)}
                       onSaved={(entry: PracticeSession) => {
                         acceptSavedPractice(entry, practiceLaunch.id);
                         studioUnsaved.current = false;

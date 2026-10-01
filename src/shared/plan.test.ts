@@ -15,6 +15,7 @@ import {
   weeklyReport,
   nativeCopyTask,
   type PlannedTask,
+  savedTaskProgress,
 } from './plan';
 
 const exercise = (extra: Partial<PlannedTask> = {}): PlannedTask => ({
@@ -26,6 +27,247 @@ const exercise = (extra: Partial<PlannedTask> = {}): PlannedTask => ({
   notes: '',
   createdAt: '2026-09-28T12:00:00.000Z',
   ...extra,
+});
+
+describe('saved assigned recording passes', () => {
+  const assignedUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_15.mp3';
+  const fasterUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_18.mp3';
+  const task = exercise({
+    id: 'current-audio',
+    dueDate: '2026-09-29',
+    exercise: { type: 'audio', url: assignedUrl, minimumPasses: 4, maximumPasses: 6 },
+    curriculum: {
+      id: 'cwa-intermediate-v2.3',
+      exerciseId: 's1-d1-t1',
+      day: 1,
+      sourceUrl: 'https://cwops.org/',
+    },
+  });
+  const entry = (id = 'heard'): PracticeSession => ({
+    id,
+    date: '2026-09-29',
+    kind: 'listening',
+    minutes: 1,
+    notes: '',
+    createdAt: '2026-09-29T12:00:00.000Z',
+    metadata: {
+      plannedTaskId: task.id,
+      evidence: {
+        version: 1,
+        type: 'timed',
+        measurement: { seconds: 60, recallSeconds: 10 },
+        recordings: [
+          {
+            url: assignedUrl,
+            seconds: 20,
+            passes: {
+              version: 1,
+              method: 'native-1x',
+              durations: [{ durationSeconds: 10, completedPasses: 1 }],
+            },
+          },
+          {
+            url: fasterUrl,
+            seconds: 20,
+            passes: {
+              version: 1,
+              method: 'native-1x',
+              durations: [{ durationSeconds: 10, completedPasses: 2 }],
+            },
+          },
+        ],
+      },
+    },
+  });
+  it('counts distinct source passes once across direct/recognized aliases, and keeps completion separate', () => {
+    const direct = entry();
+    const alias = entry('curriculum-alias');
+    alias.metadata!.plannedTaskId = 'curriculum:cwa-intermediate-v2.3:s1-d1-t1';
+    const values = [direct, direct, alias];
+    const original = structuredClone({ task, values });
+    const result = savedTaskProgress([task], values, '2026-09-29').get(task.id)!;
+    expect(result).toEqual({
+      loggedMinutes: 2,
+      todayMinutes: 2,
+      completedPasses: 6,
+      importedCompletedPasses: 0,
+      remainingPasses: 0,
+    });
+    expect(savedTaskProgress([{ ...task, done: true }], values, '2026-09-29').get(task.id)).toEqual(
+      result,
+    );
+    expect(
+      savedTaskProgress([task], values, '2026-09-29', direct.id).get(task.id)?.completedPasses,
+    ).toBe(3);
+    expect(dailyPlanSummary([task], [], [direct], '2026-09-29').assignedToday[0]).toMatchObject({
+      completedPasses: 3,
+      remainingPasses: 1,
+      status: 'started',
+      task: { done: false },
+    });
+    expect({ task, values }).toEqual(original);
+  });
+  it('keeps exact owned placement ahead of an otherwise recognized compatibility alias', () => {
+    const separate = {
+      ...task,
+      id: 'legacy-task:s1-d1-t1',
+      source: 'legacy' as const,
+      curriculum: undefined,
+    };
+    const directlyLinked = entry('separate-placement');
+    directlyLinked.metadata!.plannedTaskId = separate.id;
+    const compatible = entry('qualified-curriculum-alias');
+    compatible.metadata!.plannedTaskId = 'curriculum:cwa-intermediate-v2.3:s1-d1-t1';
+    const imported: PracticeSession = {
+      ...entry('explicit-import'),
+      source: 'legacy',
+      metadata: { legacyAttempt: { taskId: 's1-d1-t1', completedPasses: 2 } },
+    };
+    const progress = savedTaskProgress(
+      [task, separate],
+      [directlyLinked, compatible, imported],
+      '2026-09-29',
+    );
+    expect(progress.get(separate.id)).toMatchObject({
+      loggedMinutes: 2,
+      completedPasses: 5,
+      importedCompletedPasses: 2,
+      remainingPasses: 0,
+    });
+    expect(progress.get(task.id)).toMatchObject({
+      loggedMinutes: 1,
+      completedPasses: 3,
+      importedCompletedPasses: 0,
+      remainingPasses: 1,
+    });
+    expect(savedTaskProgress([task], [imported], '2026-09-29').get(task.id)).toMatchObject({
+      completedPasses: 2,
+      importedCompletedPasses: 2,
+    });
+  });
+  it('excludes class/review/future/foreign/retired links and never derives passes from old seconds or another file', () => {
+    const source = entry();
+    const unknownSource = entry('different-source');
+    unknownSource.metadata!.evidence = {
+      version: 1,
+      type: 'timed',
+      measurement: { seconds: 20 },
+      recordings: [
+        {
+          url: 'https://example.test/another.mp3',
+          seconds: 20,
+          passes: {
+            version: 1,
+            method: 'native-1x',
+            durations: [{ durationSeconds: 10, completedPasses: 2 }],
+          },
+        },
+      ],
+    };
+    const unmeasured = entry('unmeasured');
+    unmeasured.metadata!.evidence = {
+      version: 1,
+      type: 'timed',
+      measurement: { seconds: 20 },
+      recordings: [{ url: assignedUrl, seconds: 20 }],
+    };
+    const values: PracticeSession[] = [
+      { ...source, id: 'class', context: 'class' },
+      { ...source, id: 'review', metadata: { ...source.metadata, practicePurpose: 'review' } },
+      { ...source, id: 'future', date: '2026-09-30' },
+      { ...source, id: 'foreign', metadata: { ...source.metadata, plannedTaskId: 'not-owned' } },
+      {
+        ...source,
+        id: 'retired',
+        historicalPlannedTaskId: task.id,
+        metadata: { ...source.metadata, plannedTaskId: undefined },
+      },
+      {
+        ...source,
+        id: 'old-course',
+        metadata: { ...source.metadata, plannedTaskId: 'curriculum:cwa-intermediate-v1:s1-d1-t1' },
+      },
+      { ...source, id: 'historical-raw', evidenceMode: 'historical' },
+      unknownSource,
+      unmeasured,
+      {
+        ...source,
+        id: 'ordinary-recall',
+        metadata: { plannedTaskId: task.id, elapsedSeconds: 60, recallSeconds: 60 },
+      },
+    ];
+    expect(savedTaskProgress([task], values, '2026-09-29').get(task.id)).toMatchObject({
+      completedPasses: 0,
+      importedCompletedPasses: 0,
+      remainingPasses: 4,
+    });
+    expect(savedTaskProgress([], values, '2026-09-29').size).toBe(0);
+  });
+  it('retains narrowly validated imported source counts without promoting them to native measurements', () => {
+    const legacy: PracticeSession = {
+      ...entry('imported'),
+      source: 'legacy',
+      metadata: { legacyAttempt: { taskId: 's1-d1-t1', completedPasses: 2, activeSeconds: 60 } },
+    };
+    const count = (values: PracticeSession[]) =>
+      savedTaskProgress([task], values, '2026-09-29').get(task.id)!;
+    expect(count([legacy, legacy])).toMatchObject({
+      completedPasses: 2,
+      importedCompletedPasses: 2,
+      remainingPasses: 2,
+    });
+    expect(count([{ ...legacy, evidenceMode: 'historical' }])).toMatchObject({
+      completedPasses: 2,
+      importedCompletedPasses: 2,
+      remainingPasses: 2,
+    });
+    const bad = [-1, 1.5, 101, NaN, Infinity, '2', undefined].map((completedPasses, index) => ({
+      ...legacy,
+      id: `invalid-${index}`,
+      metadata: { legacyAttempt: { taskId: 's1-d1-t1', completedPasses } },
+    }));
+    const invalid: PracticeSession[] = [
+      ...bad,
+      { ...legacy, id: 'not-legacy', source: 'manual' },
+      {
+        ...legacy,
+        id: 'review',
+        metadata: { legacyAttempt: { taskId: 's1-d1-t1', completedPasses: 10, review: true } },
+      },
+      { ...legacy, id: 'class', context: 'class' },
+      { ...legacy, id: 'future', date: '2026-09-30' },
+      { ...legacy, id: 'retired', historicalPlannedTaskId: 'legacy-task:s1-d1-t1' },
+      {
+        ...legacy,
+        id: 'foreign',
+        metadata: { legacyAttempt: { taskId: 'another-task', completedPasses: 10 } },
+      },
+    ];
+    expect(count(invalid)).toMatchObject({
+      completedPasses: 0,
+      importedCompletedPasses: 0,
+      remainingPasses: 4,
+    });
+    const otherCatalog = {
+      ...task,
+      id: 'fundamental-task',
+      curriculum: { ...task.curriculum!, id: 'cwa-fundamental-v2.0' },
+    };
+    expect(
+      savedTaskProgress([otherCatalog], [legacy], '2026-09-29').get(otherCatalog.id)
+        ?.completedPasses,
+    ).toBe(0);
+    expect(
+      savedTaskProgress(
+        [{ ...task, exercise: { type: 'external', url: assignedUrl } }],
+        [legacy],
+        '2026-09-29',
+      ).get(task.id)?.completedPasses,
+    ).toBe(0);
+    expect(legacy.metadata).toEqual({
+      legacyAttempt: { taskId: 's1-d1-t1', completedPasses: 2, activeSeconds: 60 },
+    });
+  });
 });
 
 describe('today’s private course plan', () => {

@@ -365,4 +365,261 @@ describe('practice time', () => {
       ],
     });
   });
+
+  it('keeps source coverage independent from repeated heard time and completes a final tail once', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/pass.mp3', durationSeconds: 10, sourceId: 'one' };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(5, 5000);
+    clock.suspendMedia();
+    clock.startMedia(0, 5000, 1, recording);
+    clock.sample(9.8, 14_800);
+    clock.sample(10, 15_000); // Last accepted native tail precedes terminal finalization.
+    expect(clock.finalizeRecording(recording, true)).toMatchObject({ completed: true });
+    const after = clock.snapshot(15_000);
+    expect(after.seconds).toBe(15);
+    expect(after.recordingProgress?.coveredSeconds).toBe(10);
+    expect(after.recordings[0].passes?.durations[0].completedPasses).toBe(1);
+    expect(clock.finalizeRecording(recording, true)).toBeUndefined();
+    expect(clock.snapshot(15_000).recordingRevision).toBe(after.recordingRevision);
+    clock.startMedia(0, 15_000, 1, recording);
+    clock.sample(10, 25_000);
+    clock.finalizeRecording(recording, true);
+    expect(clock.snapshot(25_000).recordings[0].passes?.durations[0].completedPasses).toBe(2);
+  });
+
+  it('retains partial coverage across pause, buffering, recall and inspection without overlapping time', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/retained.mp3', durationSeconds: 10 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(2, 2000);
+    clock.suspendMedia(); // Buffering/native seek does not retire the current pass.
+    clock.startMedia(2, 7000, 1, recording);
+    clock.sample(4, 9000);
+    clock.startManual(9000, true);
+    clock.snapshot(10_000);
+    clock.pause(11_000); // Inspection pauses and retains the same source owner.
+    clock.startMedia(4, 100_000, 1, recording);
+    clock.sample(10, 106_000);
+    clock.finalizeRecording(recording, true);
+    expect(clock.snapshot(106_000)).toMatchObject({
+      seconds: 12,
+      recallSeconds: 2,
+      recordingOutcome: { completed: true },
+      recordings: [{ seconds: 10, passes: { durations: [{ completedPasses: 1 }] } }],
+    });
+  });
+
+  it.each(['pause', 'buffer', 'recall'] as const)(
+    'accepts the observed native pause-drain boundary after %s without crediting its gap',
+    (boundary) => {
+      const clock = new PracticeClock();
+      const recording = {
+        url: 'https://example.org/native-gap.mp3',
+        durationSeconds: 4,
+        sourceId: 'one',
+      };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(0.852216, 1000);
+      if (boundary === 'pause') clock.pause(1000);
+      else if (boundary === 'buffer') clock.suspendMedia();
+      else {
+        clock.startManual(1000, true);
+        clock.pause(1500);
+      }
+      clock.startMedia(0.951015, 2000, 1, recording);
+      clock.sample(4, 5200);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(true);
+      const snapshot = clock.snapshot(5200);
+      expect(snapshot.recordingProgress?.coveredSeconds).toBeCloseTo(3.901201, 6);
+      expect(snapshot.recordings[0].seconds).toBeCloseTo(3.901201, 6);
+      expect(snapshot.seconds).toBeCloseTo(3.901201 + (boundary === 'recall' ? 0.5 : 0), 6);
+      expect(snapshot.recordings[0].passes?.durations).toEqual([
+        { durationSeconds: 4, completedPasses: 1 },
+      ]);
+      expect(Object.keys(snapshot.recordings[0].passes!)).toEqual([
+        'version',
+        'method',
+        'durations',
+      ]);
+    },
+  );
+
+  it.each([0.000001, 0.01, 0.099])(
+    'does not authorize a %s-second seek while the source is already paused',
+    (gap) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/paused-seek.mp3', durationSeconds: 4 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(1, 1000);
+      clock.pause(1000);
+      clock.suspendMedia(false); // Native seeking still invalidates a paused candidate.
+      clock.startMedia(1 + gap, 2000, 1, recording);
+      clock.sample(4, 5000);
+      expect(clock.finalizeRecording(recording, true)).toMatchObject({
+        completed: false,
+        reason: 'incomplete',
+      });
+    },
+  );
+
+  it('does not manufacture native pause permission from a repeated playing anchor', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/reanchored.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.startMedia(1.01, 1100, 1, recording);
+    clock.sample(4, 4200);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it('rejects many individually small native pause gaps when their actual missing sum exceeds the budget', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/many-pauses.mp3', durationSeconds: 4 };
+    let position = 0;
+    let now = 0;
+    clock.startMedia(position, now, 1, recording);
+    for (const endpoint of [0.8, 1.8, 2.8]) {
+      now += 1000;
+      clock.sample(endpoint, now);
+      clock.pause(now);
+      position = endpoint + 0.09;
+      now += 1000;
+      clock.startMedia(position, now, 1, recording);
+    }
+    clock.sample(4, now + 1200);
+    expect(clock.snapshot(now + 1200).recordingProgress?.coveredSeconds).toBeCloseTo(3.73, 6);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each([
+    { label: 'large gap', next: { durationSeconds: 4, sourceId: 'first' }, position: 1.21 },
+    { label: 'new generation', next: { durationSeconds: 4, sourceId: 'second' }, position: 1.05 },
+    {
+      label: 'changed duration',
+      next: { durationSeconds: 4.1, sourceId: 'first' },
+      position: 1.05,
+    },
+  ])('does not transfer native pause tolerance through $label', ({ next, position }) => {
+    const clock = new PracticeClock();
+    const recording = {
+      url: 'https://example.org/fenced-gap.mp3',
+      durationSeconds: 4,
+      sourceId: 'first',
+    };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    const replacement = { ...recording, ...next };
+    clock.startMedia(position, 2000, 1, replacement);
+    clock.sample(replacement.durationSeconds, 5200);
+    expect(clock.finalizeRecording(replacement, true)?.completed).toBe(false);
+  });
+
+  it('invalid media observations revoke a previously retained native continuity candidate', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/failed-gap.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    clock.startMedia(1, NaN, 1, recording);
+    clock.startMedia(1.05, 2000, 1, recording);
+    clock.sample(4, 5000);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it('never uses a clipped plausible jump as source coverage, including tiny recordings', () => {
+    for (const duration of [0.5, 3]) {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/clipped.mp3', durationSeconds: duration };
+      clock.startMedia(0, 0, 1, recording);
+      const jump = Math.min(duration, 2.5);
+      const wall = Math.max(0, jump - 0.5);
+      clock.sample(jump, wall * 1000);
+      clock.sample(duration, (wall + duration - jump) * 1000);
+      expect(clock.snapshot(10_000).seconds).toBeGreaterThan(0);
+      expect(clock.finalizeRecording(recording, true)).toMatchObject({ completed: false });
+      expect(clock.snapshot(10_000).recordingProgress?.coveredSeconds).toBeCloseTo(duration - jump);
+    }
+  });
+
+  it('retains a seek hole even when the destination is within the end tolerance', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/seek.mp3', durationSeconds: 10 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(5, 5000);
+    clock.suspendMedia();
+    clock.startMedia(9.95, 5000, 1, recording);
+    clock.sample(10, 5050);
+    expect(clock.finalizeRecording(recording, true)).toMatchObject({
+      completed: false,
+      reason: 'incomplete',
+    });
+    expect(clock.snapshot(5050).seconds).toBeCloseTo(5.05);
+  });
+
+  it.each([0, 1])(
+    'does not supply a tiny whole clip from %s milliseconds of jitter allowance',
+    (wall) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/tiny-jump.mp3', durationSeconds: 0.05 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(0.05, wall);
+      // Existing bounded time accounting stays compatible, but a missed tiny seek
+      // cannot use that allowance as whole-source coverage.
+      expect(clock.snapshot(wall).seconds).toBe(0.05);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+      expect(clock.snapshot(wall).recordingProgress?.coveredSeconds).toBe(0);
+    },
+  );
+
+  it('accepts actual short native movement with positive wall time and bounded sample jitter', () => {
+    const clock = new PracticeClock();
+    const tiny = { url: 'https://example.org/tiny-real.mp3', durationSeconds: 0.05 };
+    clock.startMedia(0, 0, 1, tiny);
+    clock.sample(0.05, 50);
+    expect(clock.finalizeRecording(tiny, true)?.completed).toBe(true);
+    const short = { url: 'https://example.org/short-real.mp3', durationSeconds: 0.25 };
+    clock.startMedia(0, 50, 1, short);
+    clock.sample(0.25, 299); // 1ms native position/wall sampling difference.
+    expect(clock.finalizeRecording(short, true)?.completed).toBe(true);
+  });
+
+  it('keeps delayed real background media eligible and generic native rates time-only', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/background-pass.mp3', durationSeconds: 120 };
+    clock.startMedia(0, 0, 1, recording, false);
+    clock.sample(120, 120_000);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(true);
+    const fast = { url: 'https://example.org/rate.mp3', durationSeconds: 10 };
+    clock.startMedia(0, 120_000, 2, fast);
+    clock.sample(10, 125_000, 2);
+    expect(clock.finalizeRecording(fast, true)).toMatchObject({
+      completed: false,
+      reason: 'rate-unsupported',
+    });
+    expect(clock.snapshot(125_000).recordings).toMatchObject([
+      { seconds: 120, passes: { durations: [{ completedPasses: 1 }] } },
+      { seconds: 5 },
+    ]);
+    expect(clock.snapshot(125_000).recordings[1].passes).toBeUndefined();
+  });
+
+  it('publishes terminal changes below a whole second and detaches saved pass measurements', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/tiny.mp3', durationSeconds: 0.25 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(0.25, 250);
+    const before = clock.snapshot(250);
+    clock.finalizeRecording(recording, true);
+    const after = clock.snapshot(250);
+    expect(Math.floor(after.seconds)).toBe(Math.floor(before.seconds));
+    expect(after.recordingRevision).toBeGreaterThan(before.recordingRevision);
+    expect(after.recordingOutcome?.completed).toBe(true);
+    after.recordings[0].passes!.durations[0].completedPasses = 999;
+    expect(clock.snapshot(250).recordings[0].passes?.durations[0].completedPasses).toBe(1);
+    clock.reset();
+    expect(clock.snapshot(250)).toMatchObject({ seconds: 0, recordings: [] });
+    expect(clock.snapshot(250).recordingOutcome).toBeUndefined();
+  });
 });

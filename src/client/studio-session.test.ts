@@ -62,7 +62,14 @@ it('snapshots only current scoped scratchpad memory, including empty tombstones 
 function input(seconds = 30): StudioSessionInput {
   return {
     identity: { id: 'studio:first', createdAt: '2026-09-30T01:00:00.000Z' },
-    measured: { seconds, recallSeconds: 0, running: false, recalling: false, recordings: [] },
+    measured: {
+      seconds,
+      recallSeconds: 0,
+      running: false,
+      recalling: false,
+      recordings: [],
+      recordingRevision: 0,
+    },
     preferences: { ...DEFAULT_PRACTICE_PREFERENCES, wordList: 'common-30' },
     generatedListening: { version: 1, summaries: [playedWords()], overflow: false },
     scratchpad: 'Listen for the complete word.',
@@ -255,6 +262,82 @@ it('captures assignment, actual recording sources and recall without inventing a
     metadata: { recordingUrl: 'https://example.org/slow.mp3' },
   });
   expect(studioSession(value)?.characterWpm).toBeUndefined();
+});
+
+it('freezes per-file native passes in a failed retry while later current listening continues', async () => {
+  const value = input(60);
+  const assignedUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_15.mp3';
+  const fasterUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_18.mp3';
+  value.launch = {
+    id: 'launch:observed-passes',
+    activity: { type: 'audio', url: assignedUrl, characterWpm: 15 },
+    task: {
+      id: 'task:observed-passes',
+      title: 'Listen to the assigned words',
+      kind: 'listening',
+      done: false,
+      notes: '',
+      createdAt: value.identity.createdAt,
+      exercise: { type: 'audio', url: assignedUrl, minimumPasses: 4 },
+    },
+    purpose: 'assigned',
+  };
+  value.measured.recallSeconds = 10;
+  value.measured.recordings = [
+    {
+      url: assignedUrl,
+      speedWpm: 15,
+      seconds: 20,
+      passes: {
+        version: 1,
+        method: 'native-1x',
+        durations: [{ durationSeconds: 10, completedPasses: 1 }],
+      },
+    },
+    {
+      url: fasterUrl,
+      speedWpm: 18,
+      seconds: 20,
+      passes: {
+        version: 1,
+        method: 'native-1x',
+        durations: [{ durationSeconds: 10, completedPasses: 2 }],
+      },
+    },
+  ];
+  const candidate = studioSession(value)!;
+  expect(candidate.metadata?.recordings).toMatchObject(value.measured.recordings);
+  expect(candidate.metadata?.evidence).toMatchObject({
+    type: 'timed',
+    recordings: value.measured.recordings,
+  });
+  expect(candidate.notes).toContain('15 WPM: 00:20 listened; 1 completed pass');
+  expect(candidate.notes).toContain('18 WPM: 00:20 listened; 2 completed passes');
+  expect(candidate.minutes).toBe(1);
+  const coordinator = new StudioSaveCoordinator();
+  await expect(
+    coordinator.flush(candidate, async () => {
+      throw new Error('Retry after network loss');
+    }),
+  ).rejects.toThrow('network loss');
+  value.measured.seconds += 10;
+  value.measured.recordings[0].seconds += 10;
+  value.measured.recordings[0].passes!.durations[0].completedPasses++;
+  const retry = vi.fn(async (_entry: PracticeSession) => {});
+  await coordinator.flush(studioSession(value), retry);
+  expect(retry.mock.calls[0][0]).toEqual(candidate);
+  expect(retry.mock.calls[0][0].metadata?.evidence).toMatchObject({
+    recordings: [
+      { passes: { durations: [{ completedPasses: 1 }] } },
+      { passes: { durations: [{ completedPasses: 2 }] } },
+    ],
+  });
+  expect(studioSession(value)?.metadata?.evidence).toMatchObject({
+    recordings: [
+      { passes: { durations: [{ completedPasses: 2 }] } },
+      { passes: { durations: [{ completedPasses: 2 }] } },
+    ],
+  });
 });
 
 it('keeps captured review purpose with the task before and after an explicit completion decision', () => {

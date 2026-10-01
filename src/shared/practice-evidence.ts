@@ -12,12 +12,32 @@ export interface TimeCorrection {
   recallSeconds?: number;
   reason: string;
 }
+/** Observed whole-source coverage at native 1x, grouped by its actual media duration. */
+export interface RecordingPassEvidence {
+  version: 1;
+  method: 'native-1x';
+  durations: { durationSeconds: number; completedPasses: number }[];
+}
+export const MAX_RECORDING_PASS_DURATIONS = 100;
+
+/** Combined endpoint/native-boundary loss: at most one second and 5% of a source. */
+export const recordingPassTolerance = (durationSeconds: number) =>
+  Math.min(1, durationSeconds * 0.05);
+
+/** Omission is unmeasured old evidence, rather than an observed zero. */
+export function recordingCompletedPasses(
+  recording: Pick<RecordingEvidence, 'passes'>,
+): number | undefined {
+  return recording.passes?.durations.reduce((sum, item) => sum + item.completedPasses, 0);
+}
+
 export interface RecordingEvidence {
   url: string;
   speedWpm?: number;
   characterWpm?: number;
   effectiveWpm?: number;
   seconds: number;
+  passes?: RecordingPassEvidence;
 }
 export type PracticeEvidence =
   | {
@@ -74,7 +94,11 @@ function timestamp(value: unknown, label: string): string {
 
 export function validateRecordingEvidence(value: unknown): RecordingEvidence {
   const row = object(value, 'Recording evidence');
-  keys(row, ['url', 'speedWpm', 'characterWpm', 'effectiveWpm', 'seconds'], 'Recording evidence');
+  keys(
+    row,
+    ['url', 'speedWpm', 'characterWpm', 'effectiveWpm', 'seconds', 'passes'],
+    'Recording evidence',
+  );
   const url = text(row.url, 'Recording URL', 2000);
   try {
     const parsed = new URL(url);
@@ -96,7 +120,7 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
   }
   if (native && row.speedWpm !== undefined && row.speedWpm !== variant?.speedWpm)
     throw new Error('Recording file WPM must match the exact catalog source.');
-  return {
+  const result: RecordingEvidence = {
     url,
     seconds: finite(row.seconds, 'Recording listened seconds'),
     ...(row.speedWpm !== undefined
@@ -104,6 +128,51 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
       : {}),
     ...native,
   };
+  if (row.passes !== undefined) {
+    const passes = object(row.passes, 'Recording passes');
+    keys(passes, ['version', 'method', 'durations'], 'Recording passes');
+    if (passes.version !== 1 || passes.method !== 'native-1x')
+      throw new Error('Recording passes require version 1 native-1x coverage.');
+    if (
+      !Array.isArray(passes.durations) ||
+      !passes.durations.length ||
+      passes.durations.length > MAX_RECORDING_PASS_DURATIONS
+    )
+      throw new Error(
+        `Recording passes require 1–${MAX_RECORDING_PASS_DURATIONS} observed durations.`,
+      );
+    const durations = passes.durations.map((value) => {
+      const item = object(value, 'Recording pass duration');
+      keys(item, ['durationSeconds', 'completedPasses'], 'Recording pass duration');
+      const durationSeconds = finite(item.durationSeconds, 'Recording duration seconds');
+      if (durationSeconds <= 0) throw new Error('Recording duration seconds must be positive.');
+      return {
+        durationSeconds,
+        completedPasses: finite(
+          item.completedPasses,
+          'Recording completed passes',
+          Number.MAX_SAFE_INTEGER,
+          0,
+          true,
+        ),
+      };
+    });
+    if (new Set(durations.map((item) => item.durationSeconds)).size !== durations.length)
+      throw new Error('Recording pass durations must be distinct.');
+    if (!Number.isSafeInteger(durations.reduce((sum, item) => sum + item.completedPasses, 0)))
+      throw new Error('Recording completed pass total must be a safe whole number.');
+    const minimumHeard = durations.reduce(
+      (sum, item) =>
+        sum +
+        item.completedPasses *
+          (item.durationSeconds - recordingPassTolerance(item.durationSeconds)),
+      0,
+    );
+    if (minimumHeard > result.seconds + 0.001)
+      throw new Error('Recording completed passes exceed its measured native-1x listening time.');
+    result.passes = { version: 1, method: 'native-1x', durations };
+  }
+  return result;
 }
 
 function runner(value: unknown): Extract<PracticeEvidence, { type: 'runner' }>['run'] {
@@ -397,7 +466,11 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
     `Measured ${evidence.measurement.seconds.toFixed(2)} seconds${evidence.measurement.recallSeconds !== undefined ? `, including ${evidence.measurement.recallSeconds.toFixed(2)} recall seconds` : ''}.`,
     ...evidence.recordings.map(
       (item) =>
-        `${item.seconds.toFixed(2)} seconds listened${item.speedWpm !== undefined ? ` at ${item.speedWpm} file WPM` : ''}: ${item.url}`,
+        `${item.seconds.toFixed(2)} seconds listened${item.speedWpm !== undefined ? ` at ${item.speedWpm} file WPM` : ''}; ${
+          item.passes
+            ? `${recordingCompletedPasses(item)} completed ${recordingCompletedPasses(item) === 1 ? 'pass' : 'passes'} (native 1x; ${item.passes.durations.map((duration) => `${duration.completedPasses} × ${duration.durationSeconds.toFixed(2)}s observed duration`).join('; ')})`
+            : 'passes unmeasured'
+        }: ${item.url}`,
     ),
     ...(evidence.generatedListening ? generatedListeningDetails(evidence.generatedListening) : []),
     ...(evidence.correction

@@ -9,6 +9,7 @@ import { recordingSpeeds } from './recording-variants';
 import { formatPracticeDuration } from './practice-duration';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 import type { GeneratedListeningEvidence } from '../shared/generated-listening';
+import { recordingCompletedPasses } from '../shared/practice-evidence';
 
 export const STUDIO_AUTOSAVE_SECONDS = 30;
 const duration = (seconds: number) => formatPracticeDuration(seconds / 60).padStart(5, '0');
@@ -62,7 +63,7 @@ export function studioSession(
     ),
   ];
   const recordings = measured.recordings.map((item) => ({
-    ...item,
+    ...structuredClone(item),
     ...recordingSpeeds(item.url),
   }));
   const sharedSpeed = (key: 'characterWpm' | 'effectiveWpm') => {
@@ -85,7 +86,7 @@ export function studioSession(
         ? recordings
             .map(
               (item) =>
-                `${item.speedWpm ? `${item.speedWpm} WPM` : 'Recording'}: ${duration(item.seconds)} listened`,
+                `${item.speedWpm ? `${item.speedWpm} WPM` : 'Recording'}: ${duration(item.seconds)} listened${item.passes ? `; ${recordingCompletedPasses(item)} completed ${recordingCompletedPasses(item) === 1 ? 'pass' : 'passes'}` : ''}`,
             )
             .join('; ')
         : undefined,

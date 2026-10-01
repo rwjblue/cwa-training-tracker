@@ -103,7 +103,8 @@ These baseline gaps no longer describe the current implementation:
 | Focused recall | Assigned Start recall physically pauses audio; app, native and Media Session Play stop recall before playback. Every recall settlement rejects hidden, invalid, backward or at least four-second delayed samples, retains prior credit and announces deliberate resume/correction. Review edits recall within total time while retaining raw measurements and per-file listening; the split survives private saves, history, reports and backups. [Clock](../src/client/practice-clock.ts), [journey](../e2e/recall.spec.ts). | Ordinary manual/external practice intentionally continues off-page until paused; in-app inspection pauses its owner. Actual background audio remains media-derived. No reload/crash elapsed-time recovery or physical-device verification is claimed. Issue #8 validation and independent review are recorded below. |
 | Scratchpad | Notes can be written during practice, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx). | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate. |
 | Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Full custom text/scripts remain in memory with the active owner; equal custom label/count/settings deliberately share a descriptive identity. Seamless speed retiming, Stories and public exact recipes remain later issues. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
-| Official recording speeds       | Verified native-speed files, device-local Assigned/Next preference, and mixed-speed per-file actual-time metadata are supported. Official files remain at 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [catalog matching](../src/client/recording-variants.ts).                                                                                                     | Per-task remembered overrides, actual pass/coverage tracking, bookmarks, and report aggregation remain open.                                                                                                                                         |
+| Official recording speeds       | Verified native-speed files, device-local Assigned/Next preference, and mixed-speed per-file actual-time metadata are supported. Official files remain at 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [catalog matching](../src/client/recording-variants.ts).                                                                                                     | Per-task remembered overrides, bookmarks, automatic course replay and advisor-report aggregation remain later issues; observed passes are delivered separately below.                                                                                                                                         |
+| Recording coverage and passes | Native 1x movement supplies recording-local coverage and once-only completed passes. Overlap unions, file ownership and measured duration groups remain separate from heard time. Prior saved/current/remaining counts appear in Today, Plan and Studio; per-file facts survive review, history, reports and account/device backups. [Coverage](../src/client/recording-coverage.ts), [progress](../src/shared/plan.ts), [journey](../e2e/listening-passes.spec.ts). | Partial coverage stays in memory during in-app inspection; unfinished elapsed/coverage reload recovery is excluded. Old records remain unmeasured. Explicit imported source counts are labeled separately, and extra review supplies no required-pass credit. Independent validation/review are recorded in the #9 ledger below. |
 | Historical data access          | Imported practice exposes scratchpads, ratings, recall, passes, actual recording speeds, and per-run Runner/LCWO/CWT observations. Settings has an authenticated, on-demand reader for original reports, LCWO measurements, materials/revisions, course context, and device report drafts/preferences. [Imported history](../src/client/ImportedHistory.tsx).                  | Original reports and materials are readable snapshots, not native authoring/submission workflows. Device drafts are preserved for reference, not resumed.                                                                                            |
 | Native copy lifecycle           | Four public modes preserve exact targets/answers, actual trial speeds, score versions, replay/reveal flags, and separate audio/answer/review time. Account/guest-local drafts restore paused; pending saves retain stable IDs and tabs coordinate ownership. [Clock](../src/client/copy-clock.ts), [storage](../src/client/copy-storage.ts), [API](../src/worker/training.ts). | This recovery applies to CopyTrainer, not all tools. Hidden copy practice pauses; answer/review time idles after 30 seconds. Guest/signed-in desktop/mobile Chromium journeys and accessibility checks pass; physical-device behavior is unverified. |
 | Native copy history and reports | Validated per-attempt evidence appears in history and printable reports, survives export/import, and does not sum scores across rounds. [Results](../src/client/CopyResult.tsx), [report details](../src/shared/copy-report.ts).                                                                                                                                               | Native corpora/timing/scoring differ from LCWO. This is not advisor-form authoring or submission.                                                                                                                                                    |
@@ -113,7 +114,7 @@ These baseline gaps no longer describe the current implementation:
 | Native spoken repeats               | Both built-in lists use checked-in generated answer clips. Three Morse plays, speech, and pauses form one native WAV with seeking, pause/resume, looping and media-derived credit. Custom spoken lists require published words. [Listening](../src/client/ListeningTrainer.tsx), [audio provenance](spoken-audio.md), [browser regression](../e2e/spoken-answers.spec.ts).                                                                                                             | Real media decoding/progression and desktop/mobile fit are covered; physical iPhone lock-screen verification remains outstanding. A shuffled round loops its current order; New round reshuffles.                                                                                                                                                    |
 | Duration and explicit completion | The universal 15-minute fallback is removed. Elapsed time and an optional goal are separate from an assigned exercise's explicit Complete/Reopen action; completion is available without starting audio or creating a practice entry. Unknown manual-entry durations require actual learner input. [Studio](../src/client/PracticeStudio.tsx), [plan model](../src/shared/plan.ts). | Completion is a learner decision, not proof of a full listening pass or attainment of a proficiency target. Practice credit continues to come from saved actual time. |
 | Earlier reminders and session links | Today has no completion checkboxes. Dismissal hides earlier unfinished items only, with restoration in the course plan; dates, completion and recorded practice remain intact. All four courses link to the selected session in the official syllabus. [Today](../src/client/TodayPlan.tsx), [course plan](../src/client/Plan.tsx), [curriculum links](../src/shared/curriculum.ts). | Dismissal is not deletion and does not hide a task rescheduled to today or a future date. The Beginner session 2 HTML bookmark is missing, so its link uses the official PDF's page 11. |
-| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Independent review counts once toward useful daily practice and supplies no required assignment credit; class review stays separate. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation, pass coverage and cumulative Runner completion remain separate issues. Independent acceptance and production evidence are tracked in the issue #5 ledger below. |
+| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Independent review counts once toward useful daily practice and supplies no required assignment credit; class review stays separate. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation and cumulative Runner completion remain separate issues; observed recording passes are delivered below. Independent acceptance and production evidence are tracked in the issue #5 ledger below. |
 
 ## Accepted September 30 delivery ledger
 
@@ -566,3 +567,49 @@ Fresh independent review passes eleven workflow probes, 200 focused tests and
 finding. Signed publication matches the accepted tree; production health, private
 endpoint rejection and asset hashes are verified. Exact references and review
 evidence belong in the [execution journal](parity/execution-progress-2026-09-30.md).
+
+## Issue #9 delivery ledger — observed recording passes
+
+Implementation validation passes; independent acceptance and publication remain
+pending. Original interval union, terminal completion, per-recording results and
+required/prior-pass projections were rechecked at the pinned source. Course replay
+remains issue #10.
+
+One recording owner retains exact heard intervals through pause, buffering, recall
+and in-app inspection. Accepted native 1x movement supplies coverage; seeks, idle
+time and loading supply none. Overlap counts once toward coverage and replay adds
+only actual heard seconds. Every terminal outcome finalizes once. A new pass,
+source identity, actual duration or selected file starts fresh partial coverage,
+while completed per-URL duration facts and heard time remain. Retired elements and
+late transport requests cannot contribute to a replacement owner.
+
+Completion requires positive finite duration up to 24 hours and at least
+`duration - min(1 second, 5% of duration)` actual union coverage. Internal gaps are
+rejected except a known native suspension/resume position discontinuity bounded
+by `min(0.25 second, 5% of duration)`. The 0.25-second bound is one observation
+interval. Such gaps add no seconds or coverage, and the
+combined missing amount must remain inside the same completion budget. Explicit
+seeking invalidates suspension continuity even while paused. This handles native
+pause-position lag without turning deliberate skipped material into a pass.
+
+Optional version 1 `native-1x` pass facts retain 1–100 distinct observed duration
+groups per actual URL, with safe nonnegative integer counts and counts bounded by
+that file's actual heard seconds. Older omission means unmeasured; measured zero
+is explicit. No arbitrary 100-pass cap is imposed. Raw facts stay immutable during
+time correction, historical edits and exact queue retries; snapshots deep-clone
+nested duration facts. Existing strict Worker validation, private plan ownership,
+transactional backup and device lifecycle paths carry the same model.
+
+Saved task progress deduplicates owned entries and excludes class, extra review,
+future dates, retired task links and the active block identity. Exact task identity
+precedes conservative original aliases. Native counts require the assigned exact
+URL or its verified official variant group; unknown links require exact matching.
+Explicit original imported pass counts remain labeled source observations, never
+inferred from seconds or promoted from archived records. Completion/reopening
+remains a separate learner action and creates no time or pass evidence.
+
+No database entity, schema, configuration or binding change is required. No
+restricted course recording, personal import, automatic replay, elapsed recovery
+after reload/crash or physical-device verification is introduced. Final validation
+and the independent review gate are recorded in
+[execution progress](parity/execution-progress-2026-09-30.md).
