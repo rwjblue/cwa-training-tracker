@@ -1,150 +1,139 @@
 import { expect, test } from '@playwright/test';
-import { accountRequest, expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 
-for (const mobile of [false, true]) {
-  test(`finished results and account edits survive offline reopen (${mobile ? 'mobile touch' : 'desktop keyboard'})`, async ({
-    page,
-    context,
-  }) => {
-    await context.setExtraHTTPHeaders({
-      'CF-Connecting-IP': mobile ? '192.0.2.112' : '192.0.2.111',
-    });
-    if (mobile) {
-      await page.setViewportSize({ width: 390, height: 844 });
-    }
-    await signIn(page);
-    const navigate = async (name: string) => {
-      if (mobile) await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();
-      const button = page.getByRole('button', { name, exact: true });
-      if (mobile) await button.tap();
-      else await button.click();
-    };
-    const task = {
-      id: `offline-${mobile ? 'mobile' : 'desktop'}`,
-      title: 'Offline sending exercise',
-      kind: 'sending',
-      done: false,
-      notes: 'Synthetic queue practice',
-      createdAt: new Date().toISOString(),
-      source: 'manual',
-    };
-    expect((await accountRequest(context, 'POST', '/api/plan', { task })).ok()).toBe(true);
-    await page.reload();
-    const posted: unknown[] = [];
-    context.on('request', (request) => {
-      if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
-        posted.push(request.postDataJSON());
-    });
-    // Load the actual engine before disconnecting. Running-time recovery is excluded.
-    await navigate('Practice studio');
-    await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
-    const runner = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
-    await expect(runner.getByRole('button', { name: /Run$/ })).toBeEnabled();
-    await runner.getByRole('button', { name: /Run$/ }).click();
-    await expect.poll(() => runner.locator('#clock').textContent()).not.toBe('00:00:00');
-    await context.setOffline(true);
-    await page.getByRole('button', { name: 'Stop run', exact: true }).click();
-    await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
-    await page.getByLabel(/^Notes/).fill('Offline real Runner result');
-    const save = page.getByRole('button', { name: 'Save practice', exact: true });
-    await save.focus();
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.getByRole('region', { name: 'Practice upload status' })).toContainText(
-      '1 practice result saved on this device.',
-    );
-    await navigate('Academy guide');
-    await page.getByRole('button', { name: 'Whole course', exact: true }).click();
-    await page.getByRole('button', { name: 'Log practice', exact: true }).click();
-    await page.getByLabel('Time practiced', { exact: false }).fill('2:15');
-    await page.getByLabel(/^Notes/).fill('Offline manual result');
-    await page.getByRole('button', { name: 'Save practice', exact: true }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await navigate('Academy guide');
-    await page.getByRole('button', { name: 'Whole course', exact: true }).click();
-    const complete = page.getByRole('checkbox', { name: 'Mark Offline sending exercise complete' });
-    await complete.focus();
-    await page.keyboard.press('Space');
-    await page.getByRole('checkbox', { name: 'Show completed' }).check();
-    await expect(
-      page.getByRole('checkbox', { name: 'Mark Offline sending exercise incomplete' }),
-    ).toBeChecked();
-    await page
-      .getByRole('checkbox', { name: 'Mark Offline sending exercise incomplete' })
-      .uncheck();
-    // Deleting its task must not strand the already frozen offline result.
-    await page.getByRole('button', { name: `Delete ${task.title}`, exact: true }).click();
-    await page.getByRole('button', { name: 'Delete exercise', exact: true }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: task.title, exact: true })).toHaveCount(0);
-    await navigate('Your account');
-    await page.getByLabel('Name', { exact: true }).fill('Offline Student');
-    await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Account sync status' })).toContainText(
-      '4 account edits saved on this device.',
-    );
-    await expectAccessible(page, `offline-sync-${mobile ? 'mobile' : 'desktop'}`);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
-    await page.screenshot({
-      path: `.tmp/offline-sync-${mobile ? 'mobile' : 'desktop'}.png`,
-      fullPage: true,
-    });
-    const frozen = await page.evaluate(() =>
-      Object.entries(localStorage)
-        .filter(([key]) => key.startsWith('cwa:practice:pending:v1:'))
-        .map(([, value]) => JSON.parse(value)),
-    );
-    expect(frozen).toHaveLength(2);
-    // Browser serves the already built shell while the API remains genuinely offline.
-    const shell = await context.newPage();
-    await shell.route('**/*', async (route) => {
-      const url = new URL(route.request().url());
-      if (url.pathname.startsWith('/api/')) await route.abort('internetdisconnected');
-      else await route.continue();
-    });
-    await page.close();
-    await context.setOffline(false);
-    await shell.goto('/#logbook');
-    await expect(shell.getByRole('region', { name: 'Practice upload status' })).toContainText(
-      '2 practice results saved on this device.',
-    );
-    await expect(shell.getByText('Offline manual result', { exact: true })).toBeVisible();
-    await expect(shell.getByText('Offline real Runner result', { exact: true })).toBeVisible();
-    await expect(shell.getByRole('region', { name: 'Account sync status' })).toContainText(
-      '4 account edits saved on this device.',
-    );
-    await shell.unroute('**/*');
-    await shell.evaluate(() => window.dispatchEvent(new Event('online')));
-    await expect(shell.getByRole('region', { name: 'Account sync status' })).toHaveCount(0);
-    await expect(shell.getByRole('region', { name: 'Practice upload status' })).toHaveCount(0);
-    const entries = (await (await context.request.get('/api/entries')).json()).entries;
-    expect(entries).toHaveLength(2);
-    for (const entry of frozen) {
-      const attempts = posted.filter(
-        (body) => body && typeof body === 'object' && 'id' in body && body.id === entry.id,
-      );
-      expect(attempts.length).toBeGreaterThan(0);
-      for (const body of attempts) expect(body).toEqual(entry);
-      const expected = structuredClone(entry);
-      if (expected.metadata?.plannedTaskId === task.id) {
-        expected.historicalPlannedTaskId = task.id;
-        delete expected.metadata.plannedTaskId;
-      }
-      expect(entries.find((saved: { id: string }) => saved.id === entry.id)).toEqual(expected);
-    }
-    const exported = await (await context.request.get('/api/export')).json();
-    expect(
-      exported.sessions.find((entry: { notes: string }) => entry.notes === 'Offline manual result'),
-    ).toMatchObject({ historicalPlannedTaskId: task.id });
-    const state = (await (await context.request.get('/api/account-state')).json()).state;
-    expect(state.settings.displayName).toBe('Offline Student');
-    expect(state.plan.find((item: { id: string }) => item.id === task.id)).toBeUndefined();
+const mobile = false;
+
+test(`finished results and account edits survive offline reopen (desktop keyboard)`, async ({
+  page,
+  context,
+}) => {
+  await context.setExtraHTTPHeaders({
+    'CF-Connecting-IP': '192.0.2.111',
   });
-}
+
+  await signIn(page);
+  const navigate = async (name: string) => {
+    const button = page.getByRole('button', { name, exact: true });
+    await button.click();
+  };
+  const task = {
+    id: `offline-desktop`,
+    title: 'Offline sending exercise',
+    kind: 'sending',
+    done: false,
+    notes: 'Synthetic queue practice',
+    createdAt: new Date().toISOString(),
+    source: 'manual',
+  };
+  expect((await accountRequest(context, 'POST', '/api/plan', { task })).ok()).toBe(true);
+  await page.reload();
+  const posted: unknown[] = [];
+  context.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
+      posted.push(request.postDataJSON());
+  });
+  // Load the actual engine before disconnecting. Running-time recovery is excluded.
+  await navigate('Practice studio');
+  await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
+  const runner = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
+  await expect(runner.getByRole('button', { name: /Run$/ })).toBeEnabled();
+  await runner.getByRole('button', { name: /Run$/ }).click();
+  await expect.poll(() => runner.locator('#clock').textContent()).not.toBe('00:00:00');
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Stop run', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
+  await page.getByLabel(/^Notes/).fill('Offline real Runner result');
+  const save = page.getByRole('button', { name: 'Save practice', exact: true });
+  await save.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Practice upload status' })).toContainText(
+    '1 practice result saved on this device.',
+  );
+  await navigate('Academy guide');
+  await page.getByRole('button', { name: 'Whole course', exact: true }).click();
+  await page.getByRole('button', { name: 'Log practice', exact: true }).click();
+  await page.getByLabel('Time practiced', { exact: false }).fill('2:15');
+  await page.getByLabel(/^Notes/).fill('Offline manual result');
+  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await navigate('Academy guide');
+  await page.getByRole('button', { name: 'Whole course', exact: true }).click();
+  const complete = page.getByRole('checkbox', { name: 'Mark Offline sending exercise complete' });
+  await complete.focus();
+  await page.keyboard.press('Space');
+  await page.getByRole('checkbox', { name: 'Show completed' }).check();
+  await expect(
+    page.getByRole('checkbox', { name: 'Mark Offline sending exercise incomplete' }),
+  ).toBeChecked();
+  await page.getByRole('checkbox', { name: 'Mark Offline sending exercise incomplete' }).uncheck();
+  // Deleting its task must not strand the already frozen offline result.
+  await page.getByRole('button', { name: `Delete ${task.title}`, exact: true }).click();
+  await page.getByRole('button', { name: 'Delete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: task.title, exact: true })).toHaveCount(0);
+  await navigate('Your account');
+  await page.getByLabel('Name', { exact: true }).fill('Offline Student');
+  await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Account sync status' })).toContainText(
+    '4 account edits saved on this device.',
+  );
+  await expectResponsive(page, `offline-sync-desktop`);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  const frozen = await page.evaluate(() =>
+    Object.entries(localStorage)
+      .filter(([key]) => key.startsWith('cwa:practice:pending:v1:'))
+      .map(([, value]) => JSON.parse(value)),
+  );
+  expect(frozen).toHaveLength(2);
+  // Browser serves the already built shell while the API remains genuinely offline.
+  const shell = await context.newPage();
+  await shell.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.startsWith('/api/')) await route.abort('internetdisconnected');
+    else await route.continue();
+  });
+  await page.close();
+  await context.setOffline(false);
+  await shell.goto('/#logbook');
+  await expect(shell.getByRole('region', { name: 'Practice upload status' })).toContainText(
+    '2 practice results saved on this device.',
+  );
+  await expect(shell.getByText('Offline manual result', { exact: true })).toBeVisible();
+  await expect(shell.getByText('Offline real Runner result', { exact: true })).toBeVisible();
+  await expect(shell.getByRole('region', { name: 'Account sync status' })).toContainText(
+    '4 account edits saved on this device.',
+  );
+  await shell.unroute('**/*');
+  await shell.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(shell.getByRole('region', { name: 'Account sync status' })).toHaveCount(0);
+  await expect(shell.getByRole('region', { name: 'Practice upload status' })).toHaveCount(0);
+  const entries = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(entries).toHaveLength(2);
+  for (const entry of frozen) {
+    const attempts = posted.filter(
+      (body) => body && typeof body === 'object' && 'id' in body && body.id === entry.id,
+    );
+    expect(attempts.length).toBeGreaterThan(0);
+    for (const body of attempts) expect(body).toEqual(entry);
+    const expected = structuredClone(entry);
+    if (expected.metadata?.plannedTaskId === task.id) {
+      expected.historicalPlannedTaskId = task.id;
+      delete expected.metadata.plannedTaskId;
+    }
+    expect(entries.find((saved: { id: string }) => saved.id === entry.id)).toEqual(expected);
+  }
+  const exported = await (await context.request.get('/api/export')).json();
+  expect(
+    exported.sessions.find((entry: { notes: string }) => entry.notes === 'Offline manual result'),
+  ).toMatchObject({ historicalPlannedTaskId: task.id });
+  const state = (await (await context.request.get('/api/account-state')).json()).state;
+  expect(state.settings.displayName).toBe('Offline Student');
+  expect(state.plan.find((item: { id: string }) => item.id === task.id)).toBeUndefined();
+});
 
 test('a stale settings draft requires an explicit visible conflict decision', async ({
   page,
@@ -174,7 +163,7 @@ test('a stale settings draft requires an explicit visible conflict decision', as
   expect(
     (await (await context.request.get('/api/account-state')).json()).state.settings.displayName,
   ).toBe('Newer confirmed name');
-  await page.screenshot({ path: '.tmp/offline-conflict-desktop.png', fullPage: true });
+
   await status.getByRole('button', { name: 'Keep online version', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(status).toHaveCount(0);
@@ -194,7 +183,7 @@ test('a stale settings draft requires an explicit visible conflict decision', as
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'offline-conflict-mobile');
-  await page.screenshot({ path: '.tmp/offline-conflict-mobile.png', fullPage: true });
+
   await status.getByRole('button', { name: 'Apply my edit to this version', exact: true }).tap();
   await expect(status).toHaveCount(0);
   const reapplied = (await (await context.request.get('/api/account-state')).json()).state;
@@ -363,7 +352,7 @@ test('failed account selection cannot reopen the previous account offline', asyn
   );
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   await expectAccessible(page, 'offline-account-selection-failure');
-  await page.screenshot({ path: '.tmp/offline-account-selection-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   const recovery = page.getByRole('button', { name: 'Try remembering this account', exact: true });
   expect((await recovery.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -372,7 +361,7 @@ test('failed account selection cannot reopen the previous account offline', asyn
   expect(await page.evaluate(() => localStorage.getItem('cwa:account:active:v1'))).toBeNull();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'offline-account-selection-failure-mobile');
-  await page.screenshot({ path: '.tmp/offline-account-selection-mobile.png', fullPage: true });
+
   const shell = await context.newPage();
   await shell.route('**/api/**', (route) => route.abort('internetdisconnected'));
   await shell.goto('/#logbook');

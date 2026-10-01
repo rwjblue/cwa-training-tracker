@@ -62,6 +62,26 @@ export async function expectAccessible(page: Page, label: string) {
   expect(summary.map((item) => `${item.rule}: ${item.target.join(', ')}`)).toEqual([]);
 }
 
+/** Check a settled screen at both widths without replaying its persistence workflow. */
+export async function expectResponsive(page: Page, label: string) {
+  const original = page.viewportSize();
+  try {
+    for (const viewport of [
+      { width: 1440, height: 1000 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        `${label} should fit at ${viewport.width}px`,
+      ).toBe(true);
+      await expectAccessible(page, `${label}-${viewport.width}`);
+    }
+  } finally {
+    if (original) await page.setViewportSize(original);
+  }
+}
+
 async function latestLocalCode(after: number): Promise<string> {
   let code = '';
   await expect

@@ -8,6 +8,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:8791',
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
