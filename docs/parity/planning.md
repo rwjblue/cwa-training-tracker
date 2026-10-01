@@ -580,3 +580,14 @@ No push was attempted under the current instruction; GitHub commit lookup remain
 422, so #14 stays OPEN pending publication. Local main advances with this journal.
 Mobile checks remain emulation; no physical lock-screen claim. Original site is
 read-only, and unfinished elapsed reload/crash recovery remains excluded.
+
+
+Local main advancement initially refused a sideways move because external signed
+publication had moved main to scoring commit `05718a8f5319dd450b98eea2ef2bec7cb02552ed`.
+GitHub verifies that signature. All ten path-specific added/deleted line sequences
+are identical to the preserved original scoring change `03d70aea`; only its base
+history changed. Root created a conflict-free merge of the accepted #14 delivery
+journal and that published head; before this documentation addition its source
+tree is byte-identical to the accepted delivery journal. No product change or
+weakened validation was introduced. Both user scoring history and all local
+implementation/review/deploy journals are retained. No push was attempted.
