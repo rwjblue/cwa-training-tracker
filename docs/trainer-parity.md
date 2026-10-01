@@ -571,7 +571,9 @@ evidence belong in the [execution journal](parity/execution-progress-2026-09-30.
 ## Issue #9 delivery ledger — observed recording passes
 
 Implementation and review corrections pass required checks and the full browser
-suite; independent acceptance and publication remain pending. Original interval
+suite. The independent gate accepted the final corrections, and production is
+deployed and verified. GitHub publication is deferred under the learner’s latest
+no-push instruction; the issue remains open. Original interval
 union, terminal completion, per-recording results and required/prior-pass
 projections were rechecked at the pinned source. Course replay
 remains issue #10.

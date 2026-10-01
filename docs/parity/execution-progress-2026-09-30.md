@@ -778,3 +778,38 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   journeys remain working. The local runtime has stopped and port 8791 is free.
   Focused correction commits, independent recheck and signed publication remain
   pending. No physical-device or restricted long-source verification is claimed.
+
+
+### Issue #9 — independent acceptance and local delivery
+
+- Final independent review accepts local commit
+  `5c3c591fdaeba03ee526f5babc45b4d4a9156864`, exact combined tree
+  `c04c102b7ed5a48c3c3571b586dc8456ee779183`. Implementation and
+  corrections are `29a28f231105c77b07663028e8438929ca5263c8`,
+  `a6597a74b7adbcbfbe434a25ce2546109ccfd2a6`,
+  `098cd78eb34ff952f4bd0f54aac43db7d5c9320f` and `5c3c591f`.
+  Both remaining P2 findings are fixed; no substantive finding remains.
+- The reviewer independently exercised 17 serialized runtime probes and nine
+  pure clock probes, including full 1366 px keyboard / 375 px touch-emulated
+  journeys, six unmodified rapid native resumes, observed bounded first-sample
+  admission, seek rejection, quota/network exact retry, history/report, actual
+  account/device backup controls and complete invalid-import account atomicity.
+  Both omitted and measured-zero old corrected boundary variants pass actual
+  POST/PUT/export/merge/prepared replacement. Fresh Axe and geometry pass.
+  Detailed ignored evidence and review remain under `.tmp/issue9-final/` and
+  `.tmp/parity-queue/issue-09-final-correction-review.md`.
+- Fresh deployment checks pass check, all 775 tests in 44 files and build.
+  The established deployment task succeeds after one transient D1 7403 retry;
+  no migrations remain. Production version is
+  `4d075a57-8e82-4d51-ac32-f232e5242f23`. Cache-busted root/health return
+  200, private entries/account-state/account-backup return 401, and all four
+  deployed JS/CSS hashes match local dist. An immediate asset probe encountered
+  propagation delay; the subsequent complete probe passes without any change.
+- Latest learner instruction requires local commits, advancing local main and
+  deployment, and explicitly prohibits pushing. No further push is attempted.
+  Signing configuration remains intact. These four local commits are not
+  published or described as signed. GitHub main remains the final #8 journal;
+  #9 stays open until later authorized publication. This deliberate publication
+  deferral does not prevent proceeding with #10 after this accepted local gate.
+- Limits: partial coverage remains in memory; no unfinished elapsed recovery,
+  restricted audio redistribution, physical-device or lock-screen claim.

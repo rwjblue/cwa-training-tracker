@@ -451,7 +451,8 @@ resume workflow passes at desktop and mobile widths, retaining the actual heard
 time assertion, cancellation, failed-save retry, history, report and real backup
 controls. Focused coverage/clock tests pass 133 cases; twelve Worker recording
 cases include old corrected-boundary POST/PUT/export/merge/replace. Independent
-acceptance and publication remain pending in the
+acceptance passed after both substantive corrections. Production is verified;
+GitHub publication is deferred under the learner’s no-push instruction in the
 [execution journal](execution-progress-2026-09-30.md). Browser fixtures generate
 short synthetic WAVs and answer byte-range requests correctly; they never fetch
 restricted audio. Physical iPhone/lock-screen verification is not claimed.
