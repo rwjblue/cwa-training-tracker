@@ -4584,3 +4584,40 @@ body {
 .lifecycle-request-id {
   font-family: monospace;
 }
+
+/* Acknowledged Runner results are device review drafts, separate from history. */
+.runner-recovery {
+  min-width: 0;
+  padding: 24px;
+  margin-bottom: 24px;
+  overflow-wrap: anywhere;
+}
+.runner-recovery h2 {
+  margin: 0 0 12px;
+  font:
+    24px/1.25 Georgia,
+    serif;
+}
+.runner-recovery p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+.runner-recovery article {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.runner-recovery h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.runner-recovery .button {
+  max-width: 100%;
+  margin: 6px 0;
+  white-space: normal;
+}
+@media (max-width: 600px) {
+  .runner-recovery {
+    padding: 20px;
+  }
+}

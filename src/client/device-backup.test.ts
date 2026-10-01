@@ -3,7 +3,14 @@ import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { validatePlannedTask, type PlannedTask } from '../shared/plan';
-import { RUNNER_REVISION } from '../shared/runner';
+import { RUNNER_REVISION, createRunnerRun } from '../shared/runner';
+import { finishedRunnerSession } from './runner-session';
+import {
+  retainFinishedRunnerResult,
+  readRunnerResults,
+  runnerResultKey,
+  retainRunnerReview,
+} from './runner-results';
 import {
   flushAccountOperations,
   loadAccountOperations,
@@ -122,6 +129,25 @@ function snapshot() {
     .filter(([key]) => !key.startsWith('cwa:device:scope:v1:'))
     .sort(([a], [b]) => a.localeCompare(b));
 }
+function runnerEntry(id = 'device-finished-run') {
+  return finishedRunnerSession(
+    {
+      ...createRunnerRun(id, {
+        mode: 'SingleCall',
+        wpm: 20,
+        durationSeconds: 60,
+        activity: 1,
+        conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+      }),
+      status: 'stopped',
+      elapsedSeconds: 12.5,
+      runStartedAt: '2026-10-01T03:59:59.000Z',
+      runEndedAt: '2026-10-01T04:00:12.000Z',
+    },
+    {},
+    'America/New_York',
+  );
+}
 function rewrite(backup: DeviceBackup, change: (input: DeviceBackup) => void): string {
   const input = structuredClone(backup);
   change(input);
@@ -151,7 +177,7 @@ beforeEach(() => {
     'CustomEvent',
     class<T> extends Event {
       detail: T;
-      constructor(name: string, options: CustomEventInit<T>) {
+      constructor(name: string, options: CustomEventInit<T> = {}) {
         super(name);
         this.detail = options.detail!;
       }
@@ -161,6 +187,102 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe('acknowledged Runner result device inventory', () => {
+  it('round trips unreviewed start-attributed results without producing an upload and accepts older absent inventory', () => {
+    seed();
+    const entry = runnerEntry();
+    retainFinishedRunnerResult(scope, entry, { id: entry.id, accountId: scope, generation: 0 });
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(backup.stores.runnerResults).toHaveLength(1);
+    expect(backup.stores.practice.some((result) => result.id === entry.id)).toBe(false);
+    expect(summarizeDeviceBackup(backup)).toContainEqual({
+      id: 'runnerResults',
+      label: 'Finished Runner results awaiting review',
+      count: 1,
+      shared: false,
+    });
+    const old = structuredClone(backup);
+    delete old.stores.runnerResults;
+    expect(validateDeviceBackup(JSON.stringify(old), scope).stores.runnerResults).toBeUndefined();
+    values.delete(runnerResultKey(scope, entry.id));
+    restoreDeviceBackup(backup);
+    expect(readRunnerResults(scope).results[0]).toMatchObject({
+      entry,
+      reviewed: false,
+      origin: { generation: 0 },
+    });
+    expect(
+      captureDeviceBackup(scope, 'Synthetic learner').stores.practice.some(
+        (result) => result.id === entry.id,
+      ),
+    ).toBe(false);
+    expect(() => validateDeviceBackup(JSON.stringify(backup), 'guest')).toThrow(/belongs/);
+  });
+
+  it('preserves frozen reviewed bodies and rejects conflicting reviews and contradictory queued facts', () => {
+    seed();
+    const entry = runnerEntry();
+    retainFinishedRunnerResult(scope, entry, { id: entry.id, accountId: scope });
+    const submitted = {
+      ...entry,
+      notes: 'Exact reviewed notes',
+      metadata: { ...entry.metadata, runnerReviewedAt: '2026-10-02T12:00:00.000Z' },
+    };
+    retainRunnerReview(scope, submitted, true);
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(backup.stores.runnerResults![0].entry).toEqual(submitted);
+    const conflicting = structuredClone(backup);
+    conflicting.stores.runnerResults![0].entry.notes = 'Conflicting review';
+    expect(inspectDeviceRestore(conflicting).conflicts[0]).toContain('different retained review');
+    const prior = snapshot();
+    expect(() => restoreDeviceBackup(conflicting)).toThrow(/different retained review/);
+    expect(snapshot()).toEqual(prior);
+    const malformed = structuredClone(backup);
+    malformed.stores.runnerResults![0].entry.date = '2026-10-01';
+    expect(() => validateDeviceBackup(JSON.stringify(malformed), scope)).toThrow(
+      /captured timezone/,
+    );
+  });
+
+  it('rolls back failed Runner restore including its original dataset and other device work', () => {
+    seed();
+    const entry = runnerEntry();
+    retainFinishedRunnerResult(scope, entry, { id: entry.id, accountId: scope, generation: 0 });
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    values.delete(runnerResultKey(scope, entry.id));
+    values.delete(originKey(scope, entry.id));
+    const prior = snapshot();
+    const originalSet = storage.setItem;
+    let refuse = true;
+    vi.spyOn(storage, 'setItem').mockImplementation((key, value) => {
+      if (key === runnerResultKey(scope, entry.id) && refuse) {
+        refuse = false;
+        throw new Error('Synthetic quota');
+      }
+      originalSet(key, value);
+    });
+    expect(() => restoreDeviceBackup(backup)).toThrow(/original stored work was restored/);
+    expect(snapshot()).toEqual(prior);
+    expect(isDeviceScopeMutating(scope)).toBe(false);
+    restoreDeviceBackup(backup);
+    expect(readRunnerResults(scope).results).toHaveLength(1);
+  });
+
+  it('clears only selected scoped Runner records, including malformed data, without touching another account', () => {
+    seed();
+    const entry = runnerEntry();
+    retainFinishedRunnerResult(scope, entry, { id: entry.id, accountId: scope });
+    retainFinishedRunnerResult('guest', runnerEntry('guest-result'), {
+      id: 'runner:guest-result',
+      accountId: 'guest',
+    });
+    values.set(runnerResultKey(scope, 'runner:damaged'), '{malformed');
+    clearDeviceWork(scope);
+    expect(readRunnerResults(scope)).toEqual({ results: [], error: '' });
+    expect(readRunnerResults('guest').results).toHaveLength(1);
+  });
 });
 
 describe('private task recording preference inventory', () => {

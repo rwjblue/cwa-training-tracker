@@ -242,6 +242,11 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
   const previousEvidence = sessionEvidence(previous?.metadata);
   const nextEvidence = sessionEvidence(entry.metadata);
   if (
+    previous?.metadata?.runnerReviewedAt !== undefined &&
+    previous.metadata.runnerReviewedAt !== entry.metadata?.runnerReviewedAt
+  )
+    throw new HttpError(400, 'The original Runner review timestamp cannot be changed or removed.');
+  if (
     previous &&
     (getPracticePurpose(previous) !== getPracticePurpose(entry) ||
       (previous.metadata?.practicePurpose !== undefined &&

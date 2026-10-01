@@ -21,6 +21,7 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 });
     await page.route(/^https:\/\/(?:[^/]+\.)?cwops\.org\//, syntheticRecording(3.6));
     const activate = async (control: Locator) => {
+      await expect(control).toBeEnabled();
       if (width < 600) await control.tap();
       else {
         await control.focus();

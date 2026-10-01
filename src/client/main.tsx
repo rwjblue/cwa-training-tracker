@@ -104,6 +104,15 @@ import CopyResult, { CopyAttemptDetails } from './CopyResult';
 import { savedCopyAttempt } from '../shared/copy-report';
 import { clearCopyDraft } from './copy-storage';
 import { clearSavedStudioNotes } from './studio-session';
+import RunnerRecovery from './RunnerRecovery';
+import {
+  RUNNER_RESULTS_EVENT,
+  readRunnerResults,
+  clearRunnerResult,
+  retainRunnerReview,
+  RunnerResultStorageError,
+  type RunnerFinishedResult,
+} from './runner-results';
 import { formatPracticeDuration, practiceMinutesFromInput } from './practice-duration';
 import {
   autoSavePractice,
@@ -296,6 +305,12 @@ function App() {
     entries: loadLocalPractice('guest'),
   }));
   const localEntries = localHistory.scope === (user?.id ?? 'guest') ? localHistory.entries : [];
+  const [runnerHistory, setRunnerHistory] = useState(() => ({
+    scope: 'guest',
+    ...readRunnerResults('guest'),
+  }));
+  const runnerResults = runnerHistory.scope === scope ? runnerHistory.results : [];
+  const runnerError = runnerHistory.scope === scope ? runnerHistory.error : '';
   const [entries, setEntries] = useState<PracticeSession[]>([]);
   const account = useAccountData(user);
   const profile = account.state?.settings ?? {
@@ -322,6 +337,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [sessionEditor, setSessionEditor] = useState<Partial<PracticeSession> | null>(null);
   const [sessionEditorOwner, setSessionEditorOwner] = useState<string>();
+  const [sessionEditorIsExisting, setSessionEditorIsExisting] = useState(false);
   const [toast, setToast] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [demo, setDemo] = useState(true);
@@ -368,6 +384,7 @@ function App() {
       setToast('');
       setDemo(false);
       setLocalHistory({ scope, entries: loadLocalPractice(scope) });
+      setRunnerHistory({ scope, ...readRunnerResults(scope) });
       setPracticeStates(loadPracticeSaveStates(scope));
       setEntries([]);
       historyGeneration.current = null;
@@ -684,7 +701,7 @@ function App() {
       showPage('practice');
     });
   };
-  const openLog = (initial: Partial<PracticeSession> = {}, ownerId?: string) => {
+  const openLog = (initial: Partial<PracticeSession> = {}, ownerId?: string, newResult = false) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     if (
       !user &&
@@ -695,7 +712,9 @@ function App() {
       setAuthOpen(true);
       return;
     }
-    const latest = initial.id ? entries.find((entry) => entry.id === initial.id) : undefined;
+    const latest =
+      !newResult && initial.id ? entries.find((entry) => entry.id === initial.id) : undefined;
+    setSessionEditorIsExisting(Boolean(latest));
     setSessionEditorOwner(ownerId);
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
@@ -753,6 +772,7 @@ function App() {
     resumePracticeUploads(scope);
     const refresh = () => {
       setLocalHistory({ scope, entries: loadLocalPractice(scope) });
+      setRunnerHistory({ scope, ...readRunnerResults(scope) });
       setPracticeStates(loadPracticeSaveStates(scope));
     };
     const uploaded = (event: Event) => {
@@ -772,6 +792,7 @@ function App() {
     const accountChanged = retry;
     window.addEventListener(ACCOUNT_DATA_EVENT, accountChanged);
     window.addEventListener(PRACTICE_SAVED_EVENT, refresh);
+    window.addEventListener(RUNNER_RESULTS_EVENT, refresh);
     window.addEventListener(PRACTICE_UPLOADED_EVENT, uploaded);
     window.addEventListener('storage', refresh);
     window.addEventListener('online', retry);
@@ -781,6 +802,7 @@ function App() {
       window.clearInterval(retryTimer);
       window.removeEventListener(ACCOUNT_DATA_EVENT, accountChanged);
       window.removeEventListener(PRACTICE_SAVED_EVENT, refresh);
+      window.removeEventListener(RUNNER_RESULTS_EVENT, refresh);
       window.removeEventListener(PRACTICE_UPLOADED_EVENT, uploaded);
       window.removeEventListener('storage', refresh);
       window.removeEventListener('online', retry);
@@ -806,7 +828,7 @@ function App() {
       ]
     : localEntries.length
       ? localEntries
-      : demo
+      : demo && !runnerResults.length
         ? sampleEntries
         : [];
   const signedIn = async (newUser: User) => {
@@ -815,6 +837,7 @@ function App() {
     try {
       const settings = await load(newUser);
       if (pendingLog.current) {
+        setSessionEditorIsExisting(false);
         setSessionEditor({
           date: dateInTimezone(new Date(), settings?.timezone),
           ...pendingLog.current,
@@ -879,7 +902,7 @@ function App() {
         <button
           className="brand"
           onClick={() => navigate('overview')}
-          disabled={navigationBusy}
+          disabled={navigationBusy || booting}
           aria-label="CW Academy Companion home"
         >
           <img
@@ -899,7 +922,7 @@ function App() {
               key={item.page}
               className={`nav-item ${page === item.page ? 'active' : ''}`}
               onClick={() => navigate(item.page)}
-              disabled={navigationBusy}
+              disabled={navigationBusy || booting}
               aria-current={page === item.page ? 'page' : undefined}
             >
               <item.icon size={19} strokeWidth={1.7} />
@@ -928,6 +951,7 @@ function App() {
           </a>
           <button
             className="nav-item"
+            disabled={booting}
             onClick={() => {
               setMenuOpen(false);
               setDeviceOpen(true);
@@ -938,6 +962,7 @@ function App() {
           </button>
           <button
             className={`nav-item ${page === 'settings' ? 'active' : ''}`}
+            disabled={booting}
             onClick={() => (user ? navigate('settings') : setAuthOpen(true))}
           >
             <Settings2 size={18} />
@@ -977,6 +1002,7 @@ function App() {
             {user ? (
               <button
                 className="account-identity-button"
+                disabled={booting}
                 onClick={() => navigate('settings')}
                 aria-label="Open your account"
                 title={user.email}
@@ -1114,7 +1140,7 @@ function App() {
                   <div className="retained-practice-actions">
                     <button
                       className="button"
-                      disabled={navigationBusy}
+                      disabled={navigationBusy || booting}
                       onClick={() => navigate('practice')}
                     >
                       Return to practice <ArrowRight size={16} />
@@ -1123,14 +1149,14 @@ function App() {
                       <>
                         <button
                           className="button outline"
-                          disabled={navigationBusy}
+                          disabled={navigationBusy || booting}
                           onClick={() => navigate('course', false, 'week')}
                         >
                           Inspect this week
                         </button>
                         <button
                           className="button outline"
-                          disabled={navigationBusy}
+                          disabled={navigationBusy || booting}
                           onClick={() => navigate('course', false, 'report')}
                         >
                           Inspect report
@@ -1139,7 +1165,7 @@ function App() {
                     )}
                     <button
                       className="button outline"
-                      disabled={navigationBusy}
+                      disabled={navigationBusy || booting}
                       onClick={() => void finishPractice()}
                     >
                       Finish practice
@@ -1230,7 +1256,7 @@ function App() {
                   <div className="practice-view-actions" aria-label="Inspect other views">
                     <button
                       className="button outline small"
-                      disabled={navigationBusy}
+                      disabled={navigationBusy || booting}
                       onClick={() => navigate('overview')}
                     >
                       {user ? 'Inspect Today' : 'Inspect Overview'}
@@ -1239,14 +1265,14 @@ function App() {
                       <>
                         <button
                           className="button outline small"
-                          disabled={navigationBusy}
+                          disabled={navigationBusy || booting}
                           onClick={() => navigate('course', false, 'week')}
                         >
                           Inspect this week
                         </button>
                         <button
                           className="button outline small"
-                          disabled={navigationBusy}
+                          disabled={navigationBusy || booting}
                           onClick={() => navigate('course', false, 'report')}
                         >
                           Inspect report
@@ -1329,10 +1355,14 @@ function App() {
                 <Logbook
                   entries={visibleEntries}
                   profile={profile}
-                  demo={!user && localEntries.length === 0}
+                  demo={!user && localEntries.length === 0 && !runnerResults.length}
+                  scope={scope}
+                  runnerResults={runnerResults}
+                  runnerError={runnerError}
                   pendingIds={user ? localEntries.map((entry) => entry.id) : []}
                   openLog={openLog}
                   onEdit={(entry) => openLog(entry)}
+                  onReviewRunner={(entry) => openLog(entry, undefined, true)}
                   onDelete={async (id) => {
                     if (!user) {
                       removeLocalPractice('guest', id);
@@ -1461,7 +1491,7 @@ function App() {
       {sessionEditor && (
         <SessionModal
           initial={sessionEditor}
-          isExisting={entries.some((entry) => entry.id === sessionEditor.id)}
+          isExisting={sessionEditorIsExisting}
           scope={user?.id ?? 'guest'}
           generation={
             historyGeneration.current && historyGeneration.current.accountId === user?.id
@@ -1475,7 +1505,15 @@ function App() {
           onSaved={(entry, destination) => {
             if (!isDeviceScopeCurrent(scope, deviceToken)) return;
             if ((activeAccount.current ?? 'guest') !== (user?.id ?? 'guest')) return;
-            const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
+            const wasExisting = sessionEditorIsExisting;
+            let resultCleanupError = '';
+            if (!wasExisting && sessionEvidence(entry.metadata)?.type === 'runner') {
+              try {
+                clearRunnerResult(scope, entry.id, deviceToken);
+              } catch (error) {
+                resultCleanupError = ` ${(error as Error).message}`;
+              }
+            }
             const matchingOwner =
               !wasExisting &&
               sessionEditorOwner &&
@@ -1504,11 +1542,11 @@ function App() {
               } else void navigate('overview');
             }
             notify(
-              destination === 'history'
+              (destination === 'history'
                 ? 'Practice logged. A little progress adds up.'
                 : user
                   ? 'Practice saved on this device. Waiting to upload.'
-                  : 'Practice saved on this device. Find it in your logbook.',
+                  : 'Practice saved on this device. Find it in your logbook.') + resultCleanupError,
             );
           }}
         />
@@ -1952,14 +1990,22 @@ function Logbook({
   entries,
   profile,
   demo,
+  scope,
+  runnerResults,
+  runnerError,
   openLog,
   onEdit,
+  onReviewRunner,
   onDelete,
   pendingIds = [],
 }: {
   entries: PracticeSession[];
   profile: Profile;
   demo: boolean;
+  scope: string;
+  runnerResults: RunnerFinishedResult[];
+  runnerError: string;
+  onReviewRunner: (entry: PracticeSession) => void;
   openLog: () => void;
   onEdit: (entry: PracticeSession) => void;
   onDelete: (id: string) => Promise<void>;
@@ -1997,6 +2043,12 @@ function Logbook({
           <Plus size={17} /> Log practice
         </button>
       </div>
+      <RunnerRecovery
+        scope={scope}
+        results={runnerResults}
+        error={runnerError}
+        onReview={onReviewRunner}
+      />
       <div className="logbook-summary">
         <div>
           <strong>{Math.round(practiceSummary.totalMinutes * 10) / 10}</strong>
@@ -2554,7 +2606,18 @@ function SessionModal({
   const close = () => {
     if (!saving.current) onClose();
   };
-  const frozenEntry = useRef<PracticeSession | undefined>(undefined);
+  const [retainedRunner] = useState(() =>
+    !isExisting && initial.id
+      ? readRunnerResults(scope).results.find(({ entry }) => entry.id === initial.id)
+      : undefined,
+  );
+  const frozenEntry = useRef<PracticeSession | undefined>(
+    retainedRunner?.reviewed
+      ? retainedRunner.entry
+      : !isExisting && initial.metadata?.practiceTool === 'morse-runner'
+        ? loadLocalPractice(scope).find((entry) => entry.id === initial.id)
+        : undefined,
+  );
   const copyAttempt = savedCopyAttempt(initial);
   let evidence: PracticeEvidence | undefined;
   let measuredInitial = initial;
@@ -2612,8 +2675,28 @@ function SessionModal({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(evidenceError);
-  const update = (key: keyof typeof form, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const [draftError, setDraftError] = useState('');
+  const attributedRunner = evidence?.type === 'runner' && Boolean(evidence.run.attribution);
+  const update = (key: keyof typeof form, value: string) => {
+    const next = { ...form, [key]: value };
+    setForm(next);
+    if (attributedRunner && !isExisting && !frozenEntry.current) {
+      try {
+        const entry = validatePracticeSession({
+          ...initial,
+          ...identity,
+          notes: next.notes,
+          context: next.context,
+          lesson: next.lesson === '' ? undefined : Number(next.lesson),
+          metadata: { ...initial.metadata, scratchpad: next.scratchpad },
+        });
+        retainRunnerReview(scope, entry, false, capturedDeviceToken);
+        setDraftError('');
+      } catch (error) {
+        setDraftError((error as Error).message);
+      }
+    }
+  };
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving.current) return;
@@ -2662,10 +2745,27 @@ function SessionModal({
         } else delete corrected.correction;
         data.metadata = { ...initial.metadata, scratchpad: form.scratchpad, evidence: corrected };
       }
+      if (attributedRunner && !isExisting) {
+        data.metadata = {
+          ...(data.metadata as Record<string, unknown>),
+          runnerReviewedAt: initial.metadata?.runnerReviewedAt ?? new Date().toISOString(),
+        };
+      }
       const validated = frozenEntry.current ?? validatePracticeSession(data);
       if (!isDeviceScopeCurrent(scope, capturedDeviceToken))
         throw new Error('This device work changed. Reopen the current work before saving again.');
-      if (!isExisting) frozenEntry.current = validated;
+      if (!isExisting) {
+        frozenEntry.current = validated;
+        if (attributedRunner) {
+          try {
+            retainRunnerReview(scope, validated, true, capturedDeviceToken);
+            setDraftError('');
+          } catch (error) {
+            if (!(error instanceof RunnerResultStorageError)) throw error;
+            setDraftError(error.message);
+          }
+        }
+      }
       if (isExisting) {
         if (capturedGeneration === undefined)
           throw new Error('Refresh this practice log before editing a saved record.');
@@ -2681,7 +2781,12 @@ function SessionModal({
         if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
           onSaved(result.entry, 'history');
       } else {
-        const result = await autoSavePractice(scope, validated, capturedDeviceToken);
+        const result = await autoSavePractice(
+          scope,
+          validated,
+          capturedDeviceToken,
+          retainedRunner?.origin,
+        );
         if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
           onSaved(result.entry, result.destination);
       }
@@ -2699,7 +2804,8 @@ function SessionModal({
       onClose={close}
       wide
       initialFocus={
-        evidence?.type === 'timed' && (evidence.generatedListening || evidence.recordings.length)
+        evidence?.type === 'runner' ||
+        (evidence?.type === 'timed' && (evidence.generatedListening || evidence.recordings.length))
           ? 'heading'
           : saveButton
       }
@@ -2720,6 +2826,17 @@ function SessionModal({
       )}
       {copyAttempt && <CopyResult attempt={copyAttempt} />}
       {evidence && <EvidenceSummary evidence={evidence} />}
+      {attributedRunner && (
+        <p className="field-hint">
+          Practice date follows the accepted run start in its captured timezone. Result creation is
+          the acknowledged end; review and upload do not change that date.
+        </p>
+      )}
+      {draftError && (
+        <p className="alert error" role="alert">
+          {draftError}
+        </p>
+      )}
       {!evidence && <PracticeEvidenceDetails entry={initial} expanded />}
       <form onSubmit={save} aria-busy={busy}>
         <fieldset
@@ -2746,6 +2863,7 @@ function SessionModal({
               <input
                 type="date"
                 value={form.date}
+                readOnly={attributedRunner}
                 required
                 onChange={(e) => update('date', e.target.value)}
               />

@@ -499,6 +499,15 @@ export function validatePracticeSession(
       } else evidence = { ...evidence, correction: { seconds: savedSeconds, reason } };
     }
     session.metadata = metadata;
+    if (metadata.runnerReviewedAt !== undefined) {
+      if (evidence?.type !== 'runner' || !evidence.run.attribution)
+        throw new Error('A Runner review timestamp requires its captured run attribution.');
+      const reviewedAt = timestamp(metadata.runnerReviewedAt, 'Runner review time');
+      if (Date.parse(reviewedAt) < Date.parse(evidence.run.runEndedAt!))
+        throw new Error('Runner review cannot precede its acknowledged result.');
+      metadata = { ...metadata, runnerReviewedAt: reviewedAt };
+      session.metadata = metadata;
+    }
     if (evidence) {
       if (
         evidence.type === 'timed' &&
@@ -513,6 +522,21 @@ export function validatePracticeSession(
         );
       session.metadata = { ...metadata, evidence };
       if (evidence.type === 'runner') {
+        const run = evidence.run;
+        if (run.attribution) {
+          if (session.id !== `runner:${run.runId}`)
+            throw new Error('The Runner entry ID must match its run.');
+          if (session.date !== dateInTimezone(run.runStartedAt!, run.attribution.timezone))
+            throw new Error(
+              'The Runner practice date must match its start in the captured timezone.',
+            );
+          if (session.createdAt !== run.runEndedAt)
+            throw new Error('The Runner result creation time must match its acknowledged end.');
+          if (Math.abs(session.minutes * 60 - run.elapsedSeconds) > 0.001)
+            throw new Error('Runner practice duration must match its engine seconds.');
+          if (session.qsoCount !== undefined && session.qsoCount !== run.summary?.qsoCount)
+            throw new Error('Runner contacts must match its engine result.');
+        }
         session.kind = 'simulator';
         session.source = 'timer';
         session.minutes = evidence.run.elapsedSeconds / 60;

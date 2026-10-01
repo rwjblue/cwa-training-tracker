@@ -49,6 +49,7 @@ for (const viewport of [
     test.setTimeout(100_000);
     await page.setViewportSize(viewport);
     const activate = async (control: Locator) => {
+      await expect(control).toBeEnabled();
       if (viewport.width < 600) await control.tap();
       else {
         await control.focus();

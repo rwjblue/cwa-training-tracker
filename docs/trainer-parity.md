@@ -167,7 +167,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R6 · P1/P2** Listening content and continuity     | Add the three authored stories as a real third mode. Preserve exact word occurrence and paused/playing state through speed changes; preserve paused seeking; reshuffle repeated native rounds; allow editing a built-in into custom. Issue #7 now retains bounded actual played configurations; selected-but-unplayed preferences supply no source evidence.                                                                                                                                                                                                                                        | Personal [stories](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/data/cw-listening/stories.ts#L6), [retiming](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120); [listening inventory](parity/listening.md#generated-contacts-stories-and-listening-lifecycle).                 |
 | **R7 · Implemented; device check pending** Spoken answers | The September 30 follow-up explicitly adds prerecorded native spoken rounds and credits actual playback through the shared media clock. Runtime browser speech is removed. Physical iPhone locked playback remains unverified; compact prebuilt MP3 optimization remains absent.                                                                                                                                                                                                                                                                                                   | [Implementation](../src/client/morse-track.ts), [asset loader](../src/client/word-speech.ts), [verification](testing.md).                                                                                                                                                                                                                                                                             |
 | **R8 · P2** Course-audio progress                   | Issue #9 delivers actual coverage and whole passes without seek credit, distinct saved/current/remaining counts, and portable per-file evidence. Task-specific choices are independently accepted in #11; Issue #12 adds bounded private difficult timestamps and relative Replay 8 sec with deliberate native playback; optional daily listening remains #25. Course replay is delivered in #10.                                                                                                                                                                                                                                               | Personal [audio session](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L41); [audio appendix](parity/audio.md#findings-by-behavior).                                                                                                                                                                                      |
-| **R9 · P1/P2** Runner continuity | Issue #6 retains acknowledged results through in-app inspection, stopping a running engine into a partial result. Cumulative assigned minutes/remaining time, completion policy and efficient Save & next run remain later issues. Each result must retain its own measured time, score and stable identity. | Personal [Runner transitions](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48); [Runner workflow](parity/listening.md#surrounding-workflow--partial). |
+| **R9 · P1/P2** Runner continuity                          | Issue #15 retains acknowledged terminal results on the device before review, with stable run ID, accepted-start timezone/date, terminal creation time and distinct frozen review timestamp. Mixed-speed results omit generic WPM and expose recorded engine speed segments and bounded-history omissions. Logbook recovery, canceled review edits, exact retry and optional device backup inventory reuse the shared save/account/device boundaries. Cumulative assigned minutes/remaining time, completion policy and efficient Save & next run remain #16/#17; no running-clock reload/crash estimate or live-engine resumption. | Personal [Runner transitions](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48); [Runner workflow](parity/listening.md#surrounding-workflow--partial).                                                                                                                                                                  |
 | **R10 · P1/P2** Instructor material                 | Add private session-linked text/link/file material, preparation/class/reference classification, original-plus-revision history, and readable practice context. Imported materials and their revision links are readable in Settings; native material authoring and practice integration remain absent. Current custom activities cover only notes/link/date/session.                                                                                                                                                                           | Personal [materials](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L757); [planning P12](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                                   |
 | **R11 · P1/P2** Live practice and reminders         | Connect assigned CWT work to eligible event windows before class. Later add private reminder subscriptions and the optional public SST/MST/CWT live agenda, timezone toggle, and event calendar. Generic resource links do not supply scheduling. Reverify official schedules before implementation.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
 | **R12 · P2** Exact public listening recipes                  | Bounded, versioned public listening recipes that reproduce the exact exercise remain accepted issue #45. Real-contact operating guidance, contact logs, ADIF export and unrelated public practice tools are excluded from this execution.                                                                                                                                                                                                                                        | Personal [real QSO helper](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-qso.ts#L137), [share recipes](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115); [public-tool inventory](parity/listening.md#standalone-public-tools-distinct-features-not-duplicate-page-names). |
@@ -1159,3 +1159,59 @@ journal and that published head; before this documentation addition its source
 tree is byte-identical to the accepted delivery journal. No product change or
 weakened validation was introduced. Both user scoring history and all local
 implementation/review/deploy journals are retained. No push was attempted.
+
+### Issue #15 — acknowledged Runner result identity and recovery
+
+New native Runner results capture their account/device authority and learner IANA
+timezone when the accepted Run starts. Each result preserves `runner:runId`, exact
+engine seconds, settings, summary and speed measurements. Practice date derives
+from that actual start; creation is the acknowledged terminal end. First review
+submission adds a distinct immutable `runnerReviewedAt`, rather than restamping
+the practice date. Shared/Worker validation rejects contradictory ID/date/end/
+duration/QSO/timezone/review-time relationships. Earlier valid unmarked native,
+manual and historical evidence remains portable without invented timestamps.
+
+Completed, stopped and interrupted terminal results with at least one acknowledged
+engine second are stored separately from the upload queue. Logbook exposes Review,
+canceled-review edits, explicit Keep/Discard, and frozen submitted-result retry.
+Review opens at its heading so captured facts remain visible before the fields;
+Save remains reachable by keyboard and touch.
+Reopening never creates elapsed time or resumes the simulator. Public results stay
+guest-scoped; private results retain their original account generation and device
+fences. Storage refusal leaves truthful open-page retention feedback and retry.
+Cold reopening keeps workspace navigation/device selection pending until its
+account bootstrap settles, avoiding a startup owner change that drops an
+immediate keyboard navigation. A server row discovered after a lost response
+cannot silently substitute a historical edit for the exact submitted POST body. Receipt retires only that
+device result. Private history/report and account export/import preserve the same
+timeline; mixed speed clears generic WPM and labels starting WPM explicitly.
+
+Device backup version 1 gains an optional bounded terminal-result inventory with
+scope/identity/origin validation, conflict detection, transactional rollback and
+selected-scope clear/reset/replacement. Older files without the inventory remain
+valid. Malformed stored bytes remain available for device recovery instead of
+being silently deleted. No restricted curriculum, real contacts, new recognition,
+running elapsed reload recovery, cumulative completion or Save & next is added.
+
+Root validation before the implementation commit: typecheck, all 910 tests in
+49 files and production build pass. The final serialized browser suite passes
+all 75 journeys in 14.7 minutes, including actual AudioWorklet recovery at
+1440px keyboard and 390px emulated touch. Eight scoped accessibility checks have
+no violations; recovery/review/history/report screenshots are inspected.
+Actual device download/discard/chooser restore, private download/import, canceled
+notes and a lost committed response with refused queue storage preserve exact
+facts and one server row. No physical-device or lock-screen claim is made.
+
+Earlier runs are retained as failures: one mobile native-listening pass rejection
+has an unproven internal cause; its actual media trace and an exact-journey passive
+probe are retained. Two cold keyboard navigation failures were reproduced at the
+account bootstrap boundary; pending controls and enabled-state keyboard waits
+correct them. A later recording-choice fixture fired Enter on disabled Today;
+its trace confirms the same readiness assumption. Focused rechecks pass, followed
+by the complete passing gate. No audio clock, credit rule, timeout or behavioral
+assertion was weakened. Independent post-commit review and deployment remain
+pending; their outcomes will be recorded in the delivery journal. Source: [pinned original Runner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48),
+[start-date report evidence](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L49),
+[terminal producer](../src/client/runner-session.ts),
+[device result store](../src/client/runner-results.ts), and
+[native recovery journey](../e2e/runner-recovery.spec.ts).

@@ -252,6 +252,7 @@ export async function autoSavePractice(
   scope: string,
   input: PracticeSession,
   deviceToken = getDeviceScopeToken(scope),
+  capturedOrigin?: PracticeSaveOrigin,
 ): Promise<PracticeSaveReceipt> {
   requireCurrentDeviceScope(scope, deviceToken);
   observeDeviceScope();
@@ -263,6 +264,23 @@ export async function autoSavePractice(
     return receipt;
   }
   let entry = validatePracticeSession(input);
+  if (capturedOrigin) {
+    if (
+      capturedOrigin.id !== entry.id ||
+      capturedOrigin.accountId !== scope ||
+      (capturedOrigin.generation !== undefined &&
+        (!Number.isSafeInteger(capturedOrigin.generation) || capturedOrigin.generation < 0))
+    )
+      throw new Error('This result belongs to a different original account or dataset.');
+    if (
+      hasFrozenOrigin(scope, entry.id) &&
+      loadPracticeSaveOrigin(scope, entry.id).generation !== capturedOrigin.generation
+    )
+      throw new Error(
+        'This result has a different retained original dataset. Keep its recovery file before retrying.',
+      );
+    freezePracticeSaveOrigin(scope, entry.id, capturedOrigin.generation, deviceToken);
+  }
   const freshGeneration = getConfirmedAccountGeneration(scope);
   let durable = false;
   try {
@@ -276,7 +294,11 @@ export async function autoSavePractice(
       freezePracticeSaveOrigin(
         scope,
         entry.id,
-        scope === 'guest' ? undefined : freshGeneration,
+        capturedOrigin
+          ? capturedOrigin.generation
+          : scope === 'guest'
+            ? undefined
+            : freshGeneration,
         deviceToken,
       );
     }
@@ -309,9 +331,10 @@ export async function autoSavePractice(
   const frozen = JSON.stringify(entry);
   const retainedOrigin = loadPracticeSaveOrigin(scope, entry.id);
   const origin =
-    !durable && freshGeneration !== undefined && !hasFrozenOrigin(scope, entry.id)
+    capturedOrigin ??
+    (!durable && freshGeneration !== undefined && !hasFrozenOrigin(scope, entry.id)
       ? { ...retainedOrigin, generation: freshGeneration }
-      : retainedOrigin;
+      : retainedOrigin);
   const cached = loadCachedAccount(scope);
   if (!durable && origin.generation === undefined && hasFrozenOrigin(scope, entry.id))
     throw new Error(

@@ -156,6 +156,10 @@ answers, check/retry/reveal, draft retention during replay, and a fresh form whe
 the contact changes. Copy feedback is self-assessment, not a saved proficiency
 score; revealing answers should remain explicit.
 
+Keyboard helpers must wait for an enabled workspace control before focusing and
+pressing Enter. Focus alone does not wait for account bootstrap or a navigation
+flight; pointer activation already observes that readiness boundary.
+
 For embedded Morse Runner, keep protocol and result validation in pure tests.
 One browser journey should start the actual vendored AudioWorklet, stop a short
 run, and save its measured time and score against the assignment. Do not fake
@@ -282,3 +286,16 @@ or using a fake clock for audio. If a native-audio journey needs a fixed calenda
 day, offset only `Date` after sign-in and keep it advancing. Playwright's
 `setSystemTime` also installs a rounded performance clock, which can create false
 gaps between positive native media movement and zero wall-time observations.
+
+For acknowledged Runner recovery, use the real AudioWorklet for a short stopped
+run and speed change. Offset only Date for a midnight boundary; performance and
+engine clocks must advance normally. Reopen the acknowledged device result, not
+a running-clock checkpoint. Cover canceled review edits, exact first-submission
+retry after refused queue storage/lost acknowledgement, guest/account isolation,
+actual device and account backup controls, history/report evidence and keyboard/
+touch at desktop/mobile widths. Await the dialog's real entrance animation before
+steady-state Axe/geometry checks; do not disable contrast rules or insert fixed
+sleeps. Below the browser, cover DST, marked-versus-legacy validation, retired or
+unknown original datasets, malformed results, selected-scope lifecycle fencing,
+backup conflicts and transactional rollback. No emulation claim establishes
+physical-device or background lock-screen behavior.

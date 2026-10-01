@@ -20,6 +20,15 @@ import {
 import { validateCopyDraft } from './copy-draft-validator';
 import { copyStorageKey, type CopyDraft } from './copy-storage';
 import {
+  MAX_RUNNER_RESULTS,
+  readRunnerResults,
+  runnerResultKey,
+  runnerResultsPrefix,
+  validateRunnerFinishedResult,
+  sameRunnerResultFacts,
+  type RunnerFinishedResult,
+} from './runner-results';
+import {
   captureSupportedDeviceWork,
   completeDeviceScopeMutation,
   getDeviceScopeToken,
@@ -93,6 +102,7 @@ export interface DeviceBackup {
     copySettings: CopyRecipe[];
     scratchpads: { context: string; text: string }[];
     recordingChoices?: TaskRecordingChoice[];
+    runnerResults?: RunnerFinishedResult[];
   };
   shared: {
     practicePreferences?: PracticePreferences;
@@ -128,6 +138,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'copySettings', label: 'Copy exercise preferences', shared: false },
   { id: 'scratchpads', label: 'Scratchpads', shared: false },
   { id: 'recordingChoices', label: 'Task recording choices', shared: false },
+  { id: 'runnerResults', label: 'Finished Runner results awaiting review', shared: false },
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
   { id: 'recordingSpeed', label: 'Shared recording speed preference', shared: true },
   { id: 'courseReplay', label: 'Shared course replay preference', shared: true },
@@ -424,6 +435,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     'copySettings',
     'scratchpads',
     'recordingChoices',
+    'runnerResults',
   ]);
   const practice: RetainedPractice[] = list(stores.practice, 'Finished results', MAX_RESULTS).map(
     (value) => {
@@ -449,6 +461,27 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       };
     },
   );
+  const runnerResults =
+    stores.runnerResults === undefined
+      ? undefined
+      : list(stores.runnerResults, 'Retained Runner results', MAX_RUNNER_RESULTS).map((value) => {
+          const result = validateRunnerFinishedResult(value, scopeId);
+          const queued = practice.find((entry) => entry.id === result.entry.id);
+          if (
+            queued &&
+            (!sameRunnerResultFacts(validatePracticeBody(queued.body), result.entry) ||
+              queued.origin.generation !== result.origin.generation)
+          )
+            throw new Error(
+              'A retained Runner result contradicts its queued run or original dataset.',
+            );
+          return result;
+        });
+  if (runnerResults)
+    unique(
+      runnerResults.map((result) => result.entry.id),
+      'Retained Runner result IDs',
+    );
   unique(
     practice.map((item) => item.id),
     'Finished results',
@@ -574,6 +607,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       copySettings,
       scratchpads,
       ...(recordingChoices === undefined ? {} : { recordingChoices }),
+      ...(runnerResults === undefined ? {} : { runnerResults }),
     },
     shared: {
       ...(shared.courseReplay === undefined
@@ -754,6 +788,8 @@ export function captureDeviceBackup(
   });
   const scratchpads =
     storage === localStorage ? captureStudioNotes(scope) : selectedNotes(scope, storage);
+  const retainedRunner = readRunnerResults(scope, storage);
+  if (retainedRunner.error) throw new Error(retainedRunner.error);
   const preferencesRaw = storage.getItem(PRACTICE_PREFERENCES_KEY);
   const recordingSpeed = storage.getItem(RECORDING_SPEED_STORAGE_KEY);
   const courseReplay = storage.getItem(COURSE_REPLAY_STORAGE_KEY);
@@ -782,6 +818,7 @@ export function captureDeviceBackup(
       copySettings,
       scratchpads,
       recordingChoices,
+      runnerResults: retainedRunner.results,
     },
     shared: {
       ...(courseReplay === null
@@ -819,6 +856,19 @@ export function inspectDeviceRestore(
   const checked = validateDeviceBackup(JSON.stringify(backup), backup.scope.id);
   const scope = checked.scope.id;
   const conflicts: string[] = [];
+  for (const result of checked.stores.runnerResults ?? []) {
+    const existing = storage.getItem(runnerResultKey(scope, result.entry.id));
+    if (existing !== null && existing !== JSON.stringify(result))
+      conflicts.push(
+        `Runner result ${result.entry.id} already has a different retained review. Keep both files before restoring.`,
+      );
+    const origin = storage.getItem(practiceKey(scope, 'origin', result.entry.id));
+    if (origin !== null) {
+      const current = validateOrigin(parse(origin, 'Runner origin', 1000), scope, result.entry.id);
+      if (current.generation !== result.origin.generation)
+        conflicts.push(`Runner result ${result.entry.id} has a different original dataset.`);
+    }
+  }
   for (const item of checked.stores.practice) {
     const existing = storage.getItem(practiceKey(scope, 'pending', item.id));
     if (existing !== null && existing !== item.body)
@@ -846,6 +896,17 @@ export function inspectDeviceRestore(
       );
   }
   const existingNames = names(storage);
+  if (
+    new Set([
+      ...existingNames.filter((name) => name.startsWith(runnerResultsPrefix(scope))),
+      ...(checked.stores.runnerResults ?? []).map((result) =>
+        runnerResultKey(scope, result.entry.id),
+      ),
+    ]).size > MAX_RUNNER_RESULTS
+  )
+    conflicts.push(
+      `Restoring would exceed ${MAX_RUNNER_RESULTS} retained Runner results. Review or export some first.`,
+    );
   const mergedResults = new Set([
     ...existingNames.filter((name) =>
       name.startsWith(`cwa:practice:pending:v1:${encoded(scope)}:`),
@@ -1094,6 +1155,14 @@ export function restoreDeviceBackup(
     );
   const recovery = captureDeviceBackup(scope, checked.scope.label, storage);
   const changes = new Map<string, string | null>();
+  for (const result of checked.stores.runnerResults ?? []) {
+    const key = runnerResultKey(scope, result.entry.id);
+    if (storage.getItem(key) !== null) continue;
+    const origin = practiceKey(scope, 'origin', result.entry.id);
+    if (storage.getItem(origin) === null)
+      changes.set(origin, JSON.stringify({ version: 1, ...result.origin }));
+    changes.set(key, JSON.stringify(result));
+  }
   // Current task choices win: restoring an older file must not silently replace them.
   for (const choice of checked.stores.recordingChoices ?? []) {
     const key = taskRecordingChoiceKey(scope, choice.taskId);
@@ -1169,6 +1238,7 @@ export function restoreDeviceBackup(
 
 /** Exact registered scope matching also removes orphan status/origin/lease records. */
 function isScopedStore(name: string, scope: string): boolean {
+  if (name.startsWith(runnerResultsPrefix(scope))) return true;
   if (taskRecordingChoiceTaskId(name, scope) !== undefined) return true;
   if (
     name === copyStorageKey(scope) ||

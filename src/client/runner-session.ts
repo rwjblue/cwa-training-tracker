@@ -1,11 +1,42 @@
 import type { PlannedTask } from '../shared/plan';
 import { taskPracticeMetadata } from '../shared/practice-attribution';
 import { runnerResultNote, RUNNER_REVISION, type RunnerRunState } from '../shared/runner';
-import type { PracticePurpose, PracticeSession } from '../shared/training';
+import {
+  dateInTimezone,
+  validatePracticeSession,
+  type PracticePurpose,
+  type PracticeSession,
+} from '../shared/training';
 
 export interface RunnerPracticeAttribution {
   task?: Pick<PlannedTask, 'id' | 'title' | 'lesson'>;
   purpose?: PracticePurpose;
+}
+
+/** New results retain the timezone accepted at Run, never the later review day. */
+export function finishedRunnerSession(
+  run: RunnerRunState,
+  attribution: RunnerPracticeAttribution,
+  timezone: string,
+): PracticeSession {
+  if (!run.runStartedAt || !run.runEndedAt)
+    throw new Error(
+      'The Runner result is missing its accepted start or acknowledged end. Keep this page open before starting another run.',
+    );
+  if (run.elapsedSeconds < 1)
+    throw new Error('Stop the run and retain at least one confirmed engine second before review.');
+  const session = runnerSession(run, attribution, {
+    createdAt: run.runEndedAt,
+    date: dateInTimezone(run.runStartedAt, timezone),
+  });
+  const result = session.metadata!.runner as Record<string, unknown>;
+  return validatePracticeSession({
+    ...session,
+    metadata: {
+      ...session.metadata,
+      runner: { ...result, attribution: { version: 1, timezone } },
+    },
+  });
 }
 
 /** A run keeps its original task/purpose while completion and other live props change. */

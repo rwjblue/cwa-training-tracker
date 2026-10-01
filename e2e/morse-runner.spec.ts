@@ -3,7 +3,9 @@ import { accountRequest, expectAccessible, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 
-test('embedded Runner startup preserves outer focus and mobile tool navigation', async ({ page }) => {
+test('embedded Runner startup preserves outer focus and mobile tool navigation', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   let releaseSimulator!: () => void;
   const loading = new Promise<void>((resolve) => {
@@ -29,7 +31,9 @@ test('embedded Runner startup preserves outer focus and mobile tool navigation',
   await page.screenshot({ path: '.tmp/runner-startup-mobile.png', fullPage: true });
   await wordListening.tap();
   await expect(wordListening).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('heading', { name: 'The listening room', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'The listening room', exact: true }),
+  ).toBeVisible();
 });
 
 test('assigned Morse Runner uses the real engine and saves one linked run', async ({
@@ -62,7 +66,6 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await page.getByRole('button', { name: 'Stop run', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Review & save run', exact: true })).toBeEnabled();
   expect((await context.request.get('/api/entries')).status()).toBe(401);
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await signIn(page);
   // Keep the curriculum day deterministic while wall time advances alongside
@@ -152,20 +155,21 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
   await expect(page.getByRole('button', { name: 'Stop run', exact: true })).toBeDisabled();
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole('button', { name: 'Inspect Today', exact: true }).click();
-  page.once('dialog', (dialog) => dialog.dismiss());
-  await row.getByRole('button', { name: 'Extra review', exact: true }).click();
-  await expect(page).toHaveURL(/#overview$/);
-  await expect(retained).toContainText('Morse Runner: single calls');
-  await retained.getByRole('button', { name: 'Return to practice', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(page.frames()).toContain(frame);
   await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'simulator',
   );
-  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await expect(
+    page.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
+  ).toBeFocused();
   await page.screenshot({ path: '.tmp/runner-review-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: 'Save practice', exact: true }).focus();
   // The server commits, but the acknowledgement is lost. The durable device
   // receipt releases review; retrying must preserve the engine result identity.
   const submitted: unknown[] = [];

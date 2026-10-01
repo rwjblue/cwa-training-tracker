@@ -481,3 +481,72 @@ it('treats a changed cookie account as retained authentication work rather than 
   expect(fetchMock.mock.calls[1][1].headers['X-CWA-Account']).toBe(user.id);
   expect(loadLocalPractice(user.id)).toEqual([]);
 });
+
+it('uses a recovered result origin without acquiring current dataset authority', async () => {
+  for (const generation of [undefined, 7]) {
+    const scope = `recovered-runner-${generation ?? 'unknown'}`;
+    knownAccount(scope, 8);
+    const original = entry(`recovered-${generation ?? 'unknown'}`);
+    const origin = {
+      id: original.id,
+      accountId: scope,
+      ...(generation === undefined ? {} : { generation }),
+    };
+    const result = await autoSavePractice(scope, original, getDeviceScopeToken(scope), origin);
+    expect(result.destination).toBe('device');
+    expect(loadLocalPractice(scope)).toEqual([original]);
+    expect(loadPracticeSaveOrigin(scope, original.id)).toEqual(origin);
+    expect(loadPracticeSaveStates(scope)[0]).toMatchObject({
+      status: 'failed',
+      failure: 'permanent',
+    });
+  }
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('uses the captured origin when only origin and pending storage refuse writes', async () => {
+  const scope = 'recovered-origin-quota';
+  knownAccount(scope, 7);
+  const original = entry('recovered-origin-quota-result');
+  const origin = { id: original.id, accountId: scope, generation: 7 };
+  const setItem = localStorage.setItem;
+  localStorage.setItem = (key, value) => {
+    if (key.startsWith('cwa:practice:origin:v1:') || key.startsWith('cwa:practice:pending:v1:'))
+      throw new Error('Synthetic storage refused');
+    setItem(key, value);
+  };
+  fetchMock.mockResolvedValueOnce(Response.json({ entry: original, generation: 7 }));
+  expect(await autoSavePractice(scope, original, getDeviceScopeToken(scope), origin)).toEqual({
+    destination: 'history',
+    entry: original,
+  });
+  expect(fetchMock.mock.calls[0][1].headers['X-CWA-Generation']).toBe('7');
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(original);
+});
+
+it('rejects foreign or conflicting recovered origins before queuing any result', async () => {
+  const scope = 'recovered-conflicting-origin';
+  knownAccount(scope, 7);
+  const original = entry('recovered-conflict');
+  await expect(
+    autoSavePractice(scope, original, getDeviceScopeToken(scope), {
+      id: original.id,
+      accountId: 'someone-else',
+      generation: 7,
+    }),
+  ).rejects.toThrow('different original account');
+  expect(loadLocalPractice(scope)).toEqual([]);
+  localStorage.setItem(
+    `cwa:practice:origin:v1:${scope}:${original.id}`,
+    JSON.stringify({ version: 1, id: original.id, accountId: scope }),
+  );
+  await expect(
+    autoSavePractice(scope, original, getDeviceScopeToken(scope), {
+      id: original.id,
+      accountId: scope,
+      generation: 7,
+    }),
+  ).rejects.toThrow('different retained original dataset');
+  expect(loadLocalPractice(scope)).toEqual([]);
+  expect(fetchMock).not.toHaveBeenCalled();
+});

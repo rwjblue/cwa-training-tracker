@@ -26,6 +26,8 @@ import {
   type GeneratedListeningSummary,
 } from '../shared/generated-listening';
 import type { PracticeEvidence, RecordingEvidence } from '../shared/practice-evidence';
+import { createRunnerRun } from '../shared/runner';
+import { finishedRunnerSession, captureRunnerPracticeAttribution } from '../client/runner-session';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -5596,5 +5598,225 @@ describe('short measured practice and deliberate zero notes', () => {
     ).json()) as TrainingExport;
     expect(restored.sessions).toEqual(exported.sessions);
     expect(restored.plan).toEqual(exported.plan);
+  });
+});
+
+describe('start-attributed finished Runner results', () => {
+  const measuredRunner = (
+    id = 'midnight-run',
+    start = '2026-10-01T03:59:59.000Z',
+    end = '2026-10-01T04:00:12.000Z',
+    task?: PlannedTask,
+  ): PracticeSession & { metadata: NonNullable<PracticeSession['metadata']> } => {
+    const entry = finishedRunnerSession(
+      {
+        ...createRunnerRun(id, {
+          mode: 'SingleCall',
+          wpm: 20,
+          durationSeconds: 60,
+          activity: 1,
+          conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+        }),
+        status: 'stopped',
+        elapsedSeconds: 12.25,
+        runStartedAt: start,
+        runEndedAt: end,
+        speedHistory: [
+          { elapsedSeconds: 0, wpm: 20 },
+          { elapsedSeconds: 6.25, wpm: 24 },
+        ],
+        speedChangeCount: 1,
+        summary: { qsoCount: 2, verifiedPoints: 1, score: 1, nrErrors: 0, nilErrors: 0 },
+      },
+      captureRunnerPracticeAttribution(task, task ? 'review' : undefined),
+      'America/New_York',
+    );
+    return {
+      ...entry,
+      metadata: { ...entry.metadata, runnerReviewedAt: '2026-11-02T12:00:00.000Z' },
+    };
+  };
+  const storedRows = (owner: string) =>
+    db.sqlite
+      .prepare('SELECT id,date,entry_json FROM practice_entries WHERE user_id = ? ORDER BY id')
+      .all(owner);
+
+  it('preserves midnight/DST dates, mixed speeds, exact receipts and portable account history', async () => {
+    const owner = await signIn('runner-dates@example.test');
+    const runs = [
+      measuredRunner(),
+      measuredRunner('spring-dst', '2026-03-08T06:59:59.000Z', '2026-03-08T07:00:12.000Z'),
+      measuredRunner('fall-dst', '2026-11-01T05:59:59.000Z', '2026-11-01T06:00:12.000Z'),
+    ];
+    for (const source of runs) {
+      const created = await request('/api/entries', 'POST', source, owner.cookie);
+      expect(created.status).toBe(201);
+      const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+      expect(saved.date).toBe(source.date);
+      expect(saved.createdAt).toBe(source.createdAt);
+      expect(saved.metadata?.evidence).toEqual(source.metadata.evidence);
+      expect(saved).not.toHaveProperty('characterWpm');
+      expect(saved.qsoCount).toBe(2);
+      expect((await request('/api/entries', 'POST', source, owner.cookie)).status).toBe(200);
+      expect(
+        (
+          await request(
+            '/api/entries',
+            'POST',
+            { ...source, notes: 'Changed retry body' },
+            owner.cookie,
+          )
+        ).status,
+      ).toBe(409);
+      expect(
+        (
+          await request(
+            `/api/entries/${source.id}`,
+            'PUT',
+            {
+              ...saved,
+              metadata: { ...saved.metadata, runnerReviewedAt: '2026-11-03T12:00:00.000Z' },
+            },
+            owner.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect(storedRows(owner.user.id)).toHaveLength(3);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, owner.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions.map((entry) => entry.date).sort()).toEqual([
+      '2026-03-08',
+      '2026-09-30',
+      '2026-11-01',
+    ]);
+    const restored = await signIn('runner-restored@example.test');
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, restored.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, restored.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    expect(
+      (
+        await request(
+          `/api/entries/${runs[0].id}`,
+          'PUT',
+          runs[0],
+          (await signIn('runner-stranger@example.test')).cookie,
+        )
+      ).status,
+    ).toBe(404);
+  });
+
+  it('rejects contradictory attributed facts and malformed imports without changing private history', async () => {
+    const owner = await signIn('runner-invalid@example.test');
+    const original = measuredRunner();
+    expect((await request('/api/entries', 'POST', original, owner.cookie)).status).toBe(201);
+    const prior = storedRows(owner.user.id);
+    const changeRun = (change: Record<string, unknown>) => ({
+      ...original,
+      metadata: {
+        ...original.metadata,
+        runner: { ...(original.metadata.runner as object), ...change },
+        evidence: {
+          ...original.metadata.evidence!,
+          run: {
+            ...(original.metadata.evidence as Extract<PracticeEvidence, { type: 'runner' }>).run,
+            ...change,
+          },
+        },
+      },
+    });
+    for (const invalid of [
+      { ...original, date: '2026-10-01' },
+      { ...original, id: 'different-id' },
+      { ...original, minutes: 4 },
+      { ...original, qsoCount: 9 },
+      { ...original, createdAt: '2026-10-02T12:00:00.000Z' },
+      changeRun({ attribution: { version: 1, timezone: 'Fake/Zone' } }),
+      changeRun({ runStartedAt: '2026-10-01T04:00:15.000Z' }),
+      changeRun({
+        summary: { qsoCount: 1, verifiedPoints: 2, score: 2, nrErrors: 0, nilErrors: 0 },
+      }),
+      changeRun({
+        summary: { qsoCount: 2, verifiedPoints: 1, score: 7, nrErrors: 0, nilErrors: 0 },
+      }),
+      changeRun({
+        speedHistory: [
+          { elapsedSeconds: 0, wpm: 20 },
+          { elapsedSeconds: 13, wpm: 24 },
+        ],
+      }),
+      {
+        ...original,
+        metadata: { ...original.metadata, runnerReviewedAt: '2026-10-01T03:00:00.000Z' },
+      },
+    ]) {
+      const rejected = await request('/api/entries', 'POST', invalid, owner.cookie);
+      expect(rejected.status).toBe(400);
+      expect(await rejected.json()).toMatchObject({ error: expect.any(String) });
+      expect(storedRows(owner.user.id)).toEqual(prior);
+    }
+    const malformed = { ...original, date: '2026-10-01' };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...backup([malformed]), evidenceVersion: 1 } },
+          owner.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(storedRows(owner.user.id)).toEqual(prior);
+  });
+
+  it('keeps captured review assignment evidence private and old unmarked native results portable', async () => {
+    const owner = await signIn('runner-task-owner@example.test');
+    const foreign = await signIn('runner-task-foreign@example.test');
+    const task: PlannedTask = {
+      id: 'runner-private-task',
+      title: 'Synthetic Runner assignment',
+      kind: 'simulator',
+      lesson: 3,
+      notes: '',
+      done: false,
+      createdAt: '2026-09-30T12:00:00.000Z',
+    };
+    expect((await request('/api/plan', 'POST', task, owner.cookie)).status).toBe(201);
+    const linked = measuredRunner('private-run', undefined, undefined, task);
+    expect((await request('/api/entries', 'POST', linked, foreign.cookie)).status).toBe(400);
+    expect((await request('/api/entries', 'POST', linked, owner.cookie)).status).toBe(201);
+    expect(
+      (
+        (await (await request('/api/plan', 'GET', undefined, owner.cookie)).json()) as {
+          plan: PlannedTask[];
+        }
+      ).plan[0].done,
+    ).toBe(false);
+    expect(storedRows(foreign.user.id)).toEqual([]);
+    const old = measuredRunner('older-run');
+    const legacy = structuredClone(old) as PracticeSession;
+    delete (legacy.metadata!.runner as Record<string, unknown>).attribution;
+    delete (legacy.metadata!.evidence as Extract<PracticeEvidence, { type: 'runner' }>).run
+      .attribution;
+    delete legacy.metadata!.runnerReviewedAt;
+    legacy.id = 'historical-run-id';
+    legacy.date = '2026-10-02';
+    expect((await request('/api/entries', 'POST', legacy, owner.cookie)).status).toBe(201);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, owner.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions.find((entry) => entry.id === legacy.id)?.date).toBe(legacy.date);
+    expect(
+      exported.sessions.find((entry) => entry.id === legacy.id)?.metadata?.evidence,
+    ).not.toHaveProperty('run.attribution');
   });
 });

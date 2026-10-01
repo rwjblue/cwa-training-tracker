@@ -592,13 +592,7 @@ export default function PracticeStudio({
     }
 
     if (isCopy) return Promise.resolve(true);
-    if (isRunner)
-      return Promise.resolve(
-        !runnerUnsaved ||
-          window.confirm(
-            'Finish or switch Morse Runner? Your unsaved run and results will be discarded.',
-          ),
-      );
+    if (isRunner) return runner.current?.finishForNavigation() ?? Promise.resolve(!runnerUnsaved);
     pauseTimer();
     return saveSession(() => captureSession(), 'navigation');
   };
@@ -1142,6 +1136,7 @@ export default function PracticeStudio({
       ) : isRunner ? (
         <MorseRunnerStudio
           ref={runner}
+          accountId={accountId}
           active={active}
           timezone={timezone}
           key={launch?.id ?? 'public-runner'}

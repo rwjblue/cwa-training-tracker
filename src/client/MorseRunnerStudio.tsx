@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { ArrowRight, CheckCheck, ExternalLink, RotateCcw, Square } from 'lucide-react';
 import type { PlannedTask } from '../shared/plan';
-import { dateInTimezone, type PracticePurpose, type PracticeSession } from '../shared/training';
+import { type PracticePurpose, type PracticeSession } from '../shared/training';
 import {
   createRunnerRun,
   reduceRunnerEvent,
@@ -20,10 +20,14 @@ import {
 } from '../shared/runner';
 import {
   captureRunnerPracticeAttribution,
-  runnerSession,
+  finishedRunnerSession,
   type RunnerPracticeAttribution,
 } from './runner-session';
 import { RunnerStopFlight } from './runner-stop-flight';
+import { getConfirmedAccountGeneration } from './account-outbox';
+import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
+import { freezePracticeSaveOrigin, type PracticeSaveOrigin } from './practice-autosave';
+import { clearRunnerResult, retainFinishedRunnerResult } from './runner-results';
 import './morse-runner.css';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
@@ -41,10 +45,12 @@ const time = (seconds: number) =>
 /** Engine messages alone determine practiced time. The studio wall clock is never used here. */
 export interface MorseRunnerStudioHandle {
   pauseForInspection(): Promise<void>;
+  finishForNavigation(): Promise<boolean>;
 }
 
 interface Props {
   settings: RunnerSettings;
+  accountId?: string;
   timezone?: string;
   task?: PlannedTask;
   purpose?: PracticePurpose;
@@ -58,6 +64,7 @@ interface Props {
 const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function MorseRunnerStudio(
   {
     settings,
+    accountId,
     timezone,
     task,
     purpose,
@@ -72,9 +79,16 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const [run, setRun] = useState(() => createRunnerRun(crypto.randomUUID(), settings));
   const capturedAttribution = useRef<RunnerPracticeAttribution | undefined>(undefined);
   capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose);
-  const resultIdentity = useRef<{ runId: string; createdAt: string; date: string } | undefined>(
+  const scope = accountId ?? 'guest';
+  const [deviceToken] = useState(() => getDeviceScopeToken(scope));
+  const start = useRef<{ runId: string; timezone: string; origin: PracticeSaveOrigin } | undefined>(
     undefined,
   );
+  const finished = useRef<PracticeSession | undefined>(undefined);
+  const timezoneRef = useRef(timezone ?? 'UTC');
+  timezoneRef.current = timezone ?? 'UTC';
+  const [resultRetained, setResultRetained] = useState(false);
+  const [retentionError, setRetentionError] = useState('');
   const current = useRef(run);
   const frame = useRef<HTMLIFrameElement>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -95,13 +109,60 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const hasTime = run.elapsedSeconds >= 1;
   const unsaved = !saved && (run.status === 'running' || hasTime);
 
+  const retainResult = (next: RunnerRunState): boolean => {
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
+    if (next.elapsedSeconds < 1) return true;
+    try {
+      const captured = start.current;
+      if (!captured || captured.runId !== next.runId)
+        throw new Error(
+          'The run start attribution is unavailable. Keep this result before starting over.',
+        );
+      finished.current ??= finishedRunnerSession(
+        next,
+        capturedAttribution.current!,
+        captured.timezone,
+      );
+      freezePracticeSaveOrigin(scope, finished.current.id, captured.origin.generation, deviceToken);
+      const retained = retainFinishedRunnerResult(
+        scope,
+        finished.current,
+        captured.origin,
+        deviceToken,
+      );
+      finished.current = retained.entry;
+      setResultRetained(true);
+      setRetentionError('');
+      return true;
+    } catch (error) {
+      setResultRetained(false);
+      setRetentionError((error as Error).message);
+      return false;
+    }
+  };
+
   const update = (next: RunnerRunState) => {
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
+    if (next.status === 'running' && current.current.status !== 'running') {
+      start.current = {
+        runId: next.runId,
+        timezone: timezoneRef.current,
+        origin: {
+          id: `runner:${next.runId}`,
+          accountId: scope,
+          ...(scope === 'guest' || getConfirmedAccountGeneration(scope) === undefined
+            ? {}
+            : { generation: getConfirmedAccountGeneration(scope) }),
+        },
+      };
+    }
     current.current = next;
     setRun(next);
     if (terminal(next)) {
       clearTimeout(timeout.current);
       stopFlight.current.settle(next.runId);
       setStopping(false);
+      if (!saved) retainResult(next);
     }
   };
   const fail = (runId: string) => {
@@ -141,7 +202,12 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     setInspectionStopped(true);
     return stop();
   };
-  useImperativeHandle(ref, () => ({ pauseForInspection }));
+  const finishForNavigation = async () => {
+    await pauseForInspection();
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
+    return saved || current.current.elapsedSeconds < 1 || retainResult(current.current);
+  };
+  useImperativeHandle(ref, () => ({ pauseForInspection, finishForNavigation }));
   useLayoutEffect(() => {
     if (active) inspected.current = false;
     else void pauseForInspection();
@@ -228,12 +294,22 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
       setConfirmDiscard(true);
       return;
     }
+    try {
+      clearRunnerResult(scope, `runner:${current.current.runId}`, deviceToken);
+    } catch (error) {
+      setRetentionError((error as Error).message);
+      return;
+    }
     frame.current?.contentWindow?.postMessage(runnerStopCommand(current.current), location.origin);
     resize.current?.disconnect();
     setConfirmDiscard(false);
     setStopping(false);
     setInspectionStopped(false);
     setSavedRunId(undefined);
+    finished.current = undefined;
+    start.current = undefined;
+    setResultRetained(false);
+    setRetentionError('');
     const nextSettings = {
       ...current.current.settings,
       wpm: current.current.speedHistory?.at(-1)?.wpm ?? current.current.settings.wpm,
@@ -245,17 +321,8 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     if (inspected.current || !activeRef.current) return;
     const latest = current.current;
     if (!terminal(latest) || latest.elapsedSeconds < 1 || savedRunId === latest.runId) return;
-    if (resultIdentity.current?.runId !== latest.runId) {
-      const createdAt = latest.runEndedAt ?? latest.runStartedAt ?? new Date().toISOString();
-      resultIdentity.current = {
-        runId: latest.runId,
-        createdAt,
-        date: dateInTimezone(new Date(createdAt), timezone),
-      };
-    }
-    callbacks.current.onLog(
-      runnerSession(latest, capturedAttribution.current!, resultIdentity.current),
-    );
+    retainResult(latest);
+    if (finished.current) callbacks.current.onLog(finished.current);
   };
   const messages: Record<RunnerRunState['status'], string> = {
     loading: 'Loading the simulator and your settings…',
@@ -292,10 +359,27 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
             ? 'Stopping and collecting results…'
             : messages[run.status]}
       </p>
+      {ended && hasTime && !saved && (
+        <p className="field-hint" role="status">
+          {resultRetained
+            ? 'Finished result retained on this device for review. Reopen it from your logbook; it has not been uploaded or logged yet.'
+            : 'Finished result is only on this open page until device retention or a reviewed save succeeds.'}
+        </p>
+      )}
+      {retentionError && (
+        <div className="alert error" role="alert">
+          <p>{retentionError}</p>
+          {ended && hasTime && (
+            <button className="button outline" onClick={() => retainResult(current.current)}>
+              Retry retaining result
+            </button>
+          )}
+        </div>
+      )}
       {inspectionStopped && (
         <p className="field-hint">
           Visiting another view stopped this run. Its confirmed partial result stays here until you
-          save it or start a new run.
+          review it. A retained finished result can also be reopened from your logbook.
         </p>
       )}
       <div className="runner-session-controls">
@@ -409,9 +493,9 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
       )}
       <div className="runner-footer">
         <p>
-          You can visit another view and return to these results. Save before finishing or starting
-          another practice block. Practice here uses synthetic calls and creates no real radio
-          contacts.
+          You can visit another view and return to these results. Finish or switch retains the
+          acknowledged result for review in your logbook. Practice here uses synthetic calls and
+          creates no real radio contacts.
         </p>
         <a
           href={externalUrl}

@@ -68,7 +68,11 @@ export type PracticeEvidence =
   | {
       version: 1;
       type: 'runner';
-      run: Omit<RunnerRunState, 'lastSequence'> & { revision: string };
+      run: Omit<RunnerRunState, 'lastSequence'> & {
+        revision: string;
+        /** Captured when the engine accepts Run; absent on earlier valid results. */
+        attribution?: { version: 1; timezone: string };
+      };
     };
 
 function object(value: unknown, label: string): Record<string, unknown> {
@@ -218,6 +222,7 @@ function runner(value: unknown): Extract<PracticeEvidence, { type: 'runner' }>['
       'runStartedAt',
       'runEndedAt',
       'revision',
+      'attribution',
     ],
     'Runner result',
   );
@@ -304,6 +309,20 @@ function runner(value: unknown): Extract<PracticeEvidence, { type: 'runner' }>['
   if (row.runStartedAt !== undefined)
     result.runStartedAt = timestamp(row.runStartedAt, 'Runner start');
   if (row.runEndedAt !== undefined) result.runEndedAt = timestamp(row.runEndedAt, 'Runner end');
+  if (row.attribution !== undefined) {
+    const attribution = object(row.attribution, 'Runner date attribution');
+    keys(attribution, ['version', 'timezone'], 'Runner date attribution');
+    if (attribution.version !== 1) throw new Error('Unsupported Runner date attribution.');
+    const timezone = text(attribution.timezone, 'Runner start timezone', 100);
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+    } catch {
+      throw new Error('Choose a valid Runner start timezone.');
+    }
+    if (!result.runStartedAt || !result.runEndedAt)
+      throw new Error('An attributed Runner result requires its actual start and end.');
+    result.attribution = { version: 1, timezone };
+  }
   if (result.runEndedAt && !result.runStartedAt)
     throw new Error('Runner end requires a start timestamp.');
   if (
@@ -493,8 +512,16 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
               )}${run.speedHistory.length > 12 ? `; ${run.speedHistory.length - 12} more in the backup` : ''}.`,
           ]
         : []),
+      ...((run.speedChangeCount ?? 0) > (run.speedHistory?.length ?? 1) - 1
+        ? [
+            `${run.speedChangeCount! - ((run.speedHistory?.length ?? 1) - 1)} earlier speed changes omitted from the bounded timeline.`,
+          ]
+        : []),
       ...(run.runStartedAt
         ? [`Run started ${run.runStartedAt}${run.runEndedAt ? `; ended ${run.runEndedAt}` : ''}.`]
+        : []),
+      ...(run.attribution
+        ? [`Practice date uses the run start in ${run.attribution.timezone}.`]
         : []),
     ];
   }

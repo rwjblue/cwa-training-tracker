@@ -13,6 +13,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     const activate = async (control: Locator) => {
+      await expect(control).toBeEnabled();
       if (viewport.width < 600) await control.tap();
       else {
         await control.focus();
@@ -244,6 +245,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     const activate = async (control: Locator) => {
+      await expect(control).toBeEnabled();
       if (viewport.width < 600) await control.tap();
       else {
         await control.focus();

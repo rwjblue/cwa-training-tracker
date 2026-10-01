@@ -49,6 +49,7 @@ for (const width of [1440, 390]) {
     test.setTimeout(150_000);
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 });
     const activate = async (control: Locator) => {
+      await expect(control).toBeEnabled();
       if (width < 600) await control.tap();
       else {
         await control.focus();
@@ -340,6 +341,10 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole('status').filter({ hasText: 'restored' })).toBeVisible();
     await page.keyboard.press('Escape');
     await page.reload();
+    // Cold account/Studio initialization completes before keyboard navigation.
+    await expect(
+      page.getByRole('heading', { name: 'Your practice studio.', exact: true }),
+    ).toBeVisible();
     await navigate('Today');
     await activate(
       page

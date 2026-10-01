@@ -11,6 +11,7 @@ async function navigate(page: Page, name: string, touch: boolean) {
     else await menu.click();
   }
   const button = page.getByRole('button', { name, exact: true });
+  await expect(button).toBeEnabled();
   if (touch) await button.tap();
   else {
     await button.focus();
