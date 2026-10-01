@@ -432,7 +432,8 @@ Typecheck, all 512 tests across 40 files, production build and all 54 serialized
 browser journeys pass, including desktop keyboard/mobile touch continuity and
 exact retry boundaries. Initial independent review reproduced both the ownerless
 same-assignment scratchpad cleanup and misleading manual Finish copy at both
-widths. Focused corrections pass at both widths; the independent correction
-recheck, signed publication and production verification remain pending in the
+widths. Both corrections are independently accepted; all 18 distinct acceptance
+cases pass (17 plus one reviewer-only selector recheck). Signed publication,
+production verification and #6 closure are recorded in the
 [execution journal](execution-progress-2026-09-30.md). No reload/crash or
 physical-device continuity claim is made.

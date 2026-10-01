@@ -406,7 +406,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 - Page-reload/crash elapsed recovery, new spoken recognition, later pass coverage
   and cumulative Runner credit are excluded from this issue. Existing durable
   Copy drafts, content preferences and finished-result queues are preserved.
-- Implementation commit `fe437494` received fresh independent review. Thirty-five
+- Implementation commit `d3b711a0` received fresh independent review. Thirty-five
   focused logic tests and actual dual-source native listening/retry journeys pass
   at desktop/mobile widths. Browser Back/Forward/hash navigation, hidden-play
   guards, no-storage 503/lost-ack exact retries, exported source subtotals, native
@@ -419,7 +419,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   native source/time, single cancellation decisions and matching-origin cleanup.
   Fresh check, all 512 tests in 40 files and build pass; all 54 serialized browser
   journeys pass in the isolated final run (6.7 minutes). Independent correction
-  recheck, signed publication and deployment remain held.
+  recheck accepted both findings and all 18 distinct acceptance cases.
 - Preserve the separately authorized native prerecorded-answer commit as its own
   ancestor. Inspection retains its full native track and playback guards; browser
   speech is not reintroduced. The shared-checkout correction run lost a trace
@@ -429,10 +429,30 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   reading its context/trace, a test-only future pause allowance fixes that race
   before Save begins. The desktop focused recheck and final complete run pass;
   product timing and save/retry assertions remain unchanged.
+- Independent reviewer accepted correction commit `f182ef1f`'s exact tree
+  `d11276dc9e18e4d2cfefcec719397f18fef3c773`. Its runtime passed 17 cases in
+  3.6 minutes plus one focused prerecorded-word recheck (9.4 seconds) after a
+  reviewer-only subsecond timer-label assumption was corrected to use Play Morse.
+  Source/committed tests/timeouts were unchanged; actual media and the vendored
+  Runner engine established evidence. Desktop/mobile keyboard/touch captures,
+  source/state/maintainability review, Axe and fit pass. No finding remains.
+- Signed implementation `d3b711a0f3889a1bee55113df3d77377c775e917`, separate native
+  audio ancestor `542fb6eb72d6bd5b0bd4cafb1f9aa2b2e4139f48` and correction
+  `f182ef1ff6a8427f4244b4b5e51752cac5b8ddbd` are published on main. GitHub verifies
+  every signature as valid; the published tree matches the reviewer snapshot.
+- `mise run deploy` passed on retry after a transient D1 7403 response, with no
+  migration needed. Production version `5bb23a2c-f061-4ba7-9bda-3361be191a25`
+  returns root/health 200 and private entries/account-state/lifecycle-backup 401.
+  All four application JS/CSS assets, 99 public prerecorded clips and their index
+  match local build SHA-256 hashes. Cloudflare rejected a supplemental Python
+  HTTP client with 1010; the established curl probe verified the same assets.
+- [Completion comment](https://github.com/rwjblue/cwa-training-tracker/issues/6#issuecomment-5924146543)
+  records behavior, signed commits, review and honest limits. #6 closed at
+  `2026-10-01T03:29:39Z`, after publication, acceptance and production checks.
 
 ## Remaining queue
 
-Issues #1–#5 are complete; #6 is active and #7–#46 remain pending.
+Issues #1–#6 are complete; #7–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes.
 
