@@ -110,7 +110,7 @@ These baseline gaps no longer describe the current implementation:
 | Scratchpad | Notes can be written during practice, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx). | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate. |
 | Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Full custom text/scripts remain in memory with the active owner; equal custom label/count/settings deliberately share a descriptive identity. Seamless speed retiming, Stories and public exact recipes remain later issues. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
 | Official recording speeds | Verified native-speed files, shared Assigned/Next default and private device-local exact choices per stable task are supported. New launches prefer a valid scoped override; the player and Today/Plan distinguish future preference from prescribed/current WPM. Actual mixed-file evidence remains native 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [scoped choices](../src/client/task-recording-choice.ts). | Reset/default changes leave current playback intact. Invalid choices fall back visibly, with fenced cleanup/retry; choices join private device backup/restore/clear, independently of shared defaults. #11 independently accepted validation and production evidence are recorded below. Issue #12 adds exact-file difficult marks and Replay 8 sec; advisor aggregation remains later work. |
-| Assigned listening guidance | Seven verified audio families receive concise mental approaches and optional scratchpad prompts beside native playback. Exact public recording metadata precedes conservative title/instruction matching; unknown audio has an instructor-first fallback. [Guidance](../src/shared/listening-guidance.ts). | Original instructions, speed/pass policy, time, completion and private saved evidence retain their existing owners. No proficiency or learned-word inference. #13 implementation validation is recorded below; independent review/deployment pending. |
+| Assigned listening guidance | Seven verified audio families receive concise mental approaches and optional scratchpad prompts beside native playback. Exact public recording metadata precedes conservative title/instruction matching; unknown audio has an instructor-first fallback. [Guidance](../src/shared/listening-guidance.ts). | Original instructions, speed/pass policy, time, completion and private saved evidence retain their existing owners. No proficiency or learned-word inference. #13 independently accepted and deployed; evidence and limits are recorded below. |
 | Recording coverage and passes | Native 1x movement supplies recording-local coverage and once-only completed passes. Overlap unions, file ownership and measured duration groups remain separate from heard time. Prior saved/current/remaining counts appear in Today, Plan and Studio; per-file facts survive review, history, reports and account/device backups. [Coverage](../src/client/recording-coverage.ts), [progress](../src/shared/plan.ts), [journey](../e2e/listening-passes.spec.ts). | Partial coverage stays in memory during in-app inspection; unfinished elapsed/coverage reload recovery is excluded. Old records remain unmeasured. Explicit imported source counts are labeled separately, and extra review supplies no required-pass credit. Independent validation/review are recorded in the #9 ledger below. |
 | Assigned course replay | Device-local automatic replay starts off. Only an observed full pass can continue while owned prior/current passes remain below the assigned minimum. Native 1x, the existing clock and Media Session remain in use. [Policy](../src/client/course-replay.ts), [journey](../e2e/course-replay.spec.ts). | Pause/recall/inspection/source changes cancel pending Play; ended feedback offers deliberate another pass and finish. Generated Repeat is independent. Optional daily loop remains #25. Validation and review are tracked below. |
 | Historical data access          | Imported practice exposes scratchpads, ratings, recall, passes, actual recording speeds, and per-run Runner/LCWO/CWT observations. Settings has an authenticated, on-demand reader for original reports, LCWO measurements, materials/revisions, course context, and device report drafts/preferences. [Imported history](../src/client/ImportedHistory.tsx).                  | Original reports and materials are readable snapshots, not native authoring/submission workflows. Device drafts are preserved for reference, not resumed.                                                                                            |
@@ -991,3 +991,36 @@ the final full pass. Its event collector resets on page reload, so its final
 60 events/three 3.6-second native endings do not reconstruct the original failure.
 No product timing code, source data, assertion or timeout was weakened to pass.
 Independent post-implementation review and production delivery remain pending.
+
+
+Independent post-implementation review **accepted** commit
+`563be598b24b40cec4988b2784f648019647586d` with no substantive findings.
+The reviewer independently verified 243 linked public curriculum rows/239 exact
+URLs and conservative replacement/unknown boundaries (2 pure probes). Its own
+all-seven-family/generic desktop-keyboard/mobile-touch and actual-course
+retry/history/export/source-popup journeys pass 4/4 in 57.3 seconds, with 18
+empty named Axe reports and inspected surrounding-player/notes screenshots.
+Both unchanged complete native replay scenarios pass independently (1.1/1.2
+minutes); passive Node-persistent logs each contain 378 events, 22 plays and 16
+native endings at 3.6 seconds. These do not establish the earlier failed run's
+cause. Actual partial phrase hearing remains 1.849122/1.849245 seconds with zero
+passes/no completion, even after selecting another speed. Review confirmed the
+four product source files match the implementation commit. Runtime was released.
+
+Production deploy reran check, all 878 tests, build and Worker dry run. Its first
+remote D1 check returned Cloudflare 7403; the unchanged whole-task retry passed,
+found no pending migrations and deployed version
+`1e3849a4-ca61-4132-b90f-357242556c04`. Exact production asset/privacy verification
+is recorded below. Browser widths/touch are emulation; physical-device behavior
+remains unverified. Full Stories and learned-word reporting remain #30/#40.
+
+Fresh nonce-based production verification passes: all four JS/CSS assets and
+public Runner integration match local SHA-256 bytes; the entry point references
+the deployed assets, root/health return 200 and three private endpoints return
+401 without authentication. The immediate first asset request differed from
+local bytes; the unchanged complete retry and fresh root check passed. GitHub
+returns 422 for the implementation SHA; no push was attempted under the user's
+policy. Issue #13 remains open for publication, although local implementation,
+independent acceptance and production delivery are complete.
+
+Delivery comment: https://github.com/rwjblue/cwa-training-tracker/issues/13#issuecomment-5937759827.
