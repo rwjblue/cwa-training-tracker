@@ -238,3 +238,20 @@ Run still focuses Call and records/saves its own result. The mobile touch switch
 and Axe/geometry pass. This introduces no auto-run or elapsed recovery. Final
 combined regression and independent correction acceptance remain tracked in the
 execution journal; no physical-device claim is made.
+
+
+### Issue #7 follow-up — distinguish local receipt from uploaded evidence
+
+The generated-listening journey now checks the actual server receipt before
+exporting a saved result. An intentional QSO 503 proves durable local retention,
+visible queued failure feedback and explicit retry of two byte-identical frozen
+requests. Only a successful receipt permits server export/report assertions.
+The word-save path likewise retries a retained queue if the local proxy loses
+the connection. Production save and evidence behavior is unchanged.
+
+The previous full-run trace showed a closed review with a locally durable result
+and a ProxyWorker network loss, so immediate server export was an invalid test
+boundary. Both corrected synthetic native desktop/mobile journeys pass in
+40.3 seconds; exact played configuration/script/history/report checks remain.
+Check, all 800 tests and build pass; final combined regression and independent
+post-commit recheck are recorded in the execution journal.

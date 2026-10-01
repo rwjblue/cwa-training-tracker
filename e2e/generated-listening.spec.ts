@@ -156,8 +156,25 @@ for (const viewport of [
     await page.evaluate(() =>
       (window as unknown as { restoreGeneratedStorage: () => void }).restoreGeneratedStorage(),
     );
+    const wordReply = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/entries' &&
+        response.request().method() === 'POST',
+    );
     await activate(review.getByRole('button', { name: 'Save practice', exact: true }));
     await expect(review).toHaveCount(0);
+    if (!(await wordReply).ok()) {
+      // Closing review can mean a durable device receipt, not a server receipt.
+      const uploaded = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === '/api/entries' &&
+          response.request().method() === 'POST' &&
+          [200, 201].includes(response.status()) &&
+          JSON.stringify(response.request().postDataJSON()) === JSON.stringify(bodies[0]),
+      );
+      await activate(page.getByRole('button', { name: 'Retry practice uploads', exact: true }));
+      await uploaded;
+    }
     await expect.poll(() => bodies.length).toBeGreaterThanOrEqual(2);
     expect(bodies.every((body) => JSON.stringify(body) === JSON.stringify(bodies[0]))).toBe(true);
     const saved = (await (await context.request.get('/api/export')).json()).sessions[0];
@@ -228,8 +245,33 @@ for (const viewport of [
     await expect(review).toContainText('20 character / 10 effective WPM');
     await expect(review).toContainText('25 character / 15 effective WPM');
     await expect(review).not.toContainText('30 character / 20 effective WPM');
+    const qsoBodyStart = bodies.length;
+    unavailable = true;
+    const refused = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/entries' &&
+        response.request().method() === 'POST' &&
+        response.status() === 503,
+    );
     await activate(review.getByRole('button', { name: 'Save practice', exact: true }));
     await expect(review).toHaveCount(0);
+    await refused;
+    const uploads = page.getByRole('region', { name: 'Practice upload status', exact: true });
+    await expect(uploads).toContainText('Synthetic listening save failure.');
+    unavailable = false;
+    const uploaded = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/entries' &&
+        response.request().method() === 'POST' &&
+        [200, 201].includes(response.status()) &&
+        JSON.stringify(response.request().postDataJSON()) === JSON.stringify(bodies[qsoBodyStart]),
+    );
+    await activate(uploads.getByRole('button', { name: 'Retry practice uploads', exact: true }));
+    await uploaded;
+    await expect(uploads).toHaveCount(0);
+    const qsoBodies = bodies.slice(qsoBodyStart);
+    expect(qsoBodies).toHaveLength(2);
+    expect(qsoBodies[1]).toEqual(qsoBodies[0]);
     const exported = await (await context.request.get('/api/export')).json();
     const qso = exported.sessions.find(
       (entry: { metadata: { practiceTool: string } }) => entry.metadata.practiceTool === 'qso',

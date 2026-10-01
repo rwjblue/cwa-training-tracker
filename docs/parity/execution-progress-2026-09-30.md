@@ -920,3 +920,19 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   candidate. The final serialized 63-journey suite is running. The focus fix is
   committed separately from those test corrections; independent post-commit
   desktop/mobile correction recheck and deployment remain required.
+
+
+### Issue #7 — explicit uploaded receipt test correction
+
+- Corrected the generated-listening browser fixture after the local ProxyWorker
+  lost a connection. Closing a review correctly establishes durable local
+  retention; it does not establish an uploaded server record.
+- Both widths deliberately receive QSO 503, observe the retained failure and
+  use actual Retry. Two exact frozen requests and successful server receipt
+  precede unchanged export/report evidence assertions. The earlier word save
+  also awaits receipt and retries a retained queue when needed. No production
+  source, Worker, timing or evidence validation changes.
+- Focused desktop/mobile journeys pass (40.3 seconds). Check, all 800 tests in
+  45 files and build pass at the combined candidate. Final serialized regression
+  and post-commit independent recheck remain required. This is a separate test
+  correction for already delivered #7, not a new issue #10 feature.
