@@ -168,6 +168,8 @@ it('bounds timestamps to verified file duration and refuses to transplant marks 
 it.each([
   ['https://cwa.cwops.org/wp-content/uploads/QSO101_07.mp3', 7],
   ['https://cwops.org/wp-content/uploads/2022/07/ss-09.111.mp3', 9],
+  // The exact recording label says 9; its filename and session heading say 10.
+  ['https://cwops.org/wp-content/uploads/2022/07/ss-10.112.mp3', 9],
   ['https://cwa.cwops.org/wp-content/uploads/PR303_30.mp3', 30],
 ])(
   'retains exact published curriculum file %s without inventing native timing',

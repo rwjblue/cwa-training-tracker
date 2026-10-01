@@ -860,3 +860,17 @@ two new real-course desktop Space/mobile-touch journeys covering all three sourc
 families, saved actual partial hearing, task revisits, private snapshots and no
 invented timing. Six new-course Axe checks are empty; two screenshots inspected.
 The independent second-finding recheck and final full regression remain pending.
+
+
+The exhaustive independent 30-file recheck found one remaining source-label edge:
+Fundamental Session 12 Day 1 Copy 3 links `ss-10.112.mp3` but has no stored WPM.
+The [official recording label](https://cwops.org/wp-content/uploads/2025/04/CW-Academy-Fundamental-Curriculum-v2.0.htm#_Toc173138663)
+says 9 WPM although its filename and session heading say 10. Its public factual
+metadata now stores `recordingLabelWpm: 9`; annotation identity prefers this
+explicit label. Character/effective timing remains unknown, and the existing
+source discrepancy/advisor note remains visible. No filename-derived speed,
+link, duration or alternate recording was added. A fourth pure source case and
+both actual-course browser journeys cover this exact row. Check, 847 tests in
+47 files and build pass; the two four-source desktop/mobile journeys pass in
+40.5 seconds. Independent final recheck and full regression remain
+pending; this entry does not declare the issue accepted or deployed.

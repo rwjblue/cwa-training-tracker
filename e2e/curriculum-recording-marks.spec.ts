@@ -32,6 +32,7 @@ for (const width of [1440, 390]) {
     for (const [level, exerciseId, wpm] of [
       ['fundamental', 's3-d1-t6', 7],
       ['fundamental', 's11-d1-t6', 9],
+      ['fundamental', 's12-d1-t6', 9],
       ['advanced', 's13-d1-t2', 30],
     ] as const) {
       if (currentLevel !== level) {

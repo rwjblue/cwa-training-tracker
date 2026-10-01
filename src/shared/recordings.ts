@@ -79,19 +79,27 @@ export function recordingSpeeds(
 const curriculumFileWpms = new Map<string, number>();
 const ambiguousCurriculumFiles = new Set<string>();
 for (const source of [beginner, fundamental, intermediate, advanced]) {
-  for (const row of source.exercises as { kind: string; url?: string; characterWpm?: number }[]) {
+  for (const row of source.exercises as {
+    kind: string;
+    url?: string;
+    characterWpm?: number;
+    recordingLabelWpm?: number;
+  }[]) {
+    // An explicit recording label can differ from the session heading/filename.
+    // It identifies the published file without claiming measured native timing.
+    const fileWpm = row.recordingLabelWpm ?? row.characterWpm;
     if (
       row.kind !== 'audio' ||
       !row.url ||
-      !Number.isFinite(row.characterWpm) ||
-      row.characterWpm! <= 0 ||
-      row.characterWpm! > 200
+      !Number.isFinite(fileWpm) ||
+      fileWpm! <= 0 ||
+      fileWpm! > 200
     )
       continue;
     const previous = curriculumFileWpms.get(row.url);
-    if (previous !== undefined && previous !== row.characterWpm)
+    if (previous !== undefined && previous !== fileWpm)
       ambiguousCurriculumFiles.add(row.url);
-    curriculumFileWpms.set(row.url, row.characterWpm!);
+    curriculumFileWpms.set(row.url, fileWpm!);
   }
 }
 

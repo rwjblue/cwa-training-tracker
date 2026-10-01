@@ -3135,6 +3135,7 @@
       "kind": "audio",
       "recording": "ss-10.112",
       "url": "https://cwops.org/wp-content/uploads/2022/07/ss-10.112.mp3",
+      "recordingLabelWpm": 9,
       "title": "Copy 3: Official recording",
       "notes": "The source text says 9 WPM but links a file named 10 WPM. Use the original link and confirm the speed with your advisor.",
       "minutes": 30,
