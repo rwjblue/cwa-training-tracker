@@ -454,5 +454,6 @@ Private custom text/contact scripts remain with the running Studio rather than
 server records or public assets. No per-source elapsed allocation or proficiency
 is invented. Actual media time remains the existing clock's responsibility.
 Source, SQL and desktop/mobile validation and independent acceptance are tracked
-in the [execution journal](execution-progress-2026-09-30.md); the #7 gate and
-publication are still pending.
+in the [execution journal](execution-progress-2026-09-30.md). The independent #7
+gate passed after the review-focus correction; signed commits are published,
+production is verified and #7 is closed.

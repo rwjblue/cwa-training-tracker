@@ -452,7 +452,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 
 ## Remaining queue
 
-Issues #1–#6 are complete; #7–#46 remain pending.
+Issues #1–#7 are complete; #8–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes.
 
@@ -467,7 +467,7 @@ duration/speed commit remains an ancestor. A separate concurrent CSP commit
 allows the Cloudflare analytics beacon; it is preserved as the immediate parent
 of issue #2. Both improvements stay separate from this issue's implementation.
 
-## Issue #7 — actually played generated listening (implementation gate pending)
+## Issue #7 — actually played generated listening (completed)
 
 - Rechecked current body/comments and both native dependency directions after #6
   closed. No comments or native dependency edges; body prerequisite #1 is delivered.
@@ -524,3 +524,25 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   Escape/cancellation. The final complete 56-journey run passes in 7.3 minutes.
   Root inspected both opening-view captures; correction commit and independent
   recheck remain pending.
+
+- Independent correction review accepted tree
+  `db2f14d189cd1fbc6ac63ab6e8cc67b634ae45db`: four fresh mixed/overflow desktop/mobile
+  cases pass in 50.6 seconds, plus a mobile viewport capture recheck in 20.0 seconds.
+  New and historical review open at the title/evidence; keyboard Save, trap,
+  cancellation and actual historical notes edits preserve identity/raw facts.
+  Eight corrected Axe/geometry states pass and 12 correction images were inspected.
+  No substantive finding remains; ordinary manual Save focus is preserved.
+- Signed implementation `3a57a390c477d845341b788472b13e69a5769946`, separate Today
+  test fixture `4911623f811076f816d8e65c380ba605f9f590e5`, and focused correction
+  `9af8c4610bd5b7d4d05ab9670c75f9a0911ed780` are published on main. GitHub verifies
+  all three signatures as valid; the correction tree matches independent acceptance.
+- `mise run deploy` passed on retry after the transient D1 API 7403 migration-check
+  response. No migration was needed. Production version
+  `88252869-4349-4351-915a-c4895fd2fb54` returns root/health 200 and private
+  entries/account-state/lifecycle-backup 401. All four JS/CSS assets match local
+  SHA-256 hashes. No binding/config change or physical-device verification is claimed.
+- [Completion comment](https://github.com/rwjblue/cwa-training-tracker/issues/7#issuecomment-5924930796)
+  records delivered behavior, signed commits, validation, review and limits.
+  #7 closed at `2026-10-01T04:46:43Z` after publication, acceptance and production
+  checks. The two pre-existing uncommitted user documents remain byte-identical;
+  the original personal-site source was not mutated. Continue with #8.

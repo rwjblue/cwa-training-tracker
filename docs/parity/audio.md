@@ -379,5 +379,6 @@ QSO scripts and word occurrences retain their in-memory owners during review,
 replay, retiming and in-app inspection. This is source fidelity, not delivery of
 seamless occurrence-preserving speed changes or elapsed-time crash recovery.
 The [execution journal](execution-progress-2026-09-30.md) records browser evidence
-and the pending independent review/publication gate. Physical device/lock-screen
+and the accepted independent review, signed publication and production checks.
+Issue #7 is closed. Physical device/lock-screen
 verification is not implied by browser emulation.
