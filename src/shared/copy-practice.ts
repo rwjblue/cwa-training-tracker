@@ -44,7 +44,7 @@ export interface CopyTrial {
 
 export interface CopyAttempt {
   version: 1;
-  scoringVersion: 'native-copy-v1';
+  scoringVersion: 'native-copy-v1' | 'native-copy-v2';
   timingVersion: 'paris-farnsworth-v1';
   contentVersion: string;
   id: string;
@@ -428,18 +428,54 @@ export function scoreCopyText(
   }
   alignment.reverse();
   const denominator = sent.filter((c) => includeSpacesInDenominator || c !== ' ').length;
+  return { distance, denominator, ...copyErrorPercentages(distance, denominator), alignment };
+}
+
+function copyErrorPercentages(distance: number, denominator: number) {
   const errorPercent = denominator
     ? Math.min(100, Math.floor((1000 * distance) / denominator) / 10)
     : distance
       ? 100
       : 0;
   return {
-    distance,
-    denominator,
     errorPercent,
     accuracy: Math.round((100 - errorPercent) * 10) / 10,
-    alignment,
   };
+}
+
+/** Compare every group, including extra input, and keep the better total score. */
+export function scoreCopyGroups(expected: string, answer: string) {
+  const whole = scoreCopyText(expected, answer);
+  const sent = normalizeCopyText(expected).match(/\S+/gu) ?? [];
+  const received = normalizeCopyText(answer).match(/\S+/gu) ?? [];
+  let groupDistance = 0;
+  for (let i = 0; i < Math.max(sent.length, received.length); i++)
+    groupDistance += scoreCopyText(sent[i] ?? '', received[i] ?? '').distance;
+  const distance = Math.min(groupDistance, whole.distance);
+  return {
+    ...whole,
+    distance,
+    ...copyErrorPercentages(distance, whole.denominator),
+    groupDistance,
+    wholeTextDistance: whole.distance,
+  };
+}
+
+/** Saved results keep the scoring rules of the round that produced them. */
+export function scoreCopyAttemptText(attempt: CopyAttempt) {
+  if (
+    !attempt.trials.length ||
+    (attempt.recipe.mode !== 'groups' && attempt.recipe.mode !== 'plaintext')
+  )
+    return undefined;
+  if (attempt.recipe.mode === 'groups' && attempt.scoringVersion === 'native-copy-v2')
+    return scoreCopyGroups(attempt.targets[0], attempt.trials[0].answer);
+  const whole = scoreCopyText(
+    attempt.targets[0],
+    attempt.trials[0].answer,
+    attempt.recipe.mode === 'plaintext',
+  );
+  return { ...whole, wholeTextDistance: whole.distance, groupDistance: undefined };
 }
 
 export function createCopyAttempt(
@@ -450,7 +486,7 @@ export function createCopyAttempt(
   const checked = validateCopyRecipe(recipe);
   return {
     version: 1,
-    scoringVersion: 'native-copy-v1',
+    scoringVersion: 'native-copy-v2',
     timingVersion: 'paris-farnsworth-v1',
     contentVersion: COPY_CONTENT_VERSION,
     id: attemptId(options.id),
@@ -505,7 +541,10 @@ export function submitCopyAnswer(
     ...speeds,
     correct,
     points: discrete && correct ? scoreSpeed * target.length : 0,
-    distance: scoreCopyText(target, normalizedAnswer).distance,
+    distance:
+      attempt.recipe.mode === 'groups' && attempt.scoringVersion === 'native-copy-v2'
+        ? scoreCopyGroups(target, normalizedAnswer).distance
+        : scoreCopyText(target, normalizedAnswer).distance,
     replayCount: numeric(options.replayCount ?? 0, 'Replay count', 0, 1000, true),
     responseSeconds: numeric(options.responseSeconds ?? 0, 'Response time', 0, 7200),
   };
@@ -520,15 +559,7 @@ export function submitCopyAnswer(
 
 export function summarizeCopyAttempt(attempt: CopyAttempt) {
   const correct = attempt.trials.filter((trial) => trial.correct).length;
-  const continuous = attempt.recipe.mode === 'groups' || attempt.recipe.mode === 'plaintext';
-  const textScore =
-    continuous && attempt.trials.length
-      ? scoreCopyText(
-          attempt.targets[0],
-          attempt.trials[0].answer,
-          attempt.recipe.mode === 'plaintext',
-        )
-      : undefined;
+  const textScore = scoreCopyAttemptText(attempt);
   const accuracy =
     textScore?.accuracy ??
     (attempt.trials.length ? Math.round((1000 * correct) / attempt.trials.length) / 10 : 0);
@@ -583,7 +614,7 @@ export function validateCopyAttempt(value: unknown): CopyAttempt {
   const input = record(value);
   if (
     input.version !== 1 ||
-    input.scoringVersion !== 'native-copy-v1' ||
+    (input.scoringVersion !== 'native-copy-v1' && input.scoringVersion !== 'native-copy-v2') ||
     input.timingVersion !== 'paris-farnsworth-v1' ||
     input.contentVersion !== COPY_CONTENT_VERSION
   )
@@ -598,6 +629,7 @@ export function validateCopyAttempt(value: unknown): CopyAttempt {
     seed: text(input.seed, 'Exercise seed', 100, true),
     now: createdAt,
   });
+  attempt.scoringVersion = input.scoringVersion;
   if (
     !Array.isArray(input.targets) ||
     JSON.stringify(input.targets) !== JSON.stringify(attempt.targets)

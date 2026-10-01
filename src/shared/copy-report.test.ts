@@ -10,6 +10,38 @@ import { weeklyReport } from './plan';
 import { DEFAULT_PROFILE, validatePracticeSession } from './training';
 
 describe('native copy report evidence', () => {
+  it('carries the selected group score and both comparisons while preserving legacy reports', () => {
+    const initial = createCopyAttempt(
+      { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 2 },
+      { id: 'group-score', seed: 'group-score', now: '2026-09-28T12:00:00.000Z' },
+    );
+    const answer = `${initial.targets[0]} XYZ`;
+    for (const scoringVersion of ['native-copy-v1', 'native-copy-v2'] as const) {
+      const attempt = submitCopyAnswer({ ...initial, scoringVersion }, answer, {
+        now: '2026-09-28T12:01:00.000Z',
+      });
+      const entry = validatePracticeSession({
+        ...copyAttemptSessionFields(attempt),
+        date: '2026-09-28',
+        kind: 'icr',
+        notes: '',
+      });
+      const current = scoringVersion === 'native-copy-v2';
+      expect(entry.accuracy).toBe(current ? 50 : 33.4);
+      const report = weeklyReport([entry], DEFAULT_PROFILE, entry.date, entry.date);
+      expect(report).toContain(
+        current
+          ? 'Native copy: 3 edits · 50% errors · 50% accuracy'
+          : 'Native copy: 4 edits · 66.6% errors · 33.4% accuracy',
+      );
+      if (current)
+        expect(report).toContain(
+          'Scoring comparisons: 3 grouped edits · 4 whole-text edits · lower count used',
+        );
+      else expect(report).not.toContain('Scoring comparisons:');
+    }
+  });
+
   it('reports reproducible group and submitted-trial pitches while legacy tones stay fixed', () => {
     const groups = createCopyAttempt(
       { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 2 },

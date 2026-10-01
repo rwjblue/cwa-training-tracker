@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import {
   copyToneHz,
+  scoreCopyAttemptText,
   scoreCopyText,
   summarizeCopyAttempt,
   type CopyAttempt,
@@ -50,14 +51,7 @@ export default function CopyResult({
     randomTone && attempt.recipe.mode === 'groups'
       ? (attempt.targets[0]?.match(/\S+/g) ?? []).map((_, index) => copyToneHz(attempt, 0, index))
       : [];
-  const score =
-    continuous && attempt.trials[0]
-      ? scoreCopyText(
-          attempt.targets[0],
-          attempt.trials[0].answer,
-          attempt.recipe.mode === 'plaintext',
-        )
-      : undefined;
+  const score = scoreCopyAttemptText(attempt);
   return (
     <div className="copy-result">
       <div className="copy-result-stats">
@@ -68,7 +62,9 @@ export default function CopyResult({
         {continuous ? (
           <div>
             <strong>{result.distance}</strong>
-            <span>character edits</span>
+            <span>
+              {score?.groupDistance !== undefined ? 'scored character edits' : 'character edits'}
+            </span>
           </div>
         ) : (
           <>
@@ -127,18 +123,34 @@ export default function CopyResult({
           />
           <details className="copy-scoring-details">
             <summary>Scoring details</summary>
-            <p>
-              {score.distance} edits / {score.denominator} transmitted{' '}
-              {attempt.recipe.mode === 'plaintext'
-                ? 'characters, including spaces'
-                : 'characters, excluding spaces'}{' '}
-              gives {score.errorPercent}% errors (capped at 100%). Case and repeated spaces are
-              ignored; missing boundaries and extra input count.
-            </p>
-            <p>
-              The comparison uses the same full-text alignment as the score. Repeated characters can
-              have more than one equally valid alignment.
-            </p>
+            {score.groupDistance !== undefined ? (
+              <>
+                <p>
+                  Group comparison: {score.groupDistance} edits. Whole-text comparison:{' '}
+                  {score.wholeTextDistance} edits. The lower count, {score.distance}, divided by{' '}
+                  {score.denominator} transmitted characters (excluding spaces), gives{' '}
+                  {score.errorPercent}% errors (capped at 100%).
+                </p>
+                <p>
+                  Case and repeated spaces are ignored. Missing and extra groups count. The visual
+                  comparison shows the whole-text alignment; its edit count can differ from the
+                  score when the group comparison is better.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  {score.distance} edits / {score.denominator} transmitted{' '}
+                  {attempt.recipe.mode === 'plaintext'
+                    ? 'characters, including spaces'
+                    : 'characters, excluding spaces'}{' '}
+                  gives {score.errorPercent}% errors (capped at 100%). Case and repeated spaces are
+                  ignored; missing boundaries and extra input count.
+                </p>
+                <p>The comparison uses the same full-text alignment as the score.</p>
+              </>
+            )}
+            <p>Repeated characters can have more than one equally valid alignment.</p>
           </details>
           {onReplay && (
             <button className="button outline" type="button" onClick={() => onReplay(0)}>

@@ -567,8 +567,9 @@ describe('private training data', () => {
         now: '2026-09-28T12:00:00.000Z',
       },
     );
+    const answer = `${initial.targets[0]} XYZ`;
     const attempt = {
-      ...submitCopyAnswer(initial, initial.targets[0], { now: '2026-09-28T12:02:00.000Z' }),
+      ...submitCopyAnswer(initial, answer, { now: '2026-09-28T12:02:00.000Z' }),
       audioSeconds: 43.25,
       answerSeconds: 8.5,
       reviewSeconds: 2,
@@ -587,6 +588,20 @@ describe('private training data', () => {
       metadata: { copyAttempt: { ...attempt, trials: [{ ...attempt.trials[0], points: 100 }] } },
     };
     expect((await request('/api/entries', 'POST', forged, auth.cookie)).status).toBe(400);
+    for (const copyAttempt of [
+      { ...attempt, scoringVersion: 'native-copy-v3' },
+      { ...attempt, scoringVersion: 'native-copy-v1' },
+    ])
+      expect(
+        (
+          await request(
+            '/api/entries',
+            'POST',
+            { ...input, metadata: { copyAttempt } },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
     const first = await request('/api/entries', 'POST', input, auth.cookie);
     expect(first.status).toBe(201);
     const saved = (await first.json()) as { entry: PracticeSession };
@@ -594,9 +609,10 @@ describe('private training data', () => {
       minutes: 53.75 / 60,
       characterWpm: 25,
       effectiveWpm: 10,
-      accuracy: 100,
+      accuracy: 50,
       metadata: { copyAttempt: attempt },
     });
+    expect(attempt.trials[0].distance).toBe(3);
     const retry = await request('/api/entries', 'POST', input, auth.cookie);
     expect(retry.status).toBe(200);
     expect(await retry.json()).toEqual({ ...saved, duplicate: true });
@@ -619,6 +635,28 @@ describe('private training data', () => {
         )
       ).status,
     ).toBe(409);
+    const legacyAttempt = {
+      ...submitCopyAnswer(
+        { ...initial, id: 'native-api-v1', scoringVersion: 'native-copy-v1' },
+        answer,
+        { now: attempt.updatedAt },
+      ),
+      audioSeconds: attempt.audioSeconds,
+      answerSeconds: attempt.answerSeconds,
+      reviewSeconds: attempt.reviewSeconds,
+    };
+    const legacyInput = { ...input, ...copyAttemptSessionFields(legacyAttempt) };
+    const legacyFirst = await request('/api/entries', 'POST', legacyInput, auth.cookie);
+    expect(legacyFirst.status).toBe(201);
+    const legacySaved = (await legacyFirst.json()) as { entry: PracticeSession };
+    expect(legacySaved.entry).toMatchObject({
+      accuracy: 33.4,
+      metadata: { copyAttempt: legacyAttempt },
+    });
+    expect(legacyAttempt.trials[0].distance).toBe(4);
+    const legacyRetry = await request('/api/entries', 'POST', legacyInput, auth.cookie);
+    expect(legacyRetry.status).toBe(200);
+    expect(await legacyRetry.json()).toEqual({ ...legacySaved, duplicate: true });
     const legacy = {
       source: 'rwjblue.com',
       data: { lcwo: { runs: [{ id: 'original', score: 0 }] } },
@@ -639,7 +677,8 @@ describe('private training data', () => {
     const exported = (await (
       await request('/api/export', 'GET', undefined, auth.cookie)
     ).json()) as TrainingExport;
-    expect(exported.sessions).toEqual([saved.entry]);
+    expect(exported.sessions).toHaveLength(2);
+    expect(exported.sessions).toEqual(expect.arrayContaining([saved.entry, legacySaved.entry]));
     expect(exported.legacy).toEqual(legacy);
     expect(
       (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
@@ -650,6 +689,12 @@ describe('private training data', () => {
     ).json()) as TrainingExport;
     expect(restored.sessions).toEqual(exported.sessions);
     expect(restored.legacy).toEqual(exported.legacy);
+    const restoredRetry = await request('/api/entries', 'POST', legacyInput, auth.cookie);
+    expect(restoredRetry.status).toBe(200);
+    expect(await restoredRetry.json()).toMatchObject({
+      entry: legacySaved.entry,
+      duplicate: true,
+    });
   });
 
   it('isolates create, edit, delete, settings, and reset by account', async () => {
