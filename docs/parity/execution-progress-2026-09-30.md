@@ -813,3 +813,70 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   deferral does not prevent proceeding with #10 after this accepted local gate.
 - Limits: partial coverage remains in memory; no unfinished elapsed recovery,
   restricted audio redistribution, physical-device or lock-screen claim.
+
+
+## Issue #10 — implementation and validation in progress
+
+- #9 is independently accepted locally and deployed; latest instruction defers
+  GitHub publication and prohibits pushing. #10 body/comments were freshly read
+  (open, no comments) with its explicit #9 dependency and pinned source policy/UI.
+- Added separate public device course-replay opt-in with default off, strict
+  optional v1 backup field, opt-in restore and preserved private-clear behavior.
+  Replay consumes the existing actual terminal outcome and target counts, keeps
+  native 1x transport/clock/Media Session, and retains explicit ended choices.
+- Existing request/source/gates cancel pending replay and expose reachable Pause;
+  stale completions cannot restart retired audio or cancel newer recall/playback.
+  Preference-off preserves already audible playback; storage refusal offers retry.
+  Policy/preference/device tests pass all 51 focused cases. Browser validation,
+  full checks, implementation commit and independent review are in progress.
+- Initial browser fixture missed the official audio subdomain; that run's artifacts
+  were removed and the synthetic route now covers both official hosts. A corrected
+  run passed replay and earlier cancellation boundaries but a nonexistent report
+  navigation selector timed out. It was corrected to the actual Inspect Today
+  control. The interrupted runtime was explicitly stopped before the next harness;
+  a launch correctly refused its briefly lingering port rather than sharing it.
+
+- Full synthetic native #10 journeys pass at 1440 px keyboard (59.7 seconds)
+  and 390 px emulated touch (about 1.1 minutes), 2.2 minutes total. They exercise
+  default-off ending choices, two remaining passes with auto continuation and
+  minimum stopping, explicit extra playback, skipped-material rejection, delayed
+  native Play cancellation for Pause/recall/Today inspection/source/preference,
+  blocked autoplay recovery, preference storage quota/retry and unchanged
+  generated defaults. Actual device download/file chooser/opt-in restore retain
+  the choice. Canceled review and combined quota/503 exact retry save precisely
+  two actual 3.6-second passes; a new visit with saved passes does not loop.
+- Fresh check/all 799 tests in 45 files/build pass. Both new Axe reports are empty,
+  geometry fits and root visually inspected desktop/mobile ended controls; the
+  replay label has a 44-pixel touch area. Native 1x and actual Media Session playing
+  state are asserted. Source is unchanged through validation. Full serialized
+  browser suite is now running; implementation commit and fresh review remain.
+- Later harness fixes used exact Recording speed matching, compared retained
+  generated defaults to their initial existing serialization rather than null,
+  and honored the existing modal-return/current-view routing. Those failures
+  were fixture/selector assumptions; no passing claim includes their failed runs.
+  Pending UI clears at native playing, so turning the preference off after actual
+  playback starts cannot pause it merely because Play's promise is unresolved.
+
+- Root identified a pending-continuation transport gap before committing: the
+  previous end callback released Media Session ownership before automatic Play,
+  removing its Pause action during a held request. The existing paused owner now
+  remains through continuation; a fresh native playing event reclaims it normally,
+  and terminal non-continuation releases it. No new pending player claims metadata.
+  The browser observes native setActionHandler registrations and invokes the
+  actual production Pause handler while the pending Play is held. The first full
+  suite was intentionally stopped after 15 passes for this correction; it is not
+  claimed as a completed suite. Fresh affected and full validation remain required.
+
+- The corrected complete journey passes again at both widths (2.3 minutes total),
+  including the actual registered Media Session Pause handler during pending
+  continuation. Real playback, two-pass evidence, cancellation, device preference
+  backup/restore and exact save retry remain intact. Fresh required checks and
+  the full 62-journey serialized suite precede the implementation commit.
+
+- Final complete serialized browser validation passes all 62 journeys in 11.0
+  minutes, including the corrected #10 desktop/mobile paths and all earlier
+  recording passes, recall, private backup/lifecycle, Copy, Runner, generated
+  listening, completion and in-app continuity behavior. Runtime is stopped.
+  Required check, 799 tests in 45 files and build pass at the same final source;
+  no bindings/configuration/schema changed. Independent review remains required
+  after the focused implementation commit. No push or closure is attempted.

@@ -22,6 +22,7 @@ import { taskPracticeMetadata } from '../shared/practice-attribution';
 import { savedTaskProgress, type PlannedTask } from '../shared/plan';
 import { recordingCompletedPasses } from '../shared/practice-evidence';
 import ListeningPassProgress from './ListeningPassProgress';
+import { loadCourseReplay, saveCourseReplay, shouldReplayCourse } from './course-replay';
 import {
   buildMorseTrack,
   type MorseTrack,
@@ -138,6 +139,19 @@ export default function PracticeStudio({
   const automaticSave = !assigned || activity?.type === 'audio';
   const recording = useRef<HTMLAudioElement>(null);
   const recordingPlayRequest = useRef(0);
+  const recordingPlayIntent = useRef(false);
+  const pendingRecordingPlay = useRef<
+    | {
+        request: number;
+        automatic: boolean;
+      }
+    | undefined
+  >(undefined);
+  const [recordingPending, setRecordingPending] = useState(false);
+  const [courseReplay, setCourseReplay] = useState(loadCourseReplay);
+  const courseReplayChoice = useRef(courseReplay);
+  const [courseReplayRemembered, setCourseReplayRemembered] = useState(true);
+  const consumedRecordingOutcome = useRef<number | undefined>(undefined);
   const recordingSession = useRef(new MediaSessionController());
   const claimRecordingSession = (audio: HTMLAudioElement) => {
     if (audio !== recording.current || !canPractice()) return;
@@ -146,10 +160,10 @@ export default function PracticeStudio({
       title: `${launch?.task?.lesson ? `Session ${launch.task.lesson} · ` : ''}${selectedRecording?.title ?? launch?.task?.title ?? 'Assigned recording'}`,
       album: `CW Academy practice${recordingWpm ? ` · ${recordingWpm} WPM` : ''}`,
       onPlay: () => playRecording(audio),
-      onPause: () => audio.pause(),
+      onPause: () => stopPlayback(),
       onStop: () => {
         if (!canPractice()) return;
-        audio.pause();
+        stopPlayback();
         audio.currentTime = 0;
         session.release();
       },
@@ -189,6 +203,10 @@ export default function PracticeStudio({
   currentTimer.current = timer;
   const attachRecording = useCallback((element: HTMLAudioElement | null) => {
     if (recording.current && recording.current !== element) {
+      recordingPlayRequest.current++;
+      recordingPlayIntent.current = false;
+      pendingRecordingPlay.current = undefined;
+      setRecordingPending(false);
       currentTimer.current.discardRecording(recording.current, false);
       recording.current.pause();
       recordingSession.current.release();
@@ -314,6 +332,8 @@ export default function PracticeStudio({
   }, [notesScope, notesContext]);
   const stopPlayback = () => {
     recordingPlayRequest.current++;
+    recordingPlayIntent.current = false;
+    setRecordingPending(false);
     player.current.pause();
     recording.current?.pause();
     timer.pauseMedia();
@@ -365,6 +385,7 @@ export default function PracticeStudio({
   const resetTimer = () => {
     stopPlayback();
     timer.reset();
+    consumedRecordingOutcome.current = undefined;
     generatedListening.current.reset();
     sessionIdentity.current = undefined;
     saveCoordinator.current.reset();
@@ -555,28 +576,88 @@ export default function PracticeStudio({
     setFreeTrack(null);
     setFreeWord(-1);
   }, [text, mode, groupLength, wordLength, characterWpm, effectiveWpm, tone, volume, tool]);
-  const playRecording = async (audio: HTMLAudioElement) => {
+  const playRecording = async (audio: HTMLAudioElement, automatic = false) => {
     if (audio !== recording.current || !canPractice()) return;
     const request = ++recordingPlayRequest.current;
+    recordingPlayIntent.current = true;
+    pendingRecordingPlay.current = { request, automatic };
+    setRecordingPending(true);
     timer.stopRecall();
     setError('');
     try {
       timer.finalizeMedia(audio);
+      // Native Play at ended rewinds to the beginning and retains native 1x.
       await audio.play();
+      if (
+        request !== recordingPlayRequest.current ||
+        audio !== recording.current ||
+        !canPractice()
+      ) {
+        // A newer deliberate request on this same element owns its playback.
+        if (audio !== recording.current || !canPractice() || !recordingPlayIntent.current)
+          audio.pause();
+        return;
+      }
     } catch (err) {
       // Pausing for recall or inspection can reject an earlier pending Play.
       // That obsolete request must not stop the newly selected practice mode.
       if (request !== recordingPlayRequest.current || audio !== recording.current || !canPractice())
         return;
-      setError((err as Error).message);
+      recordingPlayIntent.current = false;
+      audio.pause();
+      setError(
+        `${automatic ? 'Automatic replay could not start. ' : ''}${(err as Error).message} Choose Play another pass, recall, or Finish practice.`,
+      );
       setPlaying(false);
       timer.pauseMedia();
+    } finally {
+      if (pendingRecordingPlay.current?.request === request) {
+        pendingRecordingPlay.current = undefined;
+        setRecordingPending(false);
+      }
     }
+  };
+  const changeCourseReplay = (enabled: boolean) => {
+    courseReplayChoice.current = enabled;
+    setCourseReplay(enabled);
+    setCourseReplayRemembered(saveCourseReplay(enabled));
+    if (!enabled && pendingRecordingPlay.current?.automatic) stopPlayback();
+  };
+  const endRecording = (audio: HTMLAudioElement) => {
+    if (audio !== recording.current || !canPractice() || !audio.ended) return;
+    setPlaying(false);
+    recordingPlayIntent.current = false;
+    // Capture has finalized the existing clock before this target callback.
+    const measured = timer.snapshot();
+    const outcome = measured.recordingOutcome;
+    if (!outcome || outcome.url !== recordingUrl) {
+      recordingSession.current.release();
+      return;
+    }
+    if (outcome.id === consumedRecordingOutcome.current) return;
+    consumedRecordingOutcome.current = outcome.id;
+    if (
+      shouldReplayCourse({
+        enabled: courseReplayChoice.current,
+        completed: outcome.completed,
+        minimumPasses: activity?.type === 'audio' ? activity.minimumPasses : undefined,
+        savedPasses: savedPassProgress?.completedPasses ?? 0,
+        currentPasses: measured.recordings.reduce(
+          (sum, item) => sum + (recordingCompletedPasses(item) ?? 0),
+          0,
+        ),
+        extraReview,
+      })
+    ) {
+      // The same paused transport can cancel a pending continuation. Claiming
+      // another owner still waits for actual native playing as before.
+      void playRecording(audio, true);
+    } else recordingSession.current.release();
   };
   const play = async () => {
     if (!canPractice()) return;
     identity();
-    if (playing) {
+    if (playing || recordingPending) {
       stopPlayback();
       return;
     }
@@ -646,6 +727,16 @@ export default function PracticeStudio({
       timer.pauseMedia();
       return;
     }
+    if (
+      event.target === recording.current &&
+      (event.type === 'play' || event.type === 'playing') &&
+      pendingRecordingPlay.current &&
+      pendingRecordingPlay.current.request !== recordingPlayRequest.current &&
+      !recordingPlayIntent.current
+    ) {
+      recording.current?.pause();
+      return;
+    }
     if (event.type === 'playing') identity();
     timer.onMedia(event);
   };
@@ -666,7 +757,7 @@ export default function PracticeStudio({
       </button>
       <button
         className="button outline"
-        disabled={playing || !recordingUrl}
+        disabled={playing || recordingPending || !recordingUrl}
         aria-describedby="recall-policy"
         onClick={() => void play()}
       >
@@ -929,19 +1020,19 @@ export default function PracticeStudio({
                 className="button dark"
                 disabled={activity?.type === 'audio' && !recordingUrl}
                 onClick={() =>
-                  (activity?.type === 'audio' ? playing : running)
+                  (activity?.type === 'audio' ? playing || recordingPending : running)
                     ? pauseTimer()
                     : void startPractice()
                 }
               >
-                {(activity?.type === 'audio' ? playing : running) ? (
+                {(activity?.type === 'audio' ? playing || recordingPending : running) ? (
                   <Square size={14} />
                 ) : (
                   <Play size={14} />
                 )}
                 {activity?.type === 'audio' && !recordingUrl
                   ? 'Recording unavailable'
-                  : (activity?.type === 'audio' ? playing : running)
+                  : (activity?.type === 'audio' ? playing || recordingPending : running)
                     ? 'Pause practice'
                     : seconds > 0
                       ? 'Resume practice'
@@ -1033,9 +1124,18 @@ export default function PracticeStudio({
                             recordingSession.current.updatePosition();
                           }}
                           onPlay={(event) => {
-                            if (event.currentTarget === recording.current && canPractice())
+                            if (
+                              event.currentTarget === recording.current &&
+                              canPractice() &&
+                              !event.currentTarget.paused &&
+                              (!pendingRecordingPlay.current ||
+                                pendingRecordingPlay.current.request ===
+                                  recordingPlayRequest.current ||
+                                recordingPlayIntent.current)
+                            ) {
+                              recordingPlayIntent.current = true;
                               setPlaying(true);
-                            else event.currentTarget.pause();
+                            } else event.currentTarget.pause();
                           }}
                           onPlaying={(event) => {
                             if (
@@ -1043,6 +1143,13 @@ export default function PracticeStudio({
                               canPractice() &&
                               !event.currentTarget.paused
                             ) {
+                              if (
+                                pendingRecordingPlay.current?.request ===
+                                recordingPlayRequest.current
+                              ) {
+                                pendingRecordingPlay.current = undefined;
+                                setRecordingPending(false);
+                              }
                               setError('');
                               claimRecordingSession(event.currentTarget);
                             }
@@ -1058,26 +1165,61 @@ export default function PracticeStudio({
                           }}
                           onSeeked={() => recordingSession.current.updatePosition()}
                           onPause={(event) => {
-                            if (event.currentTarget !== recording.current) return;
+                            if (
+                              event.currentTarget !== recording.current ||
+                              !event.currentTarget.paused
+                            )
+                              return;
+                            if (!event.currentTarget.ended) {
+                              recordingPlayRequest.current++;
+                              recordingPlayIntent.current = false;
+                              setRecordingPending(false);
+                            }
                             setPlaying(false);
                             recordingSession.current.setPlaybackState('paused');
                           }}
                           onEnded={(event) => {
-                            if (event.currentTarget !== recording.current) return;
-                            setPlaying(false);
-                            recordingSession.current.release();
+                            endRecording(event.currentTarget);
                           }}
                           onError={(event) => {
                             if (event.currentTarget !== recording.current) return;
                             setError(
                               'The recording could not load. Open the official exercise to check its availability.',
                             );
-                            timer.pauseMedia();
+                            stopPlayback();
                             event.currentTarget.pause();
                             setPlaying(false);
                             recordingSession.current.release();
                           }}
                         />
+                        <label className="checkbox-label course-replay-choice">
+                          <input
+                            type="checkbox"
+                            checked={courseReplay}
+                            onChange={(event) => changeCourseReplay(event.target.checked)}
+                          />
+                          <span>Automatically replay required course passes</span>
+                        </label>
+                        <p className="field-hint">
+                          Off by default. Full passes repeat only until the assigned minimum is met.
+                          Extra review pauses between passes. Generated Repeat list is separate.
+                        </p>
+                        {!courseReplayRemembered && (
+                          <p role="status">
+                            This choice applies now, but could not be remembered on this device.
+                            Enable browser storage or free space, then{' '}
+                            <button
+                              className="text-button"
+                              onClick={() => changeCourseReplay(courseReplay)}
+                            >
+                              Retry remembering replay choice
+                            </button>
+                            .
+                          </p>
+                        )}
+                        {recordingPending && (
+                          <p role="status">Starting listening… Use Pause practice to cancel.</p>
+                        )}
                         {recallControls}
                         <ListeningPassProgress
                           savedPasses={savedPassProgress?.completedPasses ?? 0}
@@ -1088,14 +1230,36 @@ export default function PracticeStudio({
                         />
                         {timer.recordingOutcome &&
                           timer.recordingOutcome.url === recordingUrl &&
-                          !playing && (
-                            <p role="status">
-                              {timer.recordingOutcome.completed
-                                ? 'Full listening pass recorded. Take a moment to recall, or play again.'
-                                : timer.recordingOutcome.reason === 'incomplete'
-                                  ? 'Some material was skipped. Heard time is retained, but this pass is incomplete. Play again for a full pass.'
-                                  : 'Heard time is retained, but this recording could not supply a complete pass measurement.'}
-                            </p>
+                          !playing &&
+                          !recordingPending && (
+                            <div>
+                              <p role="status">
+                                {timer.recordingOutcome.completed
+                                  ? 'Full listening pass recorded. Take a moment to recall, play another pass, or finish practice.'
+                                  : timer.recordingOutcome.reason === 'incomplete'
+                                    ? 'Some material was skipped. Heard time is retained, but this pass is incomplete. Play again for a full pass.'
+                                    : 'Heard time is retained, but this recording could not supply a complete pass measurement.'}
+                              </p>
+                              <div
+                                className="playback-toolbar"
+                                role="group"
+                                aria-label="End of pass choices"
+                              >
+                                <button
+                                  className="button outline"
+                                  onClick={() => {
+                                    if (recording.current) void playRecording(recording.current);
+                                  }}
+                                >
+                                  Play another pass
+                                </button>
+                                {onFinish && (
+                                  <button className="button outline" onClick={onFinish}>
+                                    Finish this block
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           )}
                         {timer.recordingProgress?.status === 'duration-limit' && (
                           <p role="status">

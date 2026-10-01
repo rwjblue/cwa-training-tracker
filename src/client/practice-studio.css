@@ -543,3 +543,11 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+.course-replay-choice {
+  min-height: 44px;
+  cursor: pointer;
+}
+.course-replay-choice > span {
+  font-size: 12px;
+}

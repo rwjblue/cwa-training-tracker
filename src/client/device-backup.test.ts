@@ -38,6 +38,7 @@ import {
   loadPracticeSaveStates,
 } from './practice-autosave';
 import { DEFAULT_PRACTICE_PREFERENCES, PRACTICE_PREFERENCES_KEY } from './practice-preferences';
+import { COURSE_REPLAY_STORAGE_KEY } from './course-replay';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
 import { loadStudioNotes, saveStudioNotes } from './studio-session';
 
@@ -194,6 +195,7 @@ describe('the explicit device inventory', () => {
     expect(inventory.filter((item) => item.shared).map((item) => item.id)).toEqual([
       'practicePreferences',
       'recordingSpeed',
+      'courseReplay',
     ]);
     expect(inventory.map((item) => item.id)).toEqual(DEVICE_STORE_INVENTORY.map((item) => item.id));
     expect(Object.keys(backup.stores).sort()).toEqual(
@@ -528,13 +530,11 @@ describe('identity-preserving restore', () => {
         },
       },
     });
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ error: 'Temporary synthetic save failure' }), {
-          status: 503,
-        }),
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Temporary synthetic save failure' }), {
+        status: 503,
+      }),
+    );
     vi.stubGlobal('fetch', fetch);
     const receipt = await autoSavePractice(scope, finished);
     expect(receipt.destination).toBe('device');
@@ -1029,4 +1029,42 @@ describe('local clear and storage recovery', () => {
     expect(loadLocalPractice('guest')).toEqual([]);
     expect(isDeviceScopeMutating('guest')).toBe(false);
   });
+});
+
+describe('portable public course replay choice', () => {
+  it('keeps old version 1 files compatible and captures no choice when unset', () => {
+    const backup = captureDeviceBackup('guest', 'Guest');
+    expect(backup.shared).not.toHaveProperty('courseReplay');
+    expect(validateDeviceBackup(JSON.stringify(backup), 'guest')).toEqual(backup);
+  });
+  it('captures true and false exactly, restores only by opt-in, and survives private clear', () => {
+    values.set(COURSE_REPLAY_STORAGE_KEY, 'true');
+    const enabled = captureDeviceBackup('guest', 'Guest');
+    expect(enabled.shared.courseReplay).toBe(true);
+    values.set(COURSE_REPLAY_STORAGE_KEY, 'false');
+    const disabled = captureDeviceBackup('guest', 'Guest');
+    expect(disabled.shared.courseReplay).toBe(false);
+    restoreDeviceBackup(enabled, { expectedScope: 'guest' });
+    expect(values.get(COURSE_REPLAY_STORAGE_KEY)).toBe('false');
+    restoreDeviceBackup(enabled, { expectedScope: 'guest', restoreSharedPreferences: true });
+    expect(values.get(COURSE_REPLAY_STORAGE_KEY)).toBe('true');
+    restoreDeviceBackup(disabled, { expectedScope: 'guest', restoreSharedPreferences: true });
+    expect(values.get(COURSE_REPLAY_STORAGE_KEY)).toBe('false');
+    clearDeviceWork('guest');
+    expect(values.get(COURSE_REPLAY_STORAGE_KEY)).toBe('false');
+  });
+  it.each(['true', 1, null, ['true'], { account: 'private' }])(
+    'rejects coerced/private choice %j before any mutation',
+    (invalid) => {
+      const backup = captureDeviceBackup('guest', 'Guest');
+      const before = snapshot();
+      expect(() =>
+        validateDeviceBackup(
+          JSON.stringify({ ...backup, shared: { courseReplay: invalid } }),
+          'guest',
+        ),
+      ).toThrow('valid shared course replay');
+      expect(snapshot()).toEqual(before);
+    },
+  );
 });

@@ -43,8 +43,7 @@ queues use the delivered device persistence and backup workflows. In-app inspect
 pauses and retains the block; canceled review and failed saves preserve its owner.
 Active elapsed-time recovery after reload/crash is excluded by the approved scope.
 
-**Still missing or partial:** per-task remembered speed overrides, automatic
-course replay, difficult marks, short replay controls, full generated-player
+**Still missing or partial:** per-task remembered speed overrides, difficult marks, short replay controls, full generated-player
 retiming continuity, and remaining advisor-report integration. Later issue ledgers
 record their delivery; baseline findings below preserve the original audit.
 No physical locked-iOS verification is claimed.
@@ -206,7 +205,7 @@ does not implement unfinished-draft persistence yet and clearly tells users to
 save before leaving/reloading. The new implementation therefore remains partial
 parity, not autosaved/recoverable scratchpad parity.
 
-### P2 — completed passes and partial listening: delivered by #9; replay remains #10
+### P2 — completed passes and partial listening: delivered by #9; deliberate replay added in #10
 
 Personal [client.ts:1683](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L1683) merges coverage intervals; a pass counts only when coverage
 reaches duration minus one second (`:1705`). Skipping to the end does not complete
@@ -219,7 +218,8 @@ Course recording automatic replay defaults off, is remembered on the device, and
 continues only while completed whole passes are below this block's target
 ([daily-listening.ts:16](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/daily-listening.ts#L16), `:50`; [client.ts:1746](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L1746)). Tracker shows prescribed min/max
 passes at the baseline. Issue #9 adds actual coverage/pass evidence; the course
-recording replay policy remains issue #10.
+recording replay policy is added by #10 with device opt-in, observed full-pass
+continuation, owned saved/current target counts and explicit cancellation.
 
 ### P2 — explicit recall timer: baseline missing; now implemented
 
@@ -456,3 +456,29 @@ GitHub publication is deferred under the learner’s no-push instruction in the
 [execution journal](execution-progress-2026-09-30.md). Browser fixtures generate
 short synthetic WAVs and answer byte-range requests correctly; they never fetch
 restricted audio. Physical iPhone/lock-screen verification is not claimed.
+
+
+### Issue #10 — deliberate course continuation
+
+The visible device-local course replay checkbox starts off and remains separate
+from generated Repeat list and future optional daily listening. One existing
+clock terminal outcome is consumed before requesting native replay. Only actual
+whole completion with an unmet required minimum continues; prior saved counts
+and this block's current facts apply. Incomplete, unmeasured, extra-review and
+minimum-met playback stop with retained evidence and explicit end-of-pass choices.
+Suggested duration never stops listening.
+
+The existing source/request/navigation/device ownership fences cancel pending
+replay for Pause, recall, inspection, reset, source change and Media Session
+transport. The existing paused Media Session owner retains Pause/Stop through
+pending continuation, with fresh ownership claims still requiring actual playing. Pending Play has a reachable Pause control, stale resolutions cannot
+start retired audio or clear new recall, and stale pause callbacks do not overwrite
+resumed state. Preference-off preserves already audible playback. Failed Play
+retains the completed pass and offers manual retry/recall/finish. Failed preference
+storage explains its current-session limit and offers retry. The optional public
+boolean joins strict device inventory, backup and opt-in restore; no source/task
+identity becomes a shared preference or private measurement.
+
+Validation and independent acceptance remain tracked in the execution journal.
+Browser fixtures use short synthetic WAV byte ranges and actual native movement;
+no physical-device/lock-screen or elapsed reload-recovery claim is made.

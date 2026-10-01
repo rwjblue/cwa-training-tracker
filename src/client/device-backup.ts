@@ -44,6 +44,7 @@ import {
   PRACTICE_PREFERENCES_KEY,
   type PracticePreferences,
 } from './practice-preferences';
+import { COURSE_REPLAY_STORAGE_KEY } from './course-replay';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
 import {
   captureScratchpadMemory,
@@ -85,7 +86,11 @@ export interface DeviceBackup {
     copySettings: CopyRecipe[];
     scratchpads: { context: string; text: string }[];
   };
-  shared: { practicePreferences?: PracticePreferences; recordingSpeed?: 'assigned' | 'next' };
+  shared: {
+    practicePreferences?: PracticePreferences;
+    recordingSpeed?: 'assigned' | 'next';
+    courseReplay?: boolean;
+  };
 }
 export interface DeviceRestoreOptions {
   /** Bind the file to the displayed scope; public Guest work grants no account authority. */
@@ -115,6 +120,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'scratchpads', label: 'Scratchpads', shared: false },
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
   { id: 'recordingSpeed', label: 'Shared recording speed preference', shared: true },
+  { id: 'courseReplay', label: 'Shared course replay preference', shared: true },
 ] as const;
 
 const encoded = (scope: string) => encodeURIComponent(scope);
@@ -523,7 +529,10 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
   const shared = object(input.shared, 'Shared device preferences', [
     'practicePreferences',
     'recordingSpeed',
+    'courseReplay',
   ]);
+  if (shared.courseReplay !== undefined && typeof shared.courseReplay !== 'boolean')
+    throw new Error('Choose a valid shared course replay preference.');
   if (
     shared.recordingSpeed !== undefined &&
     (typeof shared.recordingSpeed !== 'string' ||
@@ -544,6 +553,9 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       scratchpads,
     },
     shared: {
+      ...(shared.courseReplay === undefined
+        ? {}
+        : { courseReplay: shared.courseReplay as boolean }),
       ...(shared.practicePreferences === undefined
         ? {}
         : { practicePreferences: validateSharedPreferences(shared.practicePreferences) }),
@@ -721,6 +733,7 @@ export function captureDeviceBackup(
     storage === localStorage ? captureStudioNotes(scope) : selectedNotes(scope, storage);
   const preferencesRaw = storage.getItem(PRACTICE_PREFERENCES_KEY);
   const recordingSpeed = storage.getItem(RECORDING_SPEED_STORAGE_KEY);
+  const courseReplay = storage.getItem(COURSE_REPLAY_STORAGE_KEY);
   const backup: DeviceBackup = {
     format: 'cwa-device',
     version: 1,
@@ -737,6 +750,9 @@ export function captureDeviceBackup(
       scratchpads,
     },
     shared: {
+      ...(courseReplay === null
+        ? {}
+        : { courseReplay: parse(courseReplay, 'Shared course replay preference', 10) as boolean }),
       ...(preferencesRaw === null
         ? {}
         : {
@@ -1077,6 +1093,8 @@ export function restoreDeviceBackup(
     if (!currentNotes.has(note.context))
       changes.set(notesKey(scope, note.context), note.text || null);
   if (options.restoreSharedPreferences) {
+    if (checked.shared.courseReplay !== undefined)
+      changes.set(COURSE_REPLAY_STORAGE_KEY, JSON.stringify(checked.shared.courseReplay));
     if (checked.shared.practicePreferences)
       changes.set(PRACTICE_PREFERENCES_KEY, JSON.stringify(checked.shared.practicePreferences));
     if (checked.shared.recordingSpeed)
