@@ -12,7 +12,7 @@ import type { GeneratedListeningEvidence } from '../shared/generated-listening';
 import { recordingCompletedPasses } from '../shared/practice-evidence';
 import type { RecordingMarkSet } from '../shared/recording-marks';
 
-export const STUDIO_AUTOSAVE_SECONDS = 30;
+export const STUDIO_AUTOSAVE_SECONDS = 1;
 const duration = (seconds: number) => formatPracticeDuration(seconds / 60).padStart(5, '0');
 
 export interface StudioSessionInput {
@@ -32,7 +32,7 @@ export function studioSession(
   minimumSeconds = STUDIO_AUTOSAVE_SECONDS,
 ): PracticeSession | undefined {
   const { identity, measured, preferences, scratchpad, timezone, launch } = input;
-  if (measured.seconds < minimumSeconds) return undefined;
+  if (!Number.isFinite(measured.seconds) || measured.seconds < minimumSeconds) return undefined;
   const activity = launch?.activity;
   const assigned = Boolean(activity);
   const { tool } = preferences;
@@ -161,6 +161,20 @@ export function studioSession(
   });
 }
 
+/** Zero-time notes are deliberate; normal finishing must never create empty records. */
+export function studioNotesSession(input: StudioSessionInput): PracticeSession | undefined {
+  if (
+    input.measured.seconds !== 0 ||
+    input.measured.recallSeconds !== 0 ||
+    input.measured.running ||
+    input.measured.recordings.length > 0 ||
+    !input.scratchpad.trim()
+  )
+    return undefined;
+  // Selected/prepared content is not heard evidence for a notes-only record.
+  return studioSession({ ...input, generatedListening: undefined }, 0);
+}
+
 /** One immutable body and one in-flight request cover repeated navigation and retry. */
 export class StudioSaveCoordinator {
   private pending?: PracticeSession;
@@ -264,7 +278,7 @@ export function restoreScratchpadMemory(
   }
 }
 
-/** Short sessions do not become log entries; their notes remain scoped to their tool. */
+/** Unsaved notes remain scoped to their tool, including blocks below one second. */
 export function loadStudioNotes(scope: string, context: string, storage?: NotesStorage): string {
   const key = notesKey(scope, context);
   if (notesMemory.has(key) && notesMemoryTokens.get(key) !== getDeviceScopeToken(scope)) {

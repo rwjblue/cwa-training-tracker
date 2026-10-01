@@ -457,3 +457,94 @@ Source, SQL and desktop/mobile validation and independent acceptance are tracked
 in the [execution journal](execution-progress-2026-09-30.md). The independent #7
 gate passed after the review-focus correction; signed commits are published,
 production is verified and #7 is closed.
+
+## Issue #14 implementation ledger — short practice and zero-time notes
+
+Rechecked the current live issue body/comments (open, none), native dependency
+lists (empty) and body dependencies #2/#5/#6 (closed, delivery evidence reread).
+Original read-only pin `3106c9b8bf20b63be069f4019467cb565cdd17ec`,
+`client.ts:2291–2399`, permits actual zero duration and retains scratchpad/context.
+Companion preserves precise fractional seconds rather than porting original
+flooring, default durations or automatic completion conventions. Approved finding
+47 supersedes earlier 30-second/manual-discard parity recommendations.
+
+The existing Studio capture/shared immutable queue now retains at least one
+actual measured second on deliberate Finish or assignment/tool switch, including
+assigned audio, manual, external and sending blocks and public/generated timed
+practice. Inspection still pauses and retains the current block without saving.
+Explicit Review & save retains cancellation. Copy and Runner keep their separate
+completed-result workflows; this does not invent a generic simulator/copy timer.
+
+Save notes is reachable beside the existing scratchpad, enabled only for nonempty
+learner text at actual zero while stopped. It retains original text, exact zero,
+task/source/review purpose and stable identity through the same queue, while
+excluding selected/unplayed generated source summaries. It grants no time/pass
+or completion credit. Empty/whitespace/subsecond blocks produce no automatic junk
+records. In-flight/failed save locks preserve the frozen block; Retry uses the
+same body, with clearing/reset only after an actual durable device or server
+receipt. Destination feedback distinguishes private history, guest device and
+account device awaiting upload. Existing account-generation/device fences,
+private history, portable export/import and report calculations remain owners;
+no schema/binding/config change requires generated types.
+
+Focused capture/queue tests cover one-second and fractional boundaries, invalid
+samples, exact-zero/empty/running eligibility, no unheard evidence, review
+provenance and concurrent uncertain receipt retries. A real-SQL Worker journey
+covers zero notes plus 12-second partial hearing, exact duplicate receipts, private
+history isolation, portable restore and totals/progress without false completion.
+Its initial fixture omitted native-1x method and used noncanonical dates/property;
+those were corrected without relaxing validation. Initial browser guest save
+passed but its next fixture incorrectly requested signed-in Inspect Today;
+the retained trace identified actual guest Inspect Overview. The mobile repeat
+was stopped after reaching that same missing control. The fixture control was
+corrected without changing product logic or timeouts. Browser/full regression,
+post-implementation independent review and production delivery remain pending.
+
+
+Desktop keyboard/mobile touch notes journeys pass 2/2 (30.5/32.5 seconds) on
+the final implementation. They verify guest zero notes/no empty records/device
+receipt, private review-zero notes, storage refusal plus a lost committed server
+response, two exactly equal POST bodies yielding one row, frozen controls and
+visible retry focus, inspection/return after failure, actual native assigned and
+generated listening above 12 seconds/below 14 seconds, canceled review, zero
+passes/no completion, opened history scratchpads and actual backup download/import.
+Six named Axe reports are empty; surrounding controls, retry and history screenshots
+are retained. Assigned external Finish retains exactly 12 manual seconds and
+notes at both widths, with no save from inspection and cleared notes after receipt.
+
+The media fixture initially used an arbitrary example.test URL blocked by the
+production media policy. It was corrected to an exact known public URL with
+synthetic PCM, without fetching course audio or changing CSP. The first complete
+73-test run had 71 passes and two new-fixture disclosure-selector failures: retained
+Studio label and history summary both matched Scratchpad. The trace identified
+the ambiguity; the probe now opens the semantic summary. No product evidence,
+credit assertions or timeout was weakened. Self-review added focus on the existing
+retry control for active notes-save failure, including return from inspection,
+so an error above the player is reachable from the lower notes area. Scope-owned
+formatting and typecheck, all 885 tests/48 files and build pass. Final complete
+browser regression and independent post-commit gate remain pending.
+
+
+A subsequent complete run passed 72/73 journeys in 13.3 minutes, including both
+#14 notes journeys (30.2/33.7 seconds). The unchanged mobile course-replay test
+failed after resetting and enabling automatic replay at its line 169 (expected
+one observed completed pass, got zero); desktop passed. Root inspected the failed
+assertion, context and trace. A mistaken copy glob then failed before the next
+harness removed that trace, so no separately retained trace is claimed for this
+run; the assertion/location remain in the tool transcript. No original native
+position/performance log establishes its cause.
+
+An ignored passive probe copies the entire canonical replay scenario unchanged,
+except its helper import and appended Node-persistent native-event collection.
+Both widths pass (1.1/1.2 minutes). These logs survive reload and are retained in
+ignored progress evidence. This validates subsequent complete replay workflows;
+it does not reconstruct or resolve the earlier failure. No clock/source/credit
+assertion/timeout was changed. Final canonical regression remains pending.
+
+
+The final unchanged canonical browser run passes all 73 journeys in 14.0 minutes,
+including desktop/mobile native replay and both notes journeys (30.1/32.6 seconds).
+Product file hashes match the required check/885-test/build and focused browser
+implementation. Earlier failures and the missing second-run trace copy remain
+recorded above; this passing run does not establish their original timing cause.
+Post-implementation independent review and production delivery remain pending.

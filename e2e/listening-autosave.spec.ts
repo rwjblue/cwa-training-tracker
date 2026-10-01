@@ -30,7 +30,8 @@ test('listening tool changes save measured time once and recover a lost save res
   test.setTimeout(75_000);
   await signIn(page);
   await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
-  await startListening(page);
+  // Opening an empty tool and switching must not create a junk entry.
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
@@ -93,7 +94,8 @@ test('guest inspection retains listening and explicit Finish saves it on this de
       posts.push(request.url());
   });
   await page.goto('/#practice');
-  await startListening(page);
+  // Opening an empty tool and switching must not create a junk entry.
+  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toBeVisible();
   const audio = await startListening(page);

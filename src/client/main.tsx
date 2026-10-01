@@ -738,12 +738,13 @@ function App() {
     if ((activeAccount.current ?? 'guest') !== scope || !isDeviceScopeCurrent(scope, deviceToken))
       return;
     if (result.destination === 'history') mergeSavedEntry(result.entry);
+    const label = entry.minutes === 0 && entry.metadata?.scratchpad ? 'Notes' : 'Practice';
     notify(
       result.destination === 'history'
-        ? 'Practice saved to history.'
+        ? `${label} saved to history.`
         : scope === 'guest'
-          ? 'Practice saved on this device. Find it in your logbook.'
-          : 'Practice saved on this device. Upload will retry when you reconnect.',
+          ? `${label} saved on this device. Find it in your logbook.`
+          : `${label} saved on this device. Upload will retry when you reconnect.`,
     );
   };
   useEffect(() => {

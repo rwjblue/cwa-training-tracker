@@ -70,8 +70,9 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   English words, custom lists, four generated contact scenarios, native Morse
   audio, transcript highlighting, seeking, and logging are available. Inspecting
   app views pauses and retains the current block without a save; returning keeps
-  it paused. Explicit Finish or switching tools automatically saves at least 30
-  credited seconds; shorter practice remains available through Review & save.
+  it paused. Explicit Finish or switching tools automatically saves at least one
+  measured second; Save notes explicitly retains nonempty zero-time text.
+  Review & save still permits checking and canceling an entry.
   Sound controls sit alongside pause, repeat, and shuffle settings.
   The old “77” name is not seven missing vocabulary items. Geographic/seasonal
   coherence and scenario-aware copy checks are current-app improvements.
@@ -107,7 +108,7 @@ These baseline gaps no longer describe the current implementation:
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Playback accounting | Native Play and app Play accrue actual media movement. Pauses, seeks, and buffering do not add idle time; replay counts heard time; the target never caps the session. In-app inspection settles and pauses the same clock without resetting its source subtotals. [Clock](../src/client/practice-clock.ts), [event hook](../src/client/usePracticeClock.ts). | Existing Copy recovery remains separate; restoring unfinished non-copy elapsed time after reload/crash is excluded. Physical locked-iOS behavior still needs a device check. |
 | Focused recall | Assigned Start recall physically pauses audio; app, native and Media Session Play stop recall before playback. Every recall settlement rejects hidden, invalid, backward or at least four-second delayed samples, retains prior credit and announces deliberate resume/correction. Review edits recall within total time while retaining raw measurements and per-file listening; the split survives private saves, history, reports and backups. [Clock](../src/client/practice-clock.ts), [journey](../e2e/recall.spec.ts). | Ordinary manual/external practice intentionally continues off-page until paused; in-app inspection pauses its owner. Actual background audio remains media-derived. No reload/crash elapsed-time recovery or physical-device verification is claimed. Issue #8 validation and independent review are recorded below. |
-| Scratchpad | Notes can be written during practice, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx). | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate. |
+| Scratchpad                           | Notes can be written during practice, explicitly saved at zero time, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx).                                                                                                                                                                                                                                                                   | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate.                                                                                                                                                                                                             |
 | Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Full custom text/scripts remain in memory with the active owner; equal custom label/count/settings deliberately share a descriptive identity. Seamless speed retiming, Stories and public exact recipes remain later issues. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
 | Official recording speeds | Verified native-speed files, shared Assigned/Next default and private device-local exact choices per stable task are supported. New launches prefer a valid scoped override; the player and Today/Plan distinguish future preference from prescribed/current WPM. Actual mixed-file evidence remains native 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [scoped choices](../src/client/task-recording-choice.ts). | Reset/default changes leave current playback intact. Invalid choices fall back visibly, with fenced cleanup/retry; choices join private device backup/restore/clear, independently of shared defaults. #11 independently accepted validation and production evidence are recorded below. Issue #12 adds exact-file difficult marks and Replay 8 sec; advisor aggregation remains later work. |
 | Assigned listening guidance | Seven verified audio families receive concise mental approaches and optional scratchpad prompts beside native playback. Exact public recording metadata precedes conservative title/instruction matching; unknown audio has an instructor-first fallback. [Guidance](../src/shared/listening-guidance.ts). | Original instructions, speed/pass policy, time, completion and private saved evidence retain their existing owners. No proficiency or learned-word inference. #13 independently accepted and deployed; evidence and limits are recorded below. |
@@ -117,7 +118,7 @@ These baseline gaps no longer describe the current implementation:
 | Native copy lifecycle           | Four public modes preserve exact targets/answers, actual trial speeds, score versions, replay/reveal flags, and separate audio/answer/review time. Account/guest-local drafts restore paused; pending saves retain stable IDs and tabs coordinate ownership. [Clock](../src/client/copy-clock.ts), [storage](../src/client/copy-storage.ts), [API](../src/worker/training.ts). | This recovery applies to CopyTrainer, not all tools. Hidden copy practice pauses; answer/review time idles after 30 seconds. Guest/signed-in desktop/mobile Chromium journeys and accessibility checks pass; physical-device behavior is unverified. |
 | Native copy history and reports      | Validated per-attempt evidence appears in history and printable reports, survives export/import, and does not sum scores across rounds. New Code Groups use `native-copy-v2`; older attempts retain `native-copy-v1` scores rather than being regraded. [Results](../src/client/CopyResult.tsx), [report details](../src/shared/copy-report.ts).                                                                                                                                                                              | Code Groups uses LCWO's lower-error comparison choice with deliberate extra-group and full-text handling. Native normalization, corpora, timing and other scoring details still differ from LCWO; exact LCWO parity and advisor-form submission are not claimed.                                                                                                           |
 | Published course coverage       | All four published catalogs use official links and factual metadata. Native copy recipes replace supported LCWO launches; source discrepancies are documented. [Coverage and counts](curriculum.md).                                                                                                                                                                           | Beginner/Advanced non-LCWO tools remain linked or use existing workflows. Prototypes are not defaults; automatic progression is absent.                                                                                                              |
-| Inspecting and finishing practice | Today, Week, Report and other in-app views pause and retain one scoped block, with a reachable Return action and no autoplay or automatic save. Explicit Finish/tool or assignment switch uses one guarded save/discard decision; listening and public timed practice save at least 30 credited seconds. Copy drafts, Runner results and immutable pending bodies retain their owners. [Navigation](../src/client/practice-navigation.ts), [Studio](../src/client/PracticeStudio.tsx). | Unfinished elapsed-time reload/crash recovery is excluded. A running Runner stops into an acknowledged partial result rather than resuming the live contest. Queued uploads retain their account scope; guest history stays local until explicitly saved after sign-in. Browser and independent acceptance are tracked in the issue #6 ledger below. |
+| Inspecting and finishing practice    | Today, Week, Report and other in-app views pause and retain one scoped block, with a reachable Return action and no autoplay or automatic save. Explicit Finish/tool or assignment switch uses one guarded save/discard decision; all non-copy/non-Runner timed practice saves at least one measured second; nonempty zero-time scratchpad notes have an explicit Save notes action. Copy drafts, Runner results and immutable pending bodies retain their owners. [Navigation](../src/client/practice-navigation.ts), [Studio](../src/client/PracticeStudio.tsx). | Unfinished elapsed-time reload/crash recovery is excluded. A running Runner stops into an acknowledged partial result rather than resuming the live contest. Queued uploads retain their account scope; guest history stays local until explicitly saved after sign-in. Browser and independent acceptance are tracked in the issue #6 ledger below.                                         |
 | Lock-screen information         | Official recordings and generated Morse share Media Session artwork and controls. Official titles include the session and selected recording, with actual WPM in the album; generated tracks name the active word list or QSO scenario. [Media Session](../src/client/media-session.ts).                                                                                       | Browser metadata, PNG availability, and ownership are tested; physical iPhone artwork and locked playback still need device verification.                                                                                                            |
 | Native spoken repeats               | Both built-in lists use checked-in generated answer clips. Three Morse plays, speech, and pauses form one native WAV with seeking, pause/resume, looping and media-derived credit. Custom spoken lists require published words. [Listening](../src/client/ListeningTrainer.tsx), [audio provenance](spoken-audio.md), [browser regression](../e2e/spoken-answers.spec.ts).                                                                                                             | Real media decoding/progression and desktop/mobile fit are covered; physical iPhone lock-screen verification remains outstanding. A shuffled round loops its current order; New round reshuffles.                                                                                                                                                    |
 | Duration and explicit completion | The universal 15-minute fallback is removed. Elapsed time and an optional goal are separate from an assigned exercise's explicit Complete/Reopen action; completion is available without starting audio or creating a practice entry. Unknown manual-entry durations require actual learner input. [Studio](../src/client/PracticeStudio.tsx), [plan model](../src/shared/plan.ts). | Completion is a learner decision, not proof of a full listening pass or attainment of a proficiency target. Practice credit continues to come from saved actual time. |
@@ -1024,3 +1025,94 @@ policy. Issue #13 remains open for publication, although local implementation,
 independent acceptance and production delivery are complete.
 
 Delivery comment: https://github.com/rwjblue/cwa-training-tracker/issues/13#issuecomment-5937759827.
+
+## Issue #14 implementation ledger — short practice and zero-time notes
+
+Rechecked the current live issue body/comments (open, none), native dependency
+lists (empty) and body dependencies #2/#5/#6 (closed, delivery evidence reread).
+Original read-only pin `3106c9b8bf20b63be069f4019467cb565cdd17ec`,
+`client.ts:2291–2399`, permits actual zero duration and retains scratchpad/context.
+Companion preserves precise fractional seconds rather than porting original
+flooring, default durations or automatic completion conventions. Approved finding
+47 supersedes earlier 30-second/manual-discard parity recommendations.
+
+The existing Studio capture/shared immutable queue now retains at least one
+actual measured second on deliberate Finish or assignment/tool switch, including
+assigned audio, manual, external and sending blocks and public/generated timed
+practice. Inspection still pauses and retains the current block without saving.
+Explicit Review & save retains cancellation. Copy and Runner keep their separate
+completed-result workflows; this does not invent a generic simulator/copy timer.
+
+Save notes is reachable beside the existing scratchpad, enabled only for nonempty
+learner text at actual zero while stopped. It retains original text, exact zero,
+task/source/review purpose and stable identity through the same queue, while
+excluding selected/unplayed generated source summaries. It grants no time/pass
+or completion credit. Empty/whitespace/subsecond blocks produce no automatic junk
+records. In-flight/failed save locks preserve the frozen block; Retry uses the
+same body, with clearing/reset only after an actual durable device or server
+receipt. Destination feedback distinguishes private history, guest device and
+account device awaiting upload. Existing account-generation/device fences,
+private history, portable export/import and report calculations remain owners;
+no schema/binding/config change requires generated types.
+
+Focused capture/queue tests cover one-second and fractional boundaries, invalid
+samples, exact-zero/empty/running eligibility, no unheard evidence, review
+provenance and concurrent uncertain receipt retries. A real-SQL Worker journey
+covers zero notes plus 12-second partial hearing, exact duplicate receipts, private
+history isolation, portable restore and totals/progress without false completion.
+Its initial fixture omitted native-1x method and used noncanonical dates/property;
+those were corrected without relaxing validation. Initial browser guest save
+passed but its next fixture incorrectly requested signed-in Inspect Today;
+the retained trace identified actual guest Inspect Overview. The mobile repeat
+was stopped after reaching that same missing control. The fixture control was
+corrected without changing product logic or timeouts. Browser/full regression,
+post-implementation independent review and production delivery remain pending.
+
+
+Desktop keyboard/mobile touch notes journeys pass 2/2 (30.5/32.5 seconds) on
+the final implementation. They verify guest zero notes/no empty records/device
+receipt, private review-zero notes, storage refusal plus a lost committed server
+response, two exactly equal POST bodies yielding one row, frozen controls and
+visible retry focus, inspection/return after failure, actual native assigned and
+generated listening above 12 seconds/below 14 seconds, canceled review, zero
+passes/no completion, opened history scratchpads and actual backup download/import.
+Six named Axe reports are empty; surrounding controls, retry and history screenshots
+are retained. Assigned external Finish retains exactly 12 manual seconds and
+notes at both widths, with no save from inspection and cleared notes after receipt.
+
+The media fixture initially used an arbitrary example.test URL blocked by the
+production media policy. It was corrected to an exact known public URL with
+synthetic PCM, without fetching course audio or changing CSP. The first complete
+73-test run had 71 passes and two new-fixture disclosure-selector failures: retained
+Studio label and history summary both matched Scratchpad. The trace identified
+the ambiguity; the probe now opens the semantic summary. No product evidence,
+credit assertions or timeout was weakened. Self-review added focus on the existing
+retry control for active notes-save failure, including return from inspection,
+so an error above the player is reachable from the lower notes area. Scope-owned
+formatting and typecheck, all 885 tests/48 files and build pass. Final complete
+browser regression and independent post-commit gate remain pending.
+
+
+A subsequent complete run passed 72/73 journeys in 13.3 minutes, including both
+#14 notes journeys (30.2/33.7 seconds). The unchanged mobile course-replay test
+failed after resetting and enabling automatic replay at its line 169 (expected
+one observed completed pass, got zero); desktop passed. Root inspected the failed
+assertion, context and trace. A mistaken copy glob then failed before the next
+harness removed that trace, so no separately retained trace is claimed for this
+run; the assertion/location remain in the tool transcript. No original native
+position/performance log establishes its cause.
+
+An ignored passive probe copies the entire canonical replay scenario unchanged,
+except its helper import and appended Node-persistent native-event collection.
+Both widths pass (1.1/1.2 minutes). These logs survive reload and are retained in
+ignored progress evidence. This validates subsequent complete replay workflows;
+it does not reconstruct or resolve the earlier failure. No clock/source/credit
+assertion/timeout was changed. Final canonical regression remains pending.
+
+
+The final unchanged canonical browser run passes all 73 journeys in 14.0 minutes,
+including desktop/mobile native replay and both notes journeys (30.1/32.6 seconds).
+Product file hashes match the required check/885-test/build and focused browser
+implementation. Earlier failures and the missing second-run trace copy remain
+recorded above; this passing run does not establish their original timing cause.
+Post-implementation independent review and production delivery remain pending.

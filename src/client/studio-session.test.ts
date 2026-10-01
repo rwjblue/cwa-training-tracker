@@ -3,6 +3,7 @@ import type { PracticeSession } from '../shared/training';
 import {
   loadStudioNotes,
   clearSavedStudioNotes,
+  studioNotesSession,
   saveStudioNotes,
   studioSession,
   StudioSaveCoordinator,
@@ -195,8 +196,9 @@ it('drops another tab’s stale notes memory before a lifecycle notification is 
   }
 });
 
-it('auto-saves exact measured practice from 30 seconds, without rounding a short session up', () => {
-  expect(studioSession(input(29.999))).toBeUndefined();
+it('saves exact measured practice from one second without rounding or discarding short work', () => {
+  for (const seconds of [0, 0.999, -1, NaN, Infinity])
+    expect(studioSession(input(seconds))).toBeUndefined();
   expect(studioSession(input())).toMatchObject({
     id: 'studio:first',
     createdAt: '2026-09-30T01:00:00.000Z',
@@ -213,8 +215,8 @@ it('auto-saves exact measured practice from 30 seconds, without rounding a short
     },
   });
   expect(studioSession(input(30.25))?.minutes).toBe(30.25 / 60);
-  // Explicit review can still save a shorter session.
-  expect(studioSession(input(1), 1)?.minutes).toBe(1 / 60);
+  expect(studioSession(input(1))?.minutes).toBe(1 / 60);
+  expect(studioSession(input(12.125))?.minutes).toBe(12.125 / 60);
 });
 
 it('captures assignment, actual recording sources and recall without inventing a shared speed', () => {
@@ -498,10 +500,10 @@ describe('navigation save coordination', () => {
     );
   });
 
-  it('does not call persistence for short practice or retain its discarded time', async () => {
+  it('does not persist subsecond time or carry it into the next measured block', async () => {
     const coordinator = new StudioSaveCoordinator();
     const save = vi.fn(async () => {});
-    await expect(coordinator.flush(studioSession(input(29.999)), save)).resolves.toBe('short');
+    await expect(coordinator.flush(studioSession(input(0.999)), save)).resolves.toBe('short');
     expect(save).not.toHaveBeenCalled();
     await coordinator.flush(studioSession(input(30)), save);
     expect(save).toHaveBeenCalledTimes(1);
@@ -630,3 +632,148 @@ it('snapshots difficult marks only for actual heard files and freezes them acros
     (studioSession(value, 0)?.metadata?.evidence as typeof evidence).recordings[0],
   ).not.toHaveProperty('marks');
 });
+
+it('only captures deliberate nonempty notes at actual zero with no unplayed source evidence', () => {
+  const value = input(0);
+  value.scratchpad = '  A useful note\nwith original spacing.  ';
+  const entry = studioNotesSession(value)!;
+  expect(entry).toMatchObject({
+    id: value.identity.id,
+    minutes: 0,
+    metadata: { elapsedSeconds: 0, recallSeconds: 0, scratchpad: value.scratchpad },
+  });
+  expect(entry.metadata?.evidence).toMatchObject({
+    type: 'timed',
+    measurement: { seconds: 0, recallSeconds: 0 },
+    recordings: [],
+  });
+  expect(entry.metadata?.evidence).not.toHaveProperty('generatedListening');
+  expect(entry.metadata?.wordList).toBeUndefined();
+  expect(entry.characterWpm).toBeUndefined();
+  expect(studioSession(value)).toBeUndefined();
+  for (const scratchpad of ['', ' \n\t'])
+    expect(studioNotesSession({ ...value, scratchpad })).toBeUndefined();
+  for (const seconds of [-1, 0.001, 0.99, 1, 12, NaN, Infinity])
+    expect(
+      studioNotesSession({ ...value, measured: { ...value.measured, seconds } }),
+    ).toBeUndefined();
+  expect(
+    studioNotesSession({ ...value, measured: { ...value.measured, running: true } }),
+  ).toBeUndefined();
+  expect(
+    studioNotesSession({ ...value, measured: { ...value.measured, recallSeconds: 0.1 } }),
+  ).toBeUndefined();
+});
+
+it('keeps assigned review provenance on zero notes without measured passes or completion', () => {
+  const value = input(0);
+  value.launch = {
+    id: 'launch:zero-notes',
+    purpose: 'review',
+    task: {
+      id: 'task:zero-notes',
+      title: 'Synthetic assigned listening',
+      kind: 'listening',
+      done: false,
+      notes: '',
+      createdAt: value.identity.createdAt,
+      exercise: {
+        type: 'audio',
+        url: 'https://example.test/zero.mp3',
+        characterWpm: 10,
+        minimumPasses: 3,
+      },
+    },
+    activity: {
+      type: 'audio',
+      url: 'https://example.test/zero.mp3',
+      characterWpm: 10,
+      minimumPasses: 3,
+    },
+  };
+  const entry = studioNotesSession(value)!;
+  expect(entry).toMatchObject({
+    minutes: 0,
+    source: 'timer',
+    metadata: {
+      plannedTaskId: 'task:zero-notes',
+      practicePurpose: 'review',
+      assignedRecordingUrl: 'https://example.test/zero.mp3',
+      scratchpad: value.scratchpad,
+    },
+  });
+  expect(entry.metadata?.recordings).toBeUndefined();
+  expect(entry.metadata?.recordingUrl).toBeUndefined();
+  expect(entry).not.toHaveProperty('done');
+});
+
+it('freezes one notes-only identity across repeated clicks, failed acknowledgement and exact retry', async () => {
+  const coordinator = new StudioSaveCoordinator();
+  const original = studioNotesSession(input(0))!;
+  let fail!: (reason: Error) => void;
+  const save = vi.fn(
+    () =>
+      new Promise<void>((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  const first = coordinator.flush(original, save);
+  expect(coordinator.flush(original, save)).toBe(first);
+  await Promise.resolve();
+  fail(new Error('Uncertain receipt'));
+  await expect(first).rejects.toThrow('Uncertain receipt');
+  const retry = vi.fn(async () => {});
+  const changed = input(0);
+  changed.identity.id = 'studio:different';
+  changed.scratchpad = 'New notes';
+  await expect(coordinator.flush(studioNotesSession(changed), retry)).resolves.toBe('saved');
+  expect(retry).toHaveBeenCalledExactlyOnceWith(original);
+  expect(save).toHaveBeenCalledOnce();
+  await expect(coordinator.flush(undefined, retry)).resolves.toBe('short');
+  expect(retry).toHaveBeenCalledOnce();
+});
+
+it.each([
+  { type: 'timer' as const },
+  { type: 'external' as const, url: 'https://example.test/synthetic-key' },
+  {
+    type: 'sending' as const,
+    url: 'https://example.test/synthetic-scales',
+    sections: ['warm-up' as const],
+  },
+])(
+  'captures twelve measured assigned $type seconds without unrelated listening metadata',
+  (activity) => {
+    const value = input(12);
+    value.launch = {
+      id: 'launch:short-assigned',
+      purpose: 'assigned',
+      activity,
+      task: {
+        id: 'task:short-assigned',
+        title: 'Synthetic timed assignment',
+        kind: 'sending',
+        targetMinutes: 1,
+        done: false,
+        notes: '',
+        createdAt: value.identity.createdAt,
+      },
+    };
+    const entry = studioSession(value)!;
+    expect(entry).toMatchObject({
+      minutes: 12 / 60,
+      kind: 'sending',
+      source: 'timer',
+      metadata: {
+        plannedTaskId: value.launch!.task!.id,
+        practicePurpose: 'assigned',
+        scratchpad: value.scratchpad,
+        elapsedSeconds: 12,
+      },
+    });
+    expect(entry.metadata?.evidence).not.toHaveProperty('generatedListening');
+    expect(entry.metadata?.recordings).toBeUndefined();
+    expect(entry.characterWpm).toBeUndefined();
+    expect(value.launch!.task!.done).toBe(false);
+  },
+);

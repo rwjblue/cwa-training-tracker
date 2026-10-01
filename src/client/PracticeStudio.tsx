@@ -73,6 +73,8 @@ import {
   loadStudioNotes,
   saveStudioNotes,
   studioSession,
+  studioNotesSession,
+  STUDIO_AUTOSAVE_SECONDS,
   StudioSaveCoordinator,
 } from './studio-session';
 import './practice-studio.css';
@@ -199,7 +201,6 @@ export default function PracticeStudio({
   const [copyUnsaved, setCopyUnsaved] = useState(false);
   const isCopy = activity?.type === 'copy' || (!assigned && publicCopy);
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
-  const automaticSave = !assigned || activity?.type === 'audio';
   const recording = useRef<HTMLAudioElement>(null);
   const recordingPlayRequest = useRef(0);
   const recordingPlayIntent = useRef(false);
@@ -309,7 +310,14 @@ export default function PracticeStudio({
   const completionFlight = useRef<Promise<boolean> | undefined>(undefined);
   const [savingCompletion, setSavingCompletion] = useState(false);
   const [completionError, setCompletionError] = useState('');
-  const saveRetryIntent = useRef<'navigation' | 'completion'>('navigation');
+  const saveRetryIntent = useRef<'navigation' | 'completion' | 'notes'>('navigation');
+  const retrySaveControl = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    // Notes sit below the player. Bring a failed save and its retry into view,
+    // without moving focus away from a view the learner is inspecting.
+    if (active && saveFailed && !savingNavigation && saveRetryIntent.current === 'notes')
+      retrySaveControl.current?.focus();
+  }, [active, saveFailed, savingNavigation]);
   const beforeLeaveRef = useRef<() => Promise<boolean>>(async () => true);
   const beforeInspectRef = useRef<() => Promise<void>>(async () => {});
   const canPractice = () =>
@@ -512,20 +520,56 @@ export default function PracticeStudio({
     saveCoordinator.current.reset();
     setConfirmReset(false);
   };
-  const captureSession = (minimumSeconds = 30) =>
-    studioSession(
-      {
-        identity: identity(),
-        measured: timer.snapshot(),
-        preferences,
-        generatedListening: generatedListening.current.snapshot(),
-        recordingMarks: taskRecordingMarks,
-        scratchpad,
-        timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-        launch,
-      },
-      minimumSeconds,
-    );
+  const sessionInput = () => ({
+    identity: identity(),
+    measured: timer.snapshot(),
+    preferences,
+    generatedListening: generatedListening.current.snapshot(),
+    recordingMarks: taskRecordingMarks,
+    scratchpad,
+    timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    launch,
+  });
+  const captureSession = (minimumSeconds = STUDIO_AUTOSAVE_SECONDS) =>
+    studioSession(sessionInput(), minimumSeconds);
+  const saveSession = (
+    capture: () => PracticeSession | undefined,
+    intent: 'navigation' | 'notes',
+  ): Promise<boolean> => {
+    if (navigationFlight.current) return navigationFlight.current;
+    navigationLocked.current = true;
+    setSavingNavigation(true);
+    pauseTimer();
+    navigationFlight.current = (async () => {
+      try {
+        const outcome = await saveCoordinator.current.flush(capture(), onAutoSave);
+        if (!currentDevice()) return false;
+        if (outcome === 'saved') changeScratchpad('');
+        resetTimer();
+        setError('');
+        setSaveFailed(false);
+        navigationLocked.current = false;
+        return true;
+      } catch (error) {
+        if (!currentDevice()) return false;
+        saveRetryIntent.current = intent;
+        setError(
+          `Your session is still here. ${error instanceof Error ? error.message : 'The session could not be saved.'} Try saving again before continuing.`,
+        );
+        setSaveFailed(true);
+        return false;
+      } finally {
+        if (currentDevice()) setSavingNavigation(false);
+        navigationFlight.current = undefined;
+      }
+    })();
+    return navigationFlight.current;
+  };
+  const saveNotes = () => {
+    if (!currentDevice() || completionFlight.current || navigationFlight.current) return;
+    if (timer.snapshot().seconds !== 0 || !scratchpad.trim()) return;
+    void saveSession(() => studioNotesSession(sessionInput()), 'notes');
+  };
   const logTimedSession = () => {
     if (!canPractice()) return;
     pauseTimer();
@@ -555,43 +599,8 @@ export default function PracticeStudio({
             'Finish or switch Morse Runner? Your unsaved run and results will be discarded.',
           ),
       );
-    if (!automaticSave) {
-      pauseTimer();
-      const unsaved = timer.snapshot().seconds > 0 || scratchpad.length > 0;
-      return Promise.resolve(
-        !unsaved ||
-          window.confirm(
-            'Finish or switch this practice? Unsaved time will be discarded. Your scratchpad will remain on this device.',
-          ),
-      );
-    }
-    navigationLocked.current = true;
-    setSavingNavigation(true);
     pauseTimer();
-    navigationFlight.current = (async () => {
-      try {
-        const outcome = await saveCoordinator.current.flush(captureSession(), onAutoSave);
-        if (!currentDevice()) return false;
-        if (outcome === 'saved') changeScratchpad('');
-        resetTimer();
-        setError('');
-        setSaveFailed(false);
-        navigationLocked.current = false;
-        return true;
-      } catch (error) {
-        if (!currentDevice()) return false;
-        saveRetryIntent.current = 'navigation';
-        setError(
-          `Your session is still here. ${error instanceof Error ? error.message : 'The session could not be saved.'} Try saving again before continuing.`,
-        );
-        setSaveFailed(true);
-        return false;
-      } finally {
-        if (currentDevice()) setSavingNavigation(false);
-        navigationFlight.current = undefined;
-      }
-    })();
-    return navigationFlight.current;
+    return saveSession(() => captureSession(), 'navigation');
   };
   const changeCompletion = (done: boolean) => {
     if (!currentDevice()) return;
@@ -1040,7 +1049,7 @@ export default function PracticeStudio({
                   </span>
                   <button
                     className="text-button"
-                    disabled={savingCompletion || savingNavigation}
+                    disabled={savingCompletion || savingNavigation || saveFailed}
                     onClick={() => changeCompletion(false)}
                   >
                     {savingCompletion ? 'Reopening…' : 'Reopen exercise'}
@@ -1050,7 +1059,7 @@ export default function PracticeStudio({
                 <>
                   <button
                     className="button dark"
-                    disabled={savingCompletion || savingNavigation}
+                    disabled={savingCompletion || savingNavigation || saveFailed}
                     onClick={() => changeCompletion(true)}
                   >
                     <CheckCheck size={17} />
@@ -1153,10 +1162,12 @@ export default function PracticeStudio({
           )}
           {saveFailed && (
             <button
+              ref={retrySaveControl}
               className="button outline"
               disabled={savingNavigation || savingCompletion}
               onClick={() => {
                 if (saveRetryIntent.current === 'completion') changeCompletion(true);
+                else if (saveRetryIntent.current === 'notes') saveNotes();
                 else void beforeLeave();
               }}
             >
@@ -1829,15 +1840,30 @@ export default function PracticeStudio({
                   )}
                   <p id="scratchpad-help" className="field-hint">
                     {notesRemembered
-                      ? 'Included with saved practice. Notes from sessions under 30 seconds stay on this device for this tool.'
+                      ? 'Included with saved practice. Unsaved notes stay on this device for this tool.'
                       : 'Included with saved practice. Your browser cannot store notes; unsaved notes last until you reload.'}
+                  </p>
+                  <button
+                    className="button outline"
+                    disabled={timer.seconds !== 0 || running || !scratchpad.trim()}
+                    onClick={saveNotes}
+                    aria-describedby="notes-save-help"
+                  >
+                    Save notes
+                  </button>
+                  <p id="notes-save-help" className="field-hint">
+                    Save nonempty notes at zero time{' '}
+                    {accountId ? 'to your private history' : 'on this device'}. This adds no
+                    practice time or passes and does not complete an exercise. Use Finish practice
+                    or Review &amp; save for measured practice.
                   </p>
                 </div>
                 {isSending && (
                   <p className="sending-save-help">
-                    {automaticSave
-                      ? `Inspect other views without saving. Finish practice or switch tools to save 30 seconds or more${accountId ? ' to your log' : ' on this device'}; Review & save includes shorter practice.`
-                      : 'Inspect other views without saving. Review & save before finishing or switching to keep your time linked to this exercise.'}
+                    Inspect other views without saving. Finish practice or switch tools to save at
+                    least one measured second{' '}
+                    {accountId ? 'to your private history' : 'on this device'}. Review &amp; save
+                    lets you check the measured entry first.
                   </p>
                 )}
                 {!assigned && tool === 'free' && (
@@ -1951,11 +1977,10 @@ export default function PracticeStudio({
                         <ArrowRight size={14} />
                       </button>
                       <p className="studio-save-help">
-                        {automaticSave
-                          ? `Inspect other views without saving. Finish practice or switch tools to save 30 seconds or more${accountId ? ' to your log' : ' on this device'}. Review & save includes shorter practice.`
-                          : launch?.task && onTaskCompletion
-                            ? 'Review your measured time before saving, or choose Complete exercise to save it and mark this exercise done.'
-                            : 'This opens a practice entry for you to review. Nothing is added to your log until you choose Save practice.'}
+                        Inspect other views without saving. Finish practice or switch tools to save
+                        at least one measured second{' '}
+                        {accountId ? 'to your private history' : 'on this device'}. Review &amp;
+                        save lets you check the measured entry first.
                       </p>
                     </>
                   )}
@@ -2011,9 +2036,8 @@ export default function PracticeStudio({
                     {activity?.type === 'audio'
                       ? 'Recall counts only observed time with this page visible. '
                       : 'The manual timer keeps counting practice away from this page until you pause it. Inspecting another app view pauses this block. '}
-                    {automaticSave
-                      ? 'Practice under 30 seconds is not logged automatically. Review and save before reloading to keep unfinished time.'
-                      : 'Review and save before finishing or switching to keep your practice time.'}
+                    Finish or switch saves at least one measured second. Save notes explicitly at
+                    zero time. Save before reloading to keep unfinished time.
                   </p>
                   <div className="studio-manual-log">
                     <h3>Already practiced?</h3>

@@ -205,9 +205,9 @@ inspection, and retain account/device disposal checks. This covers the running
 app only; it does not test or introduce elapsed-time restoration after reload.
 Separately log the same assignment from Today while its block is paused: stored
 scratchpad, measured time and source position must stay with that block. Only its
-originating reviewed save may clear those notes. A manual Finish cancels cleanly,
-discards unsaved elapsed time when confirmed, and explains that local notes remain;
-fresh practice starts at zero with that retained scratchpad.
+originating reviewed save may clear those notes. Assigned manual/external/sending Finish retains at least one measured second
+and its notes through the shared queue; canceled review and inspection retain the
+current block without saving. Fresh practice starts at zero after its receipt.
 
 For generated-listening evidence, protect the actual applied round/track rather
 than final selected controls. Pure tests cover stale source preferences, retained
@@ -241,8 +241,15 @@ For automatic practice saves, test the queue below the browser: successive guest
 rounds, immutable retries after lost responses, storage/network failure, and
 stopping a flush when the authenticated account changes. Browser journeys prove
 automatic grading saves, immediate next-round focus, word progress and period
-replay, and explicit listening Finish/tool switch above/below the 30-second
-threshold with actual media movement. Visiting another app view must only pause
+replay, and explicit listening Finish/tool switch from one measured second with actual
+media movement. Boundary tests reject empty and subsecond accidental blocks.
+Exercise explicit nonempty notes at exact zero through the same frozen queue,
+including guest-device versus private-history feedback, refused storage plus a
+lost committed server response, exact retry, unchanged requirements/completion,
+and real history/backup download/import. Selected unplayed content is not heard
+evidence. Measured assigned manual/external/sending time is retained on Finish
+using the same one-second boundary; browser clocks may accelerate those manual
+timers, while native listening still needs actual media movement. Visiting another app view must only pause
 and retain the block, with no automatic save. Guest local history must survive
 reload and support explicitly saving a selected result after sign-in. Background
 upload acknowledgements must not reset a newly started session. Keep notes and

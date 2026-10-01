@@ -5491,3 +5491,110 @@ describe('account dataset lifecycle authority', () => {
       ).toMatchObject({ identity: lifecycle, outcome: 'canceled' });
   });
 });
+
+describe('short measured practice and deliberate zero notes', () => {
+  it('retains exact time and notes through idempotency, private history, restore and reports without completion', async () => {
+    const auth = await signIn('short-notes-owner@example.test');
+    const task: PlannedTask = {
+      id: 'short-notes-task',
+      title: 'Synthetic assigned listening',
+      kind: 'listening',
+      done: false,
+      notes: '',
+      dueDate: '2026-09-30',
+      targetMinutes: 1,
+      createdAt: '2026-09-30T12:00:00.000Z',
+      exercise: { type: 'audio', url: 'https://example.test/synthetic.mp3', minimumPasses: 3 },
+    };
+    expect((await request('/api/plan', 'POST', task, auth.cookie)).status).toBe(201);
+    const zero: PracticeSession = {
+      ...entry('zero-useful-notes'),
+      kind: 'listening',
+      date: task.dueDate!,
+      source: 'timer',
+      minutes: 0,
+      metadata: {
+        elapsedSeconds: 0,
+        recallSeconds: 0,
+        scratchpad: '  Synthetic private notes\nretained exactly.  ',
+        practiceTool: 'audio',
+        assignedRecordingUrl: task.exercise!.type === 'audio' ? task.exercise!.url : '',
+        plannedTaskId: task.id,
+        practicePurpose: 'assigned',
+      },
+    };
+    const partial: PracticeSession = {
+      ...zero,
+      id: 'twelve-second-partial',
+      minutes: 12 / 60,
+      metadata: {
+        ...zero.metadata,
+        elapsedSeconds: 12,
+        scratchpad: 'Twelve actual seconds.',
+        recordings: [
+          {
+            url: 'https://example.test/synthetic.mp3',
+            seconds: 12,
+            passes: {
+              version: 1,
+              method: 'native-1x',
+              durations: [{ durationSeconds: 30, completedPasses: 0 }],
+            },
+          },
+        ],
+      },
+    };
+    const review: PracticeSession = {
+      ...zero,
+      id: 'zero-review-notes',
+      metadata: { ...zero.metadata, practicePurpose: 'review', scratchpad: 'Extra review note.' },
+    };
+    const saved: PracticeSession[] = [];
+    for (const input of [zero, partial, review]) {
+      const created = await request('/api/entries', 'POST', input, auth.cookie);
+      expect(created.status, JSON.stringify(await created.clone().json())).toBe(201);
+      const result = ((await created.json()) as { entry: PracticeSession }).entry;
+      saved.push(result);
+      expect(result.minutes).toBe(input.minutes);
+      expect(result.metadata?.scratchpad).toBe(input.metadata?.scratchpad);
+      const retry = await request('/api/entries', 'POST', input, auth.cookie);
+      expect(retry.status).toBe(200);
+      expect(await retry.json()).toMatchObject({ duplicate: true, entry: result });
+    }
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions).toHaveLength(3);
+    expect(exported.plan).toEqual([task]);
+    const progress = dailyPlanSummary(exported.plan!, [], exported.sessions, task.dueDate!);
+    expect(progress.assignedToday[0]).toMatchObject({
+      loggedMinutes: 0.2,
+      status: 'started',
+      task: { done: false },
+    });
+    const onlyNotes = summarizePractice([saved[0], saved[2]], task.dueDate!);
+    expect(onlyNotes.todayMinutes).toBe(0);
+    expect(onlyNotes.bestStreak).toBe(0);
+    expect(
+      dailyPlanSummary([task], [], [saved[0], saved[2]], task.dueDate!).assignedToday[0],
+    ).toMatchObject({ loggedMinutes: 0, todayMinutes: 0, status: 'ready', task: { done: false } });
+    expect(summarizePractice(saved, task.dueDate!).todayMinutes).toBe(0.2);
+    const other = await signIn('short-notes-other@example.test');
+    expect(
+      (await request('/api/entries/zero-useful-notes', 'GET', undefined, other.cookie)).status,
+    ).toBe(404);
+    const privateHistory = (await (
+      await request('/api/entries', 'GET', undefined, other.cookie)
+    ).json()) as { entries: PracticeSession[] };
+    expect(privateHistory.entries).toEqual([]);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    const restored = (await (
+      await request('/api/export', 'GET', undefined, other.cookie)
+    ).json()) as TrainingExport;
+    expect(restored.sessions).toEqual(exported.sessions);
+    expect(restored.plan).toEqual(exported.plan);
+  });
+});
