@@ -1,6 +1,7 @@
 import {
   copyToneHz,
   normalizeCopyText,
+  scoreCopyAttemptText,
   summarizeCopyAttempt,
   validateCopyAttempt,
   type CopyAttempt,
@@ -101,6 +102,11 @@ export function copyAttemptReportDetails(attempt: CopyAttempt): string[] {
       lines.push(
         `Native copy: ${summary.distance} edits · ${displayNumber(summary.errorPercent)}% errors · ${displayNumber(summary.accuracy)}% accuracy`,
       );
+      const score = scoreCopyAttemptText(attempt);
+      if (score?.groupDistance !== undefined)
+        lines.push(
+          `Scoring comparisons: ${score.groupDistance} grouped edits · ${score.wholeTextDistance} whole-text edits · lower count used`,
+        );
     } else {
       lines.push(
         `${summary.correct}/${summary.answered} submitted answers correct · ${summary.answered}/${summary.total} trials answered · ${summary.points} points · ${summary.maxSpeed > 0 ? `${summary.maxSpeed} WPM highest correctly copied` : 'no correctly copied speed'}`,
