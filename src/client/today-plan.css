@@ -57,6 +57,12 @@
 .today-plan-next-class > svg {
   flex-shrink: 0;
 }
+.today-plan-session-hint {
+  margin: -6px 25px 17px;
+  color: #50614a;
+  font-size: 13px;
+  line-height: 1.6;
+}
 .today-plan-next-class strong {
   display: inline;
   margin-left: 6px;
@@ -417,6 +423,10 @@
   .today-plan-next-class strong {
     display: block;
     margin-left: 0;
+  }
+  .today-plan-session-hint {
+    margin-left: 18px;
+    margin-right: 18px;
   }
   .today-plan-group {
     padding: 0 18px;

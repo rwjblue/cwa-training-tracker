@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import type {
@@ -2512,6 +2512,7 @@ function SessionModal({
   onClose: () => void;
   onSaved: (entry: PracticeSession, destination: 'history' | 'device') => void;
 }) {
+  const sessionHelpId = useId();
   const saveButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false);
   const mounted = useRef(true);
@@ -2741,7 +2742,11 @@ function SessionModal({
             </label>
             <label className="field">
               Academy session <span className="label-hint">optional</span>
-              <select value={form.lesson} onChange={(e) => update('lesson', e.target.value)}>
+              <select
+                value={form.lesson}
+                aria-describedby={sessionHelpId}
+                onChange={(e) => update('lesson', e.target.value)}
+              >
                 <option value="">No session selected</option>
                 {Array.from({ length: 16 }, (_, i) => (
                   <option key={i} value={i + 1}>
@@ -2751,6 +2756,11 @@ function SessionModal({
               </select>
             </label>
           </div>
+          <p id={sessionHelpId} className="field-hint">
+            Choose the session whose exercises you practiced: the upcoming session for preparation,
+            or the earlier session for review. Logging from an exercise selects its session for you.
+            Leave this blank for general practice.
+          </p>
           <div className="form-grid three">
             <label className="field">
               Character WPM

@@ -172,6 +172,20 @@ test('course dates populate Today with playable assignments and preserve linked 
       /WD101[-_]10/i.test(task.exercise.url ?? ''),
   );
   expect(assigned).toBeTruthy();
+  await expect(
+    panel.getByText(/Record practice under the session shown on the exercise/),
+  ).toBeVisible();
+  await page
+    .locator('.page-heading')
+    .getByRole('button', { name: 'Log practice', exact: true })
+    .click();
+  const sessionSelect = page.getByRole('combobox', {
+    name: 'Academy session optional',
+    exact: true,
+  });
+  await expect(sessionSelect).toHaveValue('');
+  await expect(sessionSelect).toHaveAccessibleDescription(/Leave this blank for general practice/);
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await page.screenshot({ path: '.tmp/curriculum-today-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
@@ -402,6 +416,37 @@ test('course dates populate Today with playable assignments and preserve linked 
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
     savedBeforeCompletion,
   );
+
+  // The next class can advance while review still belongs to the earlier exercise.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.clock.setFixedTime(new Date('2026-10-09T16:00:00Z'));
+  await page.reload();
+  await page.addStyleTag({
+    content: '*,*::before,*::after{animation:none!important;transition:none!important}',
+  });
+  await expect(panel.getByText(/Next class/)).toContainText('Session 2');
+  await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
+  const earlier = plan.find(
+    (task: { id: string; lesson?: number }) => task.lesson === 1 && task.id !== assigned.id,
+  );
+  const earlierRow = panel
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: earlier.title, exact: true }) })
+    .filter({ hasText: `Session 1 · Day ${earlier.curriculum.day}` });
+  await earlierRow.getByRole('button', { name: 'Log practice', exact: true }).click();
+  await expect(sessionSelect).toHaveValue('1');
+  await expect(sessionSelect).toHaveAccessibleDescription(/earlier session for review/);
+  await expectAccessible(page, 'practice-session-desktop');
+  await page.screenshot({ path: '.tmp/practice-session-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(sessionSelect).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await expectAccessible(page, 'practice-session-mobile');
+  await page.screenshot({ path: '.tmp/practice-session-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await page.screenshot({ path: '.tmp/today-session-mobile.png', fullPage: true });
 });
 
 test('an exercise without a time target can be completed and reopened without logging practice', async ({

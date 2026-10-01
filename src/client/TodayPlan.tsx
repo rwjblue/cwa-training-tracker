@@ -138,20 +138,27 @@ export default function TodayPlan({
         </p>
       )}
       {!loading && plan.nextMeeting && (
-        <div className="today-plan-next-class">
-          <CalendarDays size={15} />
-          <span>
-            {plan.nextMeeting.date === today
-              ? 'Class today'
-              : `Next class ${dayLabel(plan.nextMeeting.date)}`}{' '}
-            <strong>Session {plan.nextMeeting.lesson}</strong>
-          </span>
-          {plan.currentCount > 0 && (
-            <span className="today-plan-count">
-              {plan.completedCount}/{plan.currentCount} done
+        <>
+          <div className="today-plan-next-class">
+            <CalendarDays size={15} />
+            <span>
+              {plan.nextMeeting.date === today
+                ? 'Class today'
+                : `Next class ${dayLabel(plan.nextMeeting.date)}`}{' '}
+              <strong>Session {plan.nextMeeting.lesson}</strong>
             </span>
-          )}
-        </div>
+            {plan.currentCount > 0 && (
+              <span className="today-plan-count">
+                {plan.completedCount}/{plan.currentCount} done
+              </span>
+            )}
+          </div>
+          <p className="today-plan-session-hint">
+            Record practice under the session shown on the exercise you practiced. Preparation
+            belongs to that upcoming session; reviewing earlier work stays with its earlier session.
+            For general practice, you can leave the session blank.
+          </p>
+        </>
       )}
       {(error || saveError) && (
         <div className="today-plan-error" role="alert">
@@ -252,7 +259,8 @@ export default function TodayPlan({
                 <span>{plan.preparation.length}</span>
               </h3>
               <p className="today-plan-group-hint">
-                These exercises follow your next class date. Choose a little to work on today.
+                These exercises prepare you for session {plan.nextMeeting?.lesson}. Practice
+                recorded here is linked to that session.
               </p>
               {renderTasks(plan.preparation)}
             </div>
