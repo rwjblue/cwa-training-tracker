@@ -203,6 +203,11 @@ an unrelated historical timed entry does not reset the paused current block.
 Exercise deliberate Finish/switch cancellation and exact retry separately from
 inspection, and retain account/device disposal checks. This covers the running
 app only; it does not test or introduce elapsed-time restoration after reload.
+Separately log the same assignment from Today while its block is paused: stored
+scratchpad, measured time and source position must stay with that block. Only its
+originating reviewed save may clear those notes. A manual Finish cancels cleanly,
+discards unsaved elapsed time when confirmed, and explains that local notes remain;
+fresh practice starts at zero with that retained scratchpad.
 
 For automatic practice saves, test the queue below the browser: successive guest
 rounds, immutable retries after lost responses, storage/network failure, and

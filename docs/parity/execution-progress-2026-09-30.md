@@ -393,7 +393,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   shared-player platform guards. Four actual-audio/Runner focused journeys and
   eight boundary rechecks pass at desktop/mobile widths with keyboard/touch,
   accessibility and overflow checks. All 51 serialized browser journeys pass in the corrected full run (6.7 minutes);
-  post-commit independent review remains pending.
+  this is the implementation's initial validation before independent review.
 - The initial complete browser run found a same-account reconnect disposal bug;
   the identity decision now reads the actual account owner, while genuine scope
   changes invalidate obsolete reads. Deferred view focus cannot steal a newer
@@ -406,6 +406,29 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 - Page-reload/crash elapsed recovery, new spoken recognition, later pass coverage
   and cumulative Runner credit are excluded from this issue. Existing durable
   Copy drafts, content preferences and finished-result queues are preserved.
+- Implementation commit `fe437494` received fresh independent review. Thirty-five
+  focused logic tests and actual dual-source native listening/retry journeys pass
+  at desktop/mobile widths. Browser Back/Forward/hash navigation, hidden-play
+  guards, no-storage 503/lost-ack exact retries, exported source subtotals, native
+  Copy/reconnect and account exit were independently exercised.
+- Two substantive P2 findings required correction: separately logging the retained
+  assignment from Today clears its stored scratchpad, and manual Finish promises
+  to discard notes that the established policy retains. Cleanup now requires the
+  originating launch; manual/fallback confirmations explain retained notes.
+  Representative desktop/mobile regressions verify the stored notes, retained
+  native source/time, single cancellation decisions and matching-origin cleanup.
+  Fresh check, all 512 tests in 40 files and build pass; all 54 serialized browser
+  journeys pass in the isolated final run (6.7 minutes). Independent correction
+  recheck, signed publication and deployment remain held.
+- Preserve the separately authorized native prerecorded-answer commit as its own
+  ancestor. Inspection retains its full native track and playback guards; browser
+  speech is not reintroduced. The shared-checkout correction run lost a trace
+  during concurrent harness cleanup, so validation moved to an isolated Jujutsu
+  workspace with one runtime. The first isolated run passed 53/54; its one failure
+  requested a test-clock pause only one millisecond ahead across an RPC. After
+  reading its context/trace, a test-only future pause allowance fixes that race
+  before Save begins. The desktop focused recheck and final complete run pass;
+  product timing and save/retry assertions remain unchanged.
 
 ## Remaining queue
 

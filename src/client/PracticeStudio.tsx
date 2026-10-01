@@ -371,7 +371,7 @@ export default function PracticeStudio({
       return Promise.resolve(
         !unsaved ||
           window.confirm(
-            'Finish or switch this practice? Unsaved time and notes will be discarded.',
+            'Finish or switch this practice? Unsaved time will be discarded. Your scratchpad will remain on this device.',
           ),
       );
     }

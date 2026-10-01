@@ -200,8 +200,9 @@ for (const mobile of [false, true]) {
       (request) =>
         new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST',
     );
-    // Hold the durable receipt deadline while checking the locked saving dialog.
-    await page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 1));
+    // Pause before starting Save; allow the evaluation/RPC to finish before the
+    // requested instant. The measured practice is already paused and captured.
+    await page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 1000));
     await activate(
       page,
       review.getByRole('button', { name: 'Save practice', exact: true }),

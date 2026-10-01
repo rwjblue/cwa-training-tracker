@@ -585,7 +585,7 @@ function App() {
     if (!studioUnsaved.current) return true;
     if (
       !window.confirm(
-        'Finish this practice? Copy practice can be recovered on this device. Unsaved time and notes from other tools will be discarded.',
+        'Finish this practice? Unsaved time and Runner results will be discarded. Copy drafts and scratchpad notes remain on this device.',
       )
     )
       return false;
@@ -1453,12 +1453,12 @@ function App() {
             if (!isDeviceScopeCurrent(scope, deviceToken)) return;
             if ((activeAccount.current ?? 'guest') !== (user?.id ?? 'guest')) return;
             const wasExisting = entries.some((saved) => saved.id === sessionEditor.id);
-            if (!wasExisting)
-              clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
             const matchingOwner =
               !wasExisting &&
               sessionEditorOwner &&
               currentLaunch.current?.id === sessionEditorOwner;
+            if (matchingOwner)
+              clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
             if (destination === 'history') acceptSavedPractice(entry, sessionEditorOwner);
             else {
               setSavedPracticeEntry(entry);

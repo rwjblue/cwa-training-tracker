@@ -403,7 +403,11 @@ Explicit Finish/switch retains the existing listening/public timed save policy
 for at least 30 credited seconds and the separate manual/Runner save/discard
 decision. Cancellation keeps the paused block. A reviewed save carries its
 originating launch and measured identity; editing another historical timer/Morse
-entry cannot clear current notes/time. Account selection, sign-out, device clear,
+entry cannot clear current notes/time. Scratchpad cleanup requires the captured
+originating launch too; separately logging that assignment from Today preserves
+the paused block's stored notes. Manual Finish truthfully distinguishes discarded
+unsaved time from the scratchpad retained on device. Account selection, sign-out,
+device clear,
 restore and destructive lifecycle changes dispose the old owner and prevent a
 late navigation/save callback from reviving it in another scope.
 Refreshing the same account on reconnect retains the block. Copy/Runner receipts
@@ -424,9 +428,11 @@ See [original view-only navigation](https://github.com/rwjblue/rwjblue.com/blob/
 [mounted host](../../src/client/main.tsx),
 [Studio](../../src/client/PracticeStudio.tsx), and
 [Runner stop flight](../../src/client/runner-stop-flight.ts).
-Typecheck, all 508 tests across 39 files, production build and all 51 serialized
+Typecheck, all 512 tests across 40 files, production build and all 54 serialized
 browser journeys pass, including desktop keyboard/mobile touch continuity and
-exact retry boundaries. Post-commit independent review, signed publication and
-production verification remain pending in the
+exact retry boundaries. Initial independent review reproduced both the ownerless
+same-assignment scratchpad cleanup and misleading manual Finish copy at both
+widths. Focused corrections pass at both widths; the independent correction
+recheck, signed publication and production verification remain pending in the
 [execution journal](execution-progress-2026-09-30.md). No reload/crash or
 physical-device continuity claim is made.

@@ -21,6 +21,7 @@ for (const viewport of [
     };
     await signIn(page);
     await page.clock.setSystemTime(new Date('2026-10-06T16:00:00Z'));
+    const { user } = await (await context.request.get('/api/me')).json();
     const settings = (await (await context.request.get('/api/settings')).json()).settings;
     expect(
       (
@@ -80,9 +81,15 @@ for (const viewport of [
     await activate(row.getByRole('button', { name: 'Listen & practice', exact: true }));
     const audio = page.getByLabel('Assigned recording', { exact: true });
     const element = await audio.elementHandle();
-    await page
-      .getByRole('textbox', { name: 'Scratchpad', exact: true })
-      .fill('Retain this exact block and recording.');
+    const notes = 'Retain this exact block and recording.';
+    const scratchpad = page.getByRole('textbox', { name: 'Scratchpad', exact: true });
+    const readNotes = () =>
+      page.evaluate(
+        ({ scope, taskId }) =>
+          localStorage.getItem(`cwa.studio.scratchpad.v1:${JSON.stringify([scope, taskId])}`),
+        { scope: user.id, taskId: assigned.id },
+      );
+    await scratchpad.fill(notes);
     await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
     await expect
       .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
@@ -93,6 +100,61 @@ for (const viewport of [
     expect(await element!.evaluate((item: HTMLAudioElement) => item.paused)).toBe(true);
     const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
     await expect(retained).toContainText(assigned.title);
+    // A separate manual log shares the task, but does not own the paused Studio.
+    await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
+    await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+    const reviewedDuration = await page.getByLabel(/^Time practiced/).inputValue();
+    const reviewedMeasurement = await page
+      .getByRole('dialog')
+      .getByText(/^Measured \d+\.\d{2} seconds/)
+      .textContent();
+    const reviewedSource = await page
+      .getByRole('dialog')
+      .getByText(/^\d+\.\d{2} seconds listened/)
+      .textContent();
+    await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+    await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+    // Stored notes matter here: the mounted textarea can mask a deleted value.
+    await expect.poll(readNotes).toBe(notes);
+    await activate(row.getByRole('button', { name: 'Log practice', exact: true }));
+    await page.getByLabel(/^Time practiced/).fill('1:00');
+    const independentNotes = 'Separate manual history for the same assignment.';
+    await page
+      .getByRole('dialog')
+      .getByRole('textbox', { name: /^Notes/ })
+      .fill(independentNotes);
+    await activate(page.getByRole('button', { name: 'Save practice', exact: true }));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(retained).toContainText(assigned.title);
+    await expect.poll(readNotes).toBe(notes);
+    const afterIndependentSave = (await (await context.request.get('/api/entries')).json()).entries;
+    expect(afterIndependentSave).toHaveLength(2);
+    const independent = afterIndependentSave.find(
+      (entry: { notes: string }) => entry.notes === independentNotes,
+    );
+    expect(independent).toMatchObject({
+      source: 'manual',
+      minutes: 1,
+      metadata: { plannedTaskId: assigned.id },
+    });
+    expect(independent.metadata.scratchpad).toBe('');
+    expect(
+      await element!.evaluate((item: HTMLAudioElement) => item.isConnected && item.paused),
+    ).toBe(true);
+    expect(await element!.evaluate((item: HTMLAudioElement) => item.currentTime)).toBe(position);
+    await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
+    await expect(audio).toHaveAttribute('src', assigned.exercise.url);
+    await expect(scratchpad).toHaveValue(notes);
+    await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+    await expect(page.getByLabel(/^Time practiced/)).toHaveValue(reviewedDuration);
+    await expect(page.getByRole('dialog').getByText(/^Measured \d+\.\d{2} seconds/)).toHaveText(
+      reviewedMeasurement!,
+    );
+    await expect(page.getByRole('dialog').getByText(/^\d+\.\d{2} seconds listened/)).toHaveText(
+      reviewedSource!,
+    );
+    await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+    await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
     await expectAccessible(page, `retained-today-${viewport.width}`);
     await page.screenshot({ path: `.tmp/retained-today-${viewport.width}.png`, fullPage: true });
     await activate(retained.getByRole('button', { name: 'Inspect this week', exact: true }));
@@ -111,9 +173,7 @@ for (const viewport of [
     expect(await audio.evaluate((item: HTMLAudioElement) => item.currentTime)).toBe(position);
     expect(await audio.evaluate((item: HTMLAudioElement) => item.paused)).toBe(true);
     await expect(audio).toHaveAttribute('src', assigned.exercise.url);
-    await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
-      'Retain this exact block and recording.',
-    );
+    await expect(scratchpad).toHaveValue(notes);
     // Editing an unrelated timer result cannot acknowledge/reset this owner.
     await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
     if (viewport.width < 600)
@@ -128,9 +188,7 @@ for (const viewport of [
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
     expect(await audio.evaluate((item: HTMLAudioElement) => item.currentTime)).toBe(position);
-    await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
-      'Retain this exact block and recording.',
-    );
+    await expect(scratchpad).toHaveValue(notes);
     await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
     await expect
       .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
@@ -139,7 +197,7 @@ for (const viewport of [
     await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
-    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(2);
     await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
     await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
     await expectAccessible(page, `retained-review-${viewport.width}`);
@@ -147,13 +205,16 @@ for (const viewport of [
     await activate(page.getByRole('button', { name: 'Save practice', exact: true }));
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(retained).toHaveCount(0);
+    await expect.poll(readNotes).toBeNull();
     const exported = await (await context.request.get('/api/export')).json();
-    expect(exported.sessions).toHaveLength(2);
-    const result = exported.sessions.find((entry: { id: string }) => entry.id !== older.id);
+    expect(exported.sessions).toHaveLength(3);
+    const result = exported.sessions.find(
+      (entry: { id: string; source: string }) => entry.id !== older.id && entry.source !== 'manual',
+    );
     expect(result.metadata).toMatchObject({
       plannedTaskId: assigned.id,
       practicePurpose: 'assigned',
-      scratchpad: 'Retain this exact block and recording.',
+      scratchpad: notes,
       recordings: [{ url: assigned.exercise.url }],
     });
     expect(result.metadata.elapsedSeconds).toBeGreaterThan(1.2);
@@ -162,9 +223,8 @@ for (const viewport of [
     expect(result.metadata.recordings[0].seconds).toBeCloseTo(result.metadata.elapsedSeconds, 8);
     // Leaving this account disposes its block before exposing the guest scope.
     await activate(row.getByRole('button', { name: 'Listen & practice', exact: true }));
-    await page
-      .getByRole('textbox', { name: 'Scratchpad', exact: true })
-      .fill('Private owner notes.');
+    await expect(scratchpad).toHaveValue('');
+    await scratchpad.fill('Private owner notes.');
     await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
     await activate(page.getByRole('button', { name: 'Open your account', exact: true }));
     await activate(page.getByRole('button', { name: 'Sign out', exact: true }));
@@ -176,5 +236,136 @@ for (const viewport of [
     await activate(page.getByRole('button', { name: 'Practice studio', exact: true }));
     await expect(audio).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
+  });
+
+  test(`assigned external Finish discards time and retains scratchpad at ${viewport.width}px`, async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize(viewport);
+    const activate = async (control: Locator) => {
+      if (viewport.width < 600) await control.tap();
+      else {
+        await control.focus();
+        await page.keyboard.press('Enter');
+      }
+    };
+    await signIn(page);
+    const time = new Date('2026-10-06T16:00:00Z');
+    await page.clock.setSystemTime(time);
+    const { settings } = await (await context.request.get('/api/settings')).json();
+    const { user } = await (await context.request.get('/api/me')).json();
+    expect(
+      (
+        await accountRequest(context, 'PUT', '/api/settings', {
+          settings: { ...settings, timezone: 'UTC' },
+        })
+      ).ok(),
+    ).toBe(true);
+    const task = {
+      id: crypto.randomUUID(),
+      title: 'Synthetic assigned external key practice',
+      kind: 'sending',
+      done: false,
+      dueDate: '2026-10-06',
+      notes: '',
+      createdAt: time.toISOString(),
+      exercise: { type: 'external', url: 'https://example.test/retained-key-practice' },
+    };
+    expect((await accountRequest(context, 'POST', '/api/plan', { task })).ok()).toBe(true);
+    await context.route(task.exercise.url, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: '<p>Synthetic key practice</p>',
+      }),
+    );
+    await page.reload();
+    const row = page
+      .getByRole('region', { name: 'What should I do today?' })
+      .getByRole('listitem')
+      .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) });
+    await activate(row.getByRole('button', { name: 'Practice', exact: true }));
+    const scratchpad = page.getByRole('textbox', { name: 'Scratchpad', exact: true });
+    const original = await scratchpad.elementHandle();
+    const notes = 'Keep these notes when finishing the unsaved timer.';
+    const readNotes = () =>
+      page.evaluate(
+        ({ scope, taskId }) =>
+          localStorage.getItem(`cwa.studio.scratchpad.v1:${JSON.stringify([scope, taskId])}`),
+        { scope: user.id, taskId: task.id },
+      );
+    await scratchpad.fill(notes);
+    // Keep animation actionability independent of the paused manual-practice clock.
+    await page.addStyleTag({
+      content: '*,*::before,*::after{animation:none!important;transition:none!important}',
+    });
+    await page.clock.install({ time });
+    await page.clock.pauseAt(new Date(time.getTime() + 1000));
+    const opened = context.waitForEvent('page');
+    await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
+    const external = await opened;
+    await expect(external).toHaveURL(task.exercise.url);
+    await external.close();
+    await page.clock.fastForward(47_000);
+    await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+    const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
+    await expect(retained).toContainText(task.title);
+    await page.clock.fastForward(300_000);
+    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+    await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
+    await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
+    await expect(scratchpad).toHaveValue(notes);
+    await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+    await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:47');
+    await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+    const prompts: string[] = [];
+    let acceptFinish = false;
+    page.on('dialog', async (dialog) => {
+      prompts.push(dialog.message());
+      if (acceptFinish) await dialog.accept();
+      else await dialog.dismiss();
+    });
+    await activate(page.getByRole('button', { name: 'Finish practice', exact: true }));
+    await expect(page).toHaveURL(/#practice$/);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toMatch(/unsaved time will be discarded/i);
+    expect(prompts[0]).toMatch(/scratchpad will remain on this device/i);
+    await expect(scratchpad).toHaveValue(notes);
+    await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
+    await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+    await activate(row.getByRole('button', { name: 'Extra review', exact: true }));
+    await expect(page).toHaveURL(/#overview$/);
+    await expect(retained).toContainText(task.title);
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toBe(prompts[0]);
+    expect(await original!.evaluate((element) => element.isConnected)).toBe(true);
+    await expect.poll(readNotes).toBe(notes);
+    await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
+    await expect(scratchpad).toHaveValue(notes);
+    await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+    await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:47');
+    await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+    await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+    await page.clock.resume();
+    await expectAccessible(page, `retained-manual-${viewport.width}`);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: `.tmp/retained-manual-${viewport.width}.png`, fullPage: true });
+    acceptFinish = true;
+    await activate(retained.getByRole('button', { name: 'Finish practice', exact: true }));
+    await expect(retained).toHaveCount(0);
+    expect(prompts).toHaveLength(3);
+    expect(prompts[2]).toBe(prompts[0]);
+    expect(await original!.evaluate((element) => element.isConnected)).toBe(false);
+    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+    await expect.poll(readNotes).toBe(notes);
+    await activate(row.getByRole('button', { name: 'Practice', exact: true }));
+    await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
+    await expect(page.getByText('00:00 elapsed', { exact: true })).toBeVisible();
+    await expect(scratchpad).toHaveValue(notes);
+    await expect.poll(readNotes).toBe(notes);
   });
 }
