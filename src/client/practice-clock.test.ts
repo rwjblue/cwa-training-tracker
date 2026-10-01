@@ -463,6 +463,287 @@ describe('practice time', () => {
     },
   );
 
+  it('retains the credible first native resume tail from the independent mobile capture', () => {
+    const clock = new PracticeClock();
+    const recording = {
+      url: 'https://example.org/native-stabilization.mp3',
+      durationSeconds: 3.6,
+      sourceId: 'one',
+    };
+    clock.startMedia(0, 1179.5, 1, recording);
+    clock.sample(0.839557, 2096.2000002861023);
+    clock.pause(2096.2000002861023);
+    clock.startMedia(0.856433, 2113.1000003814697, 1, recording);
+    clock.sample(1.094035, 2308);
+    const resumed = clock.snapshot(2308);
+    // Keep the original measured credit; only wall + existing .036 jitter
+    // supplies the resumed coverage tail. The missing head adds no coverage.
+    expect(resumed.seconds).toBeCloseTo(1.077159, 9);
+    expect(resumed.recordingProgress?.coveredSeconds).toBeCloseTo(1.07045699961853, 9);
+    clock.sample(1.150395, 2364.4000000953674);
+    clock.sample(3.6, 4860.700000286102);
+    expect(clock.finalizeRecording(recording, true)).toMatchObject({ completed: true });
+    clock.suspendMedia(); // Native pause may precede the duplicate ended callback.
+    expect(clock.finalizeRecording(recording, true)).toBeUndefined();
+    const final = clock.snapshot(4860.700000286102);
+    expect(final.seconds).toBeCloseTo(3.583124, 9);
+    expect(final.recordings[0].seconds).toBeCloseTo(3.583124, 9);
+    expect(final.recordingProgress?.coveredSeconds).toBeCloseTo(3.57642199961853, 9);
+    expect(final.recordings[0].passes?.durations).toEqual([
+      { durationSeconds: 3.6, completedPasses: 1 },
+    ]);
+  });
+
+  it.each([0, 0.01])(
+    'stabilizes the first native resume sample after a bounded %s-second position gap',
+    (gap) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/resume-tail.mp3', durationSeconds: 4 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(1, 1000);
+      clock.pause(1000);
+      clock.startMedia(1 + gap, 2000, 1, recording);
+      clock.sample(1.25 + gap, 2200);
+      clock.sample(4, 5000);
+      expect(clock.snapshot(5000).seconds).toBeCloseTo(4 - gap, 9);
+      expect(clock.snapshot(5000).recordingProgress?.coveredSeconds).toBeCloseTo(3.99 - gap, 9);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(true);
+    },
+  );
+
+  it.each([
+    { duration: 4, gap: 0.18, completed: true },
+    { duration: 4, gap: 0.195, completed: false },
+    { duration: 9, gap: 0.239, completed: true },
+    { duration: 9, gap: 0.249, completed: false },
+  ])(
+    'bounds combined resume and stabilization loss for duration $duration and gap $gap',
+    ({ duration, gap, completed }) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/bounded-tail.mp3', durationSeconds: duration };
+      const advance = 0.2 + Math.min(0.1, duration * 0.01) + 0.01;
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(1, 1000);
+      clock.pause(1000);
+      clock.startMedia(1 + gap, 2000, 1, recording);
+      clock.sample(1 + gap + advance, 2200);
+      clock.sample(duration, 10_000);
+      expect(clock.snapshot(10_000).seconds).toBeCloseTo(duration - gap, 9);
+      expect(clock.snapshot(10_000).recordingProgress?.coveredSeconds).toBeCloseTo(
+        duration - gap - (completed ? 0.01 : advance),
+        9,
+      );
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(completed);
+    },
+  );
+
+  it('shares the total missing budget across multiple stabilized native resumes', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/many-stabilizations.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(0.8, 800);
+    for (const [paused, now] of [
+      [0.8, 800],
+      [1.14, 1200],
+      [1.48, 1600],
+    ]) {
+      clock.pause(now);
+      clock.startMedia(paused + 0.09, now + 200, 1, recording);
+      clock.sample(paused + 0.34, now + 400);
+    }
+    clock.sample(4, 4180);
+    expect(clock.snapshot(4180).seconds).toBeCloseTo(3.73, 9);
+    expect(clock.snapshot(4180).recordingProgress?.coveredSeconds).toBeCloseTo(3.7, 9);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each(['ordinary movement', 'repeated playing', 'backward resume', 'seek/error'] as const)(
+    'does not authorize strict-jitter rejection after %s',
+    (boundary) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/unpermitted-tail.mp3', durationSeconds: 4 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(1, 1000);
+      if (boundary === 'ordinary movement') {
+        clock.sample(1.25, 1200);
+      } else {
+        clock.pause(1000);
+        if (boundary === 'seek/error') clock.suspendMedia(false);
+        const resumed = boundary === 'backward resume' ? 0.9 : 1.01;
+        clock.startMedia(resumed, 2000, 1, recording);
+        if (boundary === 'repeated playing') clock.startMedia(resumed, 2000, 1, recording);
+        clock.sample(resumed + 0.25, 2200);
+      }
+      clock.sample(4, 6000);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+    },
+  );
+
+  it.each([
+    { label: 'stalled position', position: 1.01, now: 2100 },
+    { label: 'zero wall', position: 1.011, now: 2000 },
+    { label: 'ordinary accepted movement', position: 1.11, now: 2100 },
+    { label: 'inadmissible jump', position: 2, now: 2000 },
+  ])('consumes stabilization on the first $label sample', ({ position, now }) => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/consumed-tail.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    clock.startMedia(1.01, 2000, 1, recording);
+    clock.sample(position, now);
+    clock.sample(position + 0.25, now + 200);
+    clock.sample(4, now + 5000);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each([
+    { label: 'invalid position', position: NaN, now: 2100, rate: 1 },
+    { label: 'invalid wall', position: 1.01, now: NaN, rate: 1 },
+    { label: 'backward wall', position: 1.01, now: 1999, rate: 1 },
+    { label: 'invalid rate', position: 1.01, now: 2100, rate: Infinity },
+  ])('revokes stabilization after an $label observation', ({ position, now, rate }) => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/invalid-tail.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    clock.startMedia(1.01, 2000, 1, recording);
+    clock.sample(position, now, rate);
+    clock.startMedia(1.01, 2200, 1, recording);
+    clock.sample(1.26, 2400);
+    clock.sample(4, 6000);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each(['changed rate', 'metadata duration', 'discard', 'reset'] as const)(
+    'revokes a pending stabilization through %s',
+    (boundary) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/replaced-tail.mp3', durationSeconds: 4 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(1, 1000);
+      clock.pause(1000);
+      clock.startMedia(1.01, 2000, 1, recording);
+      if (boundary === 'metadata duration')
+        clock.observeRecording({ ...recording, durationSeconds: 4.0000001 });
+      else if (boundary === 'discard') {
+        clock.discardRecording(recording);
+        clock.observeRecording(recording);
+      } else if (boundary === 'reset') {
+        clock.reset();
+        clock.startMedia(1.01, 2000, 1, recording);
+      }
+      clock.sample(1.26, 2200, boundary === 'changed rate' ? 2 : 1);
+      clock.sample(4, 6000);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+    },
+  );
+
+  it.each([
+    { label: 'another URL', source: { url: 'https://example.org/replacement.mp3' }, rate: 1 },
+    { label: 'another element', source: { sourceId: 'replacement' }, rate: 1 },
+    { label: 'another duration', source: { durationSeconds: 4.0000001 }, rate: 1 },
+    { label: 'another native rate', source: {}, rate: 2 },
+  ])('cannot create stabilization for $label', ({ source, rate }) => {
+    const clock = new PracticeClock();
+    const recording = {
+      url: 'https://example.org/source-fenced-tail.mp3',
+      sourceId: 'first',
+      durationSeconds: 4,
+    };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    const replacement = { ...recording, ...source };
+    clock.startMedia(1.01, 2000, rate, replacement);
+    clock.sample(1.26, 2200, rate);
+    clock.sample(replacement.durationSeconds, 6000, rate);
+    expect(clock.finalizeRecording(replacement, true)?.completed).toBe(false);
+  });
+
+  it('does not recover a time-clipped jump even immediately after a verified native resume', () => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/clipped-resume.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    clock.startMedia(1, 2000, 1, recording);
+    clock.sample(1.35, 2200); // Actual time guard clips this to .3 seconds.
+    clock.sample(4, 6000);
+    expect(clock.snapshot(6000).seconds).toBeCloseTo(3.95, 9);
+    expect(clock.snapshot(6000).recordingProgress?.coveredSeconds).toBeCloseTo(3.65, 9);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each(['suspended', 'resumed'] as const)(
+    'revokes an observed duration replacement while %s, even if the duration returns',
+    (boundary) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/observed-replacement.mp3', durationSeconds: 4 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.sample(1, 1000);
+      clock.pause(1000);
+      if (boundary === 'resumed') clock.startMedia(1.01, 2000, 1, recording);
+      // Coverage permits negligible metadata roundoff, but the native resume
+      // permission still requires the exact original observed denominator.
+      clock.observeRecording({ ...recording, durationSeconds: 4.0000001 });
+      clock.observeRecording(recording);
+      if (boundary === 'suspended') clock.startMedia(1.01, 2000, 1, recording);
+      clock.sample(1.26, 2200);
+      clock.sample(4, 6000);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+    },
+  );
+
+  it.each([
+    { label: 'invalid sample time', position: 1, now: NaN, rate: 1, pause: false },
+    { label: 'invalid sample position', position: NaN, now: 1100, rate: 1, pause: false },
+    { label: 'invalid sample rate', position: 1, now: 1100, rate: Infinity, pause: false },
+    { label: 'invalid pause time', position: 1, now: NaN, rate: 1, pause: true },
+  ])('revokes an already suspended candidate on $label', ({ position, now, rate, pause }) => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/invalid-suspension.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(1000);
+    if (pause) clock.pause(now);
+    else clock.sample(position, now, rate);
+    expect(clock.snapshot(1200).seconds).toBe(1);
+    clock.startMedia(1.01, 2000, 1, recording);
+    clock.sample(1.26, 2200);
+    clock.sample(4, 6000);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each([NaN, Infinity, 999])('revokes continuity at an invalid active pause time %s', (now) => {
+    const clock = new PracticeClock();
+    const recording = { url: 'https://example.org/invalid-active-pause.mp3', durationSeconds: 4 };
+    clock.startMedia(0, 0, 1, recording);
+    clock.sample(1, 1000);
+    clock.pause(now);
+    expect(clock.snapshot(1200).seconds).toBe(1);
+    clock.startMedia(1.01, 2000, 1, recording);
+    clock.sample(1.26, 2200);
+    clock.sample(4, 6000);
+    expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+  });
+
+  it.each([0, 1])(
+    'cannot stabilize a tiny whole clip from %s milliseconds of wall time',
+    (wall) => {
+      const clock = new PracticeClock();
+      const recording = { url: 'https://example.org/tiny-resume.mp3', durationSeconds: 0.05 };
+      clock.startMedia(0, 0, 1, recording);
+      clock.pause(0);
+      clock.startMedia(0, 1000, 1, recording);
+      clock.sample(0.05, 1000 + wall);
+      expect(clock.snapshot(1000 + wall).seconds).toBe(0.05);
+      expect(clock.snapshot(1000 + wall).recordingProgress?.coveredSeconds).toBe(0);
+      expect(clock.finalizeRecording(recording, true)?.completed).toBe(false);
+    },
+  );
+
   it('does not manufacture native pause permission from a repeated playing anchor', () => {
     const clock = new PracticeClock();
     const recording = { url: 'https://example.org/reanchored.mp3', durationSeconds: 4 };

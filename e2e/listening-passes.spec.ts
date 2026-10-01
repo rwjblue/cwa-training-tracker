@@ -133,7 +133,8 @@ for (const viewport of [
         /WD101[-_]10/i.test(item.exercise.url ?? ''),
     );
     expect(task).toBeTruthy();
-    const wav = syntheticRecording(4);
+    const observedDuration = 3.6;
+    const wav = syntheticRecording(observedDuration);
     const serveRecording = (route: Route) => {
       const range = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range ?? '');
       if (!range)
@@ -229,6 +230,16 @@ for (const viewport of [
       page.getByRole('status').filter({ hasText: 'Full listening pass recorded.' }),
     ).toBeVisible();
     await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
+    await expect
+      .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
+      .toBeGreaterThan(0.7);
+    // A queued native pause and post-resume position settling must not discard
+    // honestly heard coverage. Operate the actual native control with Space.
+    await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
+    expect(await audio.evaluate((item: HTMLAudioElement) => item.paused)).toBe(true);
+    await audio.focus();
+    await page.keyboard.press('Space');
+    await expect.poll(() => audio.evaluate((item: HTMLAudioElement) => !item.paused)).toBe(true);
     await expect(count('This block')).toHaveText('2', { timeout: 10_000 });
     await expect(count('Minimum remaining')).toHaveText('0');
     expect(
@@ -325,11 +336,17 @@ for (const viewport of [
       recordings.find((item: { url: string }) => item.url === task.exercise.url),
     ).toMatchObject({
       speedWpm: 10,
-      passes: { method: 'native-1x', durations: [{ durationSeconds: 4, completedPasses: 2 }] },
+      passes: {
+        method: 'native-1x',
+        durations: [{ durationSeconds: observedDuration, completedPasses: 2 }],
+      },
     });
     expect(recordings.find((item: { url: string }) => item.url === faster)).toMatchObject({
       speedWpm: 13,
-      passes: { method: 'native-1x', durations: [{ durationSeconds: 4, completedPasses: 1 }] },
+      passes: {
+        method: 'native-1x',
+        durations: [{ durationSeconds: observedDuration, completedPasses: 1 }],
+      },
     });
     expect(saved.metadata.evidence.measurement.seconds).toBeGreaterThan(12);
 

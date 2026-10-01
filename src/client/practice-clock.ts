@@ -27,6 +27,18 @@ export interface PracticeClockSnapshot {
   recordingOutcome?: RecordingOutcome;
 }
 
+const sameRecording = (left: RecordingSource, right: RecordingSource) =>
+  left.url === right.url &&
+  (left.sourceId ?? left.url) === (right.sourceId ?? right.url) &&
+  left.durationSeconds === right.durationSeconds;
+
+const resumeGapLimit = (source: RecordingSource) => {
+  const duration = source.durationSeconds;
+  return duration !== undefined && Number.isFinite(duration) && duration > 0 && duration <= 86400
+    ? Math.min(0.25, duration * 0.05)
+    : undefined;
+};
+
 /** Count media movement, not a stopwatch left running beside paused audio. */
 export class PracticeClock {
   private seconds = 0;
@@ -38,6 +50,8 @@ export class PracticeClock {
     at: number;
     rate: number;
     recording?: RecordingSource;
+    /** Only the first observation after a verified native resume may stabilize. */
+    resumePosition?: number;
   };
   private recordings = new Map<string, RecordingTime>();
   private coverage = new RecordingCoverage();
@@ -117,36 +131,50 @@ export class PracticeClock {
     }
     const resume = this.resume;
     this.resume = undefined;
+    let resumePosition: number | undefined;
     if (recording) {
       this.coverage.observe(recording, true);
+      const limit = resumeGapLimit(recording);
       if (
         resume &&
         rate === 1 &&
         resume.rate === 1 &&
-        resume.recording.url === recording.url &&
-        (resume.recording.sourceId ?? resume.recording.url) ===
-          (recording.sourceId ?? recording.url) &&
-        resume.recording.durationSeconds === recording.durationSeconds
-      )
+        sameRecording(resume.recording, recording) &&
+        limit !== undefined &&
+        position >= resume.position &&
+        position <= recording.durationSeconds! &&
+        position - resume.position <= limit
+      ) {
         this.coverage.authorizeResumeGap(recording, resume.position, position);
+        resumePosition = resume.position;
+      }
     } else this.coverage.discard();
-    this.media = { position, at: now, rate, recording };
+    this.media = {
+      position,
+      at: now,
+      rate,
+      ...(recording ? { recording: { ...recording } } : {}),
+      ...(resumePosition !== undefined ? { resumePosition } : {}),
+    };
   }
 
   sample(position: number, now: number, rate = 1) {
     const previous = this.media;
-    if (!previous) return;
-    const advance = position - previous.position;
-    const elapsed = now - previous.at;
     if (
       !Number.isFinite(position) ||
       position < 0 ||
       !Number.isFinite(now) ||
-      !Number.isFinite(elapsed) ||
-      elapsed < 0 ||
       !Number.isFinite(rate) ||
       rate <= 0
     ) {
+      this.media = undefined;
+      this.resume = undefined;
+      return;
+    }
+    if (!previous) return;
+    const advance = position - previous.position;
+    const elapsed = now - previous.at;
+    if (!Number.isFinite(elapsed) || elapsed < 0) {
       this.media = undefined;
       this.resume = undefined;
       return;
@@ -178,15 +206,36 @@ export class PracticeClock {
           duration !== undefined && Number.isFinite(duration) && duration > 0
             ? Math.min(0.1, duration * 0.01)
             : 0;
-        if (
-          wall > 0 &&
-          advance <= wall * previous.rate + jitter &&
-          advance <= credit * previous.rate + Number.EPSILON * Math.max(1, advance)
-        )
+        const unclipped = advance <= credit * previous.rate + Number.EPSILON * Math.max(1, advance);
+        if (wall > 0 && advance <= wall * previous.rate + jitter && unclipped)
           this.coverage.hear(previous.recording, previous.position, position, previous.rate);
+        else if (
+          wall > 0 &&
+          unclipped &&
+          previous.resumePosition !== undefined &&
+          previous.rate === 1 &&
+          rate === 1
+        ) {
+          // A native resume can settle ahead on its first observation. Keep only
+          // the tail admitted by the unchanged coverage bound; its uncertain
+          // head and the original resume gap share one bounded missing interval.
+          const from = position - (wall + jitter);
+          const limit = resumeGapLimit(previous.recording);
+          if (
+            limit !== undefined &&
+            position <= duration! &&
+            from >= previous.position &&
+            from - previous.resumePosition <= limit
+          ) {
+            this.coverage.authorizeResumeGap(previous.recording, previous.resumePosition, from);
+            this.coverage.hear(previous.recording, from, position, 1);
+          }
+        }
       }
     }
-    this.media = { ...previous, position, at: now, rate };
+    // Every observation consumes stabilization, including stalled/zero-wall or
+    // rejected movement. A later jump must satisfy normal coverage admission.
+    this.media = { ...previous, position, at: now, rate, resumePosition: undefined };
   }
 
   suspendMedia(allowResumeGap = true) {
@@ -201,6 +250,9 @@ export class PracticeClock {
   }
 
   observeRecording(source: RecordingSource) {
+    if (this.resume && !sameRecording(this.resume.recording, source)) this.resume = undefined;
+    if (this.media?.recording && !sameRecording(this.media.recording, source))
+      this.media.resumePosition = undefined;
     this.coverage.observe(source);
   }
 
@@ -216,6 +268,13 @@ export class PracticeClock {
         (this.resume.recording.sourceId ?? source.url) === (source.sourceId ?? source.url))
     )
       this.resume = undefined;
+    if (
+      this.media &&
+      (!source ||
+        (this.media.recording?.url === source.url &&
+          (this.media.recording.sourceId ?? source.url) === (source.sourceId ?? source.url)))
+    )
+      this.media.resumePosition = undefined;
   }
 
   /** A Play request stops recall without stopping intentional external practice. */
@@ -226,9 +285,10 @@ export class PracticeClock {
   }
 
   pause(now: number, visible = true) {
+    const invalidMediaTime = !Number.isFinite(now) || Boolean(this.media && now < this.media.at);
     const interruption = this.settleManual(now, visible);
     this.manual = undefined;
-    this.suspendMedia();
+    this.suspendMedia(!invalidMediaTime && interruption !== 'invalid');
     return interruption;
   }
 

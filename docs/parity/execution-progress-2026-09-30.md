@@ -723,3 +723,58 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   correction reruns affected journeys rather than duplicate unrelated coverage.
   Focused correction commit, fresh independent recheck, signed publication,
   production deployment/verification and issue closure remain pending.
+
+- Independent correction recheck at `a6597a74b7adbcbfbe434a25ce2546109ccfd2a6`,
+  exact tree `dc21b152954bd985fee3b8087b8624c7b579c8f6`, fixes the first P2
+  numerical loopholes and R8 wording but requires two further P2 corrections.
+  Older omitted/zero-pass corrected records lose the historically accepted
+  addition comparison: `(5 + .001) - 5` source time with raw 5.001/recall 5
+  and corrected 5/recall 5 is rejected by subtractive rounding. Six actual
+  POST/merge/prepared-replace cases establish the compatibility regression.
+- Actual mobile quick app pause/native Space resume can falsely lose a pass.
+  A 3.6-second owner resumes at .856433 after covering [0, .839557]. Its first
+  tick moves to 1.094035 in .1949 wall seconds: the .237602 movement passes
+  actual-time accounting, but the .036 coverage jitter drops the entire interval.
+  No seek occurs; natural end incorrectly reports incomplete. Two unmodified
+  failures and an observational-wrapper failure establish this. Wrappers retain
+  original native calls/anchors and are separate from production/unmodified
+  evidence; their overhead does not establish a failure frequency.
+- Independent corrected numeric/correction/import matrix passes in 1.3 seconds:
+  tiny hearing beside long recall, subnormal one-pass acceptance and doubled/
+  unsafe-count rejection, all-recall rejection, immutable raw facts, malformed
+  merge/prepared-replace atomicity and exact valid portable round trips. Desktop
+  full workflow passes 26.8 seconds, mobile offline typed/device controls 11.3
+  seconds, and old omitted import/atomicity 1.0 second. Full mobile acceptance
+  is withheld at the demonstrated first resume pass. Runtime/freeze released.
+- Root restores the original addition order only for omitted/zero corrected
+  evidence; positive-pass bounds remain strict. All 82 focused shared tests pass,
+  including both corrected-boundary v1 portable regressions. Worker regressions
+  and bounded known-owner native stabilization are being implemented separately.
+  Both representative browser widths now include rapid app pause/native Space
+  resume. Fresh required/full browser validation, follow-up commit and another
+  independent recheck remain required before signed publication or closure.
+
+- The second corrections retain the historical addition order only for old
+  omitted/zero-pass corrected evidence. Twelve focused Worker recording cases
+  pass, including both boundary variants through actual POST, PUT, account export,
+  merge and prepared replacement with raw facts and omission/zero preserved.
+- One original suspension position on the existing media anchor permits only a
+  credible first-sample tail under unchanged actual-time and coverage rules. The
+  uncredited head shares one bounded suspension envelope and the total missing
+  budget. Every first observation consumes it; seek/error, invalid time/rate,
+  source/duration change, repeated reanchoring, reset and discard revoke it.
+  All 133 focused clock/coverage tests pass, including the exact independent
+  capture: 3.583124 heard seconds, 3.57642199961853 covered seconds and one pass.
+  A matching paused-owner error now explicitly revokes its candidate in the hook.
+- Root's real 3.6-second range-served native workflow passes at 1440 px in 23.5
+  seconds and 390 px in 30.0 seconds (58.3 seconds total), including rapid app
+  Pause/native Space resume. Keyboard/touch, seek/overlap, separate files,
+  inspection, cancellation, quota/503 exact retry, history/report and actual
+  account backup controls pass; the greater-than-12 heard-second assertion remains.
+- Fresh required validation passes check, all 775 tests in 44 files and build.
+  The complete 60-journey serialized browser suite passes in 8.5 minutes; its
+  native paths pass again in 23.6/29.8 seconds. Continuity, recall, Runner,
+  generated source attribution, public practice and private backup/lifecycle
+  journeys remain working. The local runtime has stopped and port 8791 is free.
+  Focused correction commits, independent recheck and signed publication remain
+  pending. No physical-device or restricted long-source verification is claimed.

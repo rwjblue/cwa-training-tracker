@@ -421,8 +421,12 @@ position lag can leave a bounded gap: only a known suspension authorizes that
 boundary, never explicit seeking; the gap adds no heard seconds or coverage.
 At least duration minus the smaller of one second and 5% must actually be covered.
 Each authorized boundary is at most the smaller of 0.25 second and 5%, and all
-missing material shares the total budget. This also protects very short sources
-from the original one-second denominator edge case.
+missing material shares the total budget. A known resume's first observation can
+also settle ahead: coverage clips to its plausible tail, and the uncredited head
+shares that same boundary and total budget. This one-use allowance does not widen
+ordinary or later sample admission. Explicit seeks, failed matching paused owners
+and source/duration/rate changes cannot retain it. Very short sources remain
+protected from the original one-second denominator edge case.
 
 Today, Plan and the assigned Studio show saved/current/minimum-remaining passes.
 Extra review retains its own measured facts without required credit. Explicit
@@ -437,10 +441,17 @@ Independent review reproduced malformed tiny-duration claims accepted through
 absolute millisecond padding. Positive pass facts now require positive per-file
 and available listening time, with only relative floating-point roundoff. Raw and
 corrected aggregate bounds scale by the total operand so short actual listening
-beside long recall remains valid. Old omitted/zero-pass v1 timing stays compatible.
+beside long recall remains valid. Old omitted/zero-pass v1 timing preserves the
+original raw subtraction and corrected addition order, including valid rounded
+boundary values; that compatibility cannot supply positive completed facts.
 
-Check, all 716 tests in 44 files, build and all 60 serialized browser journeys
-pass. Independent acceptance and publication remain pending in the
+The latest review corrections pass check, all 775 tests in 44 files, build and
+all 60 serialized browser journeys in 8.5 minutes. The native rapid-pause/Space
+resume workflow passes at desktop and mobile widths, retaining the actual heard
+time assertion, cancellation, failed-save retry, history, report and real backup
+controls. Focused coverage/clock tests pass 133 cases; twelve Worker recording
+cases include old corrected-boundary POST/PUT/export/merge/replace. Independent
+acceptance and publication remain pending in the
 [execution journal](execution-progress-2026-09-30.md). Browser fixtures generate
 short synthetic WAVs and answer byte-range requests correctly; they never fetch
 restricted audio. Physical iPhone/lock-screen verification is not claimed.

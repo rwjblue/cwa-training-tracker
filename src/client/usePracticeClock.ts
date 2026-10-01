@@ -145,6 +145,13 @@ export function usePracticeClock() {
       // Natural pause may precede ended and clear the active movement anchor.
       // The source/pass owner survives it so the final accepted tail counts once.
       finalizeMedia(audio, false);
+    } else if (
+      event.type === 'error' &&
+      recordingOwner.current === audio &&
+      media.current !== audio
+    ) {
+      // A failed paused owner cannot lend a native resume boundary to later Play.
+      clock.current.suspendMedia(false);
     } else if (media.current === audio) {
       if (['pause', 'waiting', 'error'].includes(event.type)) {
         if (audio.ended) finalizeMedia(audio, false);

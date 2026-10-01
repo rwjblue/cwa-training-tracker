@@ -570,9 +570,10 @@ evidence belong in the [execution journal](parity/execution-progress-2026-09-30.
 
 ## Issue #9 delivery ledger — observed recording passes
 
-Implementation validation passes; independent acceptance and publication remain
-pending. Original interval union, terminal completion, per-recording results and
-required/prior-pass projections were rechecked at the pinned source. Course replay
+Implementation and review corrections pass required checks and the full browser
+suite; independent acceptance and publication remain pending. Original interval
+union, terminal completion, per-recording results and required/prior-pass
+projections were rechecked at the pinned source. Course replay
 remains issue #10.
 
 One recording owner retains exact heard intervals through pause, buffering, recall
@@ -592,6 +593,16 @@ combined missing amount must remain inside the same completion budget. Explicit
 seeking invalidates suspension continuity even while paused. This handles native
 pause-position lag without turning deliberate skipped material into a pass.
 
+Native position can also settle on the first observation after that known resume.
+Only the plausible tail of otherwise accepted movement supplies coverage; its
+uncertain head shares the original boundary limit and combined missing budget.
+The allowance is consumed by that first observation and cannot widen later or
+ordinary movement. No missing material adds coverage or time. Matching paused
+owner errors explicitly revoke the retained boundary before another Play.
+Native movement without a delivered seek event is judged only by observed
+positions, actual time and the same bounded missing allowance; this is not a
+universal detector of silent seeks.
+
 Optional version 1 `native-1x` pass facts retain 1–100 distinct observed duration
 groups per actual URL, with safe nonnegative integer counts and counts bounded by
 that file's actual heard seconds. Older omission means unmeasured; measured zero
@@ -604,7 +615,9 @@ Independent review found that absolute millisecond padding accepted tiny-duratio
 pass claims without actual listening. Per-file floors and pass-bearing raw or
 corrected aggregate listening now use relative numerical bounds with a positive
 time budget. Operand-aware aggregate tolerance preserves small real listening
-beside long recall; old valid omitted/zero-pass evidence remains compatible.
+beside long recall. Old valid omitted/zero-pass evidence keeps its original raw
+comparison and the original corrected addition order, including floating-point
+boundary records, rather than being promoted to observed completed-pass facts.
 
 Saved task progress deduplicates owned entries and excludes class, extra review,
 future dates, retired task links and the active block identity. Exact task identity
