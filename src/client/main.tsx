@@ -2674,7 +2674,9 @@ function SessionModal({
       onClose={close}
       wide
       initialFocus={
-        evidence?.type === 'timed' && evidence.generatedListening ? 'heading' : saveButton
+        evidence?.type === 'timed' && (evidence.generatedListening || evidence.recordings.length)
+          ? 'heading'
+          : saveButton
       }
     >
       <p className="modal-intro">
@@ -2789,6 +2791,10 @@ function SessionModal({
           </div>
           {evidence?.type === 'timed' && (
             <>
+              <p id="recall-correction-help" className="field-hint">
+                Recall time is included in total practice time. Correct either value if an
+                interruption left time uncounted; measured listening stays recorded separately.
+              </p>
               <label className="checkbox-label">
                 <input
                   type="checkbox"
@@ -2813,6 +2819,7 @@ function SessionModal({
                     Corrected recall time <span className="label-hint">minutes:seconds</span>
                     <input
                       value={correction.recallSeconds}
+                      aria-describedby="recall-correction-help"
                       onChange={(event) =>
                         setCorrection((value) => ({ ...value, recallSeconds: event.target.value }))
                       }

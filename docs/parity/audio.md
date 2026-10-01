@@ -224,10 +224,28 @@ hidden pages, negative/invalid ticks, and delayed ticks of four seconds or more.
 This avoids crediting sleep or a suspended page as focused recall. Finish allows
 recall correction within total practice time ([client.ts:2311](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L2311)).
 
-The implementation now has a distinct recall mode for assigned audio and pauses it when hidden.
-New `PracticeClock` still measures manual/recall time from its start timestamp;
-it does not implement the personal four-second interruption guard for a blocked
-or suspended visible page. This is a remaining behavior difference.
+Issue #8 adds a single guarded settlement used by observation, Pause, review,
+inspection and every mode transition. Hidden, invalid, backward and >=4-second
+recall samples add no time and pause recall; earlier observed credit remains.
+A visible notice explains the omission and correction, and only deliberate
+resume establishes a fresh anchor. Direct Start recall physically pauses the
+recording; paired recall/listening controls sit beside its native player.
+App, native and Media Session Play stop recall before requesting or
+starting playback; buffering/rejected Play supplies no listening time. Late
+media suspension and canceled Play cannot erase a newly started recall mode.
+
+The existing versioned correction workflow retains measured total/recall and
+recording subtotals. Corrected recall is included in corrected total, with typed
+finite/nonnegative bounds and retained recording time enforced in UI, Worker,
+private history/report and transactional backups. Ordinary manual/external
+timing intentionally continues off-page until paused, with explicit copy; in-app
+inspection pauses the block. Native background listening keeps its existing
+media-derived accounting. See the canonical #8 ledger for validation/review.
+New and historical recording review opens at its title/raw evidence; keyboard
+Save and cancellation remain reachable. Check, all 624 tests and build pass,
+as do the full 58 browser journeys and nine final interface rechecks. Independent
+review is pending. No elapsed-time reload/crash recovery or physical-device
+claim is added.
 
 ### P2 — difficult marks and short replay: missing for official audio
 

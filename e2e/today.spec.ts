@@ -285,10 +285,12 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.clock.pauseAt(new Date('2026-10-06T16:00:01Z'));
   await page.clock.fastForward(65_000);
   await page.getByRole('button', { name: 'Start recall timer', exact: true }).click();
-  await page.clock.fastForward(20_000);
+  await page.clock.runFor(20_000);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await expect(
+    dialog.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
+  ).toBeFocused();
   await expect(dialog.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
   await expect(dialog.getByLabel('Effective WPM', { exact: true })).toHaveValue('');
   await page.screenshot({ path: '.tmp/practice-review-mobile.png', fullPage: true });

@@ -129,6 +129,7 @@ export default function PracticeStudio({
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
   const automaticSave = !assigned || activity?.type === 'audio';
   const recording = useRef<HTMLAudioElement>(null);
+  const recordingPlayRequest = useRef(0);
   const recordingSession = useRef(new MediaSessionController());
   const attachRecording = useCallback((element: HTMLAudioElement | null) => {
     if (recording.current && recording.current !== element) {
@@ -142,7 +143,7 @@ export default function PracticeStudio({
     session.claim({
       title: `${launch?.task?.lesson ? `Session ${launch.task.lesson} · ` : ''}${selectedRecording?.title ?? launch?.task?.title ?? 'Assigned recording'}`,
       album: `CW Academy practice${recordingWpm ? ` · ${recordingWpm} WPM` : ''}`,
-      onPlay: () => (canPractice() ? audio.play() : undefined),
+      onPlay: () => playRecording(audio),
       onPause: () => audio.pause(),
       onStop: () => {
         if (!canPractice()) return;
@@ -288,6 +289,7 @@ export default function PracticeStudio({
     setScratchpad(loadStudioNotes(notesScope, notesContext));
   }, [notesScope, notesContext]);
   const stopPlayback = () => {
+    recordingPlayRequest.current++;
     timer.pauseMedia();
     player.current.pause();
     recording.current?.pause();
@@ -329,7 +331,9 @@ export default function PracticeStudio({
     return Math.floor(elapsed.seconds);
   };
   const startTimer = () => {
-    if (!canPractice() || isRunner || isCopy || running) return;
+    if (!canPractice() || isRunner || isCopy) return;
+    if (activity?.type === 'audio') stopPlayback();
+    else if (running) return;
     identity();
     setConfirmReset(false);
     timer.startManual(activity?.type === 'audio');
@@ -527,6 +531,22 @@ export default function PracticeStudio({
     setFreeTrack(null);
     setFreeWord(-1);
   }, [text, mode, groupLength, wordLength, characterWpm, effectiveWpm, tone, volume, tool]);
+  const playRecording = async (audio: HTMLAudioElement) => {
+    if (!canPractice()) return;
+    const request = ++recordingPlayRequest.current;
+    timer.stopRecall();
+    setError('');
+    try {
+      await audio.play();
+    } catch (err) {
+      // Pausing for recall or inspection can reject an earlier pending Play.
+      // That obsolete request must not stop the newly selected practice mode.
+      if (request !== recordingPlayRequest.current || !canPractice()) return;
+      setError((err as Error).message);
+      setPlaying(false);
+      timer.pauseMedia();
+    }
+  };
   const play = async () => {
     if (!canPractice()) return;
     identity();
@@ -542,7 +562,7 @@ export default function PracticeStudio({
             activity.unresolved ??
               'This recording is unavailable. Open the official exercise for alternatives.',
           );
-        await recording.current.play();
+        await playRecording(recording.current);
         return;
       }
       if (assigned) return;
@@ -585,7 +605,7 @@ export default function PracticeStudio({
   const onMedia = (event: React.SyntheticEvent) => {
     if (
       !canPractice() &&
-      (event.type === 'playing' || event.type === 'seeked') &&
+      (event.type === 'play' || event.type === 'playing' || event.type === 'seeked') &&
       event.target instanceof HTMLAudioElement
     ) {
       event.target.pause();
@@ -595,6 +615,31 @@ export default function PracticeStudio({
     if (event.type === 'playing') identity();
     timer.onMedia(event);
   };
+  const recallControls = (
+    <div className="playback-toolbar" role="group" aria-label="Listening and recall controls">
+      <button
+        className="button outline"
+        aria-pressed={timer.recalling}
+        aria-describedby="recall-policy"
+        onClick={() => (timer.recalling ? pauseTimer() : startTimer())}
+      >
+        {timer.recalling ? <Square size={14} /> : <Play size={14} />}
+        {timer.recalling
+          ? 'Pause recall'
+          : timer.recallSeconds > 0 || timer.recallInterruption
+            ? 'Resume recall timer'
+            : 'Start recall timer'}
+      </button>
+      <button
+        className="button outline"
+        disabled={playing || !recordingUrl}
+        aria-describedby="recall-policy"
+        onClick={() => void play()}
+      >
+        <Play size={14} /> Resume listening
+      </button>
+    </div>
+  );
   const SessionPanel = isSending ? 'details' : 'section';
   return (
     <>
@@ -821,6 +866,21 @@ export default function PracticeStudio({
             </button>
           )}
           {savingNavigation && <p role="status">Saving your practice…</p>}
+          {timer.recallInterruption && (
+            <div className="alert" role="status">
+              <span>
+                <strong>Recall paused.</strong>{' '}
+                {timer.recallInterruption === 'hidden'
+                  ? 'This page was hidden.'
+                  : timer.recallInterruption === 'delayed'
+                    ? 'A delay interrupted the timer.'
+                    : 'The timer could not measure the interval reliably.'}{' '}
+                The unobserved interval was not counted. Resume recall when you are ready. If you
+                practiced during the interruption, choose Correct measured time in Review &amp;
+                save. Recall is included in total practice time.
+              </span>
+            </div>
+          )}
           <fieldset
             className="studio-session-controls"
             disabled={savingNavigation || savingCompletion || saveFailed}
@@ -834,12 +894,20 @@ export default function PracticeStudio({
               <button
                 className="button dark"
                 disabled={activity?.type === 'audio' && !recordingUrl}
-                onClick={() => (running ? pauseTimer() : void startPractice())}
+                onClick={() =>
+                  (activity?.type === 'audio' ? playing : running)
+                    ? pauseTimer()
+                    : void startPractice()
+                }
               >
-                {running ? <Square size={14} /> : <Play size={14} />}
+                {(activity?.type === 'audio' ? playing : running) ? (
+                  <Square size={14} />
+                ) : (
+                  <Play size={14} />
+                )}
                 {activity?.type === 'audio' && !recordingUrl
                   ? 'Recording unavailable'
-                  : running
+                  : (activity?.type === 'audio' ? playing : running)
                     ? 'Pause practice'
                     : seconds > 0
                       ? 'Resume practice'
@@ -869,6 +937,7 @@ export default function PracticeStudio({
             >
               <section
                 className="card studio-card"
+                onPlayCapture={onMedia}
                 onPlayingCapture={onMedia}
                 onTimeUpdateCapture={onMedia}
                 onPauseCapture={onMedia}
@@ -934,8 +1003,10 @@ export default function PracticeStudio({
                             else event.currentTarget.pause();
                           }}
                           onPlaying={(event) => {
-                            if (canPractice() && !event.currentTarget.paused)
+                            if (canPractice() && !event.currentTarget.paused) {
+                              setError('');
                               claimRecordingSession(event.currentTarget);
+                            }
                           }}
                           onTimeUpdate={() => recordingSession.current.updatePosition()}
                           onLoadedMetadata={() => recordingSession.current.updatePosition()}
@@ -949,14 +1020,17 @@ export default function PracticeStudio({
                             setPlaying(false);
                             recordingSession.current.release();
                           }}
-                          onError={() => {
+                          onError={(event) => {
                             setError(
                               'The recording could not load. Open the official exercise to check its availability.',
                             );
-                            pauseTimer();
+                            timer.pauseMedia();
+                            event.currentTarget.pause();
+                            setPlaying(false);
                             recordingSession.current.release();
                           }}
                         />
+                        {recallControls}
                         {activity.url && (
                           <RecordingSpeedSelect
                             assignedUrl={activity.url}
@@ -975,9 +1049,12 @@ export default function PracticeStudio({
                         </p>
                       </>
                     ) : (
-                      <p role="status">
-                        {activity.unresolved ?? 'This recording is not currently available.'}
-                      </p>
+                      <>
+                        <p role="status">
+                          {activity.unresolved ?? 'This recording is not currently available.'}
+                        </p>
+                        {recallControls}
+                      </>
                     )}
                     {recordingUrl && (
                       <a
@@ -1204,12 +1281,15 @@ export default function PracticeStudio({
                     </span>
                   </div>
                 )}
-                <p className="studio-playback-help">
+                <p
+                  className="studio-playback-help"
+                  id={activity?.type === 'audio' ? 'recall-policy' : undefined}
+                >
                   {isSending
                     ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
                     : assigned
                       ? activity?.type === 'audio'
-                        ? 'Press Play in the audio controls to count listening time. Pauses and seeks do not add time. Use the recall timer for focused notes between listens.'
+                        ? 'Press Play to count listening time. Start recall pauses the recording for focused notes; Resume listening stops recall before playback. Recall pauses if this page is hidden or the timer is delayed.'
                         : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
                       : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
                 </p>
@@ -1319,19 +1399,15 @@ export default function PracticeStudio({
                   </details>
                   {!isSending && (
                     <>
-                      <button
-                        className="button dark full"
-                        onClick={() => (running ? pauseTimer() : startTimer())}
-                      >
-                        {running ? <Square size={14} /> : <Play size={14} />}
-                        {running
-                          ? 'Pause timer'
-                          : activity?.type === 'audio'
-                            ? 'Start recall timer'
-                            : seconds > 0
-                              ? 'Resume timer'
-                              : 'Start timer'}
-                      </button>
+                      {activity?.type !== 'audio' && (
+                        <button
+                          className="button dark full"
+                          onClick={() => (running ? pauseTimer() : startTimer())}
+                        >
+                          {running ? <Square size={14} /> : <Play size={14} />}
+                          {running ? 'Pause timer' : seconds > 0 ? 'Resume timer' : 'Start timer'}
+                        </button>
+                      )}
                       <p className="timer-elapsed">
                         <strong>{duration(seconds)}</strong> practiced ·{' '}
                         {running
@@ -1415,6 +1491,9 @@ export default function PracticeStudio({
                   <p className="studio-timer-scope">
                     {!isSending &&
                       'Listening time follows the audio, including when your screen locks. '}
+                    {activity?.type === 'audio'
+                      ? 'Recall counts only observed time with this page visible. '
+                      : 'The manual timer keeps counting practice away from this page until you pause it. Inspecting another app view pauses this block. '}
                     {automaticSave
                       ? 'Practice under 30 seconds is not logged automatically. Review and save before reloading to keep unfinished time.'
                       : 'Review and save before finishing or switching to keep your practice time.'}

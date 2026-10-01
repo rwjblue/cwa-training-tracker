@@ -222,8 +222,52 @@ describe('non-copy native evidence', () => {
     expect(backup.sessions[0]).toEqual(corrected);
   });
   it.each([
+    { measuredRecall: 10, correctedRecall: 0 },
+    { measuredRecall: 10, correctedRecall: 4.25 },
+    { measuredRecall: undefined, correctedRecall: 4.25 },
+  ])(
+    'corrects only the recall split without increasing the total %j',
+    ({ measuredRecall, correctedRecall }) => {
+      const raw = {
+        ...timed(),
+        measurement: {
+          seconds: 90.25,
+          ...(measuredRecall !== undefined ? { recallSeconds: measuredRecall } : {}),
+        },
+      };
+      const correction = { recallSeconds: correctedRecall, reason: 'Corrected interrupted recall' };
+      const corrected = validatePracticeSession({
+        ...session(raw),
+        metadata: {
+          elapsedSeconds: raw.measurement.seconds,
+          ...(measuredRecall !== undefined ? { recallSeconds: measuredRecall } : {}),
+          recordings: raw.recordings,
+          evidence: { ...raw, correction },
+        },
+      });
+      expect(corrected.minutes).toBe(raw.measurement.seconds / 60);
+      expect(corrected.metadata?.elapsedSeconds).toBe(raw.measurement.seconds);
+      expect(corrected.metadata?.recallSeconds).toBe(measuredRecall);
+      expect(corrected.metadata?.evidence).toMatchObject({
+        measurement: raw.measurement,
+        recordings: raw.recordings,
+        correction,
+      });
+      const evidence = sessionEvidence(corrected.metadata);
+      if (evidence?.type !== 'timed') throw new Error('Expected timer');
+      expect(evidenceTime(evidence)).toEqual({
+        seconds: raw.measurement.seconds,
+        recallSeconds: correctedRecall,
+      });
+    },
+  );
+  it.each([
     { seconds: 20, recallSeconds: 21, reason: 'Correction' },
     { seconds: 85, recallSeconds: 10, reason: 'Correction' },
+    { seconds: 9, reason: 'Total below retained recall' },
+    { recallSeconds: 10.25, reason: 'Recall beyond the space left after measured audio' },
+    { recallSeconds: -1, reason: 'Negative recall estimate' },
+    { recallSeconds: NaN, reason: 'Nonfinite recall estimate' },
     { seconds: 100, reason: '' },
     { recallSeconds: Infinity, reason: 'Correction' },
   ])('rejects inconsistent or unmarked corrections %j', (correction) => {

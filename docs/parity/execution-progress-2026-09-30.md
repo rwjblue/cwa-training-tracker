@@ -452,7 +452,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 
 ## Remaining queue
 
-Issues #1–#7 are complete; #8–#46 remain pending.
+Issues #1–#7 are complete; #8 is in progress and #9–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
 queue notes.
 
@@ -546,3 +546,35 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   #7 closed at `2026-10-01T04:46:43Z` after publication, acceptance and production
   checks. The two pre-existing uncommitted user documents remain byte-identical;
   the original personal-site source was not mutated. Continue with #8.
+
+## Issue #8 — guarded recall and correction (in progress)
+
+- Fresh body/comments and both native dependency directions confirm #8 is open,
+  without comments or dependency edges. Rechecked the pinned interruption guard,
+  direct recall, finish correction and server bound before implementation.
+- Reuse issue #1's correction/shared validation/private Worker/history/report
+  and transactional backup workflow. No second evidence envelope or migration.
+- Shared clock and hook authorship is isolated from root's Studio/control/review
+  integration and browser journey. Every recall observation and terminal action
+  applies the guard; actual audio and deliberate off-page manual timing keep
+  separate policies. Implementation commit and independent review remain pending.
+- Direct assigned recall physically pauses actual media. Paired recall/listening
+  controls sit beside the recording; app/native/Media Session Play settles recall
+  before buffering or rejection. Hidden/delayed/invalid observations announce
+  omitted time and deliberate resume/correction; inspection/canceled review retain
+  the owner. Successful native Play clears older errors; obsolete failed requests
+  cannot stop a newer recall mode. Audio review reuses heading focus and the
+  existing immutable correction envelope; corrected recall counts inside total.
+- Meaningful pure clock cases cover every terminal guard and the four-second
+  boundary, with positive manual off-page/background-media policies. Real SQL
+  audio correction checks invalid HTTP splits, raw immutability and portable
+  replacement fidelity. Check, all 624 tests in 43 files and build pass.
+- Complete serialized browser suite: 58 pass in 7.6 minutes. Final control placement
+  and native-error feedback: nine affected recall/correction/Today cases pass in
+  52.6 seconds. Desktop keyboard/emulated mobile touch exercise real synthetic
+  media, interruptions, deliberate resume, cancellation, invalid UI values,
+  no-storage/503 exact new-save retry, historical 503 retry, actual backup
+  download/import and report output. Root inspected the opening review and
+  interruption/correction/report captures. Initial focused tests failed only a
+  copied History selector (Head copy rather than assigned Listening); corrected
+  tests pass and both original traces remain ignored. No physical-device claim.

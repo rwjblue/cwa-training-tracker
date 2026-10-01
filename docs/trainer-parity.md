@@ -100,7 +100,7 @@ These baseline gaps no longer describe the current implementation:
 | Capability                      | Implemented behavior                                                                                                                                                                                                                                                                                                                                                           | Remaining boundary                                                                                                                                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Playback accounting | Native Play and app Play accrue actual media movement. Pauses, seeks, and buffering do not add idle time; replay counts heard time; the target never caps the session. In-app inspection settles and pauses the same clock without resetting its source subtotals. [Clock](../src/client/practice-clock.ts), [event hook](../src/client/usePracticeClock.ts). | Existing Copy recovery remains separate; restoring unfinished non-copy elapsed time after reload/crash is excluded. Physical locked-iOS behavior still needs a device check. |
-| Focused recall                  | Assigned audio has a separate recall timer, included in total time with its own saved measurement; hidden-page recall pauses. [Studio](../src/client/PracticeStudio.tsx).                                                                                                                                                                                                      | The personal visible-page delayed-tick interruption guard and finish-time recall correction are not yet equivalent.                                                                                                                                  |
+| Focused recall | Assigned Start recall physically pauses audio; app, native and Media Session Play stop recall before playback. Every recall settlement rejects hidden, invalid, backward or at least four-second delayed samples, retains prior credit and announces deliberate resume/correction. Review edits recall within total time while retaining raw measurements and per-file listening; the split survives private saves, history, reports and backups. [Clock](../src/client/practice-clock.ts), [journey](../e2e/recall.spec.ts). | Ordinary manual/external practice intentionally continues off-page until paused; in-app inspection pauses its owner. Actual background audio remains media-derived. No reload/crash elapsed-time recovery or physical-device verification is claimed. Issue #8 validation and independent review are recorded below. |
 | Scratchpad | Notes can be written during practice, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx). | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate. |
 | Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Full custom text/scripts remain in memory with the active owner; equal custom label/count/settings deliberately share a descriptive identity. Seamless speed retiming, Stories and public exact recipes remain later issues. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
 | Official recording speeds       | Verified native-speed files, device-local Assigned/Next preference, and mixed-speed per-file actual-time metadata are supported. Official files remain at 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [catalog matching](../src/client/recording-variants.ts).                                                                                                     | Per-task remembered overrides, actual pass/coverage tracking, bookmarks, and report aggregation remain open.                                                                                                                                         |
@@ -534,3 +534,29 @@ the focused mobile review correction after four fresh rechecks and a viewport
 capture check. Signed commits are published, production is verified and #7 is
 closed; exact evidence belongs in the execution journal. No physical-device
 verification is claimed.
+
+## Issue #8 delivery ledger — guarded recall and correction
+
+Implementation and validation are complete; independent acceptance is pending.
+The shared clock settles each observed recall interval at every boundary and
+retains finite prior credit when hidden, invalid, backward or delayed at least
+four seconds. Direct recall pauses actual assigned audio; Play requests settle
+recall before buffering, failure or real media-derived listening. Owner-local
+interruption feedback survives inspection and canceled review until deliberate
+resume/reset. The existing correction envelope keeps raw measurements immutable
+and corrected recall inside corrected total, including retained recording time.
+Ordinary manual/external timing intentionally continues away from this page,
+with explicit instructions; in-app inspection pauses the block. This issue adds
+no schema, binding, reload/crash elapsed restoration or speech-recognition work.
+Recall and Resume listening controls sit beside the assigned player at both
+widths. New and historical recording review starts at its heading/raw evidence,
+with keyboard access to Save and cancellation. Successful native playback clears
+earlier playback errors; canceled requests cannot erase a newer recall mode.
+
+Check, all 624 tests in 43 files and build pass. The complete serialized browser
+suite passes all 58 journeys in 7.6 minutes. After the final control placement,
+nine affected recall/correction/Today journeys pass in 52.6 seconds, including
+desktop keyboard and emulated mobile touch, invalid correction, exact new-save
+retry, historical retry, actual backup download/import and report output. Root
+inspected initial review, interruption, correction and report captures; no
+physical device or reload/crash elapsed behavior is claimed.

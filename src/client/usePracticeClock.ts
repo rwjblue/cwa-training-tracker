@@ -4,18 +4,22 @@ import { PracticeClock } from './practice-clock';
 export function usePracticeClock() {
   const clock = useRef(new PracticeClock());
   const media = useRef<HTMLAudioElement | null>(null);
-  const [state, setState] = useState(() => clock.current.snapshot(performance.now()));
-  const snapshot = () => clock.current.snapshot(performance.now());
+  const [state, setState] = useState(() =>
+    clock.current.snapshot(performance.now(), !document.hidden),
+  );
+  const snapshot = () => clock.current.snapshot(performance.now(), !document.hidden);
   const refresh = () => {
     const next = snapshot();
     setState((previous) =>
       Math.floor(previous.seconds) === Math.floor(next.seconds) &&
       Math.floor(previous.recallSeconds) === Math.floor(next.recallSeconds) &&
       previous.running === next.running &&
-      previous.recalling === next.recalling
+      previous.recalling === next.recalling &&
+      previous.recallInterruption === next.recallInterruption
         ? previous
         : next,
     );
+    return next;
   };
   const sample = (audio: HTMLAudioElement) => {
     if (!audio.seeking)
@@ -30,15 +34,24 @@ export function usePracticeClock() {
   const pause = () => {
     if (media.current) sample(media.current);
     media.current = null;
-    clock.current.pause(performance.now());
-    refresh();
-    return clock.current.snapshot(performance.now());
+    clock.current.pause(performance.now(), !document.hidden);
+    return refresh();
+  };
+  const stopRecall = () => {
+    clock.current.stopRecall(performance.now(), !document.hidden);
+    return refresh();
   };
   const onMedia = (event: SyntheticEvent) => {
     const audio = event.target;
     if (!(audio instanceof HTMLAudioElement)) return;
+    if (event.type === 'play') {
+      // Stop at the request, even if decoding/buffering never reaches playing.
+      if (!audio.paused) stopRecall();
+      else refresh();
+      return;
+    }
     if (
-      event.type === 'playing' ||
+      (event.type === 'playing' && !audio.paused) ||
       (event.type === 'seeked' && !audio.paused && audio.readyState >= 3)
     ) {
       if (media.current === audio) sample(audio);
@@ -53,6 +66,7 @@ export function usePracticeClock() {
               ...(audio.dataset.speed ? { speedWpm: Number(audio.dataset.speed) } : {}),
             }
           : undefined,
+        !document.hidden,
       );
     } else if (media.current === audio) {
       if (event.type === 'seeking' || event.type === 'emptied') {
@@ -71,8 +85,8 @@ export function usePracticeClock() {
       refresh();
     };
     const visibilityChanged = () => {
-      if (document.hidden && clock.current.snapshot(performance.now()).recalling) pause();
-      else tick();
+      // snapshot sees hidden before settling; it must not credit this last interval.
+      tick();
     };
     const interval = setInterval(tick, 250);
     document.addEventListener('visibilitychange', visibilityChanged);
@@ -87,10 +101,11 @@ export function usePracticeClock() {
     onMedia,
     pause,
     pauseMedia,
+    stopRecall,
     startManual(recall = false) {
       if (media.current) sample(media.current);
       media.current = null;
-      clock.current.startManual(performance.now(), recall);
+      clock.current.startManual(performance.now(), recall, !document.hidden);
       refresh();
     },
     reset() {

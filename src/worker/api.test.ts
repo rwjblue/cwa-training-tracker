@@ -2817,6 +2817,96 @@ describe('validated non-copy evidence', () => {
       ).status,
     ).toBe(404);
   });
+  it('corrects audio recall without inflating total time or replacing raw source facts', async () => {
+    const auth = await signIn('audio-recall-correction@example.test');
+    const raw = {
+      version: 1,
+      type: 'timed',
+      measurement: { seconds: 90.25, recallSeconds: 10 },
+      recordings: [{ url: 'https://example.test/recall-source.wav', seconds: 80.25 }],
+    };
+    const source = {
+      ...measured(),
+      kind: 'listening',
+      metadata: {
+        ...measured().metadata,
+        practiceTool: 'audio',
+        recordings: raw.recordings,
+        evidence: raw,
+      },
+    };
+    const created = await request('/api/entries', 'POST', source, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    const stored = () =>
+      db.sqlite
+        .prepare('SELECT entry_json FROM practice_entries WHERE user_id=? AND id=?')
+        .get(auth.user.id, saved.id)?.entry_json;
+    const originalBytes = stored();
+    const changedRawRecall = {
+      ...saved,
+      metadata: {
+        ...saved.metadata,
+        recallSeconds: 9,
+        evidence: { ...raw, measurement: { ...raw.measurement, recallSeconds: 9 } },
+      },
+    };
+    const changed = await request(`/api/entries/${saved.id}`, 'PUT', changedRawRecall, auth.cookie);
+    expect(changed.status).toBe(400);
+    expect(await changed.json()).toMatchObject({
+      error: expect.stringContaining('Measured source evidence cannot be changed'),
+    });
+    const correction = (recallSeconds: number) => ({
+      ...saved,
+      metadata: {
+        ...saved.metadata,
+        evidence: {
+          ...raw,
+          correction: { recallSeconds, reason: 'Corrected interrupted recall' },
+        },
+      },
+    });
+    // Nonfinite JS values serialize to null; the HTTP boundary must reject them too.
+    for (const recallSeconds of [-1, NaN, Infinity, 90.5, 10.25]) {
+      const impossible = await request(
+        `/api/entries/${saved.id}`,
+        'PUT',
+        correction(recallSeconds),
+        auth.cookie,
+      );
+      expect(impossible.status).toBe(400);
+      expect(await impossible.json()).toMatchObject({ error: expect.stringContaining('recall') });
+      expect(stored()).toBe(originalBytes);
+    }
+    const updated = await request(`/api/entries/${saved.id}`, 'PUT', correction(0), auth.cookie);
+    expect(updated.status).toBe(200);
+    const corrected = ((await updated.json()) as { entry: PracticeSession }).entry;
+    expect(corrected.minutes).toBe(raw.measurement.seconds / 60);
+    expect(corrected.metadata).toMatchObject({
+      elapsedSeconds: raw.measurement.seconds,
+      recallSeconds: raw.measurement.recallSeconds,
+      recordings: raw.recordings,
+      evidence: {
+        ...raw,
+        correction: { recallSeconds: 0, reason: 'Corrected interrupted recall' },
+      },
+    });
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions).toEqual([corrected]);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual([corrected]);
+  });
   it('rejects invalid write/import evidence before replacement changes history', async () => {
     const auth = await signIn('malformed-evidence@example.test');
     await request('/api/entries', 'POST', entry(), auth.cookie);

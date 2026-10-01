@@ -224,6 +224,19 @@ geometry before scrolling; check keyboard access to Save and Escape cancellation
 Keep actual media movement as the listening-time boundary; summaries are not
 per-configuration elapsed measurements, proficiency or on-air contact counts.
 
+For assigned recall, pure clock tests must exercise the same interruption guard
+at observations and terminal actions: just below/exactly/above four seconds,
+hidden/invalid/backward samples, repeated Start, Pause, review and Play. Retain
+positive tests for intentional off-page manual practice and real background
+media movement. The representative desktop/mobile journey starts recall while
+synthetic audio actually plays, checks physical pause and app/native/Media Session
+resume boundaries, then uses observed clock samples for valid recall and a
+deliberate delayed sample for interruption. Verify visible feedback, deliberate
+resume, inspection/canceled review, invalid correction, exact failed-save retry,
+historical edit and actual backup download/import/report. Recall correction is
+part of total time; raw measurements and recording subtotals remain immutable.
+Visibility emulation does not establish physical lock-screen behavior.
+
 For automatic practice saves, test the queue below the browser: successive guest
 rounds, immutable retries after lost responses, storage/network failure, and
 stopping a flush when the authenticated account changes. Browser journeys prove
