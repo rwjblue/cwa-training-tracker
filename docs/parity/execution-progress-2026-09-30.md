@@ -547,7 +547,7 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   checks. The two pre-existing uncommitted user documents remain byte-identical;
   the original personal-site source was not mutated. Continue with #8.
 
-## Issue #8 — guarded recall and correction (in progress)
+## Issue #8 — completed, independently accepted, published and deployed
 
 - Fresh body/comments and both native dependency directions confirm #8 is open,
   without comments or dependency edges. Rechecked the pinned interruption guard,
@@ -557,7 +557,8 @@ of issue #2. Both improvements stay separate from this issue's implementation.
 - Shared clock and hook authorship is isolated from root's Studio/control/review
   integration and browser journey. Every recall observation and terminal action
   applies the guard; actual audio and deliberate off-page manual timing keep
-  separate policies. Implementation commit and independent review remain pending.
+  separate policies. The implementation was committed before fresh independent
+  review.
 - Direct assigned recall physically pauses actual media. Paired recall/listening
   controls sit beside the recording; app/native/Media Session Play settles recall
   before buffering or rejection. Hidden/delayed/invalid observations announce
@@ -578,3 +579,28 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   interruption/correction/report captures. Initial focused tests failed only a
   copied History selector (Head copy rather than assigned Listening); corrected
   tests pass and both original traces remain ignored. No physical-device claim.
+
+- Independent review accepted exact implementation tree
+  `0bfce735e9ae0583692492b8ab1ef5afbaa4644d`, with no substantive findings. Eleven
+  independently authored workflow probes pass (nine core in 61.0 seconds and two
+  external-practice cases in 11.3 seconds). Three terminal/ownership rechecks pass
+  in 12.6 seconds; 200 focused clock/shared/Worker tests pass in 2.09 seconds.
+  Twenty-three Axe/geometry states pass and 24 latest images were inspected.
+  Actual external popup timing, terminal guard bypass attempts, pending/stale Play
+  ownership and cross-account update/deletion are independently checked. Reviewer
+  harness-only paused-clock and selector/precision mistakes are preserved with
+  their corrections in ignored evidence; no product failure was concealed.
+- Signed implementation `25341c42e35c726af8ef3cfcb1bc516637f2401a` is published
+  on main. GitHub verifies the signature as valid and its tree matches acceptance.
+  `mise run deploy` passes without a retry or migration, including fresh check,
+  all 624 tests and build. Production version
+  `dd05fb54-722e-48a9-a131-dec98264d8a0` returns root/health 200 and private
+  entries/account-state/lifecycle-backup 401. All four JS/CSS assets match local
+  SHA-256 hashes. No configuration/binding change or physical-device claim.
+- [Completion comment](https://github.com/rwjblue/cwa-training-tracker/issues/8#issuecomment-5925434735)
+  records delivered behavior, signed references, validation, review and limits.
+  #8 closed at `2026-10-01T05:36:47Z` after acceptance, publication and production
+  verification. Current audio-summary wording now reflects delivered scoped
+  notes/queues and the approved exclusion of elapsed reload/crash recovery.
+  Original source remains read-only; the two protected user documents stay outside
+  these commits. Continue with #9, freshly rechecking its body and source.

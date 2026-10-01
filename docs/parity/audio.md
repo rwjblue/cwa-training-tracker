@@ -38,10 +38,15 @@ removed. Custom spoken words require published clips. Tests use real recordings;
 physical iPhone lock-screen verification and prebuilt MP3 optimization remain
 outstanding. See [provenance](../spoken-audio.md).
 
-**Still missing or partial:** unfinished scratchpad/time recovery and offline saves,
-per-task remembered speed overrides, actual completed passes/coverage, difficult marks,
-short replay controls, full generated-player retiming continuity, and complete
-advisor-report integration. Scratchpad is **in memory until saved**.
+**Current continuity:** scoped scratchpad notes, retained content and completed-result
+queues use the delivered device persistence and backup workflows. In-app inspection
+pauses and retains the block; canceled review and failed saves preserve its owner.
+Active elapsed-time recovery after reload/crash is excluded by the approved scope.
+
+**Still missing or partial:** per-task remembered speed overrides, actual completed
+passes/coverage, difficult marks, short replay controls, full generated-player
+retiming continuity, and remaining advisor-report integration. Later issue ledgers
+record their delivery; baseline findings below preserve the original audit.
 No physical locked-iOS verification is claimed.
 
 Updated source: [clock](../../src/client/practice-clock.ts),
@@ -243,9 +248,12 @@ inspection pauses the block. Native background listening keeps its existing
 media-derived accounting. See the canonical #8 ledger for validation/review.
 New and historical recording review opens at its title/raw evidence; keyboard
 Save and cancellation remain reachable. Check, all 624 tests and build pass,
-as do the full 58 browser journeys and nine final interface rechecks. Independent
-review is pending. No elapsed-time reload/crash recovery or physical-device
-claim is added.
+as do the full 58 browser journeys and nine final interface rechecks. Fresh
+independent review passes eleven workflow probes and 200 focused tests, with
+23 accessibility/geometry states and 24 inspected images. No substantive finding
+remains. Signed publication matches the accepted tree, production is verified
+and #8 is closed. No elapsed-time reload/crash recovery or physical-device claim
+is added.
 
 ### P2 — difficult marks and short replay: missing for official audio
 

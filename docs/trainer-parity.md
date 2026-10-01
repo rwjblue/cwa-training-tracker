@@ -537,7 +537,7 @@ verification is claimed.
 
 ## Issue #8 delivery ledger — guarded recall and correction
 
-Implementation and validation are complete; independent acceptance is pending.
+Implementation is independently accepted, published and deployed; #8 is closed.
 The shared clock settles each observed recall interval at every boundary and
 retains finite prior credit when hidden, invalid, backward or delayed at least
 four seconds. Direct recall pauses actual assigned audio; Play requests settle
@@ -560,3 +560,9 @@ desktop keyboard and emulated mobile touch, invalid correction, exact new-save
 retry, historical retry, actual backup download/import and report output. Root
 inspected initial review, interruption, correction and report captures; no
 physical device or reload/crash elapsed behavior is claimed.
+
+Fresh independent review passes eleven workflow probes, 200 focused tests and
+23 accessibility/geometry states, with 24 images inspected and no substantive
+finding. Signed publication matches the accepted tree; production health, private
+endpoint rejection and asset hashes are verified. Exact references and review
+evidence belong in the [execution journal](parity/execution-progress-2026-09-30.md).
