@@ -13,6 +13,11 @@ import {
   Square,
 } from 'lucide-react';
 import type { PracticeSession } from '../shared/training';
+import {
+  GeneratedListeningCollector,
+  type GeneratedListeningSummary,
+} from '../shared/generated-listening';
+import { freeListeningSummary } from './free-listening-summary';
 import { taskPracticeMetadata } from '../shared/practice-attribution';
 import type { PlannedTask } from '../shared/plan';
 import {
@@ -185,6 +190,7 @@ export default function PracticeStudio({
   const [notesRemembered, setNotesRemembered] = useState(true);
   const sessionIdentity = useRef<{ id: string; createdAt: string } | undefined>(undefined);
   const saveCoordinator = useRef(new StudioSaveCoordinator());
+  const generatedListening = useRef(new GeneratedListeningCollector());
   const navigationFlight = useRef<Promise<boolean> | undefined>(undefined);
   const navigationLocked = useRef(false);
   const [savingNavigation, setSavingNavigation] = useState(false);
@@ -239,6 +245,7 @@ export default function PracticeStudio({
       ) {
         pauseTimer();
         timer.reset();
+        generatedListening.current.reset();
         changeScratchpad('');
         sessionIdentity.current = undefined;
         saveCoordinator.current.reset();
@@ -330,6 +337,7 @@ export default function PracticeStudio({
   const resetTimer = () => {
     stopPlayback();
     timer.reset();
+    generatedListening.current.reset();
     sessionIdentity.current = undefined;
     saveCoordinator.current.reset();
     setConfirmReset(false);
@@ -340,6 +348,7 @@ export default function PracticeStudio({
         identity: identity(),
         measured: timer.snapshot(),
         preferences,
+        generatedListening: generatedListening.current.snapshot(),
         scratchpad,
         timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
         launch,
@@ -461,8 +470,22 @@ export default function PracticeStudio({
     setPreferences(next);
     if (regenerate && next.mode !== 'custom') setText(generatePractice(next.mode, next));
   };
+  const recordGeneratedListening = (summary: GeneratedListeningSummary) => {
+    if (!canPractice()) return;
+    identity();
+    generatedListening.current.record(summary);
+  };
   const prepareFree = () => {
-    const key = JSON.stringify([text, characterWpm, effectiveWpm, tone, volume]);
+    const key = JSON.stringify([
+      text,
+      mode,
+      groupLength,
+      wordLength,
+      characterWpm,
+      effectiveWpm,
+      tone,
+      volume,
+    ]);
     if (preparedFree.current === key) return;
     const next = buildMorseTrack([{ text }], {
       characterWpm,
@@ -470,11 +493,16 @@ export default function PracticeStudio({
       frequency: tone,
       volume: volume / 100,
     });
+    const summary = freeListeningSummary(next, preferences);
     player.current.prepare(next, {
       title: 'Free Morse practice',
       canPlay: canPractice,
       onProgress: (progress) => setFreeWord(progress.wordIndex),
-      onState: (state) => setPlaying(state === 'playing'),
+      onState: (state) => {
+        if (preparedFree.current !== key) return;
+        setPlaying(state === 'playing');
+        if (state === 'playing') recordGeneratedListening(summary);
+      },
       onError: (message) => {
         setError(message);
         pauseTimer();
@@ -498,7 +526,7 @@ export default function PracticeStudio({
     preparedFree.current = '';
     setFreeTrack(null);
     setFreeWord(-1);
-  }, [text, characterWpm, effectiveWpm, tone, volume, tool]);
+  }, [text, mode, groupLength, wordLength, characterWpm, effectiveWpm, tone, volume, tool]);
   const play = async () => {
     if (!canPractice()) return;
     identity();
@@ -990,6 +1018,7 @@ export default function PracticeStudio({
                       />
                     }
                     onPlaying={setPlaying}
+                    onPlayed={recordGeneratedListening}
                     onError={(message) => {
                       pauseTimer();
                       setError(message);

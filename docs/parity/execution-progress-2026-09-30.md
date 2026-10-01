@@ -466,3 +466,46 @@ keep commits focused, and serialize browser harnesses on port 8791. Its complete
 duration/speed commit remains an ancestor. A separate concurrent CSP commit
 allows the Cloudflare analytics beacon; it is preserved as the immediate parent
 of issue #2. Both improvements stay separate from this issue's implementation.
+
+## Issue #7 — actually played generated listening (implementation gate pending)
+
+- Rechecked current body/comments and both native dependency directions after #6
+  closed. No comments or native dependency edges; body prerequisite #1 is delivered.
+  Pinned public/private word/QSO source models remain read-only evidence.
+- Added optional strict version 1 generatedListening inside timed raw evidence,
+  preserving old valid records/backups. Actual native accepted playing captures a
+  frozen words/QSO/free descriptor; selected/prepared/failed-play setups are omitted.
+- Studio owns a 15-distinct-summary collector plus explicit overflow beside its
+  existing clock and save coordinator. Inspection retains it, block reset/end
+  clears it, and first-save snapshots remain immutable across uncertain retries.
+  Actual source identities drive notes and compatibility list/scenario fields.
+- Exact custom occurrences/contact scripts and Copy answers stay in memory through
+  review/replay/retiming; only deliberate source replacement generates fresh content.
+  Word-only preferences no longer regenerate an unrelated QSO. No private text,
+  script, content hash or invented per-configuration time/score is persisted.
+- Shared review/history/report formatting and existing Worker/account backup
+  boundaries retain the summaries. Mixed/unknown/overflowed actual speed pairs
+  clear both single-session WPM fields; review cannot relabel them. Strict fields,
+  published word counts, bounds, raw-fact edits and foreign task links are tested.
+- Typecheck and 266 focused tests across seven domain/client/Worker files pass.
+  Initial fixture options/types were corrected before the focused passing run.
+  The first two-width browser run stopped on an assertion expecting an injected
+  raw play error instead of the shared player's intentional standard interruption
+  message; trace/context confirmed that message. The assertion now checks the
+  actual feedback; no timeout or product behavior changed. The two focused desktop
+  and mobile journeys pass in 36.2 seconds. Final check, all 583 tests in 43 files,
+  build and all 56 serialized browser journeys pass (7.3 minutes). Implementation
+  commit and fresh independent review remain in progress.
+- No new route/entity/schema/configuration/binding, public link sharing, Stories,
+  seamless live retiming, non-copy crash/reload elapsed recovery or physical-device
+  verification is claimed. Equal custom label/count/settings deliberately
+  deduplicate as descriptive configurations without exposing text/hash identities.
+
+- First complete browser run passed 55/56 in 7.3 minutes. The one Today journey
+  fast-forwarded its manual timer seven minutes from the actual 23:54 local clock
+  across midnight. Trace/context show Today correctly displaying the next day's
+  assignment and the saved Sep 30 record in recent/earlier history. The journey now
+  uses a fixed daytime synthetic date before arranging fixtures or fast-forwarding;
+  no product behavior, listening credit, assertions or timeout is weakened. This
+  independent harness correction will remain a separate focused commit. Its
+  focused recheck passes, and the final complete 56-journey run passes.

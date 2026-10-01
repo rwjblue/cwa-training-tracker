@@ -437,3 +437,20 @@ cases pass (17 plus one reviewer-only selector recheck). Signed publication,
 production verification and #6 closure are recorded in the
 [execution journal](execution-progress-2026-09-30.md). No reload/crash or
 physical-device continuity claim is made.
+
+### Issue #7 — generated-listening evidence in records and reports
+
+The baseline final-selected-settings gap in P18/P29 is addressed by bounded
+actual played configurations inside timed raw evidence. Shared validation and
+formatting carry published identities/custom descriptions, speeds, pitch/spacing,
+word shuffle/repeat/answer settings and actual generated station calls into save
+review, expandable history and the printable report. Mixed configurations supply
+no final-selected single speed. Existing scoped stable-ID queues, corrections,
+owned-task checks and transactional v1 export/import retain the same facts.
+
+Private custom text/contact scripts remain with the running Studio rather than
+server records or public assets. No per-source elapsed allocation or proficiency
+is invented. Actual media time remains the existing clock's responsibility.
+Source, SQL and desktop/mobile validation and independent acceptance are tracked
+in the [execution journal](execution-progress-2026-09-30.md); the #7 gate and
+publication are still pending.

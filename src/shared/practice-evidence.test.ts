@@ -7,6 +7,7 @@ import {
 } from './practice-evidence';
 import { validatePracticeSession, validateTrainingExport } from './training';
 import { RUNNER_REVISION } from './runner';
+import type { GeneratedListeningEvidence } from './generated-listening';
 
 const timed = () => ({
   version: 1,
@@ -51,7 +52,118 @@ const session = (evidence: unknown) => ({
   metadata: { evidence },
 });
 
+const generated = (): GeneratedListeningEvidence => ({
+  version: 1,
+  overflow: false,
+  summaries: [
+    {
+      mode: 'words',
+      listId: 'custom',
+      customLabel: 'Your word list',
+      entryCount: 2,
+      characterWpm: 20,
+      effectiveWpm: 10,
+      toneHz: 600,
+      wordGapSeconds: 1,
+      shuffle: false,
+      repeat: true,
+      spokenAnswers: false,
+    },
+    {
+      mode: 'qso',
+      scenarioId: 'pota',
+      stations: ['W1DPN', 'K2MVR'],
+      tonesHz: [600, 650],
+      characterWpm: 25,
+      effectiveWpm: 15,
+      transmissionGapSeconds: 2,
+    },
+  ],
+});
+
 describe('non-copy native evidence', () => {
+  it('preserves bounded played configurations through canonical aliases, correction and v1 backup', () => {
+    const raw = {
+      version: 1,
+      type: 'timed',
+      measurement: { seconds: 120, recallSeconds: 5 },
+      recordings: [],
+      generatedListening: generated(),
+    };
+    const metadata = { elapsedSeconds: 120, recallSeconds: 5, recordings: [], evidence: raw };
+    expect(sessionEvidence(metadata)).toEqual(raw);
+    const corrected = validatePracticeSession({
+      ...session(raw),
+      metadata: {
+        ...metadata,
+        evidence: { ...raw, correction: { seconds: 125, reason: 'Extra recall' } },
+      },
+    });
+    expect(corrected.minutes).toBe(125 / 60);
+    expect(corrected.metadata?.evidence).toMatchObject({
+      measurement: raw.measurement,
+      generatedListening: generated(),
+    });
+    const details = practiceSessionEvidenceDetails(corrected.metadata).join('\n');
+    expect(details).toContain('Played Your word list: 2 entries');
+    expect(details).toContain('Played A POTA contact: W1DPN / K2MVR');
+    expect(details).toContain('Learner correction: 125.00 total seconds');
+    const backup = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      evidenceVersion: 1,
+      exportedAt: corrected.createdAt,
+      sessions: [corrected],
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(backup)))).toEqual(backup);
+  });
+  it('rejects generated configuration payloads outside timed raw evidence and private fields inside it', () => {
+    expect(() =>
+      validatePracticeEvidence({ ...runner(), generatedListening: generated() }),
+    ).toThrow(/unsupported field/);
+    expect(() =>
+      sessionEvidence({
+        copyAttempt: {},
+        evidence: {
+          version: 1,
+          type: 'timed',
+          measurement: { seconds: 60 },
+          recordings: [],
+          generatedListening: generated(),
+        },
+      }),
+    ).toThrow(/combine/);
+    expect(() =>
+      validatePracticeEvidence({
+        version: 1,
+        type: 'timed',
+        measurement: { seconds: 60 },
+        recordings: [],
+        generatedListening: {
+          ...generated(),
+          summaries: [{ ...generated().summaries[0], text: 'PRIVATE LIST' }],
+        },
+      }),
+    ).toThrow(/unsupported field/);
+  });
+  it('retains old native and legacy final selections without inventing played configurations', () => {
+    expect(validatePracticeEvidence(timed())).not.toHaveProperty('generatedListening');
+    const old = {
+      ...session(undefined),
+      metadata: {
+        elapsedSeconds: 60,
+        wordList: 'common-30',
+        qsoScenario: 'short-contact',
+      },
+    };
+    expect(sessionEvidence(validatePracticeSession(old).metadata)).not.toHaveProperty(
+      'generatedListening',
+    );
+    expect(validatePracticeSession(old).metadata).toMatchObject({
+      wordList: 'common-30',
+      qsoScenario: 'short-contact',
+    });
+  });
   it.each([NaN, Infinity, -1, 86401])('rejects invalid native time %s', (seconds) => {
     expect(() => validatePracticeEvidence({ ...timed(), measurement: { seconds } })).toThrow(
       /practice seconds/,

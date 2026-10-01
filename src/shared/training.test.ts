@@ -22,6 +22,7 @@ import {
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from './copy-practice';
 import { copyAttemptSessionFields } from './copy-report';
 import { taskPracticeMetadata } from './practice-attribution';
+import type { GeneratedListeningEvidence, GeneratedListeningSummary } from './generated-listening';
 
 function session(
   id: string,
@@ -321,6 +322,99 @@ describe('practice input validation', () => {
     expect(validateTrainingExport(JSON.parse(JSON.stringify(optedOut))).profile?.useGravatar).toBe(
       false,
     );
+  });
+});
+
+describe('generated listening session fields', () => {
+  const played = (
+    change: Partial<Extract<GeneratedListeningSummary, { mode: 'words' }>> = {},
+  ): GeneratedListeningSummary => ({
+    mode: 'words',
+    listId: 'common-30',
+    entryCount: 30,
+    characterWpm: 20,
+    effectiveWpm: 10,
+    toneHz: 600,
+    wordGapSeconds: 1,
+    shuffle: true,
+    repeat: true,
+    spokenAnswers: false,
+    ...change,
+  });
+  const timedSession = (
+    summaries: GeneratedListeningSummary[] = [played()],
+    recordings: { url: string; seconds: number; speedWpm?: number }[] = [],
+    overflow = false,
+  ) =>
+    session('generated-1', '2026-09-30', 999, {
+      characterWpm: 50,
+      effectiveWpm: 40,
+      accuracy: 0,
+      qsoCount: 0,
+      metadata: {
+        evidence: {
+          version: 1,
+          type: 'timed',
+          measurement: { seconds: 120, recallSeconds: 5 },
+          recordings,
+          generatedListening: {
+            version: 1,
+            summaries,
+            overflow,
+          } satisfies GeneratedListeningEvidence,
+        },
+      },
+    });
+
+  it('derives both measured speeds from played settings and keeps optional learner observations', () => {
+    const result = validatePracticeSession(timedSession());
+    expect(result).toMatchObject({
+      minutes: 2,
+      characterWpm: 20,
+      effectiveWpm: 10,
+      accuracy: 0,
+      qsoCount: 0,
+    });
+    expect(result.metadata?.evidence).toMatchObject({
+      generatedListening: { summaries: [played()] },
+    });
+  });
+
+  it('clears both single speed fields for any mixed actual pair or overflow', () => {
+    const fixtures = [
+      timedSession([played(), played({ effectiveWpm: 12 })]),
+      timedSession([played(), played({ characterWpm: 25 })]),
+      timedSession(
+        Array.from({ length: 15 }, (_, index) => played({ toneHz: 300 + index * 25 })),
+        [],
+        true,
+      ),
+    ];
+    for (const fixture of fixtures) {
+      const result = validatePracticeSession(fixture);
+      expect(result.characterWpm).toBeUndefined();
+      expect(result.effectiveWpm).toBeUndefined();
+    }
+  });
+
+  it('requires the recording and generated pairs to agree completely before using one speed', () => {
+    const recording = {
+      url: 'https://cwa.cwops.org/wp-content/uploads/ING7_18.mp3',
+      speedWpm: 18,
+      seconds: 30,
+    };
+    const matching = validatePracticeSession(
+      timedSession([played({ characterWpm: 25, effectiveWpm: 18 })], [recording]),
+    );
+    expect(matching).toMatchObject({ characterWpm: 25, effectiveWpm: 18 });
+    for (const recordings of [
+      [recording],
+      [{ url: 'https://example.test/unknown.wav', seconds: 30, speedWpm: 20 }],
+    ]) {
+      const mixed = validatePracticeSession(timedSession([played()], recordings));
+      expect(mixed.characterWpm).toBeUndefined();
+      expect(mixed.effectiveWpm).toBeUndefined();
+    }
   });
 });
 

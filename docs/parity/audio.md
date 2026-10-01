@@ -364,3 +364,20 @@ guard now includes scratchpad length. The two functional findings above are
 addressed in the current source. This was source verification, not a new browser
 run by this reviewer. Browser/native event behavior is covered by the
 focused test runs; real locked-iOS behavior still needs its separate device check.
+
+### Issue #7 — attribution beside actual media time
+
+Generated tracks now carry a frozen descriptive configuration paired with the
+actual prepared WAV. Only the current owner's accepted native playing state adds
+it to the Studio's bounded source collector. Preparation, selection, failed Play,
+inspection and replay of an already recorded configuration cannot invent another
+source. Actual credited seconds continue to use native movement in the existing
+clock; summaries do not invent per-configuration elapsed subtotals. Official URL/
+speed/time evidence remains a separate source model.
+
+QSO scripts and word occurrences retain their in-memory owners during review,
+replay, retiming and in-app inspection. This is source fidelity, not delivery of
+seamless occurrence-preserving speed changes or elapsed-time crash recovery.
+The [execution journal](execution-progress-2026-09-30.md) records browser evidence
+and the pending independent review/publication gate. Physical device/lock-screen
+verification is not implied by browser emulation.

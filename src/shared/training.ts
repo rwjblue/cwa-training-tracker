@@ -2,6 +2,7 @@ import { legacyPlan, validatePlan, type PlannedTask } from './plan.ts';
 import { validateCopyAttempt, type CopyAttempt } from './copy-practice.ts';
 import { copyAttemptSessionFields } from './copy-report.ts';
 import { evidenceTime, sessionEvidence, type PracticeEvidence } from './practice-evidence.ts';
+import { generatedListeningSpeeds } from './generated-listening.ts';
 
 /** Public domain model. Course instructions and personal records stay private. */
 export type CourseLevel = 'beginner' | 'fundamental' | 'intermediate' | 'advanced';
@@ -519,7 +520,23 @@ export function validatePracticeSession(
         if (evidence.run.summary) session.qsoCount = evidence.run.summary.qsoCount;
       } else {
         session.minutes = evidenceTime(evidence).seconds / 60;
-        if (evidence.recordings.length) {
+        if (evidence.generatedListening) {
+          delete session.characterWpm;
+          delete session.effectiveWpm;
+          const speeds = generatedListeningSpeeds(evidence.generatedListening);
+          if (
+            speeds.characterWpm !== undefined &&
+            speeds.effectiveWpm !== undefined &&
+            evidence.recordings.every(
+              (item) =>
+                item.characterWpm === speeds.characterWpm &&
+                item.effectiveWpm === speeds.effectiveWpm,
+            )
+          ) {
+            session.characterWpm = speeds.characterWpm;
+            session.effectiveWpm = speeds.effectiveWpm;
+          }
+        } else if (evidence.recordings.length) {
           delete session.characterWpm;
           delete session.effectiveWpm;
           for (const key of ['characterWpm', 'effectiveWpm'] as const) {

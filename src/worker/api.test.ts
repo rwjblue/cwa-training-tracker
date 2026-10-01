@@ -21,6 +21,10 @@ import {
   type LifecycleIdentity,
   type LifecycleResult,
 } from '../shared/account-lifecycle';
+import {
+  GeneratedListeningCollector,
+  type GeneratedListeningSummary,
+} from '../shared/generated-listening';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -2273,6 +2277,204 @@ describe('account operation revisions and receipts', () => {
     expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
       0,
     );
+  });
+});
+
+describe('generated listening evidence', () => {
+  const words = (characterWpm = 20): GeneratedListeningSummary => ({
+    mode: 'words',
+    listId: 'custom',
+    customLabel: 'Your word list',
+    entryCount: 2,
+    characterWpm,
+    effectiveWpm: 10,
+    toneHz: 600,
+    wordGapSeconds: 1,
+    shuffle: false,
+    repeat: true,
+    spokenAnswers: false,
+  });
+  const generated = (
+    summaries: readonly GeneratedListeningSummary[] = [words(), words(25)],
+    overflow = false,
+  ) => ({
+    ...entry('generated-listening'),
+    source: 'morse',
+    characterWpm: 50,
+    effectiveWpm: 40,
+    metadata: {
+      evidence: {
+        version: 1,
+        type: 'timed',
+        measurement: { seconds: 60 },
+        recordings: [],
+        generatedListening: { version: 1, summaries, overflow },
+      },
+    },
+  });
+
+  it('round trips mixed actual sources with stable identity and immutable raw evidence', async () => {
+    const auth = await signIn('generated-roundtrip@example.test');
+    const source = generated();
+    const created = await request('/api/entries', 'POST', source, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(saved.characterWpm).toBeUndefined();
+    expect(saved.effectiveWpm).toBeUndefined();
+    expect(saved.minutes).toBe(1);
+    expect(saved.metadata?.evidence).toEqual(source.metadata.evidence);
+    expect((await request('/api/entries', 'POST', source, auth.cookie)).status).toBe(200);
+    const modified = {
+      ...saved,
+      metadata: { ...saved.metadata, evidence: generated([words(30)]).metadata.evidence },
+    };
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', modified, auth.cookie)).status).toBe(
+      400,
+    );
+    const edited = {
+      ...saved,
+      notes: 'Reviewed listening',
+      metadata: {
+        ...saved.metadata,
+        evidence: {
+          ...source.metadata.evidence,
+          correction: { seconds: 55, reason: 'Five seconds of unrelated interruption' },
+        },
+      },
+    };
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', edited, auth.cookie)).status).toBe(
+      200,
+    );
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions).toHaveLength(1);
+    expect(exported.sessions[0]).toMatchObject({
+      id: saved.id,
+      minutes: 55 / 60,
+      metadata: { evidence: { generatedListening: source.metadata.evidence.generatedListening } },
+    });
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    const other = await signIn('generated-other@example.test');
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, other.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries,
+    ).toEqual([]);
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', saved, other.cookie)).status).toBe(
+      404,
+    );
+  });
+
+  it('preserves the explicit overflow bound and rejects invalid private fields atomically', async () => {
+    const auth = await signIn('generated-bounds@example.test');
+    const collector = new GeneratedListeningCollector();
+    for (let index = 0; index < 16; index++) collector.record(words(20 + index));
+    const envelope = collector.snapshot()!;
+    expect(envelope.summaries).toHaveLength(15);
+    expect(envelope.overflow).toBe(true);
+    const response = await request(
+      '/api/entries',
+      'POST',
+      generated(envelope.summaries, true),
+      auth.cookie,
+    );
+    expect(response.status).toBe(201);
+    const saved = ((await response.json()) as { entry: PracticeSession }).entry;
+    expect(saved.metadata?.evidence).toMatchObject({ generatedListening: envelope });
+    const invalidEnvelopes = [
+      {
+        version: 1,
+        summaries: Array.from({ length: 16 }, (_, index) => words(20 + index)),
+        overflow: false,
+      },
+      { version: 1, summaries: [{ ...words(), text: 'PRIVATE CUSTOM TEXT' }], overflow: false },
+      { version: 1, summaries: [{ ...words(), customLabel: 'X'.repeat(101) }], overflow: false },
+      { version: 1, summaries: [{ ...words(), toneHz: 1200 }], overflow: false },
+    ];
+    for (const envelope of invalidEnvelopes) {
+      const invalid = {
+        ...generated(),
+        metadata: { evidence: { ...generated().metadata.evidence, generatedListening: envelope } },
+      };
+      expect((await request('/api/entries', 'POST', invalid, auth.cookie)).status).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            { mode: 'replace', data: { ...backup([invalid]), evidenceVersion: 1 } },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, auth.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries,
+    ).toEqual([saved]);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      1,
+    );
+  });
+
+  it('requires generated task evidence to belong to the writing account and resulting import plan', async () => {
+    const owner = await signIn('generated-task-owner@example.test');
+    const foreign = await signIn('generated-task-foreign@example.test');
+    const task = {
+      id: 'generated-owned-task',
+      title: 'Generated words',
+      kind: 'listening',
+      notes: '',
+      done: false,
+      createdAt: entry().createdAt,
+    };
+    expect((await request('/api/plan', 'POST', task, owner.cookie)).status).toBe(201);
+    const linked = {
+      ...generated(),
+      metadata: { ...generated().metadata, plannedTaskId: task.id },
+    };
+    expect((await request('/api/entries', 'POST', linked, foreign.cookie)).status).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...backup([linked]), evidenceVersion: 1 } },
+          foreign.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect((await request('/api/entries', 'POST', linked, owner.cookie)).status).toBe(201);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, owner.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, foreign.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, foreign.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
   });
 });
 

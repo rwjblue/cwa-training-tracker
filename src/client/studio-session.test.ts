@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { PracticeSession } from '../shared/training';
 import {
   loadStudioNotes,
   clearSavedStudioNotes,
@@ -11,6 +12,10 @@ import {
   type StudioSessionInput,
 } from './studio-session';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
+import {
+  GeneratedListeningCollector,
+  type GeneratedListeningSummary,
+} from '../shared/generated-listening';
 import { practiceLaunchForTask } from './practice-launch';
 import {
   completeDeviceScopeMutation,
@@ -59,10 +64,70 @@ function input(seconds = 30): StudioSessionInput {
     identity: { id: 'studio:first', createdAt: '2026-09-30T01:00:00.000Z' },
     measured: { seconds, recallSeconds: 0, running: false, recalling: false, recordings: [] },
     preferences: { ...DEFAULT_PRACTICE_PREFERENCES, wordList: 'common-30' },
+    generatedListening: { version: 1, summaries: [playedWords()], overflow: false },
     scratchpad: 'Listen for the complete word.',
     timezone: 'America/New_York',
   };
 }
+
+function playedWords(characterWpm = 20, effectiveWpm = 10): GeneratedListeningSummary {
+  return {
+    mode: 'words',
+    listId: 'common-30',
+    entryCount: 30,
+    characterWpm,
+    effectiveWpm,
+    toneHz: 600,
+    wordGapSeconds: 1,
+    shuffle: false,
+    repeat: true,
+    spokenAnswers: false,
+  };
+}
+
+it('saves actual played setups rather than final selections, retaining an immutable retry snapshot', async () => {
+  const collector = new GeneratedListeningCollector();
+  collector.record(playedWords());
+  collector.record(playedWords(25, 15));
+  const value = input();
+  value.preferences = {
+    ...value.preferences,
+    characterWpm: 30,
+    effectiveWpm: 20,
+    wordList: 'custom',
+  };
+  value.generatedListening = collector.snapshot();
+  const original = studioSession(value)!;
+  expect(original.characterWpm).toBeUndefined();
+  expect(original.effectiveWpm).toBeUndefined();
+  expect(original.notes).toBe('30 common English words');
+  expect(original.metadata?.wordList).toBe('common-30');
+  expect(original.metadata?.practiceMode).toBeUndefined();
+  const coordinator = new StudioSaveCoordinator();
+  await expect(
+    coordinator.flush(original, async () => {
+      throw new Error('Lost response');
+    }),
+  ).rejects.toThrow('Lost response');
+  collector.record(playedWords(30, 20));
+  value.generatedListening = collector.snapshot();
+  const retry = vi.fn(async (_entry: PracticeSession) => {});
+  await coordinator.flush(studioSession(value), retry);
+  expect(retry).toHaveBeenCalledWith(original);
+  expect(retry.mock.calls[0][0].metadata?.evidence).toMatchObject({
+    generatedListening: { summaries: [playedWords(), playedWords(25, 15)] },
+  });
+});
+
+it('does not label manual or recall-only time with a selected generated list or speed', () => {
+  const value = input();
+  value.generatedListening = undefined;
+  const entry = studioSession(value)!;
+  expect(entry.characterWpm).toBeUndefined();
+  expect(entry.effectiveWpm).toBeUndefined();
+  expect(entry.metadata).not.toHaveProperty('wordList');
+  expect(entry.notes).toBe('Word listening');
+});
 
 it('clears scoped notes memory and rejects a delayed old save without erasing restored notes', () => {
   const values = new Map<string, string>();

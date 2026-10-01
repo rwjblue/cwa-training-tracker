@@ -13,9 +13,24 @@ import MorseTranscript from './MorseTranscript';
 import { buildSpokenWordTrack } from './morse-track';
 import { loadWordSpeech } from './word-speech';
 import QsoCopy from './QsoCopy';
+import type { GeneratedListeningSummary } from '../shared/generated-listening';
+import {
+  listeningWordRound,
+  qsoListeningSummary,
+  wordListeningSummary,
+  type ListeningWordRound,
+} from './listening-configuration';
 import type { PracticePreferences } from './practice-preferences';
-import { WORD_LISTS, wordPracticeRound, type WordList } from './word-content';
+import { WORD_LISTS, type WordList } from './word-content';
 import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
+
+interface AppliedListeningTrack {
+  readonly track: MorseTrack;
+  readonly summary: GeneratedListeningSummary;
+  readonly title: string;
+  readonly loop: boolean;
+}
+const EMPTY_WORDS: readonly string[] = [];
 
 export interface ListeningTrainerHandle {
   play: () => Promise<void>;
@@ -32,6 +47,7 @@ export default forwardRef<
     onChange: (changes: Partial<PracticePreferences>) => void;
     soundSettings?: ReactNode;
     onPlaying: (playing: boolean) => void;
+    onPlayed?: (summary: GeneratedListeningSummary) => void;
     onError: (message: string) => void;
   }
 >(function ListeningTrainer(
@@ -41,6 +57,7 @@ export default forwardRef<
     onChange,
     soundSettings,
     onPlaying: onPlayingChange,
+    onPlayed,
     onError: onErrorMessage,
   },
   ref,
@@ -49,15 +66,16 @@ export default forwardRef<
   visibleOwner.current = visible;
   const inspecting = useRef(!visible);
   const canPlay = () => visibleOwner.current && !inspecting.current;
-  const callbacks = useRef({ onPlaying: onPlayingChange, onError: onErrorMessage });
-  callbacks.current = { onPlaying: onPlayingChange, onError: onErrorMessage };
+  const callbacks = useRef({ onPlaying: onPlayingChange, onPlayed, onError: onErrorMessage });
+  callbacks.current = { onPlaying: onPlayingChange, onPlayed, onError: onErrorMessage };
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
   const onError = (message: string) => callbacks.current.onError(message);
   const [custom, setCustom] = useState('');
   const [qso, setQso] = useState(() => generateQso(p.qsoScenario));
   const [copyMode, setCopyMode] = useState(false);
   const [revealedQso, setRevealedQso] = useState<PracticeQso | null>(null);
-  const [words, setWords] = useState<string[]>([]);
+  const [wordRound, setWordRound] = useState<ListeningWordRound | null>(null);
+  const words = wordRound?.words ?? EMPTY_WORDS;
   const [roundError, setRoundError] = useState('');
   const [position, setPosition] = useState(0);
   const [answer, setAnswer] = useState(false);
@@ -65,23 +83,30 @@ export default forwardRef<
   const [complete, setComplete] = useState(false);
   const player = useRef(new MorsePlayer());
   const audio = useRef<HTMLAudioElement>(null);
-  const prepared = useRef<MorseTrack | null>(null);
+  const prepared = useRef<AppliedListeningTrack | null>(null);
   const [mediaReady, setMediaReady] = useState(false);
   const [activeWord, setActiveWord] = useState(-1);
   const index = useRef(0);
-  const round = useRef<string[]>([]);
   const [speech, setSpeech] = useState<{
-    words: string[];
+    words: readonly string[];
     clips?: Map<string, Float32Array>;
     error?: string;
   } | null>(null);
   const [speechAttempt, setSpeechAttempt] = useState(0);
   const isWords = p.tool === 'words';
+  const activeWordList = isWords ? p.wordList : null;
+  const activeShuffle = isWords ? p.shuffleWords : null;
+  const activeCustom = isWords ? custom : null;
+  const spokenAnswers = isWords && p.spokenAnswers;
+  const repeatList = isWords && p.repeatList;
+  const wordGap = isWords ? p.wordGap : 0;
+  const content = isWords ? wordRound : qso;
   const checkingCopy = !isWords && copyMode;
   // Object identity prevents a newly generated contact revealing old answers for one frame.
   const copyRevealed = revealedQso === qso;
   const hideTranscript = checkingCopy ? !copyRevealed : p.hideTrainerText && !answer;
-  const listTitle = p.wordList === 'custom' ? 'Your word list' : WORD_LISTS[p.wordList].title;
+  const roundList = wordRound?.listId ?? p.wordList;
+  const listTitle = roundList === 'custom' ? 'Your word list' : WORD_LISTS[roundList].title;
   const stop = () => {
     player.current.pause();
     setActive(false);
@@ -95,36 +120,49 @@ export default forwardRef<
     if (visible) inspecting.current = false;
     else if (!inspecting.current) pauseForInspection();
   }, [visible]);
-  const reset = () => {
+  const resetTransport = () => {
     stop();
     prepared.current = null;
     setMediaReady(false);
     player.current.clear();
-    try {
-      round.current = isWords ? wordPracticeRound(p.wordList, custom, p.shuffleWords) : [];
-      setRoundError('');
-    } catch (error) {
-      // An empty or partially typed custom list is an ordinary editing state.
-      round.current = [];
-      setRoundError((error as Error).message);
-    }
     index.current = 0;
     setPosition(0);
-    setWords(round.current);
     setActiveWord(-1);
     setAnswer(false);
     setComplete(false);
   };
+  const resetWords = () => {
+    resetTransport();
+    try {
+      setWordRound(listeningWordRound(p.wordList, custom, p.shuffleWords));
+      setRoundError('');
+    } catch (error) {
+      // An empty or partially typed custom list is an ordinary editing state.
+      setWordRound(null);
+      setRoundError((error as Error).message);
+    }
+  };
   useEffect(() => {
-    reset();
-    if (!isWords) setQso(generateQso(p.qsoScenario));
-  }, [p.tool, p.wordList, p.qsoScenario, p.shuffleWords, custom]);
+    if (isWords) resetWords();
+    else resetTransport();
+  }, [isWords, activeWordList, activeShuffle, activeCustom]);
+  useEffect(() => {
+    if (qso.id === p.qsoScenario) return;
+    if (!isWords) resetTransport();
+    setQso(generateQso(p.qsoScenario));
+  }, [p.qsoScenario]);
   useEffect(() => {
     if (audio.current) player.current.attach(audio.current);
   }, []);
-  useEffect(() => () => player.current.dispose(), []);
+  useEffect(
+    () => () => {
+      prepared.current = null;
+      player.current.dispose();
+    },
+    [],
+  );
   useEffect(() => {
-    if (!isWords || !p.spokenAnswers || !words.length) {
+    if (!spokenAnswers || !words.length) {
       setSpeech(null);
       return;
     }
@@ -141,61 +179,68 @@ export default forwardRef<
     return () => {
       cancelled = true;
     };
-  }, [words, isWords, p.spokenAnswers, speechAttempt]);
+  }, [words, spokenAnswers, speechAttempt]);
 
   const trackResult = useMemo(() => {
     const items = isWords ? words : qso.lines;
-    if (!items.length) return { track: null, error: '' };
+    if (!items.length) return { applied: null, error: '' };
     try {
-      if (isWords && p.spokenAnswers) {
+      const summary = isWords ? wordListeningSummary(wordRound!, p) : qsoListeningSummary(qso, p);
+      const options = {
+        characterWpm: summary.characterWpm,
+        effectiveWpm: summary.effectiveWpm,
+        frequency: p.tone,
+        volume: p.volume / 100,
+      };
+      let track: MorseTrack;
+      if (spokenAnswers) {
         if (speech?.words !== words || !speech.clips)
-          return { track: null, error: speech?.words === words ? (speech.error ?? '') : '' };
-        return {
-          track: buildSpokenWordTrack(words, speech.clips, {
-            characterWpm: p.characterWpm,
-            effectiveWpm: p.effectiveWpm,
-            frequency: p.tone,
-            volume: p.volume / 100,
-            extraWordGap: p.wordGap,
-          }),
-          error: '',
-        };
+          return { applied: null, error: speech?.words === words ? (speech.error ?? '') : '' };
+        track = buildSpokenWordTrack(words, speech.clips, {
+          ...options,
+          extraWordGap: wordGap,
+        });
+      } else {
+        track = buildMorseTrack(
+          items.map((text, i) => ({
+            text,
+            frequency: !isWords && i % 2 ? Math.min(1000, p.tone + 50) : p.tone,
+            gapAfter: isWords
+              ? morseTimeline(text, options.characterWpm, options.effectiveWpm).wordGap + wordGap
+              : 2,
+          })),
+          options,
+        );
       }
-      const track = buildMorseTrack(
-        items.map((text, i) => ({
-          text,
-          frequency: !isWords && i % 2 ? Math.min(1000, p.tone + 50) : p.tone,
-          gapAfter: isWords
-            ? morseTimeline(text, p.characterWpm, p.effectiveWpm).wordGap + p.wordGap
-            : 2,
-        })),
-        {
-          characterWpm: p.characterWpm,
-          effectiveWpm: p.effectiveWpm,
-          frequency: p.tone,
-          volume: p.volume / 100,
-        },
-      );
-      return { track, error: '' };
+      const applied: AppliedListeningTrack = Object.freeze({
+        track,
+        summary,
+        title: isWords ? listTitle : qso.title,
+        loop: repeatList,
+      });
+      return { applied, error: '' };
     } catch (error) {
-      return { track: null, error: (error as Error).message };
+      return { applied: null, error: (error as Error).message };
     }
   }, [
-    words,
-    qso,
+    content,
     isWords,
     speech,
-    p.spokenAnswers,
+    spokenAnswers,
+    repeatList,
     p.characterWpm,
     p.effectiveWpm,
     p.tone,
     p.volume,
-    p.wordGap,
+    wordGap,
   ]);
-  const { track } = trackResult;
+  const { applied } = trackResult;
+  const track = applied?.track ?? null;
+  const available = useRef(applied);
+  available.current = applied;
   const prepare = () => {
-    if (!track) {
-      if (isWords && p.spokenAnswers && words.length) {
+    if (!applied) {
+      if (spokenAnswers && words.length) {
         if (speech?.error) setSpeechAttempt((attempt) => attempt + 1);
         throw new Error(
           trackResult.error ||
@@ -204,36 +249,54 @@ export default forwardRef<
       }
       throw new Error(roundError || trackResult.error || 'Add some words to play.');
     }
-    if (prepared.current === track) return;
+    if (prepared.current === applied) return;
+    const { track, summary } = applied;
+    const ownsPrepared = () =>
+      prepared.current === applied &&
+      available.current === applied &&
+      player.current.track === track;
+    const acceptsPlayback = () => canPlay() && ownsPrepared();
     // Preparing reports position zero synchronously; preserve the requested item first.
     const start = track.items[index.current]?.start ?? 0;
-    player.current.prepare(track, {
-      title: isWords ? listTitle : qso.title,
-      canPlay,
-      loop: isWords && p.repeatList,
-      onProgress: (progress) => {
-        setActiveWord(progress.wordIndex);
-        const answerStart = track.words[progress.wordIndex]?.answerStart;
-        setAnswer(answerStart !== undefined && progress.position >= answerStart);
-        if (progress.itemIndex >= 0) {
-          index.current = progress.itemIndex;
-          setPosition(progress.itemIndex);
-        }
-      },
-      onState: (state) => {
-        const playing = state === 'playing';
-        setActive(playing);
-        onPlaying(playing);
-        if (playing) setComplete(false);
-      },
-      onFinish: () => {
-        if (!canPlay()) return;
-        setComplete(true);
-        setActiveWord(-1);
-      },
-      onError,
-    });
-    prepared.current = track;
+    prepared.current = applied;
+    try {
+      player.current.prepare(track, {
+        title: applied.title,
+        canPlay: acceptsPlayback,
+        loop: applied.loop,
+        onProgress: (progress) => {
+          if (!ownsPrepared()) return;
+          setActiveWord(progress.wordIndex);
+          const answerStart = track.words[progress.wordIndex]?.answerStart;
+          setAnswer(answerStart !== undefined && progress.position >= answerStart);
+          if (progress.itemIndex >= 0) {
+            index.current = progress.itemIndex;
+            setPosition(progress.itemIndex);
+          }
+        },
+        onState: (state) => {
+          if (!ownsPrepared()) return;
+          const playing = state === 'playing';
+          if (playing && !canPlay()) return;
+          setActive(playing);
+          onPlaying(playing);
+          if (playing) {
+            setComplete(false);
+            callbacks.current.onPlayed?.(summary);
+          }
+        },
+        onFinish: () => {
+          if (!acceptsPlayback()) return;
+          setComplete(true);
+          setActiveWord(-1);
+        },
+        onError,
+      });
+    } catch (error) {
+      prepared.current = null;
+      setMediaReady(false);
+      throw error;
+    }
     setMediaReady(true);
     player.current.seek(start);
   };
@@ -277,24 +340,24 @@ export default forwardRef<
     setAnswer(false);
     setComplete(false);
   }, [
-    track,
+    applied,
     p.characterWpm,
     p.effectiveWpm,
     p.tone,
     p.volume,
-    p.wordGap,
-    p.repeatList,
-    p.spokenAnswers,
+    wordGap,
+    repeatList,
+    spokenAnswers,
   ]);
   useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
   const step = (delta: number) => {
     stop();
-    const length = isWords ? round.current.length : qso.lines.length;
+    const length = isWords ? words.length : qso.lines.length;
     index.current = Math.min(Math.max(0, index.current + delta), Math.max(0, length - 1));
     setPosition(index.current);
     setComplete(false);
     setAnswer(false);
-    if (prepared.current === track && track)
+    if (prepared.current === applied && track)
       player.current.seek(track.items[index.current]?.start ?? 0);
   };
   const total = isWords
@@ -489,8 +552,11 @@ export default forwardRef<
         <button
           className="text-button"
           onClick={() => {
-            reset();
-            if (!isWords) setQso(generateQso(p.qsoScenario, Math.random, qso.stations));
+            if (isWords) resetWords();
+            else {
+              resetTransport();
+              setQso(generateQso(p.qsoScenario, Math.random, qso.stations));
+            }
           }}
         >
           <Shuffle size={14} /> {isWords ? 'New round' : 'New QSO'}

@@ -209,6 +209,19 @@ originating reviewed save may clear those notes. A manual Finish cancels cleanly
 discards unsaved elapsed time when confirmed, and explains that local notes remain;
 fresh practice starts at zero with that retained scratchpad.
 
+For generated-listening evidence, protect the actual applied round/track rather
+than final selected controls. Pure tests cover stale source preferences, retained
+custom occurrences/QSO scripts, deduplication, immutable snapshots, strict source
+counts, private field rejection and 15 distinct configurations plus visible
+overflow. Worker tests exercise raw-fact immutability, correction, stable retries,
+transactional import/export and account/task isolation. The representative journey
+plays two real native word configurations, selects/rejects another setup, cancels
+review, retains the block through inspection and retries the exact frozen body
+when network/storage fail. It verifies history/report evidence and exact QSO
+content through retiming/replay at desktop/mobile widths with keyboard/touch.
+Keep actual media movement as the listening-time boundary; summaries are not
+per-configuration elapsed measurements, proficiency or on-air contact counts.
+
 For automatic practice saves, test the queue below the browser: successive guest
 rounds, immutable retries after lost responses, storage/network failure, and
 stopping a flush when the authenticated account changes. Browser journeys prove

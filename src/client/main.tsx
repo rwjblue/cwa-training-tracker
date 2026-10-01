@@ -2551,8 +2551,13 @@ function SessionModal({
   const measuredSpeeds = Boolean(
     copyAttempt ||
     evidence?.type === 'runner' ||
-    (evidence?.type === 'timed' && evidence.recordings.length),
+    (evidence?.type === 'timed' && (evidence.recordings.length || evidence.generatedListening)),
   );
+  const speedPlaceholder = copyAttempt
+    ? 'See trial speeds'
+    : evidence?.type === 'timed' && evidence.generatedListening
+      ? 'See played setups'
+      : 'Optional';
   const [correctTime, setCorrectTime] = useState(
     evidence?.type === 'timed' && Boolean(evidence.correction),
   );
@@ -2747,7 +2752,7 @@ function SessionModal({
                 min="1"
                 max="150"
                 step="0.1"
-                placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
+                placeholder={speedPlaceholder}
                 value={form.characterWpm}
                 readOnly={measuredSpeeds}
                 onChange={(e) => update('characterWpm', e.target.value)}
@@ -2760,7 +2765,7 @@ function SessionModal({
                 min="1"
                 max={form.characterWpm || 150}
                 step="0.1"
-                placeholder={copyAttempt ? 'See trial speeds' : 'Optional'}
+                placeholder={speedPlaceholder}
                 value={form.effectiveWpm}
                 readOnly={measuredSpeeds}
                 onChange={(e) => update('effectiveWpm', e.target.value)}

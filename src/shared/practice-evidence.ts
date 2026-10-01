@@ -1,5 +1,10 @@
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
 import { recordingSpeeds, recordingVariants } from './recordings.ts';
+import {
+  generatedListeningDetails,
+  validateGeneratedListeningEvidence,
+  type GeneratedListeningEvidence,
+} from './generated-listening.ts';
 
 /** Versioned client measurements, not independent proof of proficiency or on-air activity. */
 export interface TimeCorrection {
@@ -20,6 +25,7 @@ export type PracticeEvidence =
       type: 'timed';
       measurement: { seconds: number; recallSeconds?: number };
       recordings: RecordingEvidence[];
+      generatedListening?: GeneratedListeningEvidence;
       correction?: TimeCorrection;
     }
   | {
@@ -230,7 +236,11 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
     return { version: 1, type: 'runner', run: runner(row.run) };
   }
   if (row.type !== 'timed') throw new Error('Unsupported practice evidence source.');
-  keys(row, ['version', 'type', 'measurement', 'recordings', 'correction'], 'Timed evidence');
+  keys(
+    row,
+    ['version', 'type', 'measurement', 'recordings', 'generatedListening', 'correction'],
+    'Timed evidence',
+  );
   const measurement = object(row.measurement, 'Time measurement');
   keys(measurement, ['seconds', 'recallSeconds'], 'Time measurement');
   const result: Extract<PracticeEvidence, { type: 'timed' }> = {
@@ -249,6 +259,8 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
   if (!Array.isArray(row.recordings) || row.recordings.length > 100)
     throw new Error('Provide up to 100 recording measurements.');
   result.recordings = row.recordings.map(validateRecordingEvidence);
+  if (row.generatedListening !== undefined)
+    result.generatedListening = validateGeneratedListeningEvidence(row.generatedListening);
   if (new Set(result.recordings.map((item) => item.url)).size !== result.recordings.length)
     throw new Error('Recording measurements must have distinct URLs.');
   if (
@@ -387,6 +399,7 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
       (item) =>
         `${item.seconds.toFixed(2)} seconds listened${item.speedWpm !== undefined ? ` at ${item.speedWpm} file WPM` : ''}: ${item.url}`,
     ),
+    ...(evidence.generatedListening ? generatedListeningDetails(evidence.generatedListening) : []),
     ...(evidence.correction
       ? [
           `Learner correction: ${evidenceTime(evidence).seconds.toFixed(2)} total seconds, ${evidenceTime(evidence).recallSeconds.toFixed(2)} recall seconds. ${evidence.correction.reason}`,

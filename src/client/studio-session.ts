@@ -8,6 +8,7 @@ import { QSO_TEMPLATES } from './qso-content';
 import { recordingSpeeds } from './recording-variants';
 import { formatPracticeDuration } from './practice-duration';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
+import type { GeneratedListeningEvidence } from '../shared/generated-listening';
 
 export const STUDIO_AUTOSAVE_SECONDS = 30;
 const duration = (seconds: number) => formatPracticeDuration(seconds / 60).padStart(5, '0');
@@ -16,6 +17,7 @@ export interface StudioSessionInput {
   identity: { id: string; createdAt: string };
   measured: ReturnType<PracticeClock['snapshot']>;
   preferences: PracticePreferences;
+  generatedListening?: GeneratedListeningEvidence;
   scratchpad: string;
   timezone: string;
   launch?: PracticeLaunch;
@@ -30,7 +32,35 @@ export function studioSession(
   if (measured.seconds < minimumSeconds) return undefined;
   const activity = launch?.activity;
   const assigned = Boolean(activity);
-  const { tool, mode, characterWpm, effectiveWpm } = preferences;
+  const { tool } = preferences;
+  const generatedListening = assigned || tool === 'sending' ? undefined : input.generatedListening;
+  const summaries = generatedListening?.summaries ?? [];
+  const first = summaries[0];
+  const playedList =
+    first?.mode === 'words' &&
+    !generatedListening?.overflow &&
+    summaries.every((item) => item.mode === 'words' && item.listId === first.listId)
+      ? first.listId
+      : undefined;
+  const playedScenario =
+    first?.mode === 'qso' &&
+    !generatedListening?.overflow &&
+    summaries.every((item) => item.mode === 'qso' && item.scenarioId === first.scenarioId)
+      ? first.scenarioId
+      : undefined;
+  const playedTitles = [
+    ...new Set(
+      summaries.map((item) =>
+        item.mode === 'words'
+          ? item.listId === 'custom'
+            ? 'Custom word recognition'
+            : WORD_LISTS[item.listId].title
+          : item.mode === 'qso'
+            ? QSO_TEMPLATES.find((scenario) => scenario.id === item.scenarioId)?.title
+            : 'Free Morse practice',
+      ),
+    ),
+  ];
   const recordings = measured.recordings.map((item) => ({
     ...item,
     ...recordingSpeeds(item.url),
@@ -61,35 +91,43 @@ export function studioSession(
         : undefined,
       assigned
         ? undefined
-        : tool === 'words'
-          ? preferences.wordList === 'custom'
-            ? 'Custom word recognition'
-            : WORD_LISTS[preferences.wordList].title
-          : tool === 'sending'
-            ? 'Sending scales'
-            : tool === 'qso'
-              ? QSO_TEMPLATES.find((item) => item.id === preferences.qsoScenario)?.title
-              : undefined,
+        : tool === 'sending'
+          ? 'Sending scales'
+          : playedTitles.length
+            ? playedTitles.join('; ')
+            : tool === 'words'
+              ? 'Word listening'
+              : tool === 'qso'
+                ? 'QSO listening'
+                : 'Free Morse practice',
     ]
       .filter(Boolean)
       .join(' · '),
     minutes: measured.seconds / 60,
-    ...(!assigned && tool !== 'sending'
-      ? { characterWpm, effectiveWpm }
-      : activity?.type === 'audio'
-        ? {
-            ...(playedCharacterWpm !== undefined ? { characterWpm: playedCharacterWpm } : {}),
-            ...(playedEffectiveWpm !== undefined ? { effectiveWpm: playedEffectiveWpm } : {}),
-          }
-        : {}),
+    ...(activity?.type === 'audio'
+      ? {
+          ...(playedCharacterWpm !== undefined ? { characterWpm: playedCharacterWpm } : {}),
+          ...(playedEffectiveWpm !== undefined ? { effectiveWpm: playedEffectiveWpm } : {}),
+        }
+      : {}),
     source: assigned || tool === 'sending' ? 'timer' : 'morse',
     metadata: {
       elapsedSeconds: measured.seconds,
       ...(scratchpad ? { scratchpad } : {}),
       recallSeconds: measured.recallSeconds,
       ...(recordings.length ? { recordings } : {}),
+      ...(generatedListening
+        ? {
+            evidence: {
+              version: 1,
+              type: 'timed',
+              measurement: { seconds: measured.seconds, recallSeconds: measured.recallSeconds },
+              recordings,
+              generatedListening,
+            },
+          }
+        : {}),
       practiceTool: assigned ? activity?.type : tool,
-      ...(!assigned && tool !== 'sending' ? { practiceMode: mode } : {}),
       ...(activity?.type === 'audio'
         ? {
             assignedRecordingUrl: activity.url,
@@ -105,8 +143,8 @@ export function studioSession(
               : {}),
           }
         : {}),
-      ...(!assigned && tool === 'words' ? { wordList: preferences.wordList } : {}),
-      ...(!assigned && tool === 'qso' ? { qsoScenario: preferences.qsoScenario } : {}),
+      ...(!assigned && playedList ? { wordList: playedList } : {}),
+      ...(!assigned && playedScenario ? { qsoScenario: playedScenario } : {}),
       ...taskPracticeMetadata(launch?.task?.id, launch?.purpose),
       ...(assigned && !launch?.task ? { studioNotesContext: launch?.id ?? 'assigned' } : {}),
     },
