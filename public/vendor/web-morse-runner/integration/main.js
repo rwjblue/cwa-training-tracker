@@ -26,7 +26,13 @@ Calls.prototype.fetch_calls = function () {
 
 const initialize = () => {
   const view = new View();
-  view.onLoad();
+  // Setup wipes the exchange fields and normally focuses Call. Embedded startup
+  // must leave the learner's outer controls and scroll position alone. Restore
+  // ordinary focus immediately so deliberate Run and exchange navigation work.
+  const setFocus = view.setFocus;
+  view.setFocus = () => {};
+  try { view.onLoad(); }
+  finally { view.setFocus = setFocus; }
   installRunnerBridge(view, { window, document, callsReady: view.calls.trainingCallsReady });
   // Move the existing controls; retained nodes keep upstream listeners and refs.
   const launchBar = document.getElementById("run").parentElement;

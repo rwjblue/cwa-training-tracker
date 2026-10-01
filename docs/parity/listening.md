@@ -220,3 +220,21 @@ Read active entrypoints and imports, source behavior, and relevant tests; this i
 **Personal runner:** `src/lib/cw-training/{morse-runner,runner-bridge,runner-session}.ts`; `client.ts` frame/start/stop/restart/result/reload paths and storage runner shape; vendor `UPSTREAM.json`, entrypoint, integration bridge/main, runtime parity comparison; `tests/{cw-training-morse-runner,cw-training-runner-bridge,cw-training-runner-session,web-morse-runner-vendor}.test.mjs`.
 
 **Current equivalents:** `src/client/{main,PracticeStudio,ListeningTrainer,MorseTranscript,MorseRunnerStudio,QsoCopy}.tsx`; [word-content.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/word-content.ts), [qso-content.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/qso-content.ts), [qso-copy.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/qso-copy.ts), [practice-preferences.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts), [audio.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/audio.ts), native player/track interfaces; `src/shared/{plan,runner,training}.ts`; current vendor source/bootstrap/theme/manifest comparison; `src/client/{listening-content,qso-copy}.test.ts`, [src/shared/runner.test.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/runner.test.ts), `e2e/{practice,morse-runner,qso-copy}.spec.ts`; README and architecture/curriculum/testing/runner docs. No account exports, IndexedDB contents, local personal recordings, or private imported curriculum data were read.
+
+
+### Issue #6 follow-up — safe embedded Runner initialization
+
+Runner startup now leaves outer keyboard focus and scroll with the learner.
+Only synchronous initial `View.onLoad` suppresses its `setFocus` call; restoration
+in `finally` preserves normal deliberate Run and exchange field navigation.
+The local integration bootstrap owns this adaptation; pinned upstream/generated
+files and the single measured engine/bridge remain unchanged.
+
+A retained combined-build trace and independent static review establish the
+original P2 issue: late iframe initialization scrolled to Call between tool-button
+positioning and click dispatch. Deterministic held-bootstrap checks now retain
+outer focus/scroll at desktop and mobile widths; the actual engine journey proves
+Run still focuses Call and records/saves its own result. The mobile touch switch
+and Axe/geometry pass. This introduces no auto-run or elapsed recovery. Final
+combined regression and independent correction acceptance remain tracked in the
+execution journal; no physical-device claim is made.

@@ -880,3 +880,43 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   Required check, 799 tests in 45 files and build pass at the same final source;
   no bindings/configuration/schema changed. Independent review remains required
   after the focused implementation commit. No push or closure is attempted.
+
+
+### Issue #10 — independent acceptance, user work and #6 focus correction
+
+- The original #10 tree passes independent review with no substantive finding:
+  184 fresh focused tests, independent 1366 px keyboard / 375 px touch replay,
+  cancellation/stale request/native pass evidence, exact durable 503 retry,
+  history/report, actual device opt-in/old-v1 restore and privacy probes.
+  Detailed ignored report is `issue-10-independent-review.md`; no physical-device
+  or restricted long-recording claim is made.
+- Preserved the concurrent user commit clarifying Academy-session attribution.
+  The replay diff is byte-identical after rebase. A separate shared-workspace
+  signed history rewrite changes hashes without changing trees: user commit
+  `3cd5a215`, replay `313fca74`, combined tree
+  `1b79f6facf784e8d572c81259fe82d142a04fe4b`. Root did not attempt a push.
+  Fresh combined check, 799 tests in 45 files and build pass.
+- The combined serialized suite passes 61 journeys in 11.4 minutes but fails one
+  prior timer/manual journey's immediate Runner-to-Word switch. The retained
+  trace shows unsolicited startup Call focus scrolling the outer page between
+  Word button positioning and dispatch. Unchanged isolated and complete affected
+  file reruns pass; this does not erase the demonstrated failure. Independent
+  review confirms an actual P2 startup-focus issue requiring correction.
+- A separate #6 correction suppresses instance focus only through synchronous
+  initial setup and restores it in `finally`; generated/upstream files remain
+  untouched. The real Runner plus full practice file pass four affected journeys
+  in 34.4 seconds, including outer focus/scroll and deliberate Run Call focus.
+  Added deterministic mobile held-bootstrap/Axe/geometry/touch-switch check
+  passes in 2.2 seconds (7.2-second harness). Fresh required/full checks, focused
+  correction commit and combined independent recheck remain pending.
+
+- After the focus correction, the second combined full run passed 61 of 63
+  journeys. The remaining failures were separately inspected fixture boundaries:
+  a durable queued save had not received server acknowledgement, and a native
+  resume skipped an unobserved interval beyond the admitted gap bound. Neither
+  justifies weakening production timing or receipt ownership. Separate #7 and
+  #9 test corrections retain exact evidence assertions.
+- Check, all 800 tests in 45 files, and build pass at the corrected combined
+  candidate. The final serialized 63-journey suite is running. The focus fix is
+  committed separately from those test corrections; independent post-commit
+  desktop/mobile correction recheck and deployment remain required.

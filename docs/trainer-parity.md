@@ -674,3 +674,20 @@ pass; desktop/mobile keyboard/touch, actual device backup restore and exact
 save retry are verified. Independent review must pass after the implementation
 commit before this issue is recorded as accepted. Physical-device/lock-screen
 behavior remains unverified.
+
+
+### Issue #6 follow-up — embedded Runner startup focus
+
+Combined #10 regression verification exposed unsolicited upstream startup focus
+into the embedded Runner Call field. The retained trace shows the outer tool
+button visible before dispatch, followed by a parent scroll to the iframe during
+initialization; one immediate Word listening click was consumed. An independent
+reviewer confirmed this as a P2 usability finding rather than a selector failure.
+
+The local bootstrap suppresses instance focus only during synchronous initial
+setup and restores it in `finally`. Upstream and generated runtime files, bridge
+ownership, engine timing and deliberate Run/exchange focus remain unchanged.
+Held-bootstrap desktop/mobile checks preserve the focused outer control and
+parent scroll. Actual Run still focuses Call, and mobile tool switching works.
+The independent correction gate and final combined validation remain pending in
+[execution progress](parity/execution-progress-2026-09-30.md).
