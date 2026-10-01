@@ -12,9 +12,10 @@ export default function Modal({
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
-  initialFocus?: React.RefObject<HTMLElement | null>;
+  initialFocus?: React.RefObject<HTMLElement | null> | 'heading';
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   const titleId = React.useId();
   useLayoutEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -35,9 +36,13 @@ export default function Modal({
     // steal focus from a field the user has already started filling.
     const focusable = elements();
     const requested =
-      initialFocus?.current ?? panel.current?.querySelector<HTMLElement>('[autofocus]');
+      initialFocus === 'heading'
+        ? heading.current
+        : (initialFocus?.current ?? panel.current?.querySelector<HTMLElement>('[autofocus]'));
     const target =
-      (requested && focusable.includes(requested) ? requested : undefined) ??
+      (requested && (requested === heading.current || focusable.includes(requested))
+        ? requested
+        : undefined) ??
       focusable.find((element) => element.matches('input, select, textarea')) ??
       focusable[0];
     target?.focus();
@@ -81,7 +86,9 @@ export default function Modal({
         ref={panel}
       >
         <div className="modal-heading">
-          <h2 id={titleId}>{title}</h2>
+          <h2 id={titleId} ref={heading} tabIndex={initialFocus === 'heading' ? -1 : undefined}>
+            {title}
+          </h2>
           <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
             <X size={20} />
           </button>

@@ -509,3 +509,18 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   no product behavior, listening credit, assertions or timeout is weakened. This
   independent harness correction will remain a separate focused commit. Its
   focused recheck passes, and the final complete 56-journey run passes.
+
+- Post-commit independent review exercised eight distinct native desktop/mobile
+  journeys, including free modes, 16 actually played setups, visible overflow,
+  Copy retention, failed playback, quota/network retry and actual backup UI merge.
+  Sixteen settled Axe/geometry captures pass and 17 images were inspected. One
+  substantive P2 remains: focusing Save on opening mobile review scrolls the
+  played evidence above the viewport. The focused correction opens generated
+  review at its programmatically focused heading and retains keyboard access to
+  Save, the focus trap and cancellation. Regression assertions inspect initial
+  geometry before any scrolling. Correction typecheck, all 583 tests in 43 files
+  and build pass. Both focused desktop/mobile journeys pass in 37.8 seconds,
+  including new review and historical edit initial geometry, keyboard Save and
+  Escape/cancellation. The final complete 56-journey run passes in 7.3 minutes.
+  Root inspected both opening-view captures; correction commit and independent
+  recheck remain pending.

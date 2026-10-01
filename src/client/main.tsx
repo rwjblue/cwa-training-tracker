@@ -2673,7 +2673,9 @@ function SessionModal({
       title={isExisting ? 'A closer look at your practice.' : 'A little progress, worth recording.'}
       onClose={close}
       wide
-      initialFocus={saveButton}
+      initialFocus={
+        evidence?.type === 'timed' && evidence.generatedListening ? 'heading' : saveButton
+      }
     >
       <p className="modal-intro">
         {copyAttempt || evidence

@@ -31,7 +31,9 @@ contact. Word-only preference changes no longer regenerate a contact.
 
 Review/history/reports and account export/import retain these private descriptive
 summaries through the existing timed evidence/queue. Mixed/unknown/overflowed
-source pairs clear both single session speeds. Full scripts/custom words remain
+source pairs clear both single session speeds. Generated review focuses its
+heading so the played evidence is visible before the form, including on mobile;
+Save remains reachable by keyboard and touch. Full scripts/custom words remain
 local in-memory content, and equal custom label/count/settings deduplicate without
 a text/hash identity. Seamless transport retiming, Stories, fresh repeat shuffles,
 public exact recipes and reload/crash elapsed recovery are not delivered here.

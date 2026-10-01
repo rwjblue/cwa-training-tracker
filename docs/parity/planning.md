@@ -447,6 +447,8 @@ word shuffle/repeat/answer settings and actual generated station calls into save
 review, expandable history and the printable report. Mixed configurations supply
 no final-selected single speed. Existing scoped stable-ID queues, corrections,
 owned-task checks and transactional v1 export/import retain the same facts.
+Generated review starts at its focused heading and played evidence; keyboard
+navigation still reaches Save without clipping the initial evidence viewport.
 
 Private custom text/contact scripts remain with the running Studio rather than
 server records or public assets. No per-source elapsed allocation or proficiency

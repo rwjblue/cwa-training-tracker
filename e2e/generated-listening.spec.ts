@@ -81,13 +81,48 @@ for (const viewport of [
     expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
     await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
     const review = page.getByRole('dialog');
+    const reviewTitle = review.getByRole('heading', {
+      name: 'A little progress, worth recording.',
+      exact: true,
+    });
+    const firstPlayed = review.getByText(/^Played Your word list:/);
+    const expectInsideReview = async (control: Locator) => {
+      await expect
+        .poll(() =>
+          control.evaluate((element) => {
+            const dialog = element.closest('[role="dialog"]') as HTMLElement;
+            const bounds = element.getBoundingClientRect();
+            const viewport = dialog.getBoundingClientRect();
+            const top = viewport.top + dialog.clientTop;
+            const left = viewport.left + dialog.clientLeft;
+            return (
+              bounds.top >= top &&
+              bounds.bottom <= top + dialog.clientHeight &&
+              bounds.left >= left &&
+              bounds.right <= left + dialog.clientWidth
+            );
+          }),
+        )
+        .toBe(true);
+    };
+    await expect(reviewTitle).toBeFocused();
+    await expect.poll(() => review.evaluate((element) => element.scrollTop)).toBe(0);
+    await expectInsideReview(firstPlayed);
+    await review.screenshot({ path: `.tmp/generated-summary-initial-${viewport.width}.png` });
+    await page.keyboard.press('Shift+Tab');
+    await expect(review.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(review.getByRole('button', { name: 'Close dialog', exact: true })).toBeFocused();
+    await expect.poll(() => review.evaluate((element) => element.scrollTop)).toBe(0);
+    await expectInsideReview(reviewTitle);
+    await expectInsideReview(firstPlayed);
     await expect(review).toContainText('20 character / 10 effective WPM');
     await expect(review).toContainText('25 character / 15 effective WPM');
     await expect(review).not.toContainText('30 character / 20 effective WPM');
     await expect(page.getByLabel('Character WPM', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Character WPM', { exact: true })).toHaveAttribute('readonly', '');
     await expect(page.getByLabel('Effective WPM', { exact: true })).toHaveValue('');
-    await review.getByText(/^Played Your word list:/).scrollIntoViewIfNeeded();
+    await firstPlayed.scrollIntoViewIfNeeded();
     await review.screenshot({ path: `.tmp/generated-summary-${viewport.width}.png` });
     const bodies: unknown[] = [];
     let unavailable = true;
@@ -142,6 +177,20 @@ for (const viewport of [
     await activate(page.getByText('Practice evidence', { exact: true }));
     await expect(page.getByText(/20 character \/ 10 effective WPM/)).toBeVisible();
     await expect(page.getByText(/25 character \/ 15 effective WPM/)).toBeVisible();
+    await activate(
+      page.getByRole('button', { name: `Edit Head copy on ${saved.date}`, exact: true }),
+    );
+    const editTitle = review.getByRole('heading', {
+      name: 'A closer look at your practice.',
+      exact: true,
+    });
+    await expect(editTitle).toBeFocused();
+    await expect.poll(() => review.evaluate((element) => element.scrollTop)).toBe(0);
+    await expectInsideReview(firstPlayed);
+    await page.keyboard.press('Shift+Tab');
+    await expect(review.getByRole('button', { name: 'Save changes', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(review).toHaveCount(0);
     await expectAccessible(page, `generated-history-${viewport.width}`);
     await page.screenshot({ path: `.tmp/generated-history-${viewport.width}.png`, fullPage: true });
     await navigate('Practice studio');

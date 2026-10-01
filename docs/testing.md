@@ -219,6 +219,8 @@ plays two real native word configurations, selects/rejects another setup, cancel
 review, retains the block through inspection and retries the exact frozen body
 when network/storage fail. It verifies history/report evidence and exact QSO
 content through retiming/replay at desktop/mobile widths with keyboard/touch.
+Inspect initial review and historical-edit heading focus and played-source
+geometry before scrolling; check keyboard access to Save and Escape cancellation.
 Keep actual media movement as the listening-time boundary; summaries are not
 per-configuration elapsed measurements, proficiency or on-air contact counts.
 

@@ -519,6 +519,8 @@ inspection retains it; ending/resetting its block clears it. Snapshots and pendi
 saves preserve the first captured body. Up to 15 distinct configurations are kept,
 with visible overflow thereafter. One WPM pair is derived only from complete,
 uniform actual source evidence. Review inputs cannot relabel mixed playback.
+Generated review opens with focus on its heading so the played evidence remains
+visible; its keyboard trap still provides access to Save and cancellation.
 Worker validation rejects unsupported/private script/text fields, invalid source
 identities/counts and oversized summaries. Existing account isolation, owned-task
 validation, immutable raw facts, corrections and portable v1 backups apply.
