@@ -1116,3 +1116,35 @@ Product file hashes match the required check/885-test/build and focused browser
 implementation. Earlier failures and the missing second-run trace copy remain
 recorded above; this passing run does not establish their original timing cause.
 Post-implementation independent review and production delivery remain pending.
+
+
+Issue #14 independently ACCEPTED at local implementation
+`46498f2fdff640daa745ddbba2893ca6a3fc45fa`, accepted tree
+`2769e316d03a3da22cbab0195683c2f60ae441e7`, with no substantive findings.
+The post-commit reviewer independently passed ten desktop/mobile journeys:
+two committed notes, two unchanged native replay (1.1/1.2 minutes), four added
+keyboard/failure/manual/sending checks and two assigned external checks.
+Actual Scratchpad → Tab → Save notes → Enter works; repeated Enter creates no
+second record. A save failing while inspected keeps Return focused; returning
+focuses Retry. Durable offline receipt and later upload retain a newly entered
+draft. Manual assignment switching and sending/external Finish each retain
+exactly 12 seconds without automatic completion. Actual History, backup UI and
+Report preserve zero-note records and 0.4 total measured practice minutes.
+Its 41 capture/queue tests and one focused real-SQL test pass; twelve relevant
+Axe reports are empty and twelve screenshots were inspected. Native persistent
+logs contain 382/381 events, 22 plays and sixteen actual 3.6-second endings per
+width. Earlier unexplained native failure is not reconstructed by these logs.
+Independent fixture failures and their retained traces are disclosed in the
+ignored review report; there were no product corrections required by review.
+
+Production deploy passed check, all 885 tests/48 files, build, dry-run and remote
+migration check on a complete retry after the first D1 7403 response. No migrations
+or binding/config changes. Version `774089f5-859c-4b91-8048-e2d94a9ef794`
+serves the accepted implementation at https://cwa.n1rwj.com. Fresh verification
+passes root/health 200, all four built JS/CSS SHA-256 matches and entry-point
+references, public Runner integration SHA-256, and three anonymous private 401s.
+Delivery comment: https://github.com/rwjblue/cwa-training-tracker/issues/14#issuecomment-5939318861.
+No push was attempted under the current instruction; GitHub commit lookup remains
+422, so #14 stays OPEN pending publication. Local main advances with this journal.
+Mobile checks remain emulation; no physical lock-screen claim. Original site is
+read-only, and unfinished elapsed reload/crash recovery remains excluded.
