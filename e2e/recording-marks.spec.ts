@@ -60,6 +60,7 @@ for (const width of [1440, 390]) {
       exact: true,
     });
     const mark = review.getByRole('button', { name: 'Mark difficult here', exact: true });
+    const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
     const pausedAt = async (seconds: number) => {
       // Arrange a paused native timeline position; no played audio or fake elapsed time.
       await audio.evaluate((el: HTMLAudioElement, seconds) => {
@@ -136,6 +137,22 @@ for (const width of [1440, 390]) {
     await label.fill('Synthetic canceled mark');
     await activate(mark);
     await expect(review.getByRole('alert')).toContainText('could not be saved');
+
+    await speed.selectOption(url(18));
+    await expect(
+      review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
+    ).toHaveCount(0);
+    await expect(label).toHaveValue('');
+    await speed.selectOption(url(10));
+    await expect(label).toHaveValue('Synthetic canceled mark');
+    await expect(
+      review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
+    ).toBeVisible();
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await activate(page.getByRole('button', { name: 'Finish practice', exact: true }));
+    await expect(
+      review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
+    ).toBeVisible();
     await activate(review.getByRole('button', { name: 'Cancel mark edit', exact: true }));
     await expect(review.getByRole('listitem')).toHaveCount(2);
     await label.fill('Synthetic retried mark');
@@ -143,6 +160,14 @@ for (const width of [1440, 390]) {
     await expect(
       review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
     ).toBeVisible();
+
+    await speed.selectOption(url(18));
+    await label.fill('Synthetic other-file draft');
+    await speed.selectOption(url(10));
+    await expect(label).toHaveValue('Synthetic retried mark');
+    await navigate('Practice log');
+    await navigate('Practice studio');
+    await expect(label).toHaveValue('Synthetic retried mark');
     await page.evaluate(() => Reflect.set(window, 'blockMarks', false));
     await activate(
       review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
@@ -170,10 +195,10 @@ for (const width of [1440, 390]) {
       )
       .toBe(4);
     await page.unroute('**/api/account-operations');
-    const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
     await speed.selectOption(url(18));
     await expect(audio).toHaveAttribute('src', url(18));
     await expect(mark).toBeEnabled();
+    await expect(label).toHaveValue('Synthetic other-file draft');
     await expect(review.getByRole('list')).toHaveCount(0);
     await label.fill('Synthetic selected unplayed file');
     await activate(mark);

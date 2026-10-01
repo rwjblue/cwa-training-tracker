@@ -8,30 +8,37 @@ import {
   type RecordingMarkSet,
 } from '../shared/recording-marks';
 
-/** Native position display and annotations. The Studio alone owns transport/time. */
+/** In-memory Studio-owned edit, separate from admitted account annotations. */
+export interface RecordingReviewDraft {
+  label: string;
+  pending?: RecordingMark[];
+  busy?: boolean;
+  notice?: string;
+  error?: string;
+}
+
+/** Native position display and annotations. The Studio owns transport and drafts. */
 export default function RecordingReviewControls({
   audioRef,
   markSet,
   availableMarks = MAX_TASK_RECORDING_MARKS,
   onSeek,
   onSave,
+  draft,
+  onDraftChange,
 }: {
   audioRef: RefObject<HTMLAudioElement | null>;
   markSet?: RecordingMarkSet;
   availableMarks?: number;
   onSeek: (position?: number) => number | undefined;
   onSave?: (marks: RecordingMark[]) => Promise<'server' | 'device'>;
+  draft: RecordingReviewDraft;
+  onDraftChange: (update: (draft: RecordingReviewDraft) => RecordingReviewDraft) => void;
 }) {
   const [position, setPosition] = useState({ seconds: 0, duration: 0, ready: false });
-  const [label, setLabel] = useState('');
-  const [notice, setNotice] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<RecordingMark[] | undefined>();
-  const alive = useRef(true);
+  const { label, notice, error, busy, pending } = draft;
   const flight = useRef(false);
   useEffect(() => {
-    alive.current = true;
     const audio = audioRef.current;
     if (!audio) return;
     const update = () =>
@@ -58,39 +65,52 @@ export default function RecordingReviewControls({
     for (const event of events) audio.addEventListener(event, update);
     update();
     return () => {
-      alive.current = false;
       for (const event of events) audio.removeEventListener(event, update);
     };
   }, [audioRef]);
   const replay = (position?: number) => {
     const target = onSeek(position);
     if (target !== undefined)
-      setNotice(`Replaying from ${recordingMarkTimestamp(target)}. Use Pause practice to stop.`);
+      onDraftChange((previous) => ({
+        ...previous,
+        notice: `Replaying from ${recordingMarkTimestamp(target)}. Use Pause practice to stop.`,
+      }));
   };
   const save = async (marks: RecordingMark[]) => {
-    if (!onSave || flight.current) return;
+    if (!onSave || flight.current || busy) return;
     flight.current = true;
-    setBusy(true);
-    setError('');
-    setNotice('Saving difficult marks…');
+    const candidate = structuredClone(marks);
+    onDraftChange((previous) => ({
+      ...previous,
+      busy: true,
+      pending: candidate,
+      error: undefined,
+      notice: 'Saving difficult marks…',
+    }));
     try {
-      const destination = await onSave(structuredClone(marks));
-      if (!alive.current) return;
-      setPending(undefined);
-      setLabel('');
-      setNotice(
-        destination === 'server'
-          ? 'Difficult marks saved to your account.'
-          : 'Difficult marks saved on this device, waiting to sync. Retry account sync above if needed.',
-      );
+      const destination = await onSave(structuredClone(candidate));
+      // The captured callback belongs to this exact file even after a speed switch.
+      onDraftChange((previous) => ({
+        ...previous,
+        busy: false,
+        pending: undefined,
+        label: '',
+        error: undefined,
+        notice:
+          destination === 'server'
+            ? 'Difficult marks saved to your account.'
+            : 'Difficult marks saved on this device, waiting to sync. Retry account sync above if needed.',
+      }));
     } catch (error) {
-      if (!alive.current) return;
-      setPending(structuredClone(marks));
-      setNotice('');
-      setError(`Difficult marks could not be saved. ${(error as Error).message}`);
+      onDraftChange((previous) => ({
+        ...previous,
+        busy: false,
+        pending: candidate,
+        notice: undefined,
+        error: `Difficult marks could not be saved. ${(error as Error).message}`,
+      }));
     } finally {
       flight.current = false;
-      if (alive.current) setBusy(false);
     }
   };
   const marks = markSet?.marks ?? [];
@@ -128,7 +148,10 @@ export default function RecordingReviewControls({
               value={label}
               maxLength={MAX_RECORDING_MARK_LABEL}
               disabled={busy || pending !== undefined}
-              onChange={(event) => setLabel(event.target.value)}
+              onChange={(event) => {
+                const label = event.target.value;
+                onDraftChange((previous) => ({ ...previous, label }));
+              }}
             />
           </label>
           <button
@@ -208,9 +231,13 @@ export default function RecordingReviewControls({
           className="text-button"
           disabled={busy}
           onClick={() => {
-            setPending(undefined);
-            setError('');
-            setNotice('Unsaved mark edit canceled. Saved marks stay unchanged.');
+            onDraftChange((previous) => ({
+              ...previous,
+              pending: undefined,
+              label: '',
+              error: undefined,
+              notice: 'Unsaved mark edit canceled. Saved marks stay unchanged.',
+            }));
           }}
         >
           Cancel mark edit

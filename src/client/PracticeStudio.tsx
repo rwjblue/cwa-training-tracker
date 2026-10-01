@@ -50,7 +50,7 @@ import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import type { PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
-import RecordingReviewControls from './RecordingReviewControls';
+import RecordingReviewControls, { type RecordingReviewDraft } from './RecordingReviewControls';
 import {
   MAX_TASK_RECORDING_MARKS,
   recordingReplayPosition,
@@ -164,6 +164,25 @@ export default function PracticeStudio({
   const recordingWpm =
     activity?.type === 'audio' ? (selectedRecording?.speedWpm ?? activity.characterWpm) : undefined;
   const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
+  // Private, unsent edits live with this Studio owner, not a keyed file control.
+  const [recordingReviewDrafts, setRecordingReviewDrafts] = useState<
+    Record<string, RecordingReviewDraft>
+  >({});
+  const recordingReviewKey = JSON.stringify([launch?.task?.id, recordingUrl, recordingWpm]);
+  const recordingReviewUnsaved = Object.values(recordingReviewDrafts).some(
+    (draft) => draft.label.length > 0 || draft.pending !== undefined || draft.busy,
+  );
+  const changeRecordingReviewDraft = (
+    update: (draft: RecordingReviewDraft) => RecordingReviewDraft,
+  ) => {
+    if (!currentDevice()) return;
+    const key = recordingReviewKey;
+    setRecordingReviewDrafts((previous) => ({
+      ...previous,
+      [key]: update(previous[key] ?? { label: '' }),
+    }));
+  };
+
   const [publicRunner, setPublicRunner] = useState(launch?.tool === 'runner');
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const [publicCopy, setPublicCopy] = useState(
@@ -344,11 +363,21 @@ export default function PracticeStudio({
       savingCompletion ||
         copyUnsaved ||
         runnerUnsaved ||
+        recordingReviewUnsaved ||
         running ||
         seconds > 0 ||
         scratchpad.length > 0,
     );
-  }, [savingCompletion, copyUnsaved, runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
+  }, [
+    savingCompletion,
+    copyUnsaved,
+    runnerUnsaved,
+    recordingReviewUnsaved,
+    running,
+    seconds,
+    scratchpad,
+    onUnsavedChange,
+  ]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
@@ -501,6 +530,16 @@ export default function PracticeStudio({
     if (completionFlight.current)
       return completionFlight.current.then((saved) => saved && beforeLeaveRef.current());
     if (navigationFlight.current) return navigationFlight.current;
+    if (recordingReviewUnsaved) {
+      pauseTimer();
+      if (
+        !window.confirm(
+          'Unsaved difficult-mark edits are still in this block. Finish or switch and discard them? Cancel to keep them for retry.',
+        )
+      )
+        return Promise.resolve(false);
+    }
+
     if (isCopy) return Promise.resolve(true);
     if (isRunner)
       return Promise.resolve(
@@ -1322,6 +1361,8 @@ export default function PracticeStudio({
                         <RecordingReviewControls
                           key={`review:${launch?.id}:${recordingUrl}`}
                           audioRef={recording}
+                          draft={recordingReviewDrafts[recordingReviewKey] ?? { label: '' }}
+                          onDraftChange={changeRecordingReviewDraft}
                           markSet={currentRecordingMarks}
                           availableMarks={Math.max(
                             0,

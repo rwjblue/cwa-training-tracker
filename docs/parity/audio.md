@@ -578,3 +578,16 @@ Worker tests cover private mark-only saves, idempotent operations, curriculum
 annotation retention, invalid-import atomicity, version 1 export/import and
 reset fencing. No binding/configuration change requires regeneration of types.
 Independent review and deployment remain pending at this implementation commit.
+
+
+Independent review found one P2: a refused local mark edit and its label were
+lost when keyed controls unmounted on a speed switch. The follow-up lifts unsent
+label/candidate/busy/feedback state into a small Studio-owned map keyed by stable
+task, exact URL and WPM. Captured callbacks update that file even after switching;
+other files retain independent drafts, and the existing device-generation fence
+rejects retired owners. This adds no persisted cache or second queue. Inspection
+retains the draft; explicit cancellation clears it; finishing/switching practice
+with any dirty mark edit offers a deliberate discard or cancel before leaving.
+Required check/test/build still pass (842/47); both extended native journeys pass
+again in 27.4 seconds, including failed 10→18→10 retention and canceling Finish.
+Independent correction recheck and final regression/deployment remain pending.
