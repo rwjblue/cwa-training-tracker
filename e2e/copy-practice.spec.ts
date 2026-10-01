@@ -6,6 +6,7 @@ import {
   copyToneHz,
   defaultCopyRecipe,
   generateCopyTargets,
+  scoreCopyGroups,
   scoreCopyText,
   submitCopyAnswer,
 } from '../src/shared/copy-practice';
@@ -140,107 +141,145 @@ async function startWithoutMovingCopyField(
   await original.dispose();
 }
 
-test('guest copy survives reload and signs in to save one measured result with visible feedback', async ({
-  page,
-  context,
-}) => {
-  await openCopy(page);
-  await page.screenshot({ path: '.tmp/copy-default-setup-desktop.png', fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '.tmp/copy-default-setup-mobile.png', fullPage: true });
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await configureShortGroups(page);
-  await expect(page.getByRole('combobox', { name: 'Tone', exact: true })).toHaveValue('random');
-  await expectAccessible(page, 'copy-setup-desktop');
-  await page.screenshot({ path: '.tmp/copy-setup-desktop.png', fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '.tmp/copy-setup-mobile.png', fullPage: true });
-  await startWithoutMovingCopyField(page, 'Start code groups', 'E ');
-  const audio = page.getByLabel('Copy practice audio', { exact: true });
-  await expect(audio).toHaveAttribute('src', /^blob:/);
-  const randomTone = await recordingTone(page, 2);
-  for (const hz of randomTone.tones) {
-    expect(hz).toBeGreaterThanOrEqual(499.5);
-    expect(hz).toBeLessThanOrEqual(900.5);
-  }
-  await expect
-    .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
-    .toBeGreaterThan(0);
-  await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled({
-    timeout: 15_000,
+test.describe('guest code-group comparison', () => {
+  test.use({ hasTouch: true });
+  test('guest copy scores both comparisons, counts extra groups, and carries the result through save and backup', async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(60_000);
+    await openCopy(page);
+    await page.screenshot({ path: '.tmp/copy-default-setup-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '.tmp/copy-default-setup-mobile.png', fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await configureShortGroups(page);
+    await expect(page.getByRole('combobox', { name: 'Tone', exact: true })).toHaveValue('random');
+    await expectAccessible(page, 'copy-setup-desktop');
+    await page.screenshot({ path: '.tmp/copy-setup-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '.tmp/copy-setup-mobile.png', fullPage: true });
+    await startWithoutMovingCopyField(page, 'Start code groups', 'E ');
+    const audio = page.getByLabel('Copy practice audio', { exact: true });
+    await expect(audio).toHaveAttribute('src', /^blob:/);
+    const randomTone = await recordingTone(page, 2);
+    for (const hz of randomTone.tones) {
+      expect(hz).toBeGreaterThanOrEqual(499.5);
+      expect(hz).toBeLessThanOrEqual(900.5);
+    }
+    await expect
+      .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
+      .toBeGreaterThan(0);
+    await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled({
+      timeout: 15_000,
+    });
+    const target = generateCopyTargets(
+      {
+        ...defaultCopyRecipe(),
+        groupKind: 'custom',
+        customCharacters: 'E',
+        groupLength: 1,
+        effectiveWpm: 25,
+        durationSeconds: 10,
+        lengthMode: 'duration',
+      },
+      'e-only',
+    )[0];
+    const groupCount = target.split(' ').length;
+    const answer = `${target} TTT`;
+    const score = scoreCopyGroups(target, answer);
+    // The positional comparison counts all three letters in the extra group;
+    // full-text alignment also counts the added group boundary.
+    expect(score.groupDistance).toBe(3);
+    expect(score.wholeTextDistance).toBe(4);
+    expect(score.distance).toBe(3);
+    expect(score.accuracy).toBeGreaterThan(scoreCopyText(target, answer).accuracy);
+    await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill(answer);
+    await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
+    await page.reload();
+    await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(answer);
+    await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
+    expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+    await page.getByRole('button', { name: 'Check copy', exact: true }).tap();
+    await expect(page.locator('.copy-result-stats')).toContainText(`${score.accuracy}%`);
+    await expect(
+      page.getByRole('group', { name: `Group ${groupCount}`, exact: true }),
+    ).toContainText('Extra T.');
+    await page.getByText('Scoring details', { exact: true }).tap();
+    await expect(page.locator('.copy-scoring-details')).toContainText('Group comparison: 3 edits.');
+    await expect(page.locator('.copy-scoring-details')).toContainText(
+      'Whole-text comparison: 4 edits.',
+    );
+    await expect(page.locator('.copy-scoring-details')).toContainText('The lower count, 3,');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expectAccessible(page, 'copy-group-score-desktop');
+    await page.screenshot({ path: '.tmp/copy-group-score-desktop.png', fullPage: true });
+    expect((await context.request.get('/api/entries')).status()).toBe(401);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await expectAccessible(page, 'copy-result-mobile');
+    await page.screenshot({ path: '.tmp/copy-result-mobile.png', fullPage: true });
+    await page.getByText('Notes and more options', { exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Practice missed characters', exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'Sign in to save result', exact: true }).click();
+    await signIn(page, { dialogAlreadyOpen: true });
+    await expect(page.getByRole('dialog')).toContainText(`${score.accuracy}%`);
+    await expect(page.getByLabel(/^Time practiced/)).toHaveAttribute('readonly', '');
+    await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const entries = (await (await context.request.get('/api/entries')).json()).entries;
+    expect(entries).toHaveLength(1);
+    const entry = entries[0];
+    expect(entry.accuracy).toBe(score.accuracy);
+    expect(entry.metadata.copyAttempt.scoringVersion).toBe('native-copy-v2');
+    expect(entry.metadata.copyAttempt.trials[0].answer).toBe(answer);
+    expect(entry.metadata.copyAttempt.trials[0].distance).toBe(3);
+    expect(entry.metadata.copyAttempt.audioSeconds).toBeGreaterThan(8);
+    expect(entry.metadata.copyAttempt.audioSeconds).toBeLessThan(12);
+    expect(entry.metadata.copyAttempt.interruptionCount).toBeGreaterThan(0);
+    randomTone.tones.forEach((hz, index) => {
+      expect(Math.abs(hz - copyToneHz(entry.metadata.copyAttempt, 0, index))).toBeLessThan(1);
+    });
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+    await page.getByText('Code groups result', { exact: true }).click();
+    await expect(page.locator('.session-copy-result')).toContainText(`${score.accuracy}%`);
+    await page.locator('.session-copy-result').getByText('Scoring details', { exact: true }).tap();
+    await expect(page.locator('.session-copy-result .copy-scoring-details')).toContainText(
+      'Group comparison: 3 edits. Whole-text comparison: 4 edits.',
+    );
+    await expectAccessible(page, 'copy-history-mobile');
+    await page.screenshot({ path: '.tmp/copy-history-mobile.png', fullPage: true });
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+    await page.getByRole('button', { name: 'Practice report', exact: true }).click();
+    await expect(page.getByRole('dialog')).toContainText('Code groups · completed');
+    await expect(page.getByRole('dialog')).toContainText(
+      `Native copy: 3 edits · ${score.errorPercent}% errors · ${score.accuracy}% accuracy`,
+    );
+    await expect(page.getByRole('dialog')).toContainText(
+      'Scoring comparisons: 3 grouped edits · 4 whole-text edits · lower count used',
+    );
+    await expect(page.getByRole('dialog')).toContainText('native-copy-v2');
+    await expect(page.getByRole('dialog')).toContainText('Actual character/effective WPM: 25/25');
+    await expect(page.getByRole('dialog')).toContainText('Measured time:');
+    await expectAccessible(page, 'copy-report-mobile');
+    await page.screenshot({ path: '.tmp/copy-report-mobile.png' });
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Open your account', exact: true }).tap();
+    const downloaded = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export backup', exact: true }).tap();
+    const backup = JSON.parse(await readFile((await (await downloaded).path())!, 'utf8'));
+    expect(backup.sessions).toHaveLength(1);
+    expect(backup.sessions[0].accuracy).toBe(score.accuracy);
+    expect(backup.sessions[0].metadata.copyAttempt).toEqual(entry.metadata.copyAttempt);
   });
-  const target = generateCopyTargets(
-    {
-      ...defaultCopyRecipe(),
-      groupKind: 'custom',
-      customCharacters: 'E',
-      groupLength: 1,
-      effectiveWpm: 25,
-      durationSeconds: 10,
-      lengthMode: 'duration',
-    },
-    'e-only',
-  )[0];
-  const groupCount = target.split(' ').length;
-  const answer = `${target.slice(0, -1)}T`;
-  const score = scoreCopyText(target, answer);
-  await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill(answer);
-  await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
-  await page.reload();
-  await expect(page.getByText(/Recovered on this device/)).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(answer);
-  await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
-  expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
-  await page.getByRole('button', { name: 'Check copy', exact: true }).click();
-  await expect(page.locator('.copy-result-stats')).toContainText(`${score.accuracy}%`);
-  await expect(page.getByRole('group', { name: `Group ${groupCount}`, exact: true })).toContainText(
-    'Changed E to T.',
-  );
-  expect((await context.request.get('/api/entries')).status()).toBe(401);
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
-  await expectAccessible(page, 'copy-result-mobile');
-  await page.screenshot({ path: '.tmp/copy-result-mobile.png', fullPage: true });
-  await page.getByText('Notes and more options', { exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Practice missed characters', exact: true }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Sign in to save result', exact: true }).click();
-  await signIn(page, { dialogAlreadyOpen: true });
-  await expect(page.getByRole('dialog')).toContainText(`${score.accuracy}%`);
-  await expect(page.getByLabel(/^Time practiced/)).toHaveAttribute('readonly', '');
-  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  const entries = (await (await context.request.get('/api/entries')).json()).entries;
-  expect(entries).toHaveLength(1);
-  const entry = entries[0];
-  expect(entry.accuracy).toBe(score.accuracy);
-  expect(entry.metadata.copyAttempt.trials[0].answer).toBe(answer);
-  expect(entry.metadata.copyAttempt.audioSeconds).toBeGreaterThan(8);
-  expect(entry.metadata.copyAttempt.audioSeconds).toBeLessThan(12);
-  expect(entry.metadata.copyAttempt.interruptionCount).toBeGreaterThan(0);
-  randomTone.tones.forEach((hz, index) => {
-    expect(Math.abs(hz - copyToneHz(entry.metadata.copyAttempt, 0, index))).toBeLessThan(1);
-  });
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
-  await page.getByText('Code groups result', { exact: true }).click();
-  await expect(page.locator('.session-copy-result')).toContainText(`${score.accuracy}%`);
-  await expectAccessible(page, 'copy-history-mobile');
-  await page.screenshot({ path: '.tmp/copy-history-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
-  await page.getByRole('button', { name: 'Practice report', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Code groups · completed');
-  await expect(page.getByRole('dialog')).toContainText(
-    `Native copy: 1 edits · ${score.errorPercent}% errors · ${score.accuracy}% accuracy`,
-  );
-  await expect(page.getByRole('dialog')).toContainText('Actual character/effective WPM: 25/25');
-  await expect(page.getByRole('dialog')).toContainText('Measured time:');
-  await expectAccessible(page, 'copy-report-mobile');
-  await page.screenshot({ path: '.tmp/copy-report-mobile.png' });
 });
 
 test('word copy uses a compact input, replays with a period, and shows each trial outcome', async ({
@@ -484,15 +523,18 @@ test('group feedback keeps adjacent columns and later matches after omissions an
   await signIn(page);
   const endedAt = new Date().toISOString();
   const createdAt = new Date(Date.parse(endedAt) - 120_000).toISOString();
-  const initial = createCopyAttempt(
-    {
-      ...defaultCopyRecipe(),
-      lengthMode: 'count',
-      groupCount: 4,
-      groupLength: 5,
-    },
-    { id: crypto.randomUUID(), seed: 'comparison-missing-middle', now: createdAt },
-  );
+  const initial = {
+    ...createCopyAttempt(
+      {
+        ...defaultCopyRecipe(),
+        lengthMode: 'count',
+        groupCount: 4,
+        groupLength: 5,
+      },
+      { id: crypto.randomUUID(), seed: 'comparison-missing-middle', now: createdAt },
+    ),
+    scoringVersion: 'native-copy-v1' as const,
+  };
   const groups = initial.targets[0].split(' ');
   const answer = [groups[0], groups[2], groups[3]].join(' ');
   const attempt = {
@@ -510,6 +552,11 @@ test('group feedback keeps adjacent columns and later matches after omissions an
   await page.goto('/#logbook');
   await page.reload();
   await page.getByText('Code groups result', { exact: true }).click();
+  await expect(page.locator('.session-copy-result')).toContainText(
+    `${scoreCopyText(initial.targets[0], answer).accuracy}%`,
+  );
+  await page.getByText('Scoring details', { exact: true }).click();
+  await expect(page.locator('.copy-scoring-details')).not.toContainText('Group comparison:');
   const comparison = page.getByRole('list', { name: 'Character comparison', exact: true });
   await expect(comparison.getByRole('group')).toHaveCount(4);
   await expect(comparison.getByRole('group', { name: 'Group 2', exact: true })).toContainText(
@@ -612,6 +659,31 @@ test('group feedback keeps adjacent columns and later matches after omissions an
     await page.screenshot({ path: `.tmp/copy-extra-input-${width}.png`, fullPage: true });
     expect(extraRow!.height).toBeLessThan(width === 390 ? 700 : 200);
   }
+  // A historical v1 attempt keeps its original whole-text score even where
+  // today's group comparison would award a better result.
+  const legacyInitial = { ...shortInitial, scoringVersion: 'native-copy-v1' as const };
+  const legacyAnswer = `${legacyInitial.targets[0]} X`;
+  const legacyScore = scoreCopyText(legacyInitial.targets[0], legacyAnswer);
+  expect(legacyScore.distance).toBe(2);
+  expect(scoreCopyGroups(legacyInitial.targets[0], legacyAnswer).distance).toBe(1);
+  const legacyAttempt = {
+    ...submitCopyAnswer(legacyInitial, legacyAnswer, { now: endedAt }),
+    audioSeconds: 20,
+    answerSeconds: 5,
+  };
+  const legacyReplacement = await scopedRequest(context, 'PUT', `/api/entries/copy:${initial.id}`, {
+    ...copyAttemptSessionFields(legacyAttempt),
+    date: endedAt.slice(0, 10),
+    kind: 'icr',
+    notes: 'Historical whole-text score remains unchanged.',
+  });
+  expect(legacyReplacement.ok()).toBe(true);
+  await page.reload();
+  await page.getByText('Code groups result', { exact: true }).click();
+  await expect(page.locator('.session-copy-result')).toContainText(`${legacyScore.accuracy}%`);
+  await page.getByText('Scoring details', { exact: true }).click();
+  await expect(page.locator('.copy-scoring-details')).toContainText('2 edits / 12 transmitted');
+  await expect(page.locator('.copy-scoring-details')).not.toContainText('Group comparison:');
 });
 
 test.describe('copy review inspection and recovery', () => {

@@ -8,6 +8,8 @@ import {
   currentCopySpeeds,
   defaultCopyRecipe,
   generateCopyTargets,
+  scoreCopyAttemptText,
+  scoreCopyGroups,
   scoreCopyText,
   submitCopyAnswer,
   summarizeCopyAttempt,
@@ -211,6 +213,99 @@ describe('copy timing and alignment', () => {
 });
 
 describe('copy rounds and validated evidence', () => {
+  it('uses the better group or whole-text comparison while counting missing and extra input', () => {
+    expect(scoreCopyGroups('ABC DEF', 'abc\n  def')).toMatchObject({
+      distance: 0,
+      groupDistance: 0,
+      wholeTextDistance: 0,
+      accuracy: 100,
+    });
+    for (const answer of ['ABC DEF XYZ', 'ABC'])
+      expect(scoreCopyGroups('ABC DEF', answer)).toMatchObject({
+        distance: 3,
+        groupDistance: 3,
+        wholeTextDistance: 4,
+        denominator: 6,
+        errorPercent: 50,
+        accuracy: 50,
+      });
+    expect(scoreCopyGroups('ABC DEF XYZ', 'ABC XYZ')).toMatchObject({
+      distance: 4,
+      groupDistance: 6,
+      wholeTextDistance: 4,
+      errorPercent: 44.4,
+      accuracy: 55.6,
+    });
+    expect(scoreCopyGroups('ABC DEF', 'ABC XYZ DEF')).toMatchObject({
+      distance: 4,
+      groupDistance: 6,
+      wholeTextDistance: 4,
+    });
+    expect(scoreCopyGroups('ABC DEF', 'ABCX DEF').distance).toBe(1);
+    expect(scoreCopyGroups('ABC DEF', 'ABCDEF').distance).toBe(1);
+    expect(scoreCopyGroups('ABC', 'ABC🙂').distance).toBe(1);
+    expect(scoreCopyGroups('ABC DEF', '').accuracy).toBe(0);
+    expect(scoreCopyGroups('A', 'AAAA AAAA').errorPercent).toBe(100);
+  });
+
+  it('compares the complete text beyond 255 bytes and retains whole-text visual evidence', () => {
+    const groups = Array.from({ length: 30 }, () => ['ABC', 'DEF', 'XYZ']).flat();
+    const sent = groups.join(' ');
+    expect(sent.length).toBeGreaterThan(255);
+    const answer = groups.filter((_, index) => index !== 1).join(' ');
+    const score = scoreCopyGroups(sent, answer);
+    expect(score.groupDistance).toBeGreaterThan(score.wholeTextDistance);
+    expect(score).toMatchObject({
+      distance: 4,
+      wholeTextDistance: 4,
+      denominator: 270,
+      errorPercent: 1.4,
+      accuracy: 98.6,
+    });
+    const extra = scoreCopyGroups('ABC DEF', 'ABC DEF XYZ');
+    expect(extra.alignment.filter((item) => item.kind !== 'equal')).toHaveLength(4);
+    expect(extra.distance).toBe(3);
+    expect(() => scoreCopyGroups('A', 'B'.repeat(2001))).toThrow('2000');
+  });
+
+  it('versions new group scores without changing saved v1 results or other copy modes', () => {
+    const initial = createCopyAttempt(
+      { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 2 },
+      { id: 'scoring-version', seed: 'scoring-version', now },
+    );
+    expect(initial.scoringVersion).toBe('native-copy-v2');
+    const answer = `${initial.targets[0]} XYZ`;
+    const current = submitCopyAnswer(initial, answer, { now });
+    const legacy = submitCopyAnswer({ ...initial, scoringVersion: 'native-copy-v1' }, answer, {
+      now,
+    });
+    expect(current.trials[0].distance).toBe(3);
+    expect(legacy.trials[0].distance).toBe(4);
+    expect(summarizeCopyAttempt(current)).toMatchObject({ distance: 3, accuracy: 50 });
+    expect(summarizeCopyAttempt(legacy)).toMatchObject({ distance: 4, accuracy: 33.4 });
+    expect(scoreCopyAttemptText(current)?.groupDistance).toBe(3);
+    expect(scoreCopyAttemptText(legacy)?.groupDistance).toBeUndefined();
+    for (const attempt of [current, legacy]) {
+      const json = JSON.stringify(attempt);
+      expect(JSON.stringify(validateCopyAttempt(JSON.parse(json)))).toBe(json);
+    }
+    expect(() => validateCopyAttempt({ ...legacy, scoringVersion: 'native-copy-v2' })).toThrow(
+      'distance',
+    );
+    expect(() => validateCopyAttempt({ ...current, scoringVersion: 'native-copy-v3' })).toThrow(
+      'version',
+    );
+    for (const mode of ['words', 'callsigns', 'plaintext'] as const) {
+      const other = createCopyAttempt(defaultCopyRecipe(mode), { id: mode, seed: mode, now });
+      const received = `${other.targets[0]}X`;
+      expect(summarizeCopyAttempt(submitCopyAnswer(other, received, { now }))).toEqual(
+        summarizeCopyAttempt(
+          submitCopyAnswer({ ...other, scoringVersion: 'native-copy-v1' }, received, { now }),
+        ),
+      );
+    }
+  });
+
   it('scores exact adaptive items using post-increment speed and preserves successful sent speed', () => {
     let attempt = createCopyAttempt(
       { ...defaultCopyRecipe('words'), effectiveWpm: 20, maxWordLength: 3 },

@@ -16,6 +16,16 @@ callsigns add filtering, speed ceiling, stop-on-error and blind feedback. Plain
 text uses short authored sentences. These are native equivalents with versioned
 scoring, timing and content, not identical LCWO corpora or scores.
 
+New attempts use scoring version `native-copy-v2`. Code Groups compares each
+sent group with the copied group at the same position and also compares the whole
+normalized text; the lower total error count determines the score. The positional
+comparison counts missing and extra copied groups, and both comparisons run for
+all supported text lengths. Results retain the whole-text alignment as a visual
+explanation and show both error counts when they differ. Existing
+`native-copy-v1` attempts keep their original whole-text score through recovery,
+validation, history and export/import. Word, callsign and plain-text scoring is
+unchanged by this version update.
+
 New practice defaults to a random 500–900 Hz tone per group, word, or callsign.
 This matches LCWO's documented source behavior for
 [groups](https://github.com/dj1yfk/lcwo/blob/3d0b25b539c18fe24c23601f3b3579428858148f/inc/functions.php#L176-L187),
@@ -172,10 +182,13 @@ caps at 100. Saved accuracy is:
 LCWO saved accuracy = 100 − min(group error %, whole-string error %)
 ```
 
+This describes the audited LCWO source, not the current native scoring policy.
 The whole-string comparison includes normalized spaces, but its denominator
 excludes spaces. It is only attempted when the source transmission has fewer than
-255 bytes; otherwise that candidate error rate becomes 100%. Extra input groups
-also expose legacy behavior in the positional group comparison. Case and
+255 bytes; otherwise that candidate error rate becomes 100%. Its positional group
+comparison ignores copied groups after the final sent group. The native
+`native-copy-v2` policy adopts the lower-error choice while counting extra groups
+and comparing the full text without that cutoff. Case and
 whitespace normalization, player commands, and some accepted character aliases
 need explicit fixtures. See [the result calculation][group-score] and
 [comparison implementation][comparison].
@@ -370,24 +383,32 @@ Keep the present tool named **Word listening**, and name the new scored tool
 
 ### Scoring recommendation
 
-Use a documented, versioned native score. For groups, calculate whole-sequence
-Levenshtein distance after case normalization and whitespace collapse/trim;
-preserve single group separators in the comparison, exclude them from the
-transmitted-character denominator, and explain spacing errors in the result.
-Count extra groups, support long attempts, show the raw distance, and cap displayed
-error percentage at 100. Do not remove unsupported input characters while grading.
+Use a documented, versioned native score. For Code Groups, `native-copy-v2`
+calculates two error totals after case normalization and whitespace collapse/trim:
+compare groups at corresponding positions, counting missing and extra copied
+groups, and calculate whole-sequence Levenshtein distance with single group
+separators preserved. Choose the lower total for the score. Both totals use the
+sent non-space character count as denominator; truncate error percentage to one
+decimal place, cap it at 100, and subtract from 100 for accuracy. Compare the full
+supported text in both candidates with no 255-byte cutoff. Do not remove
+unsupported input characters while grading.
+
+Keep the whole-text alignment visible to explain character and spacing errors;
+show both totals when the score uses fewer errors than that alignment. Saved
+`native-copy-v1` attempts retain their original whole-text scoring, including
+unfinished attempts recovered after this change. Plain-text scoring remains a
+whole-text comparison with its existing denominator and rounding policy.
 
 For words/callsigns, expose exact item correctness and a clearly labelled
 LCWO-style speed/length score, including the post-increment convention if that
 metric is offered. Preserve sent speed, next speed, and maximum successful speed
 separately. Comparable points also require comparable dictionaries and settings.
 
-This intentionally avoids presenting LCWO's group-scoring edge cases as the new
-default. Native group percentages can differ from LCWO's saved accuracy. Keep
-imported LCWO results labelled by source. If exact numerical continuity is needed,
-add a separate pinned LCWO comparison profile with golden fixtures for its two
-scorers, rounding, aliases, and 255-byte behavior. Do not claim exact LCWO parity
-for the default native scorer or current timing engine.
+The group policy follows LCWO's choice between two comparisons while counting
+all copied groups and supporting long attempts. Normalization, rounding in other
+modes, corpora and audio timing still have documented differences, so this is not
+exact LCWO parity. Keep imported LCWO results labelled by source and preserve
+their original measurements.
 
 ### Time accounting and recovery
 
@@ -514,7 +535,9 @@ Validation should follow [the existing testing strategy](testing.md):
 - Pure tests for allowed character pools, duration bounds, whole-group endings,
   maximum word lengths, corpus availability, scoring alignments, normalization,
   adaptive speed/point trajectories and timing profiles. Include missing/extra
-  groups, extra unsupported input, >255-byte text, repeats and all-wrong rounds.
+  groups in both comparisons, cases where each comparison wins, extra unsupported
+  input, >255-byte text, historical score-version preservation, repeats and
+  all-wrong rounds.
 - Clock/state tests for replay, pause/buffering, seeks, answer/audio overlap,
   hidden pages, reload restoration, settings changes, partial attempts and
   fractional-time aggregation.

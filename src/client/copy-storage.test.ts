@@ -241,10 +241,17 @@ describe('native copy recovery', () => {
     });
   });
 
-  it('retains a legacy pending save without adding random-tone metadata', () => {
+  it('retains the original score and exact legacy pending body through recovery and device backup', () => {
     const current = draft();
     delete current.attempt.recipe.toneMode;
-    current.attempt = submitCopyAnswer(current.attempt, current.attempt.targets[0], {
+    current.attempt.scoringVersion = 'native-copy-v1';
+    const answer = `${current.attempt.targets[0]} X`;
+    const modern = submitCopyAnswer(
+      { ...current.attempt, scoringVersion: 'native-copy-v2' },
+      answer,
+      { now: current.attempt.updatedAt },
+    );
+    current.attempt = submitCopyAnswer(current.attempt, answer, {
       now: current.attempt.updatedAt,
     });
     current.pending = validatePracticeSession({
@@ -253,9 +260,21 @@ describe('native copy recovery', () => {
       kind: 'icr',
       notes: current.notes,
     });
-    saveCopyDraft('account', current);
-    expect(loadCopyDraft('account')?.pending).toEqual(current.pending);
-    expect(loadCopyDraft('account')?.attempt.recipe).not.toHaveProperty('toneMode');
+    expect(current.attempt.trials[0].distance).toBe(2);
+    expect(current.pending.accuracy).toBe(33.4);
+    expect(modern.trials[0].distance).toBe(1);
+    expect(copyAttemptSessionFields(modern).accuracy).toBe(66.7);
+    const exactDraft = JSON.stringify(current);
+    const exactPending = JSON.stringify(current.pending);
+    expect(saveCopyDraft('guest', current)).toBe(true);
+    expect(JSON.stringify(loadCopyDraft('guest'))).toBe(exactDraft);
+    expect(loadCopyDraft('guest')?.attempt.recipe).not.toHaveProperty('toneMode');
+    const backup = validateDeviceBackup(
+      JSON.stringify(captureDeviceBackup('guest', 'Synthetic learner')),
+      'guest',
+    );
+    expect(JSON.stringify(backup.stores.copyDraft)).toBe(exactDraft);
+    expect(backup.stores.practice[0].body).toBe(exactPending);
   });
 
   it('freezes a new pending result’s original generation before its draft and preserves it in device export', () => {
