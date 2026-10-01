@@ -874,3 +874,40 @@ both actual-course browser journeys cover this exact row. Check, 847 tests in
 47 files and build pass; the two four-source desktop/mobile journeys pass in
 40.5 seconds. Independent final recheck and full regression remain
 pending; this entry does not declare the issue accepted or deployed.
+
+
+Final independent review **ACCEPTED** at `b11165ca`, after correction commits
+`9527072f` and `6f2ea519`. Both substantive P2 findings are resolved, including the
+last published recording-label edge. The independent 30-file matrix passes two
+checks for strict exact source identity, parent-WPM agreement, unknown/lookalike
+rejection, legacy compatibility and absent guessed timing. The final actual
+story-112 desktop Space/mobile-touch journeys pass in 22.1 seconds: mark at three
+seconds, rewind to zero, native hearing, reviewed server save, task revisit,
+private history and actual UI backup download/import. Actual hearing is
+1.893366/1.906184 seconds with zero completed passes and no character/effective
+fields. Both Axe checks are empty and both screenshots were inspected.
+
+Earlier independent source journeys passed six cases in 57.6 seconds with six
+empty Axe reports; original mark/retry/limit/history/import journeys passed four
+cases in 38.5 seconds plus a 6.9-second late-acknowledgement case. Failed admission
+drafts, per-file labels and owner cancellation survive exact switches; late
+acknowledgements clear only their originating draft. No remaining substantive UX,
+privacy, timing-integrity or maintainability findings. The reviewer runtime is
+released; final full regression and production verification remain pending.
+
+
+Final complete single-worker browser regression: **69/69 pass in 12.7 minutes**.
+The production task reran check, all 847 tests in 47 files, build and Wrangler
+dry-run, found no pending migrations, and deployed version `53875837-a545-471f-a27d-fb773221092f`
+to https://cwa.n1rwj.com. Candidate code/tree is `b11165ca5eacabfc27313d180e8ac3b4899e036e` /
+`cfd8f7bdf87773c3ce01713e20a54736e4a0cb49`. Initial immediate verification found an entry-reference mismatch;
+a subsequent root inspection showed the expected entry references and the complete
+unchanged nonce verification passed. Four production JS/CSS asset hashes and the
+Runner integration hash match the validated build; root/health are 200, and
+entries/account-state/account-lifecycle backup reject anonymous requests with 401.
+No weakened assertions, push, signing override or original-site mutation.
+
+GitHub reports this local commit absent (422); under the latest no-push direction
+#12 remains open/unpublished despite accepted local implementation and verified
+production. Physical iPhone lock-screen behavior remains unverified; generated
+Back 10 and elapsed-time reload/crash recovery are outside this issue.
