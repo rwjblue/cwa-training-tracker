@@ -1,4 +1,5 @@
 import { officialRecordingIdentity } from '../shared/recordings';
+import { listeningGuidance } from '../shared/listening-guidance';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -169,6 +170,7 @@ export default function PracticeStudio({
         activity.characterWpm)
       : undefined;
   const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
+  const guidance = launch?.task ? listeningGuidance(launch.task, recordingUrl) : undefined;
   // Private, unsent edits live with this Studio owner, not a keyed file control.
   const [recordingReviewDrafts, setRecordingReviewDrafts] = useState<
     Record<string, RecordingReviewDraft>
@@ -1277,6 +1279,20 @@ export default function PracticeStudio({
                         ? `${activity.minimumPasses}${activity.maximumPasses && activity.maximumPasses !== activity.minimumPasses ? `–${activity.maximumPasses}` : ''} listening passes assigned.`
                         : 'Listen at the recording’s original speed.'}
                     </p>
+                    {guidance && (
+                      <div
+                        className="recording-guidance"
+                        role="note"
+                        aria-label="Listening approach"
+                      >
+                        <p>
+                          <strong>{guidance.title}.</strong> {guidance.approach}
+                        </p>
+                        <p className="field-hint">
+                          Follow the original instructions and your advisor’s requirements.
+                        </p>
+                      </div>
+                    )}
                     {recordingUrl ? (
                       <>
                         <audio
@@ -1796,13 +1812,21 @@ export default function PracticeStudio({
                       value={scratchpad}
                       onChange={(event) => changeScratchpad(event.target.value)}
                       placeholder={
-                        isSending
+                        guidance?.scratchpadPrompt ??
+                        (isSending
                           ? 'Note difficult characters, spacing, or patterns to revisit…'
-                          : 'Jot down what you hear, difficult words, or details to revisit…'
+                          : 'Jot down what you hear, difficult words, or details to revisit…')
                       }
-                      aria-describedby="scratchpad-help"
+                      aria-describedby={
+                        guidance ? 'scratchpad-prompt scratchpad-help' : 'scratchpad-help'
+                      }
                     />
                   </label>
+                  {guidance && (
+                    <p id="scratchpad-prompt" className="field-hint">
+                      {guidance.scratchpadPrompt}
+                    </p>
+                  )}
                   <p id="scratchpad-help" className="field-hint">
                     {notesRemembered
                       ? 'Included with saved practice. Notes from sessions under 30 seconds stay on this device for this tool.'

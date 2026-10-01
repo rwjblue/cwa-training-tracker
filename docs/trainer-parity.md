@@ -110,6 +110,7 @@ These baseline gaps no longer describe the current implementation:
 | Scratchpad | Notes can be written during practice, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx). | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate. |
 | Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Full custom text/scripts remain in memory with the active owner; equal custom label/count/settings deliberately share a descriptive identity. Seamless speed retiming, Stories and public exact recipes remain later issues. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
 | Official recording speeds | Verified native-speed files, shared Assigned/Next default and private device-local exact choices per stable task are supported. New launches prefer a valid scoped override; the player and Today/Plan distinguish future preference from prescribed/current WPM. Actual mixed-file evidence remains native 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [scoped choices](../src/client/task-recording-choice.ts). | Reset/default changes leave current playback intact. Invalid choices fall back visibly, with fenced cleanup/retry; choices join private device backup/restore/clear, independently of shared defaults. #11 independently accepted validation and production evidence are recorded below. Issue #12 adds exact-file difficult marks and Replay 8 sec; advisor aggregation remains later work. |
+| Assigned listening guidance | Seven verified audio families receive concise mental approaches and optional scratchpad prompts beside native playback. Exact public recording metadata precedes conservative title/instruction matching; unknown audio has an instructor-first fallback. [Guidance](../src/shared/listening-guidance.ts). | Original instructions, speed/pass policy, time, completion and private saved evidence retain their existing owners. No proficiency or learned-word inference. #13 implementation validation is recorded below; independent review/deployment pending. |
 | Recording coverage and passes | Native 1x movement supplies recording-local coverage and once-only completed passes. Overlap unions, file ownership and measured duration groups remain separate from heard time. Prior saved/current/remaining counts appear in Today, Plan and Studio; per-file facts survive review, history, reports and account/device backups. [Coverage](../src/client/recording-coverage.ts), [progress](../src/shared/plan.ts), [journey](../e2e/listening-passes.spec.ts). | Partial coverage stays in memory during in-app inspection; unfinished elapsed/coverage reload recovery is excluded. Old records remain unmeasured. Explicit imported source counts are labeled separately, and extra review supplies no required-pass credit. Independent validation/review are recorded in the #9 ledger below. |
 | Assigned course replay | Device-local automatic replay starts off. Only an observed full pass can continue while owned prior/current passes remain below the assigned minimum. Native 1x, the existing clock and Media Session remain in use. [Policy](../src/client/course-replay.ts), [journey](../e2e/course-replay.spec.ts). | Pause/recall/inspection/source changes cancel pending Play; ended feedback offers deliberate another pass and finish. Generated Repeat is independent. Optional daily loop remains #25. Validation and review are tracked below. |
 | Historical data access          | Imported practice exposes scratchpads, ratings, recall, passes, actual recording speeds, and per-run Runner/LCWO/CWT observations. Settings has an authenticated, on-demand reader for original reports, LCWO measurements, materials/revisions, course context, and device report drafts/preferences. [Imported history](../src/client/ImportedHistory.tsx).                  | Original reports and materials are readable snapshots, not native authoring/submission workflows. Device drafts are preserved for reference, not resumed.                                                                                            |
@@ -917,3 +918,76 @@ GitHub reports this local commit absent (422); under the latest no-push directio
 #12 remains open/unpublished despite accepted local implementation and verified
 production. Physical iPhone lock-screen behavior remains unverified; generated
 Back 10 and elapsed-time reload/crash recovery are outside this issue.
+
+
+## Issue #13 implementation ledger — listening guidance
+
+Rechecked the live issue body/comments (open, none), both native dependency lists
+(empty), approved audit finding 6 and the original read-only source pin
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`: `guidance.ts:11/58` and
+`client.ts:909`. The original supplies family-specific mental approaches and
+optional prompts, with separate pass/instruction ownership. Explicit learned-word
+reporting remains #40; no exposure-based learning inference is introduced here.
+
+A small typed [guidance helper](../src/shared/listening-guidance.ts) maps words,
+phrases, affixes, QSOs, POTA, CWT and stories to original concise suggestions and
+optional scratchpad prompts. Exact verified native-file metadata takes priority
+over learner-renamed titles or conflicting instructions; exact linked public
+curriculum codes cover generic-title Fundamental/Advanced recordings outside the
+variant catalog. Unknown sources use conservative complete code references or
+narrow short-story/prefix/suffix matching, then a useful instructor-first fallback.
+Arbitrary filename URLs and ordinary prose tokens do not identify families.
+Non-audio copy/sending/external/Runner tools receive no assigned-audio guidance.
+
+The approach sits directly beside assigned native playback, with explicit
+original-instruction/advisor priority. Optional family prompts remain visible
+beside the existing scratchpad and join its accessible description. Phrase/story
+copy supports meaning and recognizable fragments while preserving any prescribed
+writing/transcription requirements. Existing speed/pass displays, source links,
+replay/marks, recall, notes, completion, save/outbox and history/report owners are
+unchanged. Guidance is derived presentation, not persisted evidence or a new
+private entity; no schema/binding change requires generated types. Public tools
+remain usable without an account; restricted material and the original site stay
+linked/read-only.
+
+Initial seven-family fixtures exposed three guessed URLs; they were corrected to
+exact published catalog links, with no lookup/validation relaxation. Type checks,
+all 874 tests in 48 files (27 new guidance cases), and build pass. Browser desktop/
+mobile verification is pending because another primary-checkout suite owns port
+8791; the launcher aborted before competing with that runtime. No interface gate,
+independent acceptance or production delivery is claimed yet.
+
+
+The two actual-course desktop Space/mobile-touch journeys pass in 26.0 seconds.
+They cover assigned phrase and Fundamental story playback, exact official-source
+links and speed/pass requirements, visible optional prompts, unchanged export
+plans/completion before playback, native partial hearing, paused inspection,
+canceled review, refused durable storage plus HTTP 503, exact frozen retry/server
+receipt, private history and exported scratchpad. Guidance never enters saved
+metadata. Four Axe reports are empty and four screenshots were inspected; mobile
+approaches stay below the tested 190px bound with no horizontal overflow.
+
+The first actual browser attempt failed because its fixture expected unmodified
+generated curriculum tasks in the portable export. Tests now independently check
+unchanged exported overrides and actual `/api/plan` completion; no product or
+completion/time assertion was weakened. A separate primary-checkout suite had
+initially occupied port 8791; it was left intact until completion, with no competing
+runtime. The user's concurrent scoring commit `03d70aea` is preserved alongside
+accepted #12 history in separate conflict-free integration `106d501b`; eight
+non-overlapping user paths match byte for byte. Required combined-base checks,
+851 tests and build passed before that integration commit. Issue #13 remains a
+separate focused change. Final combined checks/full browser regression and the
+post-implementation independent gate are pending.
+
+
+Final combined validation: `mise run check`, all **878 tests in 48 files**, build,
+and the complete single-worker **71/71 browser journeys pass in 13.1 minutes**.
+The first full run had 70 passes and one existing desktop course-replay failure
+at its delayed-Play scenario (expected one pass, observed zero). Its retained
+trace reported an incomplete pass; no native position/performance event log from
+that original run establishes the exact gap. An isolated passive native-event
+probe passed the unchanged complete desktop scenario in 1.1 minutes, followed by
+the final full pass. Its event collector resets on page reload, so its final
+60 events/three 3.6-second native endings do not reconstruct the original failure.
+No product timing code, source data, assertion or timeout was weakened to pass.
+Independent post-implementation review and production delivery remain pending.

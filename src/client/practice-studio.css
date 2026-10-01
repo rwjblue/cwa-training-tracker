@@ -46,6 +46,20 @@
   color: #5b6d50;
   margin: 14px 0 0;
 }
+.recording-guidance {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.recording-guidance p {
+  margin: 0;
+}
+.recording-guidance .field-hint {
+  margin-top: 4px;
+}
 .studio-preferences-heading {
   margin-bottom: 25px;
 }

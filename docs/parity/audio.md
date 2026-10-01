@@ -671,3 +671,76 @@ GitHub reports this local commit absent (422); under the latest no-push directio
 #12 remains open/unpublished despite accepted local implementation and verified
 production. Physical iPhone lock-screen behavior remains unverified; generated
 Back 10 and elapsed-time reload/crash recovery are outside this issue.
+
+
+## Issue #13 implementation ledger — listening guidance
+
+Rechecked the live issue body/comments (open, none), both native dependency lists
+(empty), approved audit finding 6 and the original read-only source pin
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`: `guidance.ts:11/58` and
+`client.ts:909`. The original supplies family-specific mental approaches and
+optional prompts, with separate pass/instruction ownership. Explicit learned-word
+reporting remains #40; no exposure-based learning inference is introduced here.
+
+A small typed [guidance helper](../../src/shared/listening-guidance.ts) maps words,
+phrases, affixes, QSOs, POTA, CWT and stories to original concise suggestions and
+optional scratchpad prompts. Exact verified native-file metadata takes priority
+over learner-renamed titles or conflicting instructions; exact linked public
+curriculum codes cover generic-title Fundamental/Advanced recordings outside the
+variant catalog. Unknown sources use conservative complete code references or
+narrow short-story/prefix/suffix matching, then a useful instructor-first fallback.
+Arbitrary filename URLs and ordinary prose tokens do not identify families.
+Non-audio copy/sending/external/Runner tools receive no assigned-audio guidance.
+
+The approach sits directly beside assigned native playback, with explicit
+original-instruction/advisor priority. Optional family prompts remain visible
+beside the existing scratchpad and join its accessible description. Phrase/story
+copy supports meaning and recognizable fragments while preserving any prescribed
+writing/transcription requirements. Existing speed/pass displays, source links,
+replay/marks, recall, notes, completion, save/outbox and history/report owners are
+unchanged. Guidance is derived presentation, not persisted evidence or a new
+private entity; no schema/binding change requires generated types. Public tools
+remain usable without an account; restricted material and the original site stay
+linked/read-only.
+
+Initial seven-family fixtures exposed three guessed URLs; they were corrected to
+exact published catalog links, with no lookup/validation relaxation. Type checks,
+all 874 tests in 48 files (27 new guidance cases), and build pass. Browser desktop/
+mobile verification is pending because another primary-checkout suite owns port
+8791; the launcher aborted before competing with that runtime. No interface gate,
+independent acceptance or production delivery is claimed yet.
+
+
+The two actual-course desktop Space/mobile-touch journeys pass in 26.0 seconds.
+They cover assigned phrase and Fundamental story playback, exact official-source
+links and speed/pass requirements, visible optional prompts, unchanged export
+plans/completion before playback, native partial hearing, paused inspection,
+canceled review, refused durable storage plus HTTP 503, exact frozen retry/server
+receipt, private history and exported scratchpad. Guidance never enters saved
+metadata. Four Axe reports are empty and four screenshots were inspected; mobile
+approaches stay below the tested 190px bound with no horizontal overflow.
+
+The first actual browser attempt failed because its fixture expected unmodified
+generated curriculum tasks in the portable export. Tests now independently check
+unchanged exported overrides and actual `/api/plan` completion; no product or
+completion/time assertion was weakened. A separate primary-checkout suite had
+initially occupied port 8791; it was left intact until completion, with no competing
+runtime. The user's concurrent scoring commit `03d70aea` is preserved alongside
+accepted #12 history in separate conflict-free integration `106d501b`; eight
+non-overlapping user paths match byte for byte. Required combined-base checks,
+851 tests and build passed before that integration commit. Issue #13 remains a
+separate focused change. Final combined checks/full browser regression and the
+post-implementation independent gate are pending.
+
+
+Final combined validation: `mise run check`, all **878 tests in 48 files**, build,
+and the complete single-worker **71/71 browser journeys pass in 13.1 minutes**.
+The first full run had 70 passes and one existing desktop course-replay failure
+at its delayed-Play scenario (expected one pass, observed zero). Its retained
+trace reported an incomplete pass; no native position/performance event log from
+that original run establishes the exact gap. An isolated passive native-event
+probe passed the unchanged complete desktop scenario in 1.1 minutes, followed by
+the final full pass. Its event collector resets on page reload, so its final
+60 events/three 3.6-second native endings do not reconstruct the original failure.
+No product timing code, source data, assertion or timeout was weakened to pass.
+Independent post-implementation review and production delivery remain pending.

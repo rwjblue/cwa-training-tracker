@@ -78,29 +78,40 @@ export function recordingSpeeds(
 
 const curriculumFileWpms = new Map<string, number>();
 const ambiguousCurriculumFiles = new Set<string>();
+const curriculumFileCodes = new Map<string, string>();
+const ambiguousCurriculumCodes = new Set<string>();
 for (const source of [beginner, fundamental, intermediate, advanced]) {
   for (const row of source.exercises as {
     kind: string;
     url?: string;
     characterWpm?: number;
     recordingLabelWpm?: number;
+    recording?: string;
   }[]) {
+    if (row.kind !== 'audio' || !row.url) continue;
+    if (row.recording) {
+      const previous = curriculumFileCodes.get(row.url);
+      if (previous !== undefined && previous !== row.recording)
+        ambiguousCurriculumCodes.add(row.url);
+      curriculumFileCodes.set(row.url, row.recording);
+    }
     // An explicit recording label can differ from the session heading/filename.
     // It identifies the published file without claiming measured native timing.
     const fileWpm = row.recordingLabelWpm ?? row.characterWpm;
-    if (
-      row.kind !== 'audio' ||
-      !row.url ||
-      !Number.isFinite(fileWpm) ||
-      fileWpm! <= 0 ||
-      fileWpm! > 200
-    )
-      continue;
+    if (!Number.isFinite(fileWpm) || fileWpm! <= 0 || fileWpm! > 200) continue;
     const previous = curriculumFileWpms.get(row.url);
-    if (previous !== undefined && previous !== fileWpm)
-      ambiguousCurriculumFiles.add(row.url);
+    if (previous !== undefined && previous !== fileWpm) ambiguousCurriculumFiles.add(row.url);
     curriculumFileWpms.set(row.url, fileWpm!);
   }
+}
+
+/** Public exercise code for an exact published source, never parsed from an arbitrary URL. */
+export function officialRecordingCode(url: string | undefined): string | undefined {
+  if (!url) return;
+  const canonical = currentUrl(url);
+  const variant = recordingVariants(url).find((item) => item.url === canonical);
+  if (variant) return variant.title;
+  if (!ambiguousCurriculumCodes.has(canonical)) return curriculumFileCodes.get(canonical);
 }
 
 /** Exact published file labels for annotations, not guessed character/effective timing.
