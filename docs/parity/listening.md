@@ -285,3 +285,34 @@ lost committed response. Ten named settled Runner Axe reports are empty.
 The earlier full gate's single sign-in failure has a retained HTTP429 trace;
 synthetic fixture network isolation fixes it without changing limits/timeouts.
 Independent correction recheck and deployment remain pending.
+
+
+### Issue #15 — independently accepted Runner recovery and production
+
+Implementation `a6a8bbcac939483487b5710ab704fd0d83b9118c` and correction
+`cfcab92c98a2e4c5417f5e182dc709bab576b5c6` are independently accepted.
+The four initial P2 findings are resolved: zero-time restart, exact uncertain
+review through storage refusal and cancellation, truthful lifecycle inventory,
+and symmetric frozen terminal/queue conflicts before restore writes. No required
+scoped finding is deferred to cumulative progress #16 or Save & next #17.
+
+Root check, all 917 tests/49 files and build pass before the correction commit
+and again in deployment. The final serialized full browser gate passes all
+77 journeys in 15.7 minutes. Independent correction review adds 24 passing
+browser executions (22 distinct desktop/mobile cases), 14 pure probes and
+36 empty settled Axe reports. Representative viewport and scrolled review/error/
+class screenshots were inspected; all 421 tracked files match the correction.
+The original independent rejection and honest failed fixture/full-run evidence
+remain recorded. No physical handset or OS lock-screen verification is claimed.
+
+`mise run deploy` succeeds with no pending migrations. Production version
+`6d92f2f9-0d95-414f-a303-6b6ad16ef40a` serves exact hashes for all four built
+JS/CSS assets and the public Runner integration module. Fresh nonce checks
+confirm root/health200, three private endpoints401 and root asset references.
+The ignored independent correction report and production verification are
+mirrored into the primary workspace. Original trainer remains read-only.
+
+The latest instruction prohibits pushes. These accepted implementation commits
+remain local and deployed; local main advances with this delivery record, while
+#15 remains open until source publication. No PR or push was attempted; signing
+configuration is preserved. Continue ascending #16–#46.
