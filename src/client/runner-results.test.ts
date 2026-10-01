@@ -3,6 +3,7 @@ import { createRunnerRun } from '../shared/runner';
 import { finishedRunnerSession } from './runner-session';
 import {
   completeDeviceScopeMutation,
+  deviceScopeKey,
   getDeviceScopeToken,
   invalidateDeviceScope,
 } from './device-scope';
@@ -14,6 +15,7 @@ import {
   retainRunnerReview,
   runnerResultKey,
   validateRunnerFinishedResult,
+  readRunnerReview,
 } from './runner-results';
 
 const entry = (id = 'synthetic-run') =>
@@ -36,7 +38,12 @@ const entry = (id = 'synthetic-run') =>
   );
 let values: Map<string, string>;
 beforeEach(() => {
-  values = new Map();
+  values = new Map(
+    ['guest', 'account-a'].map((scope) => [
+      deviceScopeKey(scope),
+      JSON.stringify({ version: 1, token: crypto.randomUUID(), mutating: false }),
+    ]),
+  );
   vi.stubGlobal('localStorage', {
     get length() {
       return values.size;
@@ -214,5 +221,126 @@ it('bounds the separate terminal inventory without evicting existing student res
   expect(
     readRunnerResults('guest').results.some(({ entry }) => entry.id === 'runner:retained-0'),
   ).toBe(true);
+  expect(loadLocalPractice('guest')).toEqual([]);
+  const submitted = {
+    ...overflow,
+    notes: 'Online-only overflow',
+    metadata: { ...overflow.metadata, runnerReviewedAt: '2026-10-02T12:00:00.000Z' },
+  };
+  expect(() => retainRunnerReview('guest', submitted, true)).toThrow('100 retained Runner results');
+  expect(readRunnerReview('guest', overflow.id)).toMatchObject({
+    reviewed: true,
+    entry: submitted,
+  });
+  expect(readRunnerResults('guest').results).toHaveLength(100);
+});
+
+it('keeps canceled edits and the exact first submission in the open-page owner when storage refuses', () => {
+  const original = entry('volatile-review');
+  const origin = { id: original.id, accountId: 'guest' };
+  const token = getDeviceScopeToken('guest');
+  const real = localStorage.setItem.bind(localStorage);
+  let refuse = true;
+  vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+    if (key === runnerResultKey('guest', original.id) && refuse) throw new Error('quota');
+    real(key, value);
+  });
+  expect(() => retainFinishedRunnerResult('guest', original, origin, token)).toThrow(
+    /Keep this page open/,
+  );
+  const edited = { ...original, notes: 'Canceled offline notes' };
+  expect(() => retainRunnerReview('guest', edited, false, token)).toThrow(/could not retain/);
+  expect(readRunnerReview('guest', original.id, token)?.entry).toEqual(edited);
+  const submitted = {
+    ...edited,
+    metadata: { ...edited.metadata, runnerReviewedAt: '2026-10-02T12:00:00.000Z' },
+  };
+  expect(() => retainRunnerReview('guest', submitted, true, token)).toThrow(/could not retain/);
+  submitted.metadata.runnerReviewedAt = '2026-10-02T12:01:00.000Z';
+  expect(readRunnerReview('guest', original.id, token)?.entry.metadata?.runnerReviewedAt).toBe(
+    '2026-10-02T12:00:00.000Z',
+  );
+  submitted.metadata.runnerReviewedAt = '2026-10-02T12:00:00.000Z';
+  expect(readRunnerResults('guest').results).toEqual([]);
+  expect(readRunnerReview('guest', original.id, token)).toMatchObject({
+    reviewed: true,
+    origin,
+    entry: submitted,
+  });
+  expect(() =>
+    retainRunnerReview('guest', { ...submitted, notes: 'Different retry' }, true, token),
+  ).toThrow(/exact retained/);
+  expect(() => retainFinishedRunnerResult('guest', original, origin, token)).toThrow(
+    /could not retain/,
+  );
+  refuse = false;
+  expect(retainFinishedRunnerResult('guest', original, origin, token)).toMatchObject({
+    reviewed: true,
+    entry: submitted,
+  });
+  expect(readRunnerResults('guest').results[0].entry).toEqual(submitted);
+  clearRunnerResult('guest', original.id, token);
+  expect(readRunnerReview('guest', original.id, token)).toBeUndefined();
+});
+
+it('does not expose an open-page review to a replacement owner or another account', () => {
+  const original = entry('volatile-replaced');
+  const token = getDeviceScopeToken('guest');
+  vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+    if (key === runnerResultKey('guest', original.id)) throw new Error('quota');
+    values.set(key, value);
+  });
+  expect(() =>
+    retainFinishedRunnerResult('guest', original, { id: original.id, accountId: 'guest' }, token),
+  ).toThrow();
+  expect(readRunnerReview('account-a', original.id)).toBeUndefined();
+  const replacement = invalidateDeviceScope('guest');
+  completeDeviceScopeMutation('guest', replacement);
+  expect(() => readRunnerReview('guest', original.id, token)).toThrow(/changed/);
+  expect(readRunnerReview('guest', original.id, replacement)).toBeUndefined();
+});
+
+it('keeps an acknowledged open-page result when browser storage reads and writes are unavailable', () => {
+  const original = entry('volatile-unavailable');
+  vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+    throw new Error('disabled');
+  });
+  vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+    throw new Error('disabled');
+  });
+  expect(() =>
+    retainFinishedRunnerResult('guest', original, { id: original.id, accountId: 'guest' }),
+  ).toThrow(/could not retain/);
+  const submitted = {
+    ...original,
+    notes: 'Exact online body',
+    metadata: { ...original.metadata, runnerReviewedAt: '2026-10-02T12:00:00.000Z' },
+  };
+  expect(() => retainRunnerReview('guest', submitted, true)).toThrow(/could not retain/);
+  expect(readRunnerReview('guest', original.id)).toMatchObject({
+    reviewed: true,
+    entry: submitted,
+  });
+});
+
+it('retains the current submitted body despite unrelated damaged inventory without publishing or overwriting damage', () => {
+  const damaged = runnerResultKey('guest', 'runner:unrelated-damaged');
+  values.set(damaged, '{unreadable');
+  const original = entry('volatile-damaged-inventory');
+  expect(() =>
+    retainFinishedRunnerResult('guest', original, { id: original.id, accountId: 'guest' }),
+  ).toThrow(/could not be read/);
+  const submitted = {
+    ...original,
+    notes: 'Exact online-only body',
+    metadata: { ...original.metadata, runnerReviewedAt: '2026-10-02T12:00:00.000Z' },
+  };
+  expect(() => retainRunnerReview('guest', submitted, true)).toThrow(/could not be read/);
+  expect(readRunnerReview('guest', original.id)).toMatchObject({
+    reviewed: true,
+    entry: submitted,
+  });
+  expect(values.get(damaged)).toBe('{unreadable');
+  expect(values.has(runnerResultKey('guest', original.id))).toBe(false);
   expect(loadLocalPractice('guest')).toEqual([]);
 });

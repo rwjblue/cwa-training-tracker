@@ -17,6 +17,13 @@ export interface RunnerFinishedResult {
 export const runnerResultsPrefix = (scope: string) =>
   `cwa:runner:result:v1:${encodeURIComponent(scope)}:`;
 const prefix = runnerResultsPrefix;
+/** Only failed durable writes live here; never exported or recovered after reload. */
+const volatileReviews = new Map<string, { token: string; result: RunnerFinishedResult }>();
+function currentReviews(scope: string, token: string) {
+  for (const [key, value] of volatileReviews)
+    if (key.startsWith(prefix(scope)) && value.token !== token) volatileReviews.delete(key);
+  return [...volatileReviews].filter(([key]) => key.startsWith(prefix(scope)));
+}
 export const runnerResultKey = (scope: string, id: string) =>
   prefix(scope) + encodeURIComponent(id);
 export function runnerResultId(key: string, scope: string): string | undefined {
@@ -108,8 +115,26 @@ function write(scope: string, result: RunnerFinishedResult, token: string): Runn
   const checked = validateRunnerFinishedResult(result, scope);
   const raw = JSON.stringify(checked);
   if (raw.length > 300_000) throw new Error('The retained Runner result is too large.');
+  const key = runnerResultKey(scope, checked.entry.id);
+  const current = currentReviews(scope, token);
+  if (!volatileReviews.has(key) && current.length >= MAX_RUNNER_RESULTS)
+    throw new Error('Review or discard an open-page Runner result before retaining another.');
+  // Retain edits and the first submitted body before attempting optional storage.
+  volatileReviews.set(key, { token, result: structuredClone(checked) });
+  const loaded = readRunnerResults(scope);
+  if (loaded.error)
+    throw new RunnerResultStorageError(
+      `${loaded.error} This result stays on this open page; you can still review and save online.`,
+    );
+  if (
+    !loaded.results.some(({ entry }) => entry.id === checked.entry.id) &&
+    loaded.results.length >= MAX_RUNNER_RESULTS
+  )
+    throw new RunnerResultStorageError(
+      `Review, export or discard some of the ${MAX_RUNNER_RESULTS} retained Runner results before retaining another. This result stays on this open page; you can still save online.`,
+    );
   try {
-    localStorage.setItem(runnerResultKey(scope, checked.entry.id), raw);
+    localStorage.setItem(key, raw);
     if (localStorage.getItem(runnerResultKey(scope, checked.entry.id)) !== raw)
       throw new Error('Result readback failed.');
   } catch {
@@ -118,6 +143,7 @@ function write(scope: string, result: RunnerFinishedResult, token: string): Runn
     );
   }
   requireCurrentDeviceScope(scope, token);
+  volatileReviews.delete(key);
   changed();
   return checked;
 }
@@ -134,6 +160,33 @@ function retained(scope: string, id: string): RunnerFinishedResult | undefined {
   if (raw.length > 300_000) throw new Error('The retained Runner result is too large.');
   return validateRunnerFinishedResult(JSON.parse(raw), scope);
 }
+/** The current open-page review survives Cancel even when durable storage refuses. */
+export function readRunnerReview(
+  scope: string,
+  id: string,
+  token = getDeviceScopeToken(scope),
+): RunnerFinishedResult | undefined {
+  requireCurrentDeviceScope(scope, token);
+  currentReviews(scope, token);
+  const memory = volatileReviews.get(runnerResultKey(scope, id))?.result;
+  let stored: RunnerFinishedResult | undefined;
+  try {
+    stored = retained(scope, id);
+  } catch (error) {
+    if (!memory || !(error instanceof RunnerResultStorageError)) throw error;
+  }
+  if (
+    memory &&
+    stored &&
+    (!sameRunnerResultFacts(memory.entry, stored.entry) ||
+      JSON.stringify(memory.origin) !== JSON.stringify(stored.origin) ||
+      (stored.reviewed && JSON.stringify(memory.entry) !== JSON.stringify(stored.entry)))
+  )
+    throw new Error('The open-page Runner review conflicts with its retained submission.');
+  const result = memory ?? stored;
+  return result ? structuredClone(result) : undefined;
+}
+
 export function sameRunnerResultFacts(a: PracticeSession, b: PracticeSession): boolean {
   return (
     a.id === b.id &&
@@ -156,7 +209,13 @@ export function retainFinishedRunnerResult(
     { version: 1, entry, origin, reviewed: false },
     scope,
   );
-  const previous = retained(scope, entry.id);
+  let previous: RunnerFinishedResult | undefined;
+  try {
+    previous = readRunnerReview(scope, entry.id, token);
+  } catch (error) {
+    if (!(error instanceof RunnerResultStorageError)) throw error;
+    return write(scope, checked, token);
+  }
   if (previous) {
     if (
       !sameRunnerResultFacts(previous.entry, checked.entry) ||
@@ -165,14 +224,10 @@ export function retainFinishedRunnerResult(
       throw new Error(
         'A different Runner result already uses this identity. Keep it before starting over.',
       );
-    return previous;
+    return volatileReviews.has(runnerResultKey(scope, entry.id))
+      ? write(scope, previous, token)
+      : previous;
   }
-  const loaded = readRunnerResults(scope);
-  if (loaded.error) throw new Error(loaded.error);
-  if (loaded.results.length >= MAX_RUNNER_RESULTS)
-    throw new Error(
-      `Review, export or discard some of the ${MAX_RUNNER_RESULTS} retained Runner results before retaining another.`,
-    );
   freezePracticeSaveOrigin(scope, entry.id, origin.generation, token);
   return write(scope, checked, token);
 }
@@ -185,7 +240,7 @@ export function retainRunnerReview(
   token = getDeviceScopeToken(scope),
 ): void {
   requireCurrentDeviceScope(scope, token);
-  const previous = retained(scope, entry.id);
+  const previous = readRunnerReview(scope, entry.id, token);
   if (!previous) return;
   const checked = validatePracticeSession(entry);
   if (!sameRunnerResultFacts(previous.entry, checked))
@@ -195,6 +250,7 @@ export function retainRunnerReview(
       throw new Error(
         'This Runner review has already been submitted. Retry its exact retained body.',
       );
+    if (volatileReviews.has(runnerResultKey(scope, entry.id))) write(scope, previous, token);
     return;
   }
   write(scope, { ...previous, entry: checked, reviewed: freeze }, token);
@@ -215,5 +271,6 @@ export function clearRunnerResult(
       'This browser could not remove the retained Runner result. Free storage or enable browser storage, then retry.',
     );
   }
+  volatileReviews.delete(runnerResultKey(scope, id));
   changed();
 }

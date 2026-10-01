@@ -110,6 +110,7 @@ import {
   readRunnerResults,
   clearRunnerResult,
   retainRunnerReview,
+  readRunnerReview,
   RunnerResultStorageError,
   type RunnerFinishedResult,
 } from './runner-results';
@@ -2571,7 +2572,7 @@ function AuthModal({
 }
 
 function SessionModal({
-  initial,
+  initial: providedInitial,
   isExisting,
   scope,
   generation,
@@ -2599,6 +2600,19 @@ function SessionModal({
       saveController.current?.abort(new Error('This device work changed.'));
     };
   }, []);
+  const [retainedRunner] = useState(() =>
+    !isExisting && providedInitial.id
+      ? readRunnerReview(scope, providedInitial.id, capturedDeviceToken)
+      : undefined,
+  );
+  const frozenEntry = useRef<PracticeSession | undefined>(
+    retainedRunner?.reviewed
+      ? retainedRunner.entry
+      : !isExisting && providedInitial.metadata?.practiceTool === 'morse-runner'
+        ? loadLocalPractice(scope).find((entry) => entry.id === providedInitial.id)
+        : undefined,
+  );
+  const initial = frozenEntry.current ?? retainedRunner?.entry ?? providedInitial;
   const [identity] = useState(() => ({
     id: initial.id ?? crypto.randomUUID(),
     createdAt: initial.createdAt ?? new Date().toISOString(),
@@ -2606,18 +2620,6 @@ function SessionModal({
   const close = () => {
     if (!saving.current) onClose();
   };
-  const [retainedRunner] = useState(() =>
-    !isExisting && initial.id
-      ? readRunnerResults(scope).results.find(({ entry }) => entry.id === initial.id)
-      : undefined,
-  );
-  const frozenEntry = useRef<PracticeSession | undefined>(
-    retainedRunner?.reviewed
-      ? retainedRunner.entry
-      : !isExisting && initial.metadata?.practiceTool === 'morse-runner'
-        ? loadLocalPractice(scope).find((entry) => entry.id === initial.id)
-        : undefined,
-  );
   const copyAttempt = savedCopyAttempt(initial);
   let evidence: PracticeEvidence | undefined;
   let measuredInitial = initial;

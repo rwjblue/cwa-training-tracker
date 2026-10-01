@@ -467,11 +467,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       : list(stores.runnerResults, 'Retained Runner results', MAX_RUNNER_RESULTS).map((value) => {
           const result = validateRunnerFinishedResult(value, scopeId);
           const queued = practice.find((entry) => entry.id === result.entry.id);
-          if (
-            queued &&
-            (!sameRunnerResultFacts(validatePracticeBody(queued.body), result.entry) ||
-              queued.origin.generation !== result.origin.generation)
-          )
+          if (queued && !runnerQueueMatches(result, queued.body, queued.origin.generation))
             throw new Error(
               'A retained Runner result contradicts its queued run or original dataset.',
             );
@@ -848,6 +844,19 @@ export function summarizeDeviceBackup(
   });
 }
 
+function runnerQueueMatches(
+  result: RunnerFinishedResult,
+  body: string,
+  generation: number | undefined,
+) {
+  const queued = validatePracticeBody(body);
+  return (
+    sameRunnerResultFacts(queued, result.entry) &&
+    generation === result.origin.generation &&
+    (!result.reviewed || JSON.stringify(queued) === JSON.stringify(result.entry))
+  );
+}
+
 export function inspectDeviceRestore(
   backup: DeviceBackup,
   _options: DeviceRestoreOptions = {},
@@ -862,6 +871,17 @@ export function inspectDeviceRestore(
       conflicts.push(
         `Runner result ${result.entry.id} already has a different retained review. Keep both files before restoring.`,
       );
+    const pending = storage.getItem(practiceKey(scope, 'pending', result.entry.id));
+    if (pending !== null) {
+      const originRaw = storage.getItem(practiceKey(scope, 'origin', result.entry.id));
+      const generation =
+        originRaw === null
+          ? undefined
+          : validateOrigin(parse(originRaw, 'Runner origin', 1000), scope, result.entry.id)
+              .generation;
+      if (!runnerQueueMatches(result, pending, generation))
+        conflicts.push(`Runner result ${result.entry.id} contradicts its queued submission.`);
+    }
     const origin = storage.getItem(practiceKey(scope, 'origin', result.entry.id));
     if (origin !== null) {
       const current = validateOrigin(parse(origin, 'Runner origin', 1000), scope, result.entry.id);
@@ -870,6 +890,16 @@ export function inspectDeviceRestore(
     }
   }
   for (const item of checked.stores.practice) {
+    const terminal = storage.getItem(runnerResultKey(scope, item.id));
+    if (
+      terminal !== null &&
+      !runnerQueueMatches(
+        validateRunnerFinishedResult(parse(terminal, 'Runner result', 300_000), scope),
+        item.body,
+        item.origin.generation,
+      )
+    )
+      conflicts.push(`Practice result ${item.id} contradicts its retained Runner submission.`);
     const existing = storage.getItem(practiceKey(scope, 'pending', item.id));
     if (existing !== null && existing !== item.body)
       conflicts.push(

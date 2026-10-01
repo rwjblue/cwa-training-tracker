@@ -350,6 +350,7 @@ export default function AccountLifecyclePanel({
                 Practice and uploads for {user.email} stay paused until this boundary is resolved.
               </p>
               <p>
+                {record.counts.runnerResults ?? 0} finished Runner results ·{' '}
                 {record.counts.practice} waiting results · {record.counts.accountOperations} account
                 edits · {record.counts.scratchpads} notes · {record.counts.copyDraft} Copy drafts
               </p>
@@ -478,12 +479,13 @@ export default function AccountLifecyclePanel({
             Your account and passkeys stay active.
           </p>
           <p>
-            Old waiting results, edits, notes, and Copy drafts will leave the active device
-            workspace after success. They will never upload into the new log. Other accounts, Guest
-            work, and shared practice preferences stay available.
+            Old finished Runner results, waiting results, edits, notes, and Copy drafts will leave
+            the active device workspace after success. They will never upload into the new log.
+            Other accounts, Guest work, and shared practice preferences stay available.
           </p>
           {inventory && (
             <p>
+              {inventory.stores.runnerResults?.length ?? 0} finished Runner results ·{' '}
               {inventory.stores.practice.length} waiting results ·{' '}
               {inventory.stores.accountOperations.length} account edits ·{' '}
               {inventory.stores.scratchpads.length} notes · {inventory.stores.copyDraft ? 1 : 0}{' '}

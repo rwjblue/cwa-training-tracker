@@ -246,6 +246,59 @@ describe('acknowledged Runner result device inventory', () => {
     );
   });
 
+  it.each(['notes', 'review-time'] as const)(
+    'rejects conflicting frozen %s across file and existing device stores before writes',
+    (field) => {
+      seed();
+      const entry = runnerEntry();
+      retainFinishedRunnerResult(scope, entry, { id: entry.id, accountId: scope, generation: 0 });
+      const submitted = {
+        ...entry,
+        notes: 'First immutable body',
+        metadata: { ...entry.metadata, runnerReviewedAt: '2026-10-02T12:00:00.000Z' },
+      };
+      retainRunnerReview(scope, submitted, true);
+      const terminalOnly = captureDeviceBackup(scope, 'Synthetic learner');
+      const different = structuredClone(submitted);
+      if (field === 'notes') different.notes = 'Different immutable body';
+      else different.metadata!.runnerReviewedAt = '2026-10-02T12:01:00.000Z';
+      const queued = {
+        id: entry.id,
+        body: JSON.stringify(different),
+        origin: { version: 1 as const, id: entry.id, accountId: scope, generation: 0 },
+      };
+      const contradictory = structuredClone(terminalOnly);
+      contradictory.stores.practice = [queued];
+      expect(() => validateDeviceBackup(JSON.stringify(contradictory), scope)).toThrow(
+        /contradicts/,
+      );
+      const matching = structuredClone(contradictory);
+      matching.stores.practice[0].body = JSON.stringify(submitted);
+      expect(validateDeviceBackup(JSON.stringify(matching), scope).stores.practice).toHaveLength(1);
+      const editable = structuredClone(contradictory);
+      editable.stores.runnerResults![0].reviewed = false;
+      expect(
+        validateDeviceBackup(JSON.stringify(editable), scope).stores.runnerResults![0].reviewed,
+      ).toBe(false);
+      // Incoming queue must agree with an existing submitted terminal review.
+      const queueOnly = structuredClone(contradictory);
+      delete queueOnly.stores.runnerResults;
+      let before = snapshot();
+      expect(inspectDeviceRestore(queueOnly).conflicts.join(' ')).toContain(
+        'retained Runner submission',
+      );
+      expect(() => restoreDeviceBackup(queueOnly)).toThrow(/retained Runner submission/);
+      expect(snapshot()).toEqual(before);
+      // Incoming terminal must agree with an existing immutable queued body.
+      values.delete(runnerResultKey(scope, entry.id));
+      values.set(pendingKey(scope, entry.id), queued.body);
+      before = snapshot();
+      expect(inspectDeviceRestore(terminalOnly).conflicts.join(' ')).toContain('queued submission');
+      expect(() => restoreDeviceBackup(terminalOnly)).toThrow(/queued submission/);
+      expect(snapshot()).toEqual(before);
+    },
+  );
+
   it('rolls back failed Runner restore including its original dataset and other device work', () => {
     seed();
     const entry = runnerEntry();

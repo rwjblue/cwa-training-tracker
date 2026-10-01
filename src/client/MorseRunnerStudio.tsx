@@ -289,13 +289,15 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     }
   };
   const restart = () => {
-    if (inspected.current || !activeRef.current) return;
+    if (inspected.current || !activeRef.current || !isDeviceScopeCurrent(scope, deviceToken))
+      return;
     if (unsaved && !confirmDiscard) {
       setConfirmDiscard(true);
       return;
     }
     try {
-      clearRunnerResult(scope, `runner:${current.current.runId}`, deviceToken);
+      if (current.current.elapsedSeconds >= 1 || finished.current)
+        clearRunnerResult(scope, `runner:${current.current.runId}`, deviceToken);
     } catch (error) {
       setRetentionError((error as Error).message);
       return;

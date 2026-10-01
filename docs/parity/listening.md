@@ -266,3 +266,22 @@ fresh combined Axe summaries are empty. The accepted production bootstrap hash
 serves in version `ca935f6a-2302-4575-85d2-245aeb8108ba`; original-source/upstream
 files remain unchanged. These focused local correction commits are unpublished
 under the no-push instruction, even though their reviewed behavior is deployed.
+
+Issue #15 post-commit correction: refused durable writes retain canceled notes
+and the first submitted body in a bounded account/device-token-fenced open-page
+cache, including full or unrelated damaged inventory. This cannot claim durable
+retention, a local receipt or reload/live-engine recovery. Review displays the
+exact frozen queued notes/context when an older editable terminal draft coexists.
+Zero-time load failure can restart without removing a nonexistent result; actual
+acknowledged-result discard remains protected. Reset/replacement summaries count
+finished Runner results, including retained recovery. Submitted terminal/queue
+contradictions are rejected in-file and against either existing store before
+restore mutation; old optional inventory/lifecycle records remain compatible.
+
+Root correction checks pass 917 tests/49 files and production build; the final
+full browser gate passes 77 journeys in 15.7 minutes. Actual AudioWorklet journeys
+verify both widths, storage refusal, cancellation and identical retry after a
+lost committed response. Ten named settled Runner Axe reports are empty.
+The earlier full gate's single sign-in failure has a retained HTTP429 trace;
+synthetic fixture network isolation fixes it without changing limits/timeouts.
+Independent correction recheck and deployment remain pending.

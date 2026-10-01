@@ -51,7 +51,14 @@ export interface AccountLifecycleRecord {
   policy: AccountLifecyclePolicy;
   token: string;
   phase: 'prepared' | 'unknown' | 'applied' | 'canceled' | 'remote';
-  counts: { practice: number; accountOperations: number; scratchpads: number; copyDraft: number };
+  counts: {
+    practice: number;
+    accountOperations: number;
+    scratchpads: number;
+    copyDraft: number;
+    /** Older recovery records predate the separate terminal inventory. */
+    runnerResults?: number;
+  };
   resultGeneration?: number;
   error?: string;
 }
@@ -114,7 +121,14 @@ function validateRecord(value: unknown, scope: string): AccountLifecycleRecord {
     !/^[a-zA-Z0-9-]{1,100}$/.test(input.token) ||
     !['prepared', 'unknown', 'applied', 'canceled', 'remote'].includes(input.phase) ||
     !input.counts ||
-    Object.keys(input.counts).length !== 4 ||
+    Object.keys(input.counts).some(
+      (key) =>
+        !['practice', 'accountOperations', 'scratchpads', 'copyDraft', 'runnerResults'].includes(
+          key,
+        ),
+    ) ||
+    (input.counts.runnerResults !== undefined &&
+      (!integer(input.counts.runnerResults) || input.counts.runnerResults > 100)) ||
     !['practice', 'accountOperations', 'scratchpads', 'copyDraft'].every((key) =>
       integer(input.counts[key as keyof typeof input.counts]),
     ) ||
@@ -185,6 +199,7 @@ function counts(backup: DeviceBackup): AccountLifecycleRecord['counts'] {
     accountOperations: backup.stores.accountOperations.length,
     scratchpads: backup.stores.scratchpads.length,
     copyDraft: backup.stores.copyDraft ? 1 : 0,
+    runnerResults: backup.stores.runnerResults?.length ?? 0,
   };
 }
 

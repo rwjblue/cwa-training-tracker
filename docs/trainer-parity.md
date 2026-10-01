@@ -1215,3 +1215,42 @@ pending; their outcomes will be recorded in the delivery journal. Source: [pinne
 [terminal producer](../src/client/runner-session.ts),
 [device result store](../src/client/runner-results.ts), and
 [native recovery journey](../e2e/runner-recovery.spec.ts).
+
+Independent post-commit #15 review found four P2 boundaries: zero-time restart
+required unnecessary storage removal; canceled online-only uncertain review lost
+its first submission; lifecycle confirmations omitted terminal counts; and device
+restore accepted contradictory submitted terminal/queue bodies. The correction
+keeps failed-write drafts in a bounded cloned cache for the original account and
+device token, before optional inventory/storage checks. Canceled edits and the
+first immutable submitted body survive storage refusal, full inventory or
+unrelated damaged data. No local receipt, live engine, exportable runtime state
+or reload recovery is inferred from that cache. Original generation is retained.
+Review displays the frozen queued notes/context when an older editable terminal
+draft coexists with that submitted body. Actual result discard still requires
+successful removal; a zero-time failed load can restart without it.
+
+Both preparation and pending lifecycle summaries count finished Runner results;
+older four-count records remain readable. Backup validation and restore reject
+conflicting submitted bodies inside a file and in either direction against
+existing terminal/queue stores before writes. Editable unreviewed drafts retain
+their distinct policy. Malformed data is preserved; no result is evicted.
+
+Correction validation: typecheck, 917 tests in 49 files and production build pass.
+The final serialized full browser gate passes all 77 journeys in 15.7 minutes.
+Four actual native recovery/failure journeys pass at desktop keyboard/mobile
+touch, covering real load timeout, protected actual-result discard, counted reset,
+canceled edits, frozen queued display, both terminal/pending stores refusing
+writes, lost committed response and two identical POST bodies/one server row.
+Ten named settled Runner accessibility reports are empty; representative recovery,
+review, history and report screenshots were inspected at both widths. This is
+Chromium emulation, with no physical-device/lock-screen claim.
+
+Honest correction iterations: two full runs were deliberately stopped after 27
+and 16 passes before source refinements. An unchanged local-import CLI test once
+hit its existing five-second timeout; focused rerun and complete suite pass
+without a timeout change. A later full gate passed 76 journeys but sign-in for
+Today dismissal returned HTTP429: the added tests shared the local network limit.
+Retained trace proves that response/visible error. Reserved synthetic addresses
+now isolate those two fixtures; limits and email timeouts remain unchanged. The
+failed journey and final full gate pass. Independent correction recheck and
+production deployment remain pending; #15 is not yet accepted.

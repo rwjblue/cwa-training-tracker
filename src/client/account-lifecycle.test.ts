@@ -2,6 +2,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { AccountSnapshot } from '../shared/account-sync';
 import type { LifecycleIdentity, LifecycleResult } from '../shared/account-lifecycle';
 import { ApiError } from './api';
+import { createRunnerRun } from '../shared/runner';
+import { finishedRunnerSession } from './runner-session';
+import { retainFinishedRunnerResult, readRunnerResults } from './runner-results';
 import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
 import {
   attachAccountLifecyclePayload,
@@ -905,4 +908,38 @@ it('does not promote restored old or unknown practice and does not let it block 
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(JSON.parse(fetchMock.mock.calls[0][1].body).id).toBe('fresh-edit');
   expect(loadAccountOperations(accountId)).toHaveLength(1);
+});
+
+it('counts finished Runner results in destructive recovery and reads older lifecycle records', async () => {
+  const runner = finishedRunnerSession(
+    {
+      ...createRunnerRun('lifecycle-terminal', {
+        mode: 'SingleCall',
+        wpm: 20,
+        durationSeconds: 60,
+        activity: 1,
+        conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+      }),
+      status: 'stopped',
+      elapsedSeconds: 12,
+      runStartedAt: '2026-10-01T12:00:00.000Z',
+      runEndedAt: '2026-10-01T12:00:12.000Z',
+    },
+    {},
+    'UTC',
+  );
+  retainFinishedRunnerResult(accountId, runner, { id: runner.id, accountId, generation: 0 });
+  retainFinishedRunnerResult('guest', runner, { id: runner.id, accountId: 'guest' });
+  const guest = readRunnerResults('guest');
+  const record = await begin();
+  expect(record.counts).toMatchObject({ practice: 0, runnerResults: 1 });
+  expect(loadAccountLifecycle(accountId)?.counts.runnerResults).toBe(1);
+  const old = structuredClone(record);
+  delete old.counts.runnerResults;
+  values.set(accountLifecycleKey(accountId), JSON.stringify(old));
+  expect(loadAccountLifecycle(accountId)?.counts.runnerResults).toBeUndefined();
+  values.set(accountLifecycleKey(accountId), JSON.stringify(record));
+  await dispatchAccountLifecycle(user(), transports());
+  expect(readRunnerResults(accountId).results).toEqual([]);
+  expect(readRunnerResults('guest')).toEqual(guest);
 });

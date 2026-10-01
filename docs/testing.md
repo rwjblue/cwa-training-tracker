@@ -299,3 +299,20 @@ sleeps. Below the browser, cover DST, marked-versus-legacy validation, retired o
 unknown original datasets, malformed results, selected-scope lifecycle fencing,
 backup conflicts and transactional rollback. No emulation claim establishes
 physical-device or background lock-screen behavior.
+
+Also refuse both terminal-result and pending-body writes: Cancel/reopen must keep
+unsent notes and the first submitted body in the same open page, with frozen
+fields after an uncertain response. Only an actual server acknowledgement can
+succeed without storage. Verify an actual zero-time load failure can restart
+while removal is refused, but an acknowledged result still cannot be discarded.
+Count terminal inventory in reset/replacement preparation and retained recovery.
+Below the browser reject conflicting submitted terminal/queue bodies in-file and
+in either direction against existing stores, with no partial writes; old optional
+inventory/lifecycle records remain compatible. Never export the open-page cache
+or use it to restore elapsed practice after reload.
+
+Give additional authenticated scenarios distinct reserved synthetic network
+addresses through `CF-Connecting-IP`, as the existing browser fixtures do.
+The local Worker otherwise shares one network's real sign-in rate limit across
+all cases. Keep production limits and timeout assertions intact; inspect the
+actual request/visible error before treating missing simulator email as a delay.
