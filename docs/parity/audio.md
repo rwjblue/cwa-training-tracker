@@ -777,3 +777,22 @@ policy. Issue #13 remains open for publication, although local implementation,
 independent acceptance and production delivery are complete.
 
 Delivery comment: https://github.com/rwjblue/cwa-training-tracker/issues/13#issuecomment-5937759827.
+
+
+### Issue #12 follow-up — date the synthetic mark task in its account timezone
+
+The complete #16 regression crossed midnight UTC while the synthetic account
+remained in America/New_York. Both existing difficult-mark journeys correctly
+showed the API-created assignment as tomorrow's work, then failed to locate
+Today’s Listen & practice button. Retained snapshots and traces establish that
+fixture mismatch before any playback/marks action. The fixture now reads its
+actual account timezone and uses the shared date helper for its due date.
+Production date rules, audio clock, assertions and timeouts remain unchanged.
+Keep this test-only correction in a focused #12 follow-up commit; independent
+combined recheck and production delivery are tracked with the #16 gate.
+
+Required check, 923 tests/50 files and build pass. Both exact affected mark
+journeys pass in the focused four-case gate (8.6/14.1 seconds), then in the final
+79-journey full regression (8.3/14.0 seconds; full gate 16.3 minutes). No failure
+is erased or counted as passing. Independent post-commit combined recheck
+remains required before accepted delivery.

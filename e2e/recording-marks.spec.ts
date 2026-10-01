@@ -1,3 +1,4 @@
+import { dateInTimezone } from '../src/shared/training';
 import { expect, test, type Locator } from '@playwright/test';
 import { accountRequest, expectAccessible, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
@@ -30,6 +31,7 @@ for (const width of [1440, 390]) {
       await activate(page.getByRole('button', { name, exact: true }));
     };
     await signIn(page);
+    const { settings } = await (await context.request.get('/api/settings')).json();
     const task: PlannedTask = {
       id: `mark-task-${width}`,
       title: 'Synthetic difficult recording',
@@ -38,7 +40,7 @@ for (const width of [1440, 390]) {
       source: 'manual',
       done: false,
       createdAt: '2026-09-30T12:00:00Z',
-      dueDate: new Date().toISOString().slice(0, 10),
+      dueDate: dateInTimezone(new Date(), settings.timezone),
       link: url(10),
       exercise: { type: 'audio', url: url(10), characterWpm: 10 },
     };
