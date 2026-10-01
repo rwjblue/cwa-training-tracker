@@ -11,7 +11,13 @@ import {
   type CopyRecipe,
 } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
-import { dateInTimezone, validatePracticeSession, type PracticeSession } from '../shared/training';
+import {
+  dateInTimezone,
+  validatePracticeSession,
+  type PracticePurpose,
+  type PracticeSession,
+} from '../shared/training';
+import { taskPracticeMetadata } from '../shared/practice-attribution';
 import type { PlannedTask } from '../shared/plan';
 import {
   autoSavePractice,
@@ -24,9 +30,11 @@ import { CopyClock } from './copy-clock';
 import {
   claimCopyLease,
   clearCopyDraft,
+  copyDraftMatchesRequest,
   copySetupRecipe,
   loadCopyDraft,
   loadCopyPreferences,
+  nextCopyRoundContext,
   ownsCopyLease,
   releaseCopyLease,
   saveCopyDraft,
@@ -49,6 +57,7 @@ interface Props {
   recipe?: CopyRecipe;
   alternatives?: CopyRecipe[];
   task?: PlannedTask;
+  purpose?: PracticePurpose;
   requiresCharacterSelection?: boolean;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onSaved?: (entry: PracticeSession) => void;
@@ -66,6 +75,7 @@ function CopyTrainerSession({
   recipe: assignedRecipe,
   alternatives,
   task,
+  purpose,
   requiresCharacterSelection,
   onLog,
   onSaved,
@@ -111,7 +121,11 @@ function CopyTrainerSession({
   const autoSaveAttempted = useRef('');
   const [saveReceipt, setSaveReceipt] = useState<PracticeSaveReceipt>();
   const mounted = useRef(true);
-  const nextTask = useRef(task);
+  const requestedPurpose = task ? (purpose ?? 'assigned') : undefined;
+  const nextAttribution = useRef<{ task?: PlannedTask; purpose?: PracticePurpose }>({
+    task: task ? structuredClone(task) : undefined,
+    purpose: requestedPurpose,
+  });
   const [revealed, setRevealed] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [tick, setTick] = useState(0);
@@ -413,7 +427,8 @@ function CopyTrainerSession({
         trialAnswerStartedAt: 0,
         heard: false,
         notes: '',
-        task: nextTask.current,
+        task: nextAttribution.current.task,
+        purpose: nextAttribution.current.purpose,
       };
       clock.current = new CopyClock();
       prepared.current = '';
@@ -509,7 +524,13 @@ function CopyTrainerSession({
     player.current.clear();
     prepared.current = '';
     autoDeadline.current = undefined;
-    nextTask.current = detachAssignment ? undefined : task;
+    const next = nextCopyRoundContext(
+      draftRef.current,
+      { task, purpose: requestedPurpose, recipe: assignedRecipe },
+      nextRecipe,
+      detachAssignment,
+    );
+    nextAttribution.current = next;
     if (draft) clearCopyDraft(scope, draft.attempt.id, deviceToken);
     savedRef.current = false;
     setSaved(false);
@@ -517,11 +538,11 @@ function CopyTrainerSession({
     autoSaveAttempted.current = '';
     write(undefined);
     clock.current = new CopyClock();
-    setRecipe(copySetupRecipe(nextRecipe));
+    setRecipe(next.recipe);
     setFeedback('');
     setRevealed(false);
     setError('');
-    if (play) start(nextRecipe);
+    if (play) start(next.recipe);
   };
   const save = async () => {
     if (savedRef.current) return true;
@@ -542,7 +563,7 @@ function CopyTrainerSession({
           notes: [current.task?.title, current.notes].filter(Boolean).join('\n'),
           metadata: {
             ...fields.metadata,
-            ...(current.task ? { plannedTaskId: current.task.id } : {}),
+            ...taskPracticeMetadata(current.task?.id, current.purpose),
           },
         });
       write({ ...current, pending });
@@ -599,6 +620,7 @@ function CopyTrainerSession({
               format: 'cwa-copy-result',
               ...current.attempt,
               notes: saveReceipt?.entry.notes ?? current.notes,
+              ...(current.purpose ? { practicePurpose: current.purpose } : {}),
               ...(current.task
                 ? {
                     assignment: {
@@ -646,6 +668,11 @@ function CopyTrainerSession({
     setBlocked(false);
   };
   const attempt = draft?.attempt;
+  const roundTask = draft ? draft.task : nextAttribution.current.task;
+  const roundPurpose = draft ? draft.purpose : nextAttribution.current.purpose;
+  const differentRequestedContext = Boolean(
+    draft && !copyDraftMatchesRequest(draft, task, requestedPurpose),
+  );
   const active = attempt?.status === 'active';
   const currentRecipe = attempt?.recipe ?? recipe;
   const assignmentRecipes = assignedRecipe
@@ -737,6 +764,21 @@ function CopyTrainerSession({
           ? 'Graded rounds save automatically to your private history.'
           : 'Graded rounds save automatically on this device.'}
       </p>
+      <p className="copy-help" role="status">
+        {draft ? 'This round is ' : 'Your next round is '}
+        {roundTask ? (
+          <>
+            <strong>{roundPurpose === 'review' ? 'extra review' : 'assigned practice'}</strong>
+            {' for '}
+            {roundTask.title}.{' '}
+            {roundPurpose === 'review'
+              ? 'Saved time counts toward daily practice without adding required assignment credit.'
+              : 'Saved time contributes to assignment progress. Completing the exercise remains your choice.'}
+          </>
+        ) : (
+          'open practice. Saved time counts toward daily practice.'
+        )}
+      </p>
       {blocked && (
         <div className="notice" role="alert">
           Copy practice is open in another tab.{' '}
@@ -768,11 +810,14 @@ function CopyTrainerSession({
           Recovered on this device. Playback stays paused until you continue.
         </p>
       )}
-      {draft && draft.task?.id !== task?.id && (
-        <p className="notice">
-          This round{' '}
-          {draft.task ? `belongs to ${draft.task.title}` : 'was started as open practice'}. Finish
-          it or start a new round for the current assignment.
+      {differentRequestedContext && (
+        <p className="notice" role="status">
+          Your recovered round keeps the exercise and practice purpose shown above. Finish it with
+          that saved context. A new round will use{' '}
+          {task
+            ? `${requestedPurpose === 'review' ? 'extra review' : 'assigned practice'} for ${task.title}`
+            : 'open practice'}
+          .
         </p>
       )}
       {!attempt || active ? (

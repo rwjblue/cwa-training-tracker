@@ -144,7 +144,10 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
     kind: 'simulator',
     characterWpm: 10,
     qsoCount: 0,
-    metadata: { plannedTaskId: 'curriculum:cwa-intermediate-v2.3:s1-d2-t6' },
+    metadata: {
+      plannedTaskId: 'curriculum:cwa-intermediate-v2.3:s1-d2-t6',
+      practicePurpose: 'assigned',
+    },
   });
   expect(entries[0].minutes).toBeGreaterThan(0);
   expect(entries[0].minutes).toBeLessThan(1);
@@ -153,4 +156,40 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
     summary: { qsoCount: 0, score: 0 },
   });
   expect(entries[0].metadata.elapsedSeconds).toBeCloseTo(entries[0].minutes * 60, 8);
+
+  // Extra review uses the same real engine and keeps its own run identity. It
+  // contributes useful practice without adding to the source assignment.
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  const requiredBefore = await row.getByText(/min practiced/).textContent();
+  await row.getByRole('button', { name: 'Extra review', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Your extra review.', exact: true }),
+  ).toBeVisible();
+  await runner.getByRole('button', { name: /Run$/ }).click();
+  await expect.poll(() => runner.locator('#clock').textContent()).not.toBe('00:00:00');
+  await page.getByRole('button', { name: 'Stop run', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & save run', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Extra review.');
+  await page.getByRole('button', { name: 'Save practice', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(row.getByText(/min practiced/)).toHaveText(requiredBefore!);
+  const afterReview = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(afterReview).toHaveLength(2);
+  const reviewed = afterReview.find(
+    (entry: { metadata: { practicePurpose: string } }) =>
+      entry.metadata.practicePurpose === 'review',
+  );
+  expect(reviewed).toMatchObject({
+    kind: 'simulator',
+    metadata: { plannedTaskId: 'curriculum:cwa-intermediate-v2.3:s1-d2-t6' },
+  });
+  expect(reviewed.id).not.toBe(entries[0].id);
+  expect(reviewed.metadata.runner.runId).not.toBe(entries[0].metadata.runner.runId);
+  expect(reviewed.minutes).toBeGreaterThan(0);
+  expect(reviewed.metadata.elapsedSeconds).toBeCloseTo(reviewed.minutes * 60, 8);
+  expect(
+    (await (await context.request.get('/api/plan')).json()).plan.find(
+      (task: { id: string }) => task.id === reviewed.metadata.plannedTaskId,
+    ).done,
+  ).toBe(false);
 });

@@ -11,6 +11,7 @@ import {
   type StudioSessionInput,
 } from './studio-session';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
+import { practiceLaunchForTask } from './practice-launch';
 import {
   completeDeviceScopeMutation,
   getDeviceScopeToken,
@@ -191,6 +192,33 @@ it('captures assignment, actual recording sources and recall without inventing a
   expect(studioSession(value)?.characterWpm).toBeUndefined();
 });
 
+it('keeps captured review purpose with the task before and after an explicit completion decision', () => {
+  const value = input(40);
+  const task = {
+    id: 'task:extra-review',
+    title: 'Sending practice',
+    kind: 'sending' as const,
+    done: false,
+    notes: '',
+    createdAt: value.identity.createdAt,
+  };
+  value.launch = { id: 'launch:review', ...practiceLaunchForTask(task, 'review') };
+  expect(studioSession(value)).toMatchObject({
+    minutes: 40 / 60,
+    metadata: { plannedTaskId: task.id, practicePurpose: 'review' },
+  });
+  value.launch.task = { ...value.launch.task!, done: true };
+  expect(studioSession(value)?.metadata?.practicePurpose).toBe('review');
+  value.launch.task = { ...value.launch.task, done: false };
+  expect(studioSession(value)?.metadata?.practicePurpose).toBe('review');
+  value.launch = { id: 'launch:assigned', ...practiceLaunchForTask(task) };
+  expect(studioSession(value)?.metadata?.practicePurpose).toBe('assigned');
+  delete value.launch.purpose;
+  expect(studioSession(value)?.metadata).not.toHaveProperty('practicePurpose');
+  value.launch = undefined;
+  expect(studioSession(value)?.metadata).not.toHaveProperty('practicePurpose');
+});
+
 it('logs known recording timing and retains a shared character speed across effective-speed changes', () => {
   const value = input(229.054);
   const assignedUrl = 'https://cwa.cwops.org/wp-content/uploads/ING7_15.mp3';
@@ -252,6 +280,37 @@ it('saves public scales as measured sending practice without unrelated listening
 });
 
 describe('navigation save coordination', () => {
+  it('retries the first captured purpose even after a new launch requests ordinary practice', async () => {
+    const coordinator = new StudioSaveCoordinator();
+    const value = input(30);
+    value.launch = {
+      id: 'launch:review',
+      ...practiceLaunchForTask(
+        {
+          id: 'task:same-exercise',
+          title: 'Sending practice',
+          kind: 'sending',
+          done: false,
+          notes: '',
+          createdAt: value.identity.createdAt,
+        },
+        'review',
+      ),
+    };
+    const original = studioSession(value)!;
+    const failedSave = vi.fn(async () => {
+      throw new Error('Response lost');
+    });
+    await expect(coordinator.flush(original, failedSave)).rejects.toThrow('Response lost');
+    value.launch = { ...value.launch, id: 'launch:assigned', purpose: 'assigned' };
+    const retry = vi.fn(async (_entry: unknown) => {});
+    await expect(coordinator.flush(studioSession(value), retry)).resolves.toBe('saved');
+    expect(retry).toHaveBeenCalledWith(original);
+    expect(retry.mock.calls[0]?.[0]).toMatchObject({
+      metadata: { plannedTaskId: 'task:same-exercise', practicePurpose: 'review' },
+    });
+  });
+
   it('keeps one immutable request through concurrent navigation and an uncertain save retry', async () => {
     const coordinator = new StudioSaveCoordinator();
     const original = studioSession(input())!;

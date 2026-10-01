@@ -2,15 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
+import type { PlannedTask } from '../shared/plan';
+import { taskPracticeMetadata } from '../shared/practice-attribution';
 import { rememberAccount } from './account-outbox';
 import { autoSavePractice, loadPracticeSaveOrigin } from './practice-autosave';
-import { captureDeviceBackup } from './device-backup';
+import { captureDeviceBackup, validateDeviceBackup } from './device-backup';
+import { validateCopyDraft } from './copy-draft-validator';
 import {
   claimCopyLease,
   clearCopyDraft,
+  copyDraftMatchesRequest,
   copyStorageKey,
   loadCopyDraft,
   loadCopyPreferences,
+  nextCopyRoundContext,
   ownsCopyLease,
   releaseCopyLease,
   saveCopyDraft,
@@ -63,6 +68,14 @@ const account = (scope: string, generation: number) =>
     { id: scope, email: 'synthetic@example.test' },
     { accountId: scope, generation, revision: 0, settings: DEFAULT_PROFILE, plan: [] },
   );
+const task = (id = 'task:copy'): PlannedTask => ({
+  id,
+  title: `Copy exercise ${id}`,
+  kind: 'icr',
+  done: false,
+  notes: '',
+  createdAt: '2026-09-29T12:00:00.000Z',
+});
 
 beforeEach(() => {
   const values = new Map<string, string>();
@@ -76,6 +89,99 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('native copy recovery', () => {
+  it('distinguishes a recovered same-task opposite purpose without recasting old ordinary drafts', () => {
+    const retained = { ...draft(), task: task(), purpose: 'review' as const };
+    expect(saveCopyDraft('guest', retained)).toBe(true);
+    expect(loadCopyDraft('guest')).toEqual(retained);
+    expect(copyDraftMatchesRequest(retained, retained.task, 'review')).toBe(true);
+    expect(copyDraftMatchesRequest(retained, retained.task, 'assigned')).toBe(false);
+    const legacy = { ...draft('old-ordinary'), task: task() };
+    expect(copyDraftMatchesRequest(legacy, legacy.task, 'assigned')).toBe(true);
+    expect(copyDraftMatchesRequest(legacy, legacy.task, 'review')).toBe(false);
+    expect(legacy).not.toHaveProperty('purpose');
+  });
+
+  it('adopts the requested task, purpose and recipe only when deliberately preparing a new round', () => {
+    const retained = { ...draft(), task: task(), purpose: 'review' as const };
+    const original = structuredClone(retained);
+    const requested = {
+      task: task('task:other-copy'),
+      purpose: 'assigned' as const,
+      recipe: defaultCopyRecipe('words'),
+    };
+    const next = nextCopyRoundContext(retained, requested, retained.attempt.recipe);
+    expect(next).toMatchObject({
+      task: requested.task,
+      purpose: 'assigned',
+      recipe: requested.recipe,
+    });
+    expect(retained).toEqual(original);
+    requested.task.title = 'Later change';
+    expect(next.task?.title).not.toBe(requested.task.title);
+    const sameTask = nextCopyRoundContext(
+      retained,
+      { task: retained.task, purpose: 'assigned', recipe: defaultCopyRecipe('words') },
+      retained.attempt.recipe,
+    );
+    expect(sameTask).toMatchObject({
+      task: retained.task,
+      purpose: 'assigned',
+      recipe: { ...retained.attempt.recipe, lengthMode: 'duration' },
+    });
+    const missedCharacters = {
+      ...defaultCopyRecipe(),
+      groupKind: 'custom' as const,
+      customCharacters: 'AE',
+    };
+    expect(nextCopyRoundContext(retained, requested, missedCharacters, true)).toEqual({
+      task: undefined,
+      purpose: undefined,
+      recipe: missedCharacters,
+    });
+  });
+
+  it('preserves review purpose and exact pending bodies in recovery and strict device files', () => {
+    const current = finishedDraft('review-copy');
+    current.task = task();
+    current.purpose = 'review';
+    current.pending!.metadata = {
+      ...current.pending!.metadata,
+      ...taskPracticeMetadata(current.task.id, current.purpose),
+    };
+    expect(saveCopyDraft('guest', current)).toBe(true);
+    expect(loadCopyDraft('guest')).toEqual(current);
+    const backup = captureDeviceBackup('guest', 'Synthetic learner');
+    const restored = validateDeviceBackup(JSON.stringify(backup), 'guest');
+    expect(restored.stores.copyDraft).toEqual(current);
+    expect(JSON.parse(restored.stores.practice[0].body)).toEqual(current.pending);
+    for (const purpose of [undefined, 'assigned'] as const) {
+      const changed = { ...current, purpose };
+      expect(() => validateCopyDraft(changed)).toThrow('practice purpose');
+    }
+    const changedPending = structuredClone(current);
+    changedPending.pending!.metadata!.practicePurpose = 'assigned';
+    expect(() => validateCopyDraft(changedPending)).toThrow('practice purpose');
+  });
+
+  it('requires a strict captured draft purpose and preserves legacy pending absence verbatim', () => {
+    for (const purpose of [true, false, null, 1, 'Review', {}, []])
+      expect(() => validateCopyDraft({ ...draft(), task: task(), purpose })).toThrow(
+        'practice purpose',
+      );
+    expect(() => validateCopyDraft({ ...draft(), purpose: 'review' })).toThrow(
+      'requires an exercise',
+    );
+    const legacy = finishedDraft('legacy-purpose');
+    legacy.task = task();
+    legacy.pending!.metadata = { ...legacy.pending!.metadata, plannedTaskId: legacy.task.id };
+    const exact = JSON.stringify(legacy);
+    expect(saveCopyDraft('guest', legacy)).toBe(true);
+    const recovered = loadCopyDraft('guest')!;
+    expect(JSON.stringify(recovered)).toBe(exact);
+    expect(recovered).not.toHaveProperty('purpose');
+    expect(recovered.pending!.metadata).not.toHaveProperty('practicePurpose');
+  });
+
   it('keeps recovery, preferences, and clearing scoped to the account and attempt', () => {
     const guest = draft();
     const account = draft('private');

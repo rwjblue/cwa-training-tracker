@@ -298,9 +298,46 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 
 ## Remaining queue
 
-Issues #1–#4 are complete. Issues #5–#46 remain pending.
+### Issue #5 — implementation validated; independent review pending
+
+- Refreshed the live finding-10 body, comments and dependencies after #4 closed:
+  OPEN, no comments, no native blocker; body dependency #1 is accepted/closed.
+  Rechecked pinned original task-progress exclusion before seconds/passes and
+  its separate useful daily/report selection as read-only evidence.
+- Native metadata captures assigned/review purpose with task provenance, old
+  absence stays ordinary, and original legacy review flags retain their meaning
+  and owned link. Required accounting excludes review before direct/alias credit;
+  daily/report practice includes it once with distinguishable evidence labels.
+  Worker purpose edits and removal reject while note edits preserve provenance.
+- Deliberate Today/full-plan review routes, history/save labels and captured
+  timer/manual/Runner/Copy plumbing are authored. Copy recovery retains original
+  purpose even for the same task requested differently; deliberate new rounds
+  change attribution, and detached public practice clears both task and purpose.
+- Domain/Worker focused validation passes 170 tests; client attribution/recovery
+  validation passes 32 tests across four files. Final root check, 496 tests across
+  37 files and production build pass. The representative sending workflow passes
+  at desktop/mobile, including cancellation, locked saving, exact retry, useful
+  daily totals versus required credit, completed/older exercise review, separate
+  Complete/Reopen, reports and actual backup download/chooser merge. Native Runner
+  assigned/review saves and Copy same-task opposite-purpose recovery also pass.
+- The first full browser run passed 47 of 49 journeys. Two existing native Copy
+  journeys paused before their target was heard. Retained traces show no explicit
+  pause action or playback error; their actual WAVs were under two seconds. A
+  focused observer run passed both with actual native playback/end events and no
+  hidden-page event, plus both review-purpose journeys. Observers are removed;
+  the uninstrumented final full suite passes all 49 journeys in 6.6 minutes.
+  No source playback fault or fix is claimed. Initial review accessibility
+  checks stalled on paused test timers; the helper now resumes for Axe, then pauses
+  the held-save receipt deadline for deterministic dismissal assertions.
+- Implementation commit, fresh post-commit independent review, signed publication
+  and deployment remain pending. No elapsed recovery or physical-device claim is
+  made; the mobile workflow uses Chromium touch emulation.
+- No config/binding change is needed. The original remains read only and the
+  pre-existing user documents remain untouched. No issue after #5 is implemented.
+
+Issues #1–#4 are complete. Issue #5 is in progress; #6–#46 remain pending.
 No external blockers remain. Read-only source/dependency maps remain in ignored
-queue notes; no issue after #4 has been implemented.
+queue notes.
 
 ## Concurrent work to preserve
 

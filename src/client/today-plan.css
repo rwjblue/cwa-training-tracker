@@ -185,6 +185,13 @@
   background: #2b5038;
   color: #fff;
 }
+.today-plan-task-actions > .today-plan-review {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #b5c5a8;
+  border-radius: 5px;
+  background: #f7f8f3;
+}
 .today-plan-dismiss-actions {
   display: flex;
   align-items: center;

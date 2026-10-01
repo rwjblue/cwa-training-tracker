@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCheck, ExternalLink, RotateCcw, Square } from 'lucide-react';
 import type { PlannedTask } from '../shared/plan';
-import { dateInTimezone, type PracticeSession } from '../shared/training';
+import { dateInTimezone, type PracticePurpose, type PracticeSession } from '../shared/training';
 import {
   createRunnerRun,
   reduceRunnerEvent,
   runnerConfigureCommand,
-  runnerResultNote,
   runnerStopCommand,
   RUNNER_FRAME_URL,
-  RUNNER_REVISION,
   type RunnerRunState,
   type RunnerSettings,
 } from '../shared/runner';
+import {
+  captureRunnerPracticeAttribution,
+  runnerSession,
+  type RunnerPracticeAttribution,
+} from './runner-session';
 import './morse-runner.css';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
@@ -32,6 +35,7 @@ export default function MorseRunnerStudio({
   settings,
   timezone,
   task,
+  purpose,
   externalUrl = fallbackUrl,
   savedEntry,
   onLog,
@@ -40,12 +44,15 @@ export default function MorseRunnerStudio({
   settings: RunnerSettings;
   timezone?: string;
   task?: PlannedTask;
+  purpose?: PracticePurpose;
   externalUrl?: string;
   savedEntry?: PracticeSession;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onUnsavedChange: (unsaved: boolean) => void;
 }) {
   const [run, setRun] = useState(() => createRunnerRun(crypto.randomUUID(), settings));
+  const capturedAttribution = useRef<RunnerPracticeAttribution | undefined>(undefined);
+  capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose);
   const resultIdentity = useRef<{ runId: string; createdAt: string; date: string } | undefined>(
     undefined,
   );
@@ -182,12 +189,12 @@ export default function MorseRunnerStudio({
       ...current.current.settings,
       wpm: current.current.speedHistory?.at(-1)?.wpm ?? current.current.settings.wpm,
     };
+    capturedAttribution.current = captureRunnerPracticeAttribution(task, purpose);
     update(createRunnerRun(crypto.randomUUID(), nextSettings));
   };
   const review = () => {
     const latest = current.current;
     if (!terminal(latest) || latest.elapsedSeconds < 1 || savedRunId === latest.runId) return;
-    const { lastSequence: _sequence, ...result } = latest;
     if (resultIdentity.current?.runId !== latest.runId) {
       const createdAt = latest.runEndedAt ?? latest.runStartedAt ?? new Date().toISOString();
       resultIdentity.current = {
@@ -196,24 +203,9 @@ export default function MorseRunnerStudio({
         date: dateInTimezone(new Date(createdAt), timezone),
       };
     }
-    callbacks.current.onLog({
-      id: `runner:${latest.runId}`,
-      createdAt: resultIdentity.current.createdAt,
-      date: resultIdentity.current.date,
-      kind: 'simulator',
-      minutes: latest.elapsedSeconds / 60,
-      characterWpm: latest.settings.wpm,
-      lesson: task?.lesson,
-      qsoCount: latest.summary?.qsoCount,
-      notes: [task?.title, runnerResultNote(latest)].filter(Boolean).join('\n'),
-      source: 'timer',
-      metadata: {
-        practiceTool: 'morse-runner',
-        elapsedSeconds: latest.elapsedSeconds,
-        runner: { ...result, revision: RUNNER_REVISION },
-        ...(task ? { plannedTaskId: task.id } : {}),
-      },
-    });
+    callbacks.current.onLog(
+      runnerSession(latest, capturedAttribution.current!, resultIdentity.current),
+    );
   };
   const messages: Record<RunnerRunState['status'], string> = {
     loading: 'Loading the simulator and your settings…',

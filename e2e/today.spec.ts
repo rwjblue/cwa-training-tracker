@@ -476,7 +476,7 @@ test('an exercise without a time target can be completed and reopened without lo
   await page.reload();
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
   await panel.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
-  await panel.getByRole('button', { name: 'Review exercise', exact: true }).click();
+  await panel.getByRole('button', { name: 'Extra review', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expectAccessible(page, 'exercise-completed-mobile');

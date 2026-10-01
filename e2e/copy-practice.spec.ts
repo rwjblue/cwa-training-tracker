@@ -594,7 +594,7 @@ test('group feedback keeps adjacent columns and later matches after omissions an
   }
 });
 
-test('assigned copy alternatives stay selected when a round is recovered and reopened', async ({
+test('copy review keeps its captured purpose and alternative when reopened as assigned practice', async ({
   page,
   context,
 }) => {
@@ -626,7 +626,7 @@ test('assigned copy alternatives stay selected when a round is recovered and reo
   const assigned = page
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name: title, exact: true }) });
-  await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
+  await assigned.getByRole('button', { name: 'Extra review', exact: true }).click();
   const option = page.getByRole('combobox', { name: 'Assignment option', exact: true });
   await option.selectOption('1');
   await expect(option.locator('option:checked')).toContainText('Word copy');
@@ -637,6 +637,10 @@ test('assigned copy alternatives stay selected when a round is recovered and reo
   await expect(option).toHaveValue('1');
   await page.reload();
   await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+  const copy = page.getByRole('region', { name: 'Copy practice', exact: true });
+  await expect(
+    copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
+  ).toContainText(title);
   await expect(page.getByRole('button', { name: 'Word copy', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -648,7 +652,17 @@ test('assigned copy alternatives stay selected when a round is recovered and reo
   await expect(option).toHaveValue('1');
   await expect(option.locator('option:checked')).toContainText('Word copy');
   await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('A');
+  await expect(
+    copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
+  ).toContainText(title);
+  await expect(
+    copy.getByRole('status').filter({ hasText: 'Your recovered round keeps' }),
+  ).toContainText(`A new round will use assigned practice for ${title}`);
   await page.screenshot({ path: '.tmp/copy-recovered-assignment-option.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expectAccessible(page, 'copy-recovered-review-purpose-mobile');
+  await page.screenshot({ path: '.tmp/copy-recovered-review-purpose-mobile.png', fullPage: true });
 });
 
 test('callsign controls protect replay and blind feedback, and plain text grades punctuation and exports', async ({

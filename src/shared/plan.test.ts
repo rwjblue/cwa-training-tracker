@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PROFILE, validateTrainingExport, type PracticeSession } from './training';
+import {
+  DEFAULT_PROFILE,
+  summarizePractice,
+  validateTrainingExport,
+  type PracticeSession,
+} from './training';
 import {
   legacyPlan,
   dailyPlanSummary,
@@ -185,6 +190,93 @@ describe('today’s private course plan', () => {
     expect(result.assignedToday[0]).toMatchObject({ status: 'started', loggedMinutes: 4 });
   });
 
+  it.each([false, true])(
+    'excludes review before direct and alias task matching without changing completion %s',
+    (done) => {
+      const task = exercise({
+        id: 'scheduled-id',
+        done,
+        dueDate: '2026-09-29',
+        curriculum: {
+          id: 'cwa-intermediate-v2.3',
+          exerciseId: 's1-d1-t1',
+          day: 1,
+          sourceUrl: 'https://cwops.org/',
+        },
+      });
+      const base: PracticeSession = {
+        id: 'review-direct',
+        date: '2026-09-29',
+        kind: 'listening',
+        minutes: 5,
+        notes: '',
+        createdAt: '2026-09-29T12:00:00Z',
+        metadata: { plannedTaskId: task.id, practicePurpose: 'review' },
+      };
+      const reviews: PracticeSession[] = [
+        base,
+        base,
+        {
+          ...base,
+          id: 'review-alias',
+          metadata: {
+            plannedTaskId: 'curriculum:cwa-intermediate-v2.3:s1-d1-t1',
+            practicePurpose: 'review',
+          },
+        },
+        {
+          ...base,
+          id: 'legacy-linked-review',
+          source: 'legacy',
+          metadata: {
+            plannedTaskId: 'legacy-task:s1-d1-t1',
+            legacyAttempt: { taskId: 's1-d1-t1', review: true },
+          },
+        },
+        {
+          ...base,
+          id: 'legacy-fallback-review',
+          source: 'legacy',
+          metadata: {
+            legacyAttempt: { taskId: 's1-d1-t1', review: true },
+          },
+        },
+        { ...base, id: 'class', context: 'class', minutes: 60 },
+        { ...base, id: 'future', date: '2026-09-30', minutes: 60 },
+      ];
+      const original = structuredClone({ task, reviews });
+      const result = dailyPlanSummary([task], meetings, reviews, '2026-09-29');
+      expect([...result.assignedToday, ...result.completed][0]).toMatchObject({
+        loggedMinutes: 0,
+        todayMinutes: 0,
+        status: done ? 'done' : 'ready',
+        task: { done },
+      });
+      expect(summarizePractice(reviews, '2026-09-29').todayMinutes).toBe(20);
+      const ordinary = [
+        { ...base, id: 'ordinary-old', metadata: { plannedTaskId: task.id }, minutes: 2 },
+        {
+          ...base,
+          id: 'ordinary-assigned',
+          metadata: {
+            plannedTaskId: task.id,
+            practicePurpose: 'assigned' as const,
+          },
+          minutes: 3,
+        },
+      ];
+      const advanced = dailyPlanSummary([task], meetings, [...reviews, ...ordinary], '2026-09-29');
+      expect([...advanced.assignedToday, ...advanced.completed][0]).toMatchObject({
+        loggedMinutes: 5,
+        todayMinutes: 5,
+        status: done ? 'done' : 'started',
+        task: { done },
+      });
+      expect(summarizePractice([...reviews, ...ordinary], '2026-09-29').todayMinutes).toBe(25);
+      expect({ task, reviews }).toEqual(original);
+    },
+  );
+
   it('separates checked exercises without requiring logged minutes', () => {
     const tasks = [
       exercise({ id: 'today-done', done: true, dueDate: '2026-09-29' }),
@@ -309,7 +401,11 @@ describe('private planned exercises', () => {
       kind: 'listening',
       minutes: 15,
       date: '2026-09-28',
-      metadata: { plannedTaskId: task.id },
+      metadata: { plannedTaskId: task.id, practicePurpose: 'assigned' },
+    });
+    expect(practiceForTask(task, '2026-09-28', 'review').metadata).toEqual({
+      plannedTaskId: task.id,
+      practicePurpose: 'review',
     });
     expect(task.done).toBe(false);
     const untimed = exercise();
@@ -584,6 +680,45 @@ describe('legacy homework migration', () => {
 });
 
 describe('advisor practice reports', () => {
+  it('counts review once while labeling its evidence separately from assigned practice', () => {
+    const review: PracticeSession = {
+      id: 'review',
+      date: '2026-09-28',
+      kind: 'sending',
+      minutes: 2,
+      notes: 'Review notes',
+      createdAt: '2026-09-28T12:00:00Z',
+      metadata: { plannedTaskId: 'task', practicePurpose: 'review', elapsedSeconds: 120 },
+    };
+    const assigned = {
+      ...review,
+      id: 'assigned',
+      minutes: 3,
+      notes: 'Assigned notes',
+      metadata: { plannedTaskId: 'task', elapsedSeconds: 180 },
+    };
+    const legacy = {
+      ...review,
+      id: 'legacy',
+      minutes: 1,
+      notes: 'Legacy review notes',
+      metadata: { legacyAttempt: { review: true } },
+    };
+    const report = weeklyReport(
+      [review, review, assigned, legacy],
+      DEFAULT_PROFILE,
+      '2026-09-28',
+      '2026-10-04',
+    );
+    expect(report).toContain('6 independent-practice minutes across 1 days.');
+    expect(report).toContain('2 min · sending · extra review (no required assignment credit)');
+    expect(report).toContain('3 min · sending · assigned practice');
+    expect(report.match(/2 min · sending/g)).toHaveLength(1);
+    expect(report.match(/extra review \(no required assignment credit\)/g)).toHaveLength(2);
+    expect(report).toContain('Measured 120.00 seconds');
+    expect(report).toContain('Assigned notes');
+  });
+
   it('excludes class minutes from the total while preserving zero results and notes', () => {
     const base: PracticeSession = {
       id: 'entry-1',

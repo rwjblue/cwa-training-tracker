@@ -39,7 +39,13 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { CourseLevel, PracticeKind, PracticeSession, Profile } from '../shared/training';
+import type {
+  CourseLevel,
+  PracticeKind,
+  PracticePurpose,
+  PracticeSession,
+  Profile,
+} from '../shared/training';
 import {
   DEFAULT_PROFILE,
   PUBLIC_RESOURCES,
@@ -50,6 +56,7 @@ import {
   addDays,
   summarizePractice,
   validatePracticeSession,
+  getPracticePurpose,
 } from '../shared/training';
 import { evidenceTime, sessionEvidence, type PracticeEvidence } from '../shared/practice-evidence';
 import { EvidenceSummary, PracticeEvidenceDetails } from './PracticeEvidenceDetails';
@@ -1005,7 +1012,9 @@ function App() {
                             updateTaskStatus(tasks, { dismissedFromToday: true })
                           }
                           onLog={openLog}
-                          onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
+                          onPracticeTask={(task, purpose) =>
+                            openPractice(practiceLaunchForTask(task, purpose))
+                          }
                           onManagePlan={() => navigate('course')}
                           onAddTask={async () => {
                             if (await navigate('course')) setStartNewTask(true);
@@ -1095,7 +1104,9 @@ function App() {
                   profile={profile}
                   entries={entries}
                   onLog={openLog}
-                  onPracticeTask={(task) => openPractice(practiceLaunchForTask(task))}
+                  onPracticeTask={(task, purpose) =>
+                    openPractice(practiceLaunchForTask(task, purpose))
+                  }
                   startNewTask={startNewTask}
                   tasks={tasks}
                   planLoading={account.loading}
@@ -1605,6 +1616,9 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
         <strong>
           {kind.label}
           {entry.context === 'class' && <span className="lesson-label">Class</span>}
+          {getPracticePurpose(entry) === 'review' && (
+            <span className="lesson-label">Extra review</span>
+          )}
           {entry.lesson && <span className="lesson-label">Session {entry.lesson}</span>}
         </strong>
         <span>
@@ -1858,7 +1872,7 @@ function Course({
   profile: Profile;
   entries: PracticeSession[];
   onLog: (initial?: Partial<PracticeSession>) => void;
-  onPracticeTask: (task: PlannedTask) => void;
+  onPracticeTask: (task: PlannedTask, purpose: PracticePurpose) => void;
   user: User | null;
   onSettings: () => void;
 }) {
@@ -2402,6 +2416,12 @@ function SessionModal({
           ? 'Your measured time and results stay with this attempt. Add notes and choose where to record it.'
           : 'Capture what you practiced and how it felt. The details are up to you.'}
       </p>
+      {getPracticePurpose(initial) === 'review' && (
+        <p className="session-purpose">
+          <strong>Extra review.</strong> This practice counts toward your daily total. It does not
+          add to the assignment’s required practice.
+        </p>
+      )}
       {copyAttempt && <CopyResult attempt={copyAttempt} />}
       {evidence && <EvidenceSummary evidence={evidence} />}
       {!evidence && <PracticeEvidenceDetails entry={initial} expanded />}

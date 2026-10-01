@@ -1,6 +1,6 @@
 import { validateCopyRecipe, type CopyAttempt, type CopyRecipe } from '../shared/copy-practice';
 import type { PlannedTask } from '../shared/plan';
-import type { PracticeSession } from '../shared/training';
+import type { PracticePurpose, PracticeSession } from '../shared/training';
 import { validateCopyDraft } from './copy-draft-validator';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 import { getConfirmedAccountGeneration } from './account-outbox';
@@ -17,6 +17,8 @@ export interface CopyDraft {
   autoSkipAt?: number;
   notes: string;
   task?: PlannedTask;
+  /** Captured with this round; absent on legacy drafts and never inferred from the next launch. */
+  purpose?: PracticePurpose;
   pending?: PracticeSession;
 }
 
@@ -82,6 +84,37 @@ export function copySetupRecipe(recipe: CopyRecipe): CopyRecipe {
     ...recipe,
     toneMode: recipe.toneMode ?? 'random',
     ...(recipe.mode === 'groups' ? { lengthMode: 'duration' as const } : {}),
+  };
+}
+
+/** Legacy drafts have ordinary assigned meaning without rewriting their saved body. */
+export function copyDraftMatchesRequest(
+  draft: CopyDraft,
+  task?: PlannedTask,
+  purpose?: PracticePurpose,
+): boolean {
+  return (
+    draft.task?.id === task?.id &&
+    (!task || (draft.purpose ?? 'assigned') === (purpose ?? 'assigned'))
+  );
+}
+
+/** An explicit new round adopts the requested attribution and, for a different task, its recipe. */
+export function nextCopyRoundContext(
+  current: CopyDraft | undefined,
+  requested: { task?: PlannedTask; purpose?: PracticePurpose; recipe?: CopyRecipe },
+  selectedRecipe: CopyRecipe,
+  detachAssignment = false,
+): { task?: PlannedTask; purpose?: PracticePurpose; recipe: CopyRecipe } {
+  const task = detachAssignment ? undefined : requested.task;
+  return {
+    task: task ? structuredClone(task) : undefined,
+    purpose: task ? (requested.purpose ?? 'assigned') : undefined,
+    recipe: copySetupRecipe(
+      !detachAssignment && current && current.task?.id !== task?.id && requested.recipe
+        ? requested.recipe
+        : selectedRecipe,
+    ),
   };
 }
 

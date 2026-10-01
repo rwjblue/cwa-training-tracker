@@ -109,6 +109,7 @@ These baseline gaps no longer describe the current implementation:
 | Foreground spoken repeats       | Each word reuses its loaded Morse recording for all three plays before the spoken answer. Repeating a list keeps the sequence active when its transcript refreshes; Stop cancels pending speech advancement. [Listening](../src/client/ListeningTrainer.tsx), [browser regression](../e2e/spoken-answers.spec.ts).                                                             | The regression uses real native Morse playback and simulated speech callbacks. An installed local English voice and an open page are still required; background spoken-audio parity remains R7.                                                      |
 | Duration and explicit completion | The universal 15-minute fallback is removed. Elapsed time and an optional goal are separate from an assigned exercise's explicit Complete/Reopen action; completion is available without starting audio or creating a practice entry. Unknown manual-entry durations require actual learner input. [Studio](../src/client/PracticeStudio.tsx), [plan model](../src/shared/plan.ts). | Completion is a learner decision, not proof of a full listening pass or attainment of a proficiency target. Practice credit continues to come from saved actual time. |
 | Earlier reminders and session links | Today has no completion checkboxes. Dismissal hides earlier unfinished items only, with restoration in the course plan; dates, completion and recorded practice remain intact. All four courses link to the selected session in the official syllabus. [Today](../src/client/TodayPlan.tsx), [course plan](../src/client/Plan.tsx), [curriculum links](../src/shared/curriculum.ts). | Dismissal is not deletion and does not hide a task rescheduled to today or a future date. The Beginner session 2 HTML bookmark is missing, so its link uses the official PDF's page 11. |
+| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Review counts once toward useful daily practice and supplies no required assignment credit. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation, pass coverage and cumulative Runner completion remain separate issues. Independent acceptance and deployment status are tracked in the issue #5 ledger below. |
 
 ## Accepted September 30 delivery ledger
 
@@ -392,3 +393,41 @@ captures and accepted the complete workflow with no remaining substantive findin
 Signed publication and production migration/deployment are complete; their commit
 references and verification are recorded in the execution journal.
 It does not add active elapsed-time recovery or physical-device verification.
+
+## Issue #5 delivery ledger — extra review purpose
+
+Today and the full plan provide deliberate Extra review for incomplete and
+completed exercises, including older completed work through Whole course and
+Show completed. The launch captures assigned/review purpose with its originating
+task. Timer, manual Studio, Copy and Runner results use the same attribution
+serializer; source measurements and immutable queued bodies keep that purpose.
+Explicit Complete/Reopen remains a separate learner decision.
+
+Saved native purpose is strictly validated in metadata. Missing purpose remains
+ordinary work, while original imported `review:true` stays review and retains its
+owned task link. Malformed or contradictory flags reject. The shared required
+practice rule excludes review before direct or catalog-alias task matching, while
+useful daily totals and reports include it once. History, save review and report
+evidence identify Extra review. Generic note edits retain purpose; Worker edits
+cannot remove or change it. Review follows the same owned/retired task checks,
+generation fences, persistence and portable export/import as ordinary practice.
+
+A restored Copy round retains its captured task, recipe and purpose even when
+the requested launch has the same task with another purpose. Its actual context
+and the requested next context are readable separately. A deliberate new round
+adopts the requested attribution and, when changing exercise, its recipe; public
+missed-character practice detaches task and purpose together. Old pending bodies
+remain unchanged rather than receiving a new default field.
+
+Evidence: [purpose validation](../src/shared/training.ts),
+[attribution](../src/shared/practice-attribution.ts),
+[required accounting and report selection](../src/shared/plan.ts),
+[captured Copy context](../src/client/copy-storage.ts),
+[Runner result](../src/client/runner-session.ts), and
+[student workflow](../e2e/review-purpose.spec.ts).
+Final typecheck, 496 tests across 37 files, production build and all 49 serialized
+browser journeys pass. The required post-commit independent review, signed
+publication and deployment remain pending in
+[execution progress](parity/execution-progress-2026-09-30.md).
+This does not implement the separate review recommendation rotation, recording
+pass coverage or cumulative Runner completion issues.

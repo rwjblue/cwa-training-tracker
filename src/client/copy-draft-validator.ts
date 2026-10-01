@@ -18,6 +18,7 @@ export function validateCopyDraft(value: unknown): CopyDraft {
     'autoSkipAt',
     'notes',
     'task',
+    'purpose',
     'pending',
   ];
   if (Object.keys(input).some((key) => !allowed.includes(key)))
@@ -163,6 +164,10 @@ export function validateCopyDraft(value: unknown): CopyDraft {
             'Copy pending result',
           ),
         );
+  if (input.purpose !== undefined && input.purpose !== 'assigned' && input.purpose !== 'review')
+    throw new Error('The copy draft practice purpose must be assigned or review.');
+  if (input.purpose !== undefined && !task)
+    throw new Error('The copy draft practice purpose requires an exercise.');
   if (
     pending &&
     (pending.id !== `copy:${attempt.id}` ||
@@ -176,6 +181,8 @@ export function validateCopyDraft(value: unknown): CopyDraft {
     pending.historicalPlannedTaskId !== task.id
   )
     throw new Error('The copy draft pending result does not match its exercise.');
+  if (pending && pending.metadata?.practicePurpose !== input.purpose)
+    throw new Error('The copy draft pending result does not match its practice purpose.');
   // Keep legacy recipes and the original pending body rather than migrating defaults.
   return structuredClone(input) as unknown as CopyDraft;
 }

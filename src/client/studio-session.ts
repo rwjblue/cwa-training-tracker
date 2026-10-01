@@ -1,4 +1,5 @@
 import { dateInTimezone, validatePracticeSession, type PracticeSession } from '../shared/training';
+import { taskPracticeMetadata } from '../shared/practice-attribution';
 import type { PracticeLaunch } from './practice-launch';
 import type { PracticePreferences } from './practice-preferences';
 import type { PracticeClock } from './practice-clock';
@@ -106,7 +107,7 @@ export function studioSession(
         : {}),
       ...(!assigned && tool === 'words' ? { wordList: preferences.wordList } : {}),
       ...(!assigned && tool === 'qso' ? { qsoScenario: preferences.qsoScenario } : {}),
-      ...(launch?.task ? { plannedTaskId: launch.task.id } : {}),
+      ...taskPracticeMetadata(launch?.task?.id, launch?.purpose),
       ...(assigned && !launch?.task ? { studioNotesContext: launch?.id ?? 'assigned' } : {}),
     },
   });

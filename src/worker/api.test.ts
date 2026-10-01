@@ -2,7 +2,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from './index';
-import { DEFAULT_PROFILE, type PracticeSession, type TrainingExport } from '../shared/training';
+import {
+  DEFAULT_PROFILE,
+  getPracticePurpose,
+  summarizePractice,
+  type PracticeSession,
+  type TrainingExport,
+} from '../shared/training';
 import { dailyPlanSummary, type PlannedTask } from '../shared/plan';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
@@ -2699,6 +2705,506 @@ describe('validated non-copy evidence', () => {
         )
       ).status,
     ).toBe(400);
+  });
+});
+
+describe('review purpose and assignment provenance', () => {
+  const reviewTask = (id = 'review-task'): PlannedTask => ({
+    id,
+    title: 'Private sending exercise',
+    kind: 'sending',
+    done: false,
+    notes: '',
+    dueDate: '2026-09-28',
+    createdAt: '2026-09-28T12:00:00.000Z',
+  });
+  const reviewEntry = (id = 'review-result', taskId?: string): PracticeSession => ({
+    ...entry(id),
+    kind: 'sending',
+    source: 'timer',
+    minutes: 1.5,
+    metadata: {
+      elapsedSeconds: 90,
+      practicePurpose: 'review',
+      ...(taskId ? { plannedTaskId: taskId } : {}),
+    },
+  });
+
+  it('preserves owned review on exact retry, note edits and portable account restore without required credit', async () => {
+    const auth = await signIn('review-owner@example.test');
+    const task = reviewTask();
+    expect((await request('/api/plan', 'POST', task, auth.cookie)).status).toBe(201);
+    const frozen = reviewEntry('review-result', task.id);
+    const originalBody = JSON.stringify(frozen);
+    const created = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(saved).toMatchObject({
+      metadata: {
+        plannedTaskId: task.id,
+        practicePurpose: 'review',
+        evidence: {
+          type: 'timed',
+          measurement: { seconds: 90 },
+        },
+      },
+    });
+    const retry = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toMatchObject({ duplicate: true, entry: saved });
+    expect(JSON.stringify(frozen)).toBe(originalBody);
+    expect(
+      (
+        await request(
+          '/api/entries',
+          'POST',
+          {
+            ...frozen,
+            metadata: { ...frozen.metadata, practicePurpose: 'assigned' },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    const edited = { ...saved, notes: 'Review sending rhythm' };
+    expect((await request('/api/entries/review-result', 'PUT', edited, auth.cookie)).status).toBe(
+      200,
+    );
+    expect((await request('/api/entries', 'POST', frozen, auth.cookie)).status).toBe(409);
+    const beforeAssigned = dailyPlanSummary([task], [], [edited, edited], '2026-09-28');
+    expect(beforeAssigned.assignedToday[0]).toMatchObject({
+      loggedMinutes: 0,
+      todayMinutes: 0,
+      status: 'ready',
+      task: { done: false },
+    });
+    expect(summarizePractice([edited, edited], '2026-09-28').todayMinutes).toBe(1.5);
+    const assigned = {
+      ...entry('ordinary-unflagged'),
+      kind: 'sending',
+      minutes: 2,
+      metadata: { plannedTaskId: task.id },
+    };
+    expect((await request('/api/entries', 'POST', assigned, auth.cookie)).status).toBe(201);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.plan).toEqual([task]);
+    expect(exported.sessions.find((item) => item.id === saved.id)).toEqual(edited);
+    expect(
+      dailyPlanSummary(exported.plan!, [], exported.sessions, '2026-09-28').assignedToday[0],
+    ).toMatchObject({
+      loggedMinutes: 2,
+      todayMinutes: 2,
+      status: 'started',
+      task: { done: false },
+    });
+    expect(summarizePractice(exported.sessions, '2026-09-28').todayMinutes).toBe(3.5);
+    for (const key of [
+      'accountId',
+      'generation',
+      'retiredPlanTasks',
+      'revision',
+      'historyRevision',
+    ])
+      expect(exported).not.toHaveProperty(key);
+    const restored = await signIn('review-restored@example.test');
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, restored.cookie))
+        .status,
+    ).toBe(200);
+    const imported = (await (
+      await request('/api/export', 'GET', undefined, restored.cookie)
+    ).json()) as TrainingExport;
+    expect(imported.sessions).toEqual(exported.sessions);
+    expect(imported.plan).toEqual(exported.plan);
+    expect(
+      db.sqlite
+        .prepare('SELECT count(*) AS count FROM practice_entries WHERE user_id = ?')
+        .get(auth.user.id)?.count,
+    ).toBe(2);
+  });
+
+  it.each([
+    ['old ordinary', undefined],
+    ['assigned', 'assigned'],
+    ['review', 'review'],
+  ] as const)(
+    'keeps saved %s purpose immutable while allowing notes edits',
+    async (label, purpose) => {
+      const auth = await signIn(`purpose-${label.replaceAll(' ', '-')}@example.test`);
+      const value = {
+        ...entry(),
+        metadata: purpose === undefined ? {} : { practicePurpose: purpose },
+      };
+      expect((await request('/api/entries', 'POST', value, auth.cookie)).status).toBe(201);
+      const edited = { ...value, notes: 'Updated notes' };
+      expect((await request('/api/entries/test-entry', 'PUT', edited, auth.cookie)).status).toBe(
+        200,
+      );
+      const relabeled = {
+        ...edited,
+        metadata: {
+          practicePurpose: purpose === 'review' ? 'assigned' : 'review',
+        },
+      };
+      const rejected = await request('/api/entries/test-entry', 'PUT', relabeled, auth.cookie);
+      expect(rejected.status).toBe(400);
+      expect(await rejected.json()).toMatchObject({ error: expect.stringContaining('purpose') });
+      if (purpose !== undefined)
+        expect(
+          (
+            await request(
+              '/api/entries/test-entry',
+              'PUT',
+              { ...edited, metadata: {} },
+              auth.cookie,
+            )
+          ).status,
+        ).toBe(400);
+      const stored = JSON.parse(
+        String(
+          db.sqlite
+            .prepare('SELECT entry_json FROM practice_entries WHERE user_id = ? AND id = ?')
+            .get(auth.user.id, value.id)?.entry_json,
+        ),
+      ) as PracticeSession;
+      expect(stored.notes).toBe(edited.notes);
+      expect(getPracticePurpose(stored)).toBe(purpose ?? 'assigned');
+    },
+  );
+
+  it('uses actual live/retired ownership for review POST, PUT and import and retains historical purpose', async () => {
+    const auth = await signIn('review-links-owner@example.test');
+    const other = await signIn('review-links-foreign@example.test');
+    const owned = reviewTask('owned-review-task');
+    const foreign = reviewTask('foreign-review-task');
+    expect((await request('/api/plan', 'POST', owned, auth.cookie)).status).toBe(201);
+    expect((await request('/api/plan', 'POST', foreign, other.cookie)).status).toBe(201);
+    const original = reviewEntry('unlinked-review');
+    const created = await request('/api/entries', 'POST', original, auth.cookie);
+    const unlinked = ((await created.json()) as { entry: PracticeSession }).entry;
+    const liveEdit = await request(
+      `/api/entries/${unlinked.id}`,
+      'PUT',
+      {
+        ...unlinked,
+        metadata: { ...unlinked.metadata, plannedTaskId: owned.id },
+      },
+      auth.cookie,
+    );
+    expect(liveEdit.status).toBe(200);
+    expect(await liveEdit.json()).toMatchObject({
+      entry: {
+        metadata: { plannedTaskId: owned.id, practicePurpose: 'review' },
+      },
+    });
+    const retiredCandidate = await request(
+      '/api/entries',
+      'POST',
+      reviewEntry('unlinked-retired-review'),
+      auth.cookie,
+    );
+    const retiredUnlinked = ((await retiredCandidate.json()) as { entry: PracticeSession }).entry;
+    const foreignBody = reviewEntry('foreign-review', foreign.id);
+    for (const retired of [false, true]) {
+      if (retired) {
+        expect(
+          (await request(`/api/plan/${foreign.id}`, 'DELETE', undefined, other.cookie)).status,
+        ).toBe(200);
+        expect(
+          db.sqlite
+            .prepare('SELECT task_id FROM retired_plan_tasks WHERE user_id = ?')
+            .all(other.user.id),
+        ).toEqual([{ task_id: foreign.id }]);
+      }
+      expect((await request('/api/entries', 'POST', foreignBody, auth.cookie)).status).toBe(400);
+      expect(
+        (
+          await request(
+            `/api/entries/${unlinked.id}`,
+            'PUT',
+            {
+              ...unlinked,
+              metadata: { ...unlinked.metadata, plannedTaskId: foreign.id },
+            },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            {
+              mode: 'merge',
+              data: { ...backup([foreignBody]), evidenceVersion: 1 },
+            },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect((await request(`/api/plan/${owned.id}`, 'DELETE', undefined, auth.cookie)).status).toBe(
+      200,
+    );
+    const frozen = reviewEntry('delayed-review', owned.id);
+    const delayed = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(delayed.status).toBe(201);
+    const saved = ((await delayed.json()) as { entry: PracticeSession }).entry;
+    expect(saved).toMatchObject({
+      historicalPlannedTaskId: owned.id,
+      metadata: { practicePurpose: 'review' },
+    });
+    expect(saved.metadata).not.toHaveProperty('plannedTaskId');
+    const retry = await request('/api/entries', 'POST', frozen, auth.cookie);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toMatchObject({ duplicate: true, entry: saved });
+    const linkedEdit = await request(
+      `/api/entries/${retiredUnlinked.id}`,
+      'PUT',
+      {
+        ...retiredUnlinked,
+        metadata: { ...retiredUnlinked.metadata, plannedTaskId: owned.id },
+      },
+      auth.cookie,
+    );
+    expect(linkedEdit.status).toBe(200);
+    expect(await linkedEdit.json()).toMatchObject({
+      entry: {
+        historicalPlannedTaskId: owned.id,
+        metadata: { practicePurpose: 'review' },
+      },
+    });
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions.every((item) => getPracticePurpose(item) === 'review')).toBe(true);
+    expect(exported.sessions.every((item) => item.historicalPlannedTaskId === owned.id)).toBe(true);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      db.sqlite
+        .prepare('SELECT count(*) AS count FROM retired_plan_tasks WHERE user_id = ?')
+        .get(other.user.id)?.count,
+    ).toBe(0);
+    expect(
+      (
+        await request(
+          '/api/entries',
+          'POST',
+          { ...frozen, id: 'foreign-portable-claim' },
+          other.cookie,
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  it('preserves original legacy review flags, task links and archive through merge and exact export restore', async () => {
+    const auth = await signIn('legacy-review-owner@example.test');
+    const legacy = {
+      exportedAt: entry().createdAt,
+      snapshot: {
+        course: {
+          id: 'synthetic-course',
+          timezone: 'UTC',
+          assignments: [
+            {
+              session: 1,
+              tasks: [
+                {
+                  id: 'source-task',
+                  title: 'Synthetic original exercise',
+                  kind: 'audio',
+                },
+              ],
+            },
+          ],
+        },
+        attempts: [
+          {
+            id: 'review-attempt',
+            taskId: 'source-task',
+            context: 'practice',
+            review: true,
+            completed: true,
+            activeSeconds: 120,
+            startedAt: entry().createdAt,
+          },
+        ],
+      },
+    };
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: legacy }, auth.cookie)).status,
+    ).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.legacy?.data).toEqual(legacy);
+    expect(exported.sessions[0]).toMatchObject({
+      metadata: {
+        plannedTaskId: 'legacy-task:source-task',
+        practicePurpose: 'review',
+        legacyAttempt: { review: true, completed: true },
+      },
+    });
+    expect(exported.plan?.find((task) => task.id === 'legacy-task:source-task')?.done).toBe(false);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    const again = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(again.sessions).toEqual(exported.sessions);
+    expect(again.legacy).toEqual(exported.legacy);
+    const malformedSource = {
+      ...legacy,
+      snapshot: {
+        ...legacy.snapshot,
+        attempts: [
+          {
+            ...legacy.snapshot.attempts[0],
+            review: 'true',
+          },
+        ],
+      },
+    };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: malformedSource },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      db.sqlite
+        .prepare('SELECT count(*) AS count FROM practice_entries WHERE user_id = ?')
+        .get(auth.user.id)?.count,
+    ).toBe(1);
+    const oldConverted = {
+      ...exported.sessions[0],
+      id: 'old-converted',
+      metadata: {
+        legacyAttempt: { review: true, taskId: 'source-task' },
+      },
+    };
+    expect((await request('/api/entries', 'POST', oldConverted, auth.cookie)).status).toBe(201);
+    expect(
+      (
+        await request(
+          '/api/entries/old-converted',
+          'PUT',
+          {
+            ...oldConverted,
+            notes: 'Preserved legacy review',
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(
+          '/api/entries/old-converted',
+          'PUT',
+          { ...oldConverted, metadata: {} },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  it('rejects malformed purpose before SQL writes and replacement import changes history', async () => {
+    const auth = await signIn('malformed-purpose@example.test');
+    expect((await request('/api/entries', 'POST', entry(), auth.cookie)).status).toBe(201);
+    const invalidMetadata = [
+      { practicePurpose: 'optional' },
+      { practicePurpose: true },
+      { practicePurpose: null },
+      { legacyAttempt: { review: 'true' } },
+      { practicePurpose: 'assigned', legacyAttempt: { review: true } },
+      { practicePurpose: 'review', legacyAttempt: { review: false } },
+    ];
+    for (const metadata of invalidMetadata) {
+      const invalid = { ...entry('invalid-purpose'), metadata };
+      expect((await request('/api/entries', 'POST', invalid, auth.cookie)).status).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/entries/test-entry',
+            'PUT',
+            { ...invalid, id: 'test-entry' },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            {
+              mode: 'replace',
+              data: backup([invalid]),
+            },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect(
+      db.sqlite.prepare('SELECT id FROM practice_entries WHERE user_id = ?').all(auth.user.id),
+    ).toEqual([{ id: 'test-entry' }]);
+    expect(await getAccountSnapshot(env, auth.user.id)).toMatchObject({
+      generation: 0,
+      historyRevision: 1,
+    });
+  });
+
+  it('applies dataset generation fences to review writes, edits and merge imports', async () => {
+    const auth = await signIn('review-generation@example.test');
+    const task = reviewTask();
+    expect((await request('/api/plan', 'POST', task, auth.cookie)).status).toBe(201);
+    const frozen = reviewEntry('before-reset', task.id);
+    const created = await request('/api/entries', 'POST', frozen, auth.cookie);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(
+      (await request('/api/reset', 'POST', { confirmation: 'RESET' }, auth.cookie)).status,
+    ).toBe(200);
+    const stale = { 'X-CWA-Generation': '0' };
+    for (const response of [
+      await request('/api/entries', 'POST', frozen, auth.cookie, { ...stale }),
+      await request(
+        '/api/entries/before-reset',
+        'PUT',
+        { ...saved, notes: 'Stale edit' },
+        auth.cookie,
+        { ...stale },
+      ),
+      await request('/api/import', 'POST', { mode: 'merge', data: backup([saved]) }, auth.cookie, {
+        ...stale,
+      }),
+    ]) {
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({
+        code: 'dataset_retired',
+        state: { generation: 1 },
+      });
+    }
+    // The new generation does not inherit retired-task authority from the old one.
+    expect((await request('/api/entries', 'POST', frozen, auth.cookie)).status).toBe(400);
+    expect(
+      db.sqlite
+        .prepare('SELECT count(*) AS count FROM practice_entries WHERE user_id = ?')
+        .get(auth.user.id)?.count,
+    ).toBe(0);
   });
 });
 

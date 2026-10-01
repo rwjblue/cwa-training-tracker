@@ -16,6 +16,7 @@ import {
   dateInTimezone,
   PRACTICE_KINDS,
   type PracticeSession,
+  type PracticePurpose,
   type Profile,
 } from '../shared/training';
 import {
@@ -39,7 +40,7 @@ export interface TodayPlanProps {
   onManagePlan: () => void;
   onImport: () => void;
   onPractice?: () => void;
-  onPracticeTask?: (task: PlannedTask) => void;
+  onPracticeTask?: (task: PlannedTask, purpose: PracticePurpose) => void;
   onAddTask?: () => void;
   onSetupCourse?: () => void;
 }
@@ -106,7 +107,7 @@ export default function TodayPlan({
           item={item}
           today={today}
           onLog={() => onLog(practiceForTask(item.task, today))}
-          onPractice={onPracticeTask ? () => onPracticeTask(item.task) : undefined}
+          onPractice={onPracticeTask ? (purpose) => onPracticeTask(item.task, purpose) : undefined}
         />
       ))}
     </ul>
@@ -334,7 +335,7 @@ function TodayTask({
   item: DailyPlannedTask;
   today: string;
   onLog: () => void;
-  onPractice?: () => void;
+  onPractice?: (purpose: PracticePurpose) => void;
 }) {
   const { task, dueDate, status } = item;
   const overdue = dueDate && dueDate < today;
@@ -372,14 +373,18 @@ function TodayTask({
           </p>
         )}
         <div className="today-plan-task-actions">
-          {onPractice && (
-            <button className="today-plan-practice" onClick={onPractice}>
+          {onPractice && !task.done && (
+            <button className="today-plan-practice" onClick={() => onPractice('assigned')}>
               <Play size={12} />{' '}
-              {task.done
-                ? 'Review exercise'
-                : task.exercise?.type === 'audio'
-                  ? 'Listen & practice'
-                  : 'Practice'}
+              {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
+            </button>
+          )}
+          {onPractice && (
+            <button
+              className={task.done ? 'today-plan-practice' : 'today-plan-review'}
+              onClick={() => onPractice('review')}
+            >
+              <Play size={12} /> Extra review
             </button>
           )}
           {task.link && (

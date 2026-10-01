@@ -13,6 +13,7 @@ import {
   Square,
 } from 'lucide-react';
 import type { PracticeSession } from '../shared/training';
+import { taskPracticeMetadata } from '../shared/practice-attribution';
 import type { PlannedTask } from '../shared/plan';
 import {
   buildMorseTrack,
@@ -85,6 +86,7 @@ export default function PracticeStudio({
   const currentDevice = () => isDeviceScopeCurrent(notesScope, deviceToken);
   const activity = launch?.activity;
   const assigned = Boolean(activity);
+  const extraReview = launch?.purpose === 'review';
   const [selectedRecording, setSelectedRecording] = useState(() =>
     activity?.type === 'audio'
       ? preferredRecording(activity.url, activity.characterWpm)
@@ -514,7 +516,13 @@ export default function PracticeStudio({
           <div className="eyebrow">
             <span className="small-line" /> TUNE IN. TAKE YOUR TIME.
           </div>
-          <h1>{assigned ? 'Your assigned practice.' : 'Your practice studio.'}</h1>
+          <h1>
+            {assigned
+              ? extraReview
+                ? 'Your extra review.'
+                : 'Your assigned practice.'
+              : 'Your practice studio.'}
+          </h1>
           <p>
             {assigned
               ? isRunner
@@ -530,12 +538,19 @@ export default function PracticeStudio({
       {launch?.task && (
         <div className="studio-task-context">
           <div>
-            <span className="eyebrow">ASSIGNED PRACTICE</span>
+            <span className="eyebrow">
+              {isCopy ? 'REQUESTED EXERCISE · ' : ''}
+              {extraReview ? 'EXTRA REVIEW' : 'ASSIGNED PRACTICE'}
+            </span>
             <strong>{launch.task.title}</strong>
             <span>
               {launch.task.targetMinutes !== undefined &&
                 `${launch.task.targetMinutes} min suggested · `}
-              Practice as long as you need. Saved time stays linked to this exercise.
+              {isCopy
+                ? 'New rounds use this exercise and purpose. A recovered round keeps its original context, shown below.'
+                : extraReview
+                  ? 'Saved practice counts toward your daily total and stays linked to this exercise. It does not add to the assignment’s required practice.'
+                  : 'Practice as long as you need. Saved time stays linked to this exercise and contributes to assignment progress.'}
             </span>
           </div>
           {launch.task.link && (
@@ -657,6 +672,7 @@ export default function PracticeStudio({
           accountId={accountId}
           timezone={timezone}
           task={launch?.task}
+          purpose={launch?.purpose}
           recipe={activity?.type === 'copy' ? activity.recipe : undefined}
           alternatives={activity?.type === 'copy' ? activity.alternatives : undefined}
           requiresCharacterSelection={
@@ -674,6 +690,7 @@ export default function PracticeStudio({
           settings={activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS}
           externalUrl={activity?.type === 'morse-runner' ? activity.url : undefined}
           task={launch?.task}
+          purpose={launch?.purpose}
           savedEntry={savedEntry}
           onLog={onLog}
           onUnsavedChange={setRunnerUnsaved}
@@ -1316,7 +1333,7 @@ export default function PracticeStudio({
                               : {}),
                           source: 'manual',
                           metadata: {
-                            ...(launch?.task ? { plannedTaskId: launch.task.id } : {}),
+                            ...taskPracticeMetadata(launch?.task?.id, launch?.purpose),
                             ...(assigned
                               ? { studioNotesContext: notesContext }
                               : { practiceTool: tool }),

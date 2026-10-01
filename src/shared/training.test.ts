@@ -10,7 +10,9 @@ import {
   courseMeetings,
   dateInTimezone,
   DEFAULT_PROFILE,
+  getPracticePurpose,
   isCalendarDate,
+  isRequiredPractice,
   summarizePractice,
   validatePracticeSession,
   validateProfile,
@@ -19,6 +21,7 @@ import {
 } from './training';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from './copy-practice';
 import { copyAttemptSessionFields } from './copy-report';
+import { taskPracticeMetadata } from './practice-attribution';
 
 function session(
   id: string,
@@ -98,6 +101,63 @@ function legacyFixture() {
 }
 
 describe('practice input validation', () => {
+  it('preserves explicit purpose and old unflagged/boolean legacy meaning across backups', () => {
+    const ordinary = session('old', '2026-09-28', 5);
+    const values = [
+      ordinary,
+      { ...ordinary, id: 'assigned', metadata: taskPracticeMetadata('task', 'assigned') },
+      { ...ordinary, id: 'review', metadata: taskPracticeMetadata('task', 'review') },
+      {
+        ...ordinary,
+        id: 'old-review',
+        source: 'legacy' as const,
+        metadata: { legacyAttempt: { review: true, taskId: 'task' } },
+      },
+      { ...ordinary, id: 'old-assigned', metadata: { legacyAttempt: { review: false } } },
+    ].map((value) => validatePracticeSession(value));
+    expect(values.map(getPracticePurpose)).toEqual([
+      'assigned',
+      'assigned',
+      'review',
+      'review',
+      'assigned',
+    ]);
+    expect(values.map(isRequiredPractice)).toEqual([true, true, false, false, true]);
+    expect(isRequiredPractice({ ...values[1], context: 'class' })).toBe(false);
+    const exported = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      evidenceVersion: 1,
+      exportedAt: ordinary.createdAt,
+      sessions: values,
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(exported)))).toEqual(exported);
+    expect(values[0]).not.toHaveProperty('metadata');
+    expect(values[3].metadata).not.toHaveProperty('practicePurpose');
+    expect(taskPracticeMetadata('task')).toEqual({ plannedTaskId: 'task' });
+    expect(taskPracticeMetadata(undefined, 'review')).toEqual({});
+  });
+
+  it.each([
+    { practicePurpose: true },
+    { practicePurpose: 'true' },
+    { practicePurpose: 'extra' },
+    { practicePurpose: null },
+    { legacyAttempt: { review: 'true' } },
+    { legacyAttempt: { review: 1 } },
+    { legacyAttempt: { review: null } },
+    { practicePurpose: 'assigned', legacyAttempt: { review: true } },
+    { practicePurpose: 'review', legacyAttempt: { review: false } },
+    { practicePurpose: 'review', legacyAttempt: {} },
+  ])('rejects malformed or contradictory purpose %j', (metadata) => {
+    expect(() =>
+      validatePracticeSession({
+        ...session('bad-purpose', '2026-09-28', 5),
+        metadata,
+      }),
+    ).toThrow(/purpose|review/i);
+  });
+
   it('derives native copy time and measurements from validated attempt evidence', () => {
     const initial = createCopyAttempt(
       {
@@ -376,6 +436,40 @@ describe('legacy migration', () => {
     );
   });
 
+  it('validates original review booleans even before cutoff and retains linked review provenance', () => {
+    const original = legacyFixture();
+    original.pending.attempts.push({
+      ...original.snapshot.attempts[0],
+      id: 'bad-review',
+      review: 'true',
+      startedAt: '2026-10-01T12:00:00Z',
+    });
+    expect(() => convertLegacyExport(original, { beforeDate: '2026-09-29' })).toThrow(
+      'Legacy review must be a boolean',
+    );
+    original.pending.attempts = [
+      {
+        ...original.snapshot.attempts[0],
+        id: 'review',
+        review: true,
+        completed: true,
+      },
+    ];
+    original.snapshot.attempts = [];
+    const converted = convertLegacyExport(original);
+    expect(converted.sessions[0]).toMatchObject({
+      metadata: {
+        plannedTaskId: 'legacy-task:listening-1',
+        practicePurpose: 'review',
+        legacyAttempt: { review: true, completed: true },
+      },
+    });
+    expect(converted.plan?.[0].done).toBe(false);
+    expect(getPracticePurpose(converted.sessions[0])).toBe('review');
+    expect(summarizePractice(converted.sessions, '2026-09-28').totalMinutes).toBe(9.5);
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(converted)))).toEqual(converted);
+  });
+
   it('round-trips the modern format with all legacy metadata intact', () => {
     const converted = convertLegacyExport(legacyFixture());
     expect(convertLegacyExport(JSON.parse(JSON.stringify(converted)))).toEqual(converted);
@@ -487,7 +581,11 @@ describe('legacy migration', () => {
     expect(entries[4].characterWpm).toBeUndefined();
     expect(entries[5].characterWpm).toBeUndefined();
     expect(entries[6]).toMatchObject({ kind: 'listening' });
-    expect(entries[7].metadata?.plannedTaskId).toBeUndefined();
+    expect(entries[7].metadata).toMatchObject({
+      plannedTaskId: 'legacy-task:listening-1',
+      practicePurpose: 'review',
+      legacyAttempt: { review: true },
+    });
     expect(entries[8]).toMatchObject({
       kind: 'sending',
       lesson: 4,

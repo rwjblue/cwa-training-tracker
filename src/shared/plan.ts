@@ -1,4 +1,12 @@
-import type { PracticeKind, PracticeSession, Profile } from './training';
+import {
+  getPracticePurpose,
+  isRequiredPractice,
+  type PracticeKind,
+  type PracticePurpose,
+  type PracticeSession,
+  type Profile,
+} from './training.ts';
+import { taskPracticeMetadata } from './practice-attribution.ts';
 import { isRunnerSettings, type RunnerSettings } from './runner.ts';
 import { defaultCopyRecipe, validateCopyRecipe, type CopyRecipe } from './copy-practice.ts';
 import { copyAttemptReportDetails, savedCopyAttempt } from './copy-report.ts';
@@ -401,7 +409,7 @@ export function dailyPlanSummary(
     if (seenEntries.has(entry.id)) continue;
     seenEntries.add(entry.id);
     if (
-      entry.context === 'class' ||
+      !isRequiredPractice(entry) ||
       !validDate(entry.date) ||
       entry.date > today ||
       !Number.isFinite(entry.minutes) ||
@@ -413,9 +421,7 @@ export function dailyPlanSummary(
       const original = entry.metadata?.legacyAttempt;
       if (original && typeof original === 'object' && !Array.isArray(original)) {
         const attempt = original as Record<string, unknown>;
-        // Extra review remains useful practice but does not advance assigned work.
-        if (attempt.review !== true && typeof attempt.taskId === 'string')
-          taskId = `legacy-task:${attempt.taskId}`;
+        if (typeof attempt.taskId === 'string') taskId = `legacy-task:${attempt.taskId}`;
       }
     }
     if (typeof taskId !== 'string') continue;
@@ -478,7 +484,11 @@ export function dailyPlanSummary(
 }
 
 /** Practice credit and completing homework are deliberately separate decisions. */
-export function practiceForTask(task: PlannedTask, date: string): Partial<PracticeSession> {
+export function practiceForTask(
+  task: PlannedTask,
+  date: string,
+  purpose: PracticePurpose = 'assigned',
+): Partial<PracticeSession> {
   return {
     date,
     kind: task.kind,
@@ -486,7 +496,7 @@ export function practiceForTask(task: PlannedTask, date: string): Partial<Practi
     ...(task.targetMinutes !== undefined ? { minutes: task.targetMinutes } : {}),
     notes: task.title,
     source: 'manual',
-    metadata: { plannedTaskId: task.id },
+    metadata: taskPracticeMetadata(task.id, purpose),
   };
 }
 
@@ -498,7 +508,13 @@ export function weeklyReport(
 ): string {
   if (!validDate(fromDate) || !validDate(toDate) || fromDate > toDate)
     throw new Error('Choose valid report dates.');
+  const seenEntries = new Set<string>();
   const all = entries
+    .filter((entry) => {
+      if (seenEntries.has(entry.id)) return false;
+      seenEntries.add(entry.id);
+      return true;
+    })
     .filter((entry) => entry.date >= fromDate && entry.date <= toDate)
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
   const practice = all.filter((entry) => entry.context !== 'class');
@@ -520,6 +536,11 @@ export function weeklyReport(
         `${minutes(entry.minutes)} min`,
         entry.kind,
         ...(entry.context === 'class' ? ['class'] : []),
+        ...(getPracticePurpose(entry) === 'review'
+          ? ['extra review (no required assignment credit)']
+          : typeof entry.metadata?.plannedTaskId === 'string' || entry.historicalPlannedTaskId
+            ? ['assigned practice']
+            : []),
         ...(entry.lesson ? [`session ${entry.lesson}`] : []),
         ...(entry.characterWpm !== undefined
           ? [

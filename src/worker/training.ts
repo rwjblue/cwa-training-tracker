@@ -1,6 +1,7 @@
 import {
   DEFAULT_PROFILE,
   convertLegacyExport,
+  getPracticePurpose,
   validatePracticeSession,
   validateProfile,
   validateTrainingExport,
@@ -240,6 +241,13 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     );
   const previousEvidence = sessionEvidence(previous?.metadata);
   const nextEvidence = sessionEvidence(entry.metadata);
+  if (
+    previous &&
+    (getPracticePurpose(previous) !== getPracticePurpose(entry) ||
+      (previous.metadata?.practicePurpose !== undefined &&
+        entry.metadata?.practicePurpose === undefined))
+  )
+    throw new HttpError(400, 'Saved practice purpose cannot be changed or removed.');
   if (
     previous &&
     previous.evidenceMode !== entry.evidenceMode &&

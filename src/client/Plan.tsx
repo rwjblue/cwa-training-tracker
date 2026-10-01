@@ -20,6 +20,7 @@ import {
   PRACTICE_KINDS,
   summarizePractice,
   type PracticeSession,
+  type PracticePurpose,
   type Profile,
 } from '../shared/training';
 import {
@@ -45,7 +46,7 @@ interface Props {
   revision: number;
   pendingIds?: string[];
   onLog: (initial?: Partial<PracticeSession>) => void;
-  onPracticeTask?: (task: PlannedTask) => void;
+  onPracticeTask?: (task: PlannedTask, purpose: PracticePurpose) => void;
   onSetupCourse?: () => void;
 }
 
@@ -293,9 +294,17 @@ export default function Plan({
                   )}
                   <div className="plan-task-links">
                     {onPracticeTask && !task.done && (
-                      <button className="plan-task-practice" onClick={() => onPracticeTask(task)}>
+                      <button
+                        className="plan-task-practice"
+                        onClick={() => onPracticeTask(task, 'assigned')}
+                      >
                         <Play size={12} />{' '}
                         {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
+                      </button>
+                    )}
+                    {onPracticeTask && (
+                      <button onClick={() => onPracticeTask(task, 'review')}>
+                        <Play size={12} /> Extra review
                       </button>
                     )}
                     {task.link && (

@@ -4230,6 +4230,16 @@ body {
 .session-summary .lesson-label {
   color: #697a59;
 }
+.session-purpose {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid #b5c5a8;
+  border-radius: 6px;
+  background: #f7f8f3;
+  color: #3d623d;
+  font-size: 14px;
+  line-height: 1.6;
+}
 .practice-tip .morse-word {
   color: #855c34;
 }

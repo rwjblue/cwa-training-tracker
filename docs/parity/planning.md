@@ -340,3 +340,32 @@ and 47 serialized browser journeys passed locally. The independent reviewer
 accepted 16 new and seven committed browser journeys, 28 inspected captures and
 fresh client/Worker/SQL checks. Signed publication, migration 6 and production
 verification are complete, and issue #4 is closed.
+
+### Issue #5 — extra review and required assignment evidence
+
+P08/P10 now share an explicit captured purpose boundary: deliberate review stays
+linked to the source exercise and contributes useful daily/report practice once,
+while required task credit excludes it before direct/alias matching. Ordinary
+unflagged historical work keeps ordinary meaning; original review flags are
+strictly validated and preserved without guessing from completion or labels.
+This delivers native review context rather than the separate P08 recommendation
+pool/rotation, which remains issue #24. Pass tracking and cumulative Runner
+completion remain their separate issues.
+
+Today and Whole course/Show completed make review reachable for incomplete and
+completed exercises. Studio, reviewed save, history and reports explain its
+purpose; explicit Complete/Reopen does not reclassify the captured block. Timed,
+manual, Runner and Copy producers share attribution and retain raw evidence in
+exact retries and portable files. Restored Copy context stays authoritative until
+a deliberate new round; a same-task opposite-purpose request is explained visibly.
+Worker purpose immutability and owned/retired links protect note editing and
+cross-account saves/imports. No schema/binding change is needed.
+
+See [source exclusion](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L79),
+[shared accounting](../../src/shared/plan.ts),
+[validation](../../src/shared/training.ts), and
+[actual workflow](../../e2e/review-purpose.spec.ts).
+Root typecheck, 496 tests across 37 files, build and all 49 serialized browser
+journeys pass. The independent post-commit gate and publication/deployment remain
+pending in the execution journal; no broader parity, elapsed-time recovery or
+physical-device claim is made.

@@ -7,6 +7,7 @@ import { evidenceTime, sessionEvidence, type PracticeEvidence } from './practice
 export type CourseLevel = 'beginner' | 'fundamental' | 'intermediate' | 'advanced';
 export type PracticeKind =
   'listening' | 'sending' | 'head-copy' | 'icr' | 'simulator' | 'on-air' | 'other';
+export type PracticePurpose = 'assigned' | 'review';
 
 export interface Profile {
   displayName: string;
@@ -42,7 +43,33 @@ export interface PracticeSession {
   /** Unavailable task provenance, outside metadata's independently bounded payload. */
   historicalPlannedTaskId?: string;
   /** Validated native evidence and original imported metrics travel with backups. */
-  metadata?: Record<string, unknown> & { copyAttempt?: CopyAttempt; evidence?: PracticeEvidence };
+  metadata?: Record<string, unknown> & {
+    copyAttempt?: CopyAttempt;
+    evidence?: PracticeEvidence;
+    practicePurpose?: PracticePurpose;
+  };
+}
+
+/** Missing purpose retains ordinary accounting for older saved work. */
+export function getPracticePurpose(entry: Pick<PracticeSession, 'metadata'>): PracticePurpose {
+  if (entry.metadata?.practicePurpose !== undefined) return entry.metadata.practicePurpose;
+  const original = entry.metadata?.legacyAttempt;
+  return original &&
+    typeof original === 'object' &&
+    !Array.isArray(original) &&
+    (original as Record<string, unknown>).review === true
+    ? 'review'
+    : 'assigned';
+}
+
+/** Review remains useful practice, but never supplies required exercise evidence. */
+export function isRequiredPractice(entry: Pick<PracticeSession, 'metadata' | 'context'>): boolean {
+  return entry.context !== 'class' && getPracticePurpose(entry) !== 'review';
+}
+
+function validateLegacyReview(attempt: Record<string, unknown>): void {
+  if (attempt.review !== undefined && typeof attempt.review !== 'boolean')
+    throw new Error('Legacy review must be a boolean.');
 }
 
 export interface TrainingExport {
@@ -414,6 +441,21 @@ export function validatePracticeSession(
         !/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]*$/.test(metadata.plannedTaskId))
     )
       throw new Error('Planned task ID contains unsupported characters.');
+    if (
+      metadata.practicePurpose !== undefined &&
+      metadata.practicePurpose !== 'assigned' &&
+      metadata.practicePurpose !== 'review'
+    )
+      throw new Error('Practice purpose must be assigned or review.');
+    if (metadata.legacyAttempt !== undefined) {
+      const original = record(metadata.legacyAttempt, 'Legacy attempt');
+      validateLegacyReview(original);
+      if (
+        metadata.practicePurpose !== undefined &&
+        metadata.practicePurpose !== (original.review === true ? 'review' : 'assigned')
+      )
+        throw new Error('Practice purpose contradicts the original legacy review flag.');
+    }
     // Imported archives remain historical source records. They are not upgraded
     // to native measurements, whose recording/recall accounting differs.
     let evidence = sessionEvidence(metadata);
@@ -812,6 +854,7 @@ export function convertLegacyExport(
     ...(Array.isArray(pending.attempts) ? pending.attempts : []),
   ]) {
     const attempt = record(value, 'Legacy attempt');
+    validateLegacyReview(attempt);
     if (typeof attempt.id !== 'string' || !attempt.id)
       throw new Error('Legacy attempt is missing its ID.');
     attempts.set(attempt.id, attempt);
@@ -848,8 +891,9 @@ export function convertLegacyExport(
           legacyAttempt: attempt,
           legacyCourseId: course.id,
           legacyTask: task,
+          ...(attempt.review === true ? { practicePurpose: 'review' as const } : {}),
           ...(typeof attempt.scratchpad === 'string' ? { scratchpad: attempt.scratchpad } : {}),
-          ...(found?.planned && attempt.context !== 'class' && attempt.review !== true
+          ...(found?.planned && attempt.context !== 'class'
             ? { plannedTaskId: `legacy-task:${String(attempt.taskId)}` }
             : {}),
         },
