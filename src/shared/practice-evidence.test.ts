@@ -110,6 +110,147 @@ describe('non-copy native evidence', () => {
     },
   );
 
+  it.each([
+    { seconds: 0, duration: 1e-20, count: Number.MAX_SAFE_INTEGER },
+    { seconds: 1e-10, duration: 1e-20, count: Number.MAX_SAFE_INTEGER },
+    { seconds: Number.MIN_VALUE, duration: Number.MIN_VALUE * 2, count: 1 },
+    { seconds: Number.MIN_VALUE, duration: Number.MIN_VALUE, count: 2 },
+  ])(
+    'rejects positive passes without their actual positive hearing: $seconds / $duration',
+    (row) => {
+      expect(() =>
+        validateRecordingEvidence({
+          url: 'https://example.test/tiny.wav',
+          seconds: row.seconds,
+          passes: {
+            version: 1,
+            method: 'native-1x',
+            durations: [{ durationSeconds: row.duration, completedPasses: row.count }],
+          },
+        }),
+      ).toThrow(/passes exceed/);
+    },
+  );
+
+  it('accepts positive subnormal hearing and ordinary fractional roundoff without free time', () => {
+    for (const [duration, seconds] of [
+      [Number.MIN_VALUE, Number.MIN_VALUE],
+      [2, 2.3 - 0.4],
+    ]) {
+      const result = validateRecordingEvidence({
+        url: 'https://example.test/fractional.wav',
+        seconds,
+        passes: {
+          version: 1,
+          method: 'native-1x',
+          durations: [{ durationSeconds: duration, completedPasses: 1 }],
+        },
+      });
+      expect(recordingCompletedPasses(result)).toBe(1);
+      expect(result.seconds).toBe(seconds);
+    }
+  });
+
+  it.each([1, 0.99999])(
+    'requires available listening outside %s recall seconds for completed passes',
+    (recallSeconds) => {
+      expect(() =>
+        validatePracticeEvidence({
+          ...timed(),
+          measurement: { seconds: 1, recallSeconds },
+          recordings: [
+            {
+              url: 'https://example.test/tiny.wav',
+              seconds: 0.0001,
+              passes: {
+                version: 1,
+                method: 'native-1x',
+                durations: [{ durationSeconds: 1e-20, completedPasses: Number.MAX_SAFE_INTEGER }],
+              },
+            },
+          ],
+        }),
+      ).toThrow(/Recording and recall/);
+    },
+  );
+
+  it('cannot correct a pass-bearing source into an all-recall total', () => {
+    expect(() =>
+      validatePracticeEvidence({
+        ...timed(),
+        measurement: { seconds: 1, recallSeconds: 0 },
+        recordings: [
+          {
+            url: 'https://example.test/tiny.wav',
+            seconds: 0.0001,
+            passes: {
+              version: 1,
+              method: 'native-1x',
+              durations: [{ durationSeconds: 1e-20, completedPasses: Number.MAX_SAFE_INTEGER }],
+            },
+          },
+        ],
+        correction: { seconds: 1, recallSeconds: 1, reason: 'Invalid recall correction' },
+      }),
+    ).toThrow(/Corrected total must include/);
+  });
+
+  it('retains short actual listening beside long recall despite subtraction roundoff', () => {
+    const raw = {
+      ...timed(),
+      measurement: { seconds: 84000 + 0.001, recallSeconds: 84000 },
+      recordings: [
+        {
+          url: 'https://example.test/short.wav',
+          seconds: 0.001,
+          passes: {
+            version: 1,
+            method: 'native-1x',
+            durations: [{ durationSeconds: 0.001, completedPasses: 1 }],
+          },
+        },
+      ],
+    };
+    expect(validatePracticeEvidence(raw)).toMatchObject({ recordings: raw.recordings });
+    expect(
+      validatePracticeEvidence({
+        ...raw,
+        correction: { seconds: 84000 + 0.001, recallSeconds: 84000, reason: 'Exact measured time' },
+      }),
+    ).toMatchObject({ recordings: raw.recordings });
+  });
+
+  it('preserves older omitted and measured-zero pass backups with their existing timing tolerance', () => {
+    const recording = { url: 'https://example.test/old.wav', seconds: 0.0001 };
+    const entries = [
+      undefined,
+      {
+        version: 1,
+        method: 'native-1x',
+        durations: [{ durationSeconds: 1e-20, completedPasses: 0 }],
+      },
+    ].map((passes, index) =>
+      validatePracticeSession({
+        ...session({
+          ...timed(),
+          measurement: { seconds: 1, recallSeconds: 1 },
+          recordings: [{ ...recording, ...(passes ? { passes } : {}) }],
+        }),
+        id: `old-tolerance-${index}`,
+      }),
+    );
+    const backup = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: entries[0].createdAt,
+      sessions: entries,
+    });
+    expect(validateTrainingExport(JSON.parse(JSON.stringify(backup)))).toEqual(backup);
+    const evidence = sessionEvidence(backup.sessions[0].metadata)!;
+    if (evidence.type !== 'timed') throw new Error('Expected timed evidence');
+    expect(recordingCompletedPasses(evidence.recordings[0])).toBeUndefined();
+  });
+
   it('retains changed-duration native pass groups through aliases, correction and old v1 backup', () => {
     const passes: RecordingPassEvidence = {
       version: 1,

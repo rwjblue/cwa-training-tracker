@@ -2533,6 +2533,35 @@ describe('assigned recording pass evidence', () => {
       },
     };
   };
+  const tinyPass = (
+    id: string,
+    recordingSeconds: number,
+    measurement: { seconds: number; recallSeconds: number },
+  ): PracticeSession => ({
+    ...entry(id),
+    kind: 'listening',
+    source: 'timer',
+    minutes: measurement.seconds / 60,
+    metadata: {
+      evidence: {
+        version: 1,
+        type: 'timed',
+        measurement,
+        recordings: [
+          {
+            url: firstUrl,
+            speedWpm: 10,
+            seconds: recordingSeconds,
+            passes: {
+              version: 1,
+              method: 'native-1x',
+              durations: [{ durationSeconds: 1e-20, completedPasses: Number.MAX_SAFE_INTEGER }],
+            },
+          },
+        ],
+      },
+    },
+  });
   const alterRecording = (
     input: PracticeSession,
     change: (recording: RecordingEvidence) => void,
@@ -2638,6 +2667,151 @@ describe('assigned recording pass evidence', () => {
       const restored = await request('/api/import', 'POST', { mode, data: exported }, auth.cookie);
       expect(restored.status).toBe(200);
       expect((await exportFor(auth.cookie)).sessions).toEqual(exported.sessions);
+    }
+    expect(stored(auth.user.id)).toHaveLength(1);
+  });
+
+  it('rejects completed passes with no or insufficient actual listening without changing stored data', async () => {
+    const auth = await signIn('recording-pass-time-bounds@example.test');
+    expect((await request('/api/entries', 'POST', measured(), auth.cookie)).status).toBe(201);
+    const originalSql = stored(auth.user.id);
+    const originalAccount = await getAccountSnapshot(env, auth.user.id);
+    const invalid = [
+      tinyPass('zero-listening', 0, { seconds: 1, recallSeconds: 1 }),
+      tinyPass('insufficient-positive-listening', 1e-10, { seconds: 1, recallSeconds: 0 }),
+      tinyPass('all-recall-total', 0.0001, { seconds: 1, recallSeconds: 1 }),
+    ];
+    for (const input of invalid) {
+      const response = await request('/api/entries', 'POST', input, auth.cookie);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: expect.stringMatching(/passes|recording.*recall/i),
+      });
+      expect(stored(auth.user.id)).toEqual(originalSql);
+      expect(await getAccountSnapshot(env, auth.user.id)).toEqual(originalAccount);
+    }
+  });
+
+  it.each(['merge', 'replace'] as const)(
+    'preserves account rows and revisions when a %s import leaves no listening for completed passes',
+    async (mode) => {
+      const auth = await signIn(`recording-pass-import-time-bounds-${mode}@example.test`);
+      expect((await request('/api/plan', 'POST', task(), auth.cookie)).status).toBe(201);
+      expect((await request('/api/entries', 'POST', measured(), auth.cookie)).status).toBe(201);
+      const originalSql = stored(auth.user.id);
+      const originalAccount = await getAccountSnapshot(env, auth.user.id);
+      const originalExport = await exportFor(auth.cookie);
+      const response = await request(
+        '/api/import',
+        'POST',
+        {
+          mode,
+          data: {
+            ...originalExport,
+            sessions: [
+              measured('valid-import-prefix'),
+              tinyPass('invalid-all-recall-import', 0.0001, { seconds: 1, recallSeconds: 1 }),
+            ],
+            plan: [],
+            profile: { ...DEFAULT_PROFILE, callsign: 'N0CHANGED' },
+          },
+        },
+        auth.cookie,
+      );
+      expect(response.status).toBe(400);
+      expect(stored(auth.user.id)).toEqual(originalSql);
+      expect(await getAccountSnapshot(env, auth.user.id)).toEqual(originalAccount);
+      const after = await exportFor(auth.cookie);
+      expect(after.sessions).toEqual(originalExport.sessions);
+      expect(after.plan).toEqual(originalExport.plan);
+      expect(after.profile).toEqual(originalExport.profile);
+    },
+  );
+
+  it('rejects an all-recall correction while retaining the immutable measured pass facts', async () => {
+    const auth = await signIn('recording-pass-corrected-time-bounds@example.test');
+    const created = await request(
+      '/api/entries',
+      'POST',
+      tinyPass('corrected-all-recall', 0.0001, { seconds: 1, recallSeconds: 0 }),
+      auth.cookie,
+    );
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    const originalSql = stored(auth.user.id);
+    const originalAccount = await getAccountSnapshot(env, auth.user.id);
+    const corrected = {
+      ...saved,
+      notes: 'Invalid correction cannot replace the original notes',
+      metadata: {
+        ...saved.metadata,
+        evidence: {
+          ...saved.metadata!.evidence!,
+          correction: { recallSeconds: 1, reason: 'All time reclassified as recall' },
+        },
+      },
+    };
+    const response = await request(`/api/entries/${saved.id}`, 'PUT', corrected, auth.cookie);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: expect.stringContaining('Corrected total must include the measured recording time'),
+    });
+    expect(stored(auth.user.id)).toEqual(originalSql);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(originalAccount);
+    expect((await exportFor(auth.cookie)).sessions).toEqual([saved]);
+  });
+
+  it('retains valid short listening beside long recall through correction and portable imports', async () => {
+    const auth = await signIn('recording-pass-cancellation-bounds@example.test');
+    const recordingSeconds = 1e-8;
+    const recallSeconds = 80_000;
+    const totalSeconds = recallSeconds + recordingSeconds;
+    // Subtraction loses precision at this scale; the recording still has actual positive time.
+    expect(totalSeconds - recallSeconds).toBeLessThan(recordingSeconds);
+    const input = tinyPass('short-listening-long-recall', recordingSeconds, {
+      seconds: totalSeconds,
+      recallSeconds,
+    });
+    const evidence = input.metadata!.evidence!;
+    if (evidence.type !== 'timed') throw new Error('Expected timed fixture.');
+    evidence.recordings[0].passes!.durations = [
+      { durationSeconds: recordingSeconds, completedPasses: 1 },
+    ];
+    const created = await request('/api/entries', 'POST', input, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    const updated = await request(
+      `/api/entries/${saved.id}`,
+      'PUT',
+      {
+        ...saved,
+        metadata: {
+          ...saved.metadata,
+          evidence: {
+            ...saved.metadata!.evidence!,
+            correction: {
+              seconds: totalSeconds,
+              recallSeconds,
+              reason: 'Confirmed measured listening and recall',
+            },
+          },
+        },
+      },
+      auth.cookie,
+    );
+    expect(updated.status).toBe(200);
+    const corrected = ((await updated.json()) as { entry: PracticeSession }).entry;
+    expect(corrected.metadata?.evidence).toMatchObject({
+      measurement: { seconds: totalSeconds, recallSeconds },
+      recordings: evidence.recordings,
+      correction: { seconds: totalSeconds, recallSeconds },
+    });
+    const exported = await exportFor(auth.cookie);
+    for (const mode of ['merge', 'replace']) {
+      expect(
+        (await request('/api/import', 'POST', { mode, data: exported }, auth.cookie)).status,
+      ).toBe(200);
+      expect((await exportFor(auth.cookie)).sessions).toEqual([corrected]);
     }
     expect(stored(auth.user.id)).toHaveLength(1);
   });

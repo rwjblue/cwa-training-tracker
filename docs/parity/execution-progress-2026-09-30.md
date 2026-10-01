@@ -675,3 +675,51 @@ of issue #2. Both improvements stay separate from this issue's implementation.
   reviewer must resolve against its own actual dialog inspection/captures.
   No runtime remains on port 8791. Implementation commit and fresh review follow;
   publication, production verification and issue closure are still pending.
+
+- Implementation `29a28f231105c77b07663028e8438929ca5263c8`, exact tree
+  `3afaa9374cbe2bf47eb90cb6b7d4662a567edd88`, was committed after fresh required
+  checks. A new independent reviewer and read-only static child evaluated it.
+  The gate requires one P2 correction: absolute millisecond padding accepts tiny
+  positive pass claims with zero/insufficient per-file time or no listening outside
+  recall. Three fresh real Worker POSTs returned 201; their ignored evidence is
+  retained. The analogous corrected-time bound also needs the same invariant.
+  R8's stale missing-pass wording is a separate P3 documentation correction.
+- Independent desktop 1366 px keyboard and mobile 375 px emulated touch workflows
+  pass in 28.1/35.2 seconds. Native keyboard Space, physical pause, tiny deliberate
+  seek rejection, overlap, speed files, inspection/cancellation, combined quota/503
+  exact retry, completion/reopen, optional review, history/report and actual account
+  backup controls pass. Pending device backup/restore plus nine typed/account fences
+  pass in 9.5 seconds; old-backup merge and invalid-import atomicity pass in 1.3
+  seconds; 13 independently authored domain probes pass in 277 ms. Own captures,
+  Axe and geometry checks pass. Opaque computed dialog styles and legible own
+  full-page/element images resolve root's capture artifact as no reproduced UX bug.
+  Initial harness selectors/report-modal dismissal were corrected. A first mobile
+  pause/resume zero-count observation lacked native events; the later instrumented
+  run with an explicit resumed-media assertion passes. Its initial trace remains;
+  no additional product finding was established or failure represented as passing.
+- Root's correction requires positive hearing and available listening for positive
+  passes. Relative shortfall avoids subnormal free credit; aggregate scaling by raw
+  total handles cancellation beside long recall. Raw and corrected bounds share
+  this rule, while omitted/zero-pass v1 evidence retains compatibility. Eighty
+  focused shared tests pass, including ten new boundary/correction/backup cases.
+  Real Worker regressions, fresh full validation, focused follow-up commit and
+  independent correction recheck remain pending. Reviewer runtime is stopped.
+
+- The correction passes fresh required check/all 731 tests in 44 files/build.
+  Five new real SQL Worker regressions reject all three POST repros, preserve
+  account rows/revisions on invalid merge and replace, reject an all-recall
+  correction without mutating raw facts, and round-trip positive 1e-8-second
+  listening beside 80,000 recall seconds through correction and both imports.
+  The focused Worker section passes all ten cases. Its first valid-rounding
+  fixture used 1e-7 and failed only its subtraction-direction assertion; 1e-8
+  actually exercises the intended positive shortfall without changing validation.
+- The sole affected native browser journey passes at 1440 px in 26.1 seconds
+  and 390 px in 32.0 seconds (two journeys, 1.1 minutes). Keyboard/touch, native
+  coverage/seek/overlap, cancellation, frozen quota/network retry, purpose, saved
+  reopen, history/report and actual account backup controls remain working.
+  Root inspected the reviewer's independent opaque/legible desktop/mobile
+  review and mobile restored-device captures. No physical-device verification.
+  The full 60-journey implementation suite already passed; this shared-validation
+  correction reruns affected journeys rather than duplicate unrelated coverage.
+  Focused correction commit, fresh independent recheck, signed publication,
+  production deployment/verification and issue closure remain pending.

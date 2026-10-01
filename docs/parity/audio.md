@@ -433,6 +433,12 @@ account/device backups preserve typed per-file facts and raw measurement identit
 Unknown/missing duration, unsupported rates and exhausted duration-group bounds
 retain heard time and readable limitations. Partial coverage is not portable.
 
+Independent review reproduced malformed tiny-duration claims accepted through
+absolute millisecond padding. Positive pass facts now require positive per-file
+and available listening time, with only relative floating-point roundoff. Raw and
+corrected aggregate bounds scale by the total operand so short actual listening
+beside long recall remains valid. Old omitted/zero-pass v1 timing stays compatible.
+
 Check, all 716 tests in 44 files, build and all 60 serialized browser journeys
 pass. Independent acceptance and publication remain pending in the
 [execution journal](execution-progress-2026-09-30.md). Browser fixtures generate

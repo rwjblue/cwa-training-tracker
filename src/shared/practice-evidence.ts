@@ -24,6 +24,16 @@ export const MAX_RECORDING_PASS_DURATIONS = 100;
 export const recordingPassTolerance = (durationSeconds: number) =>
   Math.min(1, durationSeconds * 0.05);
 
+/** Relative roundoff never supplies a short source or a zero listening budget. */
+function exceedsMeasuredTime(required: number, available: number, totalScale = 0) {
+  if (required <= available) return false;
+  if (available <= 0) return true;
+  // Division avoids an underflow floor becoming credit for subnormal durations.
+  // Aggregate subtraction also scales by the total, protecting small actual
+  // listening amounts beside long recall from floating-point cancellation.
+  return (required - available) / Math.max(required, available, totalScale) > Number.EPSILON * 16;
+}
+
 /** Omission is unmeasured old evidence, rather than an observed zero. */
 export function recordingCompletedPasses(
   recording: Pick<RecordingEvidence, 'passes'>,
@@ -168,7 +178,7 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
           (item.durationSeconds - recordingPassTolerance(item.durationSeconds)),
       0,
     );
-    if (minimumHeard > result.seconds + 0.001)
+    if (exceedsMeasuredTime(minimumHeard, result.seconds))
       throw new Error('Recording completed passes exceed its measured native-1x listening time.');
     result.passes = { version: 1, method: 'native-1x', durations };
   }
@@ -332,10 +342,16 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
     result.generatedListening = validateGeneratedListeningEvidence(row.generatedListening);
   if (new Set(result.recordings.map((item) => item.url)).size !== result.recordings.length)
     throw new Error('Recording measurements must have distinct URLs.');
-  if (
-    result.recordings.reduce((sum, item) => sum + item.seconds, 0) >
-    result.measurement.seconds - (result.measurement.recallSeconds ?? 0) + 0.001
-  )
+  const recordingSeconds = result.recordings.reduce((sum, item) => sum + item.seconds, 0);
+  const hasCompletedPasses = result.recordings.some(
+    (item) => (recordingCompletedPasses(item) ?? 0) > 0,
+  );
+  // Omitted/zero-pass v1 records retain their previously accepted tolerance.
+  const exceedsListening = (seconds: number, recallSeconds: number) =>
+    hasCompletedPasses
+      ? exceedsMeasuredTime(recordingSeconds, seconds - recallSeconds, seconds)
+      : recordingSeconds > seconds - recallSeconds + 0.001;
+  if (exceedsListening(result.measurement.seconds, result.measurement.recallSeconds ?? 0))
     throw new Error('Recording and recall time cannot exceed measured practice time.');
   if (row.correction !== undefined) {
     const correction = object(row.correction, 'Time correction');
@@ -354,10 +370,7 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
     const corrected = evidenceTime(result);
     if (corrected.recallSeconds > corrected.seconds)
       throw new Error('Corrected recall time cannot exceed corrected total practice time.');
-    if (
-      corrected.seconds + 0.001 <
-      result.recordings.reduce((sum, item) => sum + item.seconds, 0) + corrected.recallSeconds
-    )
+    if (exceedsListening(corrected.seconds, corrected.recallSeconds))
       throw new Error(
         'Corrected total must include the measured recording time and corrected recall.',
       );
