@@ -360,12 +360,18 @@ exact retries and portable files. Restored Copy context stays authoritative unti
 a deliberate new round; a same-task opposite-purpose request is explained visibly.
 Worker purpose immutability and owned/retired links protect note editing and
 cross-account saves/imports. No schema/binding change is needed.
+The class/practice checkbox now controls the review explanation as well as its
+existing placement: class review remains outside the daily practice goal, and
+immutable retries retain the captured placement.
 
 See [source exclusion](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L79),
 [shared accounting](../../src/shared/plan.ts),
 [validation](../../src/shared/training.ts), and
 [actual workflow](../../e2e/review-purpose.spec.ts).
 Root typecheck, 496 tests across 37 files, build and all 49 serialized browser
-journeys pass. The independent post-commit gate and publication/deployment remain
-pending in the execution journal; no broader parity, elapsed-time recovery or
-physical-device claim is made.
+journeys passed before the implementation commit. Independent review passed five
+student workflows and 202 focused checks, and required the class-placement copy
+correction. Correction check, all 496 tests, build and all 49 browser journeys
+pass. Independent recheck and publication/deployment remain pending in the
+execution journal; no broader parity,
+elapsed-time recovery or physical-device claim is made.

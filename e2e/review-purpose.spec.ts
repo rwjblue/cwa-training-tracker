@@ -141,6 +141,25 @@ for (const mobile of [false, true]) {
     await expect(review).toContainText('Extra review.');
     await expect(review).toContainText('does not add to the assignment’s required practice');
     await expect(review.getByLabel(/^Time practiced/)).toHaveValue('1:00');
+    const classPlacement = review.getByRole('checkbox', { name: /^This was a class meeting/ });
+    if (mobile) await classPlacement.tap();
+    else {
+      await classPlacement.focus();
+      await page.keyboard.press('Space');
+    }
+    await expect(classPlacement).toBeChecked();
+    await expect(review).toContainText(
+      'This is class time, kept separate from your daily practice total.',
+    );
+    await expect(review).not.toContainText('This practice counts toward your daily total.');
+    await inspect(page, `${label}-class-placement`);
+    if (mobile) await classPlacement.tap();
+    else {
+      await classPlacement.focus();
+      await page.keyboard.press('Space');
+    }
+    await expect(classPlacement).not.toBeChecked();
+    await expect(review).toContainText('This practice counts toward your daily total.');
     for (let index = 0; index < 8; index++) {
       await page.keyboard.press(index % 2 ? 'Shift+Tab' : 'Tab');
       expect(await review.evaluate((element) => element.contains(document.activeElement))).toBe(

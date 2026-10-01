@@ -2418,8 +2418,11 @@ function SessionModal({
       </p>
       {getPracticePurpose(initial) === 'review' && (
         <p className="session-purpose">
-          <strong>Extra review.</strong> This practice counts toward your daily total. It does not
-          add to the assignment’s required practice.
+          <strong>Extra review.</strong>{' '}
+          {(frozenEntry.current?.context ?? form.context) === 'class'
+            ? 'This is class time, kept separate from your daily practice total.'
+            : 'This practice counts toward your daily total.'}{' '}
+          It does not add to the assignment’s required practice.
         </p>
       )}
       {copyAttempt && <CopyResult attempt={copyAttempt} />}

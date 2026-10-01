@@ -411,6 +411,9 @@ useful daily totals and reports include it once. History, save review and report
 evidence identify Extra review. Generic note edits retain purpose; Worker edits
 cannot remove or change it. Review follows the same owned/retired task checks,
 generation fences, persistence and portable export/import as ordinary practice.
+The save/edit explanation follows the selected class/practice placement; class
+review stays outside daily practice totals. An immutable retry describes the
+captured saved placement.
 
 A restored Copy round retains its captured task, recipe and purpose even when
 the requested launch has the same task with another purpose. Its actual context
@@ -425,9 +428,12 @@ Evidence: [purpose validation](../src/shared/training.ts),
 [captured Copy context](../src/client/copy-storage.ts),
 [Runner result](../src/client/runner-session.ts), and
 [student workflow](../e2e/review-purpose.spec.ts).
-Final typecheck, 496 tests across 37 files, production build and all 49 serialized
-browser journeys pass. The required post-commit independent review, signed
-publication and deployment remain pending in
+Typecheck, 496 tests across 37 files, production build and all 49 serialized
+browser journeys passed before the implementation commit. The independent
+post-commit review passed five student workflows and 202 focused checks, and
+required a correction to the class-placement explanation. Correction typecheck,
+all 496 tests, production build and all 49 serialized browser journeys pass.
+Independent recheck, signed publication and deployment remain pending in
 [execution progress](parity/execution-progress-2026-09-30.md).
 This does not implement the separate review recommendation rotation, recording
 pass coverage or cumulative Runner completion issues.

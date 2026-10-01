@@ -298,7 +298,7 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
 
 ## Remaining queue
 
-### Issue #5 — implementation validated; independent review pending
+### Issue #5 — review correction under validation
 
 - Refreshed the live finding-10 body, comments and dependencies after #4 closed:
   OPEN, no comments, no native blocker; body dependency #1 is accepted/closed.
@@ -329,9 +329,21 @@ reference is `3106c9b8bf20b63be069f4019467cb565cdd17ec`. No personal records wer
   No source playback fault or fix is claimed. Initial review accessibility
   checks stalled on paused test timers; the helper now resumes for Axe, then pauses
   the held-save receipt deadline for deterministic dismissal assertions.
-- Implementation commit, fresh post-commit independent review, signed publication
-  and deployment remain pending. No elapsed recovery or physical-device claim is
-  made; the mobile workflow uses Chromium touch emulation.
+- After implementation commit, fresh independent review passed 202 focused tests
+  across seven files, desktop/mobile sending workflows, actual native Runner and
+  two new native Copy recovery/retry workflows. The reviewer inspected 22 captures
+  with passing Axe and overflow checks, and found one substantive P2: the save/edit
+  explanation promised daily practice credit when review was placed in class.
+  Actual class accounting, owned task link and review purpose were correct.
+- The correction follows the selected placement and retained immutable retry
+  body. The existing student journey adds desktop Space/mobile tap checks for
+  class placement and restoration of ordinary review copy. Correction check,
+  all 496 tests across 37 files and build pass; all 49 serialized browser journeys
+  pass in 6.2 minutes. Root inspected the class-placement desktop/mobile captures;
+  Axe and overflow checks pass. A focused follow-up commit and independent
+  correction recheck are required before signed publication/deployment/closure.
+- No elapsed recovery or physical-device claim is made; the mobile workflow uses
+  Chromium touch emulation.
 - No config/binding change is needed. The original remains read only and the
   pre-existing user documents remain untouched. No issue after #5 is implemented.
 
