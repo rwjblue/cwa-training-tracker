@@ -108,9 +108,23 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   const row = today
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) });
-  const daily = page
-    .locator('section')
-    .filter({ has: page.getByText('TODAY’S INTENTION', { exact: true }) });
+  const daily = page.getByRole('region', { name: 'Today’s practice time', exact: true });
+  const expectDaily = async (time: string) => {
+    const independent = daily.getByLabel('Independent practice', { exact: true });
+    for (const [label, value] of [
+      ['Saved', time],
+      ['Current', '0:00'],
+      ['Total', time],
+    ])
+      await expect(
+        independent
+          .locator('div')
+          .filter({ hasText: new RegExp(`^${label}`) })
+          .locator('dd'),
+      ).toHaveText(value);
+    await expect(daily).toContainText('Required goal: 60 min');
+    await expect(daily).toContainText('Optional personal target: 60 min');
+  };
   await expect(row.getByRole('button', { name: 'Extra review', exact: true })).toBeVisible();
   await expect(row.getByRole('button', { name: 'Practice', exact: true })).toBeVisible();
   await activate(page, row.getByRole('button', { name: 'Extra review', exact: true }), mobile);
@@ -207,7 +221,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await page.clock.resume();
   await expect(review).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
-  await expect(daily).toContainText('1 / 60');
+  await expectDaily('1:00');
   await expect(row.getByText('Started', { exact: true })).toHaveCount(0);
   await expect(row).not.toContainText('min practiced');
   expect((await plan(context)).find((item: { id: string }) => item.id === task.id).done).toBe(
@@ -256,7 +270,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await acknowledged;
   await expect(page.getByText('Waiting to upload', { exact: true })).toHaveCount(0);
   await navigate(page, 'Today', mobile);
-  await expect(daily).toContainText('1 / 60');
+  await expectDaily('1:00');
   await expect(row).not.toContainText('min practiced');
 
   await activate(page, row.getByRole('button', { name: 'Practice', exact: true }), mobile);
@@ -275,7 +289,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await page.clock.resume();
   await expect(row.getByText('1 min practiced · 1 today', { exact: true })).toBeVisible();
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
-  await expect(daily).toContainText('2 / 60');
+  await expectDaily('2:00');
   const assigned = (await entries(context)).find(
     (entry: { metadata: { practicePurpose: string } }) =>
       entry.metadata.practicePurpose === 'assigned',
@@ -309,7 +323,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   expect((await plan(context)).find((item: { id: string }) => item.id === task.id).done).toBe(true);
   await today.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
   await expect(row.getByText('1 min practiced · 1 today', { exact: true })).toBeVisible();
-  await expect(daily).toContainText('3 / 60');
+  await expectDaily('3:00');
   await activate(page, row.getByRole('button', { name: 'Extra review', exact: true }), mobile);
   await activate(page, page.getByRole('button', { name: 'Reopen exercise', exact: true }), mobile);
   await expect(page.getByText('EXTRA REVIEW', { exact: true })).toBeVisible();
@@ -354,7 +368,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   expect((await plan(context)).find((item: { id: string }) => item.id === older.id).done).toBe(
     true,
   );
-  await expect(daily).toContainText('3.8 / 60');
+  await expectDaily('3:47');
   await expect(row.getByText('1 min practiced · 1 today', { exact: true })).toBeVisible();
 
   await navigate(page, 'Academy guide', mobile);

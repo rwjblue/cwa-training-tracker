@@ -39,6 +39,7 @@ import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
   currentRunner?: CurrentRunnerProgress;
+  today?: string;
   accountId?: string;
   profile: Profile;
   entries: PracticeSession[];
@@ -70,6 +71,7 @@ export default function TodayPlan({
   accountId,
   currentRunner,
   profile,
+  today: learnerDate,
   entries,
   tasks,
   loading = false,
@@ -88,7 +90,7 @@ export default function TodayPlan({
   const [dismissing, setDismissing] = useState(false);
   const [dismissedCount, setDismissedCount] = useState(0);
   const [saveError, setSaveError] = useState('');
-  const today = dateInTimezone(new Date(), profile.timezone);
+  const today = learnerDate ?? dateInTimezone(new Date(), profile.timezone);
   const runnerProgress = useMemo(
     () => runnerAssignmentProgress(tasks, entries, today, currentRunner),
     [tasks, entries, today, currentRunner],

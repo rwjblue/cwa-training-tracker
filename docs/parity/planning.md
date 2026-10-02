@@ -781,3 +781,48 @@ Original trainer remains read-only evidence. Chromium touch/viewport emulation
 is not physical-device or OS lock-screen verification. No attendance inference,
 elapsed reload/crash recovery, public join feed or automatic original conversion
 was added. Rest/disjoint practice windows remain separate #19.
+
+
+### Issue #19 — P05/P38 daily goal and disjoint-time delivery
+
+The exact-date assignment rule now makes required daily goal zero on rest dates,
+without discarding the existing optional personal target. Completed assignments
+still establish their original required date. Earlier unfinished and undated
+future session preparation do not silently create required dates. Saved positive
+independent dates retain their previous streak meaning; legacy estimates retain
+original provenance and accounting.
+
+Today/Overview and Studio share a readonly saved/current/combined projection from
+the existing clock and acknowledged engine owners. Stable IDs transfer once to
+saved device/server receipts, including edited zero/class receipts. Class is
+separate; recall is included within total. Retained terminal Runner results stay
+current pending review and are deduplicated against the live owner and receipt.
+Zero, invalid, future and other-day data add no credit. Guest summaries use their
+actual scoped device work, never the sample log. Scope/device/launch fencing and
+existing save/backup/lifecycle ownership remain intact.
+
+A common learner-calendar refresh handles midnight and visibility while paused.
+New blocks freeze start-zone attribution, including optional validated zone in
+existing Copy drafts/private device inventory; old omitted drafts and exact
+pending bodies remain compatible. Across midnight the retained prior-day block
+is explicitly outside today's totals. Saving keeps its date. No new goal policy
+field, backend entity, schema or binding; no unfinished elapsed reload/crash
+recovery. P15's earlier historical persistence recommendation is superseded by the
+approved scope. Existing Copy and finished-result recovery remain supported.
+
+See [implementation ledger](../trainer-parity.md#issue-19--requiredrest-goals-and-shared-daily-practice-time),
+[shared summary](../../src/shared/practice-time.ts),
+[changed manual journey](../../e2e/practice-time.spec.ts), and native assertions in
+existing Copy/Runner journeys. Initial browser setup failures and final gates are
+retained in ignored progress notes; independent acceptance/production evidence
+will be appended after the required post-commit review. Physical-device behavior
+is unverified, original evidence remains read-only, and no push is permitted.
+
+
+Issue #19 implementation gate: check, 967 fast tests/53 files and build pass;
+all 65 serialized browser journeys pass in 13.4 minutes. Focused summary/storage
+83 cases and actual native Copy/Runner checks pass, with eight empty settled
+Axe reports across the changed daily-summary states. The obsolete goal-ring
+selector was corrected to exact shared totals; its original failure trace is
+retained and the final complete gate is clean. Post-commit independent review
+and production delivery remain pending; see the canonical validation ledger.

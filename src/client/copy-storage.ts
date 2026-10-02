@@ -8,6 +8,8 @@ import { freezePracticeSaveOrigin } from './practice-autosave';
 
 export interface CopyDraft {
   attempt: CopyAttempt;
+  /** Captured start-day zone. Old drafts retain their existing mount-time fallback. */
+  timezone?: string;
   answer: string;
   position: number;
   replayCount: number;

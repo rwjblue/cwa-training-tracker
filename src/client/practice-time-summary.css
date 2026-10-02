@@ -1,0 +1,70 @@
+.practice-time-summary {
+  padding: 1.15rem;
+}
+.practice-time-summary h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.35rem;
+}
+.practice-time-summary p {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  margin: 0.6rem 0;
+  overflow-wrap: anywhere;
+}
+.practice-time-date {
+  color: var(--muted);
+}
+.practice-time-totals,
+.practice-time-class {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 1rem 0;
+}
+.practice-time-totals div,
+.practice-time-class div {
+  min-width: 0;
+}
+.practice-time-summary dt {
+  font-size: 0.78rem;
+}
+.practice-time-summary dd {
+  margin: 0.25rem 0 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.35rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.practice-time-class dd {
+  font-size: 1rem;
+}
+.practice-time-goal {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+.practice-time-hint {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+.studio-time-summary {
+  margin: 1rem 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.daily-card:has(.practice-time-summary) {
+  display: block;
+  padding: 0.5rem;
+  text-align: left;
+}
+.daily-card:has(.practice-time-summary) > button {
+  margin: 0 1rem 1rem;
+  width: calc(100% - 2rem);
+}
+.practice-time-summary .practice-time-date {
+  color: #55624f;
+}
+.practice-time-hint summary {
+  font-size: 0.82rem;
+  cursor: pointer;
+}

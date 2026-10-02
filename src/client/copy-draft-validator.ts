@@ -1,6 +1,6 @@
 import { defaultCopyRecipe, validateCopyAttempt } from '../shared/copy-practice';
 import { validatePlannedTask } from '../shared/plan';
-import { validatePracticeSession } from '../shared/training';
+import { dateInTimezone, validatePracticeSession } from '../shared/training';
 import type { CopyDraft } from './copy-storage';
 
 /** File import must reject malformed data; recovery loading may catch this error. */
@@ -10,6 +10,7 @@ export function validateCopyDraft(value: unknown): CopyDraft {
   const input = value as Record<string, unknown>;
   const allowed = [
     'attempt',
+    'timezone',
     'answer',
     'position',
     'replayCount',
@@ -79,6 +80,15 @@ export function validateCopyDraft(value: unknown): CopyDraft {
         'Copy answer',
       );
   const attempt = validateCopyAttempt(input.attempt);
+  if (input.timezone !== undefined) {
+    if (typeof input.timezone !== 'string' || !input.timezone || input.timezone.length > 100)
+      throw new Error('The copy draft has an invalid start timezone.');
+    try {
+      dateInTimezone(attempt.createdAt, input.timezone);
+    } catch {
+      throw new Error('The copy draft has an invalid start timezone.');
+    }
+  }
   for (const [key, maximum] of [
     ['answer', 2000],
     ['notes', 10000],

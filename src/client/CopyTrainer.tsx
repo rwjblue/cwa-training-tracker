@@ -1,3 +1,5 @@
+import { usePracticeTimeProjection } from './usePracticeTimeProjection';
+import type { CurrentPracticeTime } from '../shared/practice-time';
 import {
   forwardRef,
   useEffect,
@@ -69,6 +71,7 @@ interface Props {
   requiresCharacterSelection?: boolean;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onSaved?: (entry: PracticeSession) => void;
+  onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   savedEntry?: PracticeSession;
   onUnsavedChange?: (unsaved: boolean) => void;
   active?: boolean;
@@ -93,6 +96,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
     requiresCharacterSelection,
     onLog,
     onSaved,
+    onCurrentPracticeChange,
     savedEntry,
     onUnsavedChange,
     active: studioActive = true,
@@ -114,6 +118,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
         }
       : undefined,
   );
+  const [legacyTimezone] = useState(timezone);
   const draftRef = useRef(draft);
   const [recipe, setRecipe] = useState(
     initial?.attempt.recipe ??
@@ -453,6 +458,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
       });
       const next: CopyDraft = {
         attempt,
+        timezone,
         answer: '',
         position: 0,
         replayCount: 0,
@@ -589,7 +595,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
         current.pending ??
         validatePracticeSession({
           ...fields,
-          date: dateInTimezone(current.attempt.createdAt, timezone),
+          date: dateInTimezone(current.attempt.createdAt, current.timezone ?? legacyTimezone),
           kind: current.task?.kind ?? 'icr',
           lesson: current.task?.lesson,
           notes: [current.task?.title, current.notes].filter(Boolean).join('\n'),
@@ -652,6 +658,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
               format: 'cwa-copy-result',
               ...current.attempt,
               notes: saveReceipt?.entry.notes ?? current.notes,
+              ...(current.timezone ? { practiceTimezone: current.timezone } : {}),
               ...(current.purpose ? { practicePurpose: current.purpose } : {}),
               ...(current.task
                 ? {
@@ -718,6 +725,21 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
   const assignmentOption = assignmentIndex < 0 ? 'custom' : String(assignmentIndex);
   const discrete = currentRecipe.mode === 'words' || currentRecipe.mode === 'callsigns';
   const measured = clock.current.snapshot(performance.now());
+  const currentTime =
+    draft && !saved && !blocked && currentDevice()
+      ? {
+          id: `copy:${draft.attempt.id}`,
+          date:
+            draft.pending?.date ??
+            dateInTimezone(draft.attempt.createdAt, draft.timezone ?? legacyTimezone),
+          seconds:
+            draft.pending?.minutes !== undefined
+              ? draft.pending.minutes * 60
+              : measured.audioSeconds + measured.answerSeconds + measured.reviewSeconds,
+          classTime: draft.pending?.context === 'class',
+        }
+      : undefined;
+  usePracticeTimeProjection(currentTime, !playing && !measured.thinking, onCurrentPracticeChange);
   const speeds = attempt ? currentCopySpeeds(attempt) : recipe;
   const selectingCharacters =
     requiresCharacterSelection &&

@@ -1,3 +1,5 @@
+import type { CurrentPracticeTime } from '../shared/practice-time';
+import { usePracticeTimeProjection } from './usePracticeTimeProjection';
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
 import { officialRecordingIdentity } from '../shared/recordings';
 import { listeningGuidance } from '../shared/listening-guidance';
@@ -15,7 +17,7 @@ import {
   Shuffle,
   Square,
 } from 'lucide-react';
-import type { PracticeSession } from '../shared/training';
+import { dateInTimezone, type PracticeSession } from '../shared/training';
 import {
   GeneratedListeningCollector,
   type GeneratedListeningSummary,
@@ -112,7 +114,11 @@ export default function PracticeStudio({
   onBeforeLeaveChange,
   onBeforeInspectChange,
   onRunnerProgressChange,
+  onCurrentPracticeChange,
+  practiceSummary,
 }: {
+  onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
+  practiceSummary?: React.ReactNode;
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
   savedOwnerId?: string;
@@ -282,11 +288,28 @@ export default function PracticeStudio({
   }, []);
   const seconds = Math.floor(timer.seconds);
   const running = timer.running;
+
   const [scratchpad, setScratchpad] = useState('');
   const notesContext =
     launch?.task?.id ?? (assigned ? (launch?.id ?? 'assigned') : `public:${tool}`);
   const [notesRemembered, setNotesRemembered] = useState(true);
-  const sessionIdentity = useRef<{ id: string; createdAt: string } | undefined>(undefined);
+  const sessionIdentity = useRef<{ id: string; createdAt: string; timezone: string } | undefined>(
+    undefined,
+  );
+  const currentTime =
+    !isCopy && !isRunner && currentDevice() && sessionIdentity.current
+      ? {
+          id: sessionIdentity.current.id,
+          date: dateInTimezone(sessionIdentity.current.createdAt, sessionIdentity.current.timezone),
+          seconds: timer.seconds,
+          recallSeconds: timer.recallSeconds,
+        }
+      : undefined;
+  usePracticeTimeProjection(
+    currentTime,
+    !timer.running,
+    isCopy || isRunner ? undefined : onCurrentPracticeChange,
+  );
   const savedPassProgress = launch?.task
     ? savedTaskProgress(
         tasks,
@@ -329,6 +352,7 @@ export default function PracticeStudio({
     (sessionIdentity.current ??= {
       id: `studio:${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
+      timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
   const changeScratchpad = (value: string) => {
     if (!currentDevice()) return;
@@ -530,7 +554,7 @@ export default function PracticeStudio({
     generatedListening: generatedListening.current.snapshot(),
     recordingMarks: taskRecordingMarks,
     scratchpad,
-    timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone: identity().timezone,
     launch,
   });
   const captureSession = (minimumSeconds = STUDIO_AUTOSAVE_SECONDS) =>
@@ -835,7 +859,6 @@ export default function PracticeStudio({
   };
   const play = async () => {
     if (!canPractice()) return;
-    identity();
     if (playing || recordingPending) {
       stopPlayback();
       return;
@@ -1117,6 +1140,7 @@ export default function PracticeStudio({
           </button>
         </div>
       )}
+      <div className="studio-time-summary">{practiceSummary}</div>
       {isCopy ? (
         <CopyTrainer
           ref={copyTrainer}
@@ -1132,6 +1156,7 @@ export default function PracticeStudio({
             activity?.type === 'copy' ? activity.requiresCharacterSelection : undefined
           }
           onLog={onLog}
+          onCurrentPracticeChange={onCurrentPracticeChange}
           onSaved={onSaved}
           savedEntry={savedEntry}
           onUnsavedChange={setCopyUnsaved}
@@ -1142,6 +1167,7 @@ export default function PracticeStudio({
           entries={entries}
           tasks={tasks}
           today={today}
+          onCurrentPracticeChange={onCurrentPracticeChange}
           onProgressChange={onRunnerProgressChange}
           accountId={accountId}
           active={active}

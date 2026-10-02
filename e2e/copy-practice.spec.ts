@@ -195,6 +195,21 @@ test.describe('guest code-group comparison', () => {
     expect(score.distance).toBe(3);
     expect(score.accuracy).toBeGreaterThan(scoreCopyText(target, answer).accuracy);
     await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill(answer);
+    const practiceTime = page.getByRole('region', { name: 'Today’s practice time', exact: true });
+    await expect(
+      practiceTime
+        .getByLabel('Independent practice', { exact: true })
+        .locator('div')
+        .filter({ hasText: /^Current/ })
+        .locator('dd'),
+    ).not.toHaveText('0:00');
+    await expect(
+      practiceTime
+        .getByLabel('Independent practice', { exact: true })
+        .locator('div')
+        .filter({ hasText: /^Saved/ })
+        .locator('dd'),
+    ).toHaveText('0:00');
     await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
     await page.reload();
     await expect(page.getByText(/Recovered on this device/)).toBeVisible();
@@ -203,6 +218,21 @@ test.describe('guest code-group comparison', () => {
     expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
     await page.getByRole('button', { name: 'Check copy', exact: true }).tap();
     await expect(page.locator('.copy-result-stats')).toContainText(`${score.accuracy}%`);
+    await expect(
+      practiceTime
+        .getByLabel('Independent practice', { exact: true })
+        .locator('div')
+        .filter({ hasText: /^Current/ })
+        .locator('dd'),
+    ).toHaveText('0:00');
+    await expect(
+      practiceTime
+        .getByLabel('Independent practice', { exact: true })
+        .locator('div')
+        .filter({ hasText: /^Saved/ })
+        .locator('dd'),
+    ).not.toHaveText('0:00');
+
     await expect(
       page.getByRole('group', { name: `Group ${groupCount}`, exact: true }),
     ).toContainText('Extra T.');

@@ -88,6 +88,34 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+describe('captured copy start timezone compatibility', () => {
+  it('validates captured zones and keeps old omitted zones without migration', () => {
+    const old = draft();
+    expect(validateCopyDraft(old)).toEqual(old);
+    const captured = { ...old, timezone: 'Pacific/Honolulu' };
+    expect(validateCopyDraft(captured)).toEqual(captured);
+    for (const timezone of ['', 'Not/AZone', 4, null])
+      expect(() => validateCopyDraft({ ...old, timezone })).toThrow('start timezone');
+  });
+  it('carries the captured start zone through private device inventory', () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      get length() {
+        return values.size;
+      },
+      key: (index: number) => [...values.keys()][index] ?? null,
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    });
+    const captured = { ...draft('zone'), timezone: 'Asia/Kathmandu' };
+    expect(saveCopyDraft('guest', captured)).toBe(true);
+    const backup = captureDeviceBackup('guest', 'Synthetic learner');
+    const checked = validateDeviceBackup(JSON.stringify(backup), 'guest');
+    expect(checked.stores.copyDraft?.timezone).toBe('Asia/Kathmandu');
+  });
+});
+
 describe('native copy recovery', () => {
   it('distinguishes a recovered same-task opposite purpose without recasting old ordinary drafts', () => {
     const retained = { ...draft(), task: task(), purpose: 'review' as const };

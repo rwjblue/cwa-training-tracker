@@ -1,7 +1,24 @@
+import {
+  dailyPracticeGoals,
+  savedPracticeTime,
+  practiceTimeWithCurrent,
+  currentPracticeFromResult,
+  type CurrentPracticeTime,
+} from '../shared/practice-time';
+import PracticeTimeSummary from './PracticeTimeSummary';
+import { useLearnerDate } from './useLearnerDate';
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
 import ClassScheduleFields from './ClassScheduleFields';
 import ClassMeetingCard from './ClassMeetingCard';
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import type {
@@ -17,7 +34,6 @@ import {
   CalendarDays,
   Check,
   Clock3,
-  Coffee,
   Download,
   ExternalLink,
   Fingerprint,
@@ -290,6 +306,12 @@ function App() {
     ownerId: string;
     current?: CurrentRunnerProgress;
   }>();
+  const [currentPractice, setCurrentPractice] = useState<{
+    scope: string;
+    token: string;
+    ownerId: string;
+    current?: CurrentPracticeTime;
+  }>();
   const currentLaunch = useRef(practiceLaunch);
   currentLaunch.current = practiceLaunch;
   const nextRunnerFocus = useRef<{ ownerId: string; scope: string; token: string } | undefined>(
@@ -334,6 +356,7 @@ function App() {
     ...DEFAULT_PROFILE,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   };
+  const today = useLearnerDate(profile.timezone);
   const profileAccountId = account.state?.accountId;
   const tasks = account.state?.plan ?? [];
   const latestTasks = useRef(tasks);
@@ -369,6 +392,7 @@ function App() {
     currentLaunch.current = launch;
     setPracticeLaunch(launch);
     setCurrentRunnerProgress(undefined);
+    setCurrentPractice(undefined);
     setSavedOwnerId(undefined);
     setCourseInspection(undefined);
     setNavigationBusy(false);
@@ -858,16 +882,56 @@ function App() {
     document.addEventListener('keydown', dismiss);
     return () => document.removeEventListener('keydown', dismiss);
   }, [menuOpen]);
-  const visibleEntries = user
-    ? [
-        ...entries,
-        ...localEntries.filter((local) => !entries.some((entry) => entry.id === local.id)),
-      ]
-    : localEntries.length
-      ? localEntries
-      : demo && !runnerResults.length
-        ? sampleEntries
-        : [];
+  const visibleEntries = useMemo(
+    () =>
+      user
+        ? [
+            ...entries,
+            ...localEntries.filter((local) => !entries.some((entry) => entry.id === local.id)),
+          ]
+        : localEntries.length
+          ? localEntries
+          : demo && !runnerResults.length
+            ? sampleEntries
+            : [],
+    [user?.id, entries, localEntries, demo, runnerResults.length],
+  );
+  const onCurrentPracticeChange = useCallback(
+    (current: CurrentPracticeTime | undefined) => {
+      const ownerId = practiceLaunch?.id;
+      if (
+        !ownerId ||
+        currentLaunch.current?.id !== ownerId ||
+        (activeAccount.current ?? 'guest') !== scope ||
+        !isDeviceScopeCurrent(scope, deviceToken)
+      )
+        return;
+      setCurrentPractice({ scope, token: deviceToken, ownerId, current });
+    },
+    [scope, deviceToken, practiceLaunch?.id],
+  );
+  const ownedCurrent =
+    currentPractice?.scope === scope &&
+    currentPractice.token === deviceToken &&
+    currentPractice.ownerId === practiceLaunch?.id
+      ? currentPractice.current
+      : undefined;
+  const realEntries = user ? visibleEntries : localEntries;
+  const savedTime = useMemo(() => savedPracticeTime(realEntries, today), [realEntries, today]);
+  const practiceTime = practiceTimeWithCurrent(savedTime, [
+    ...(ownedCurrent ? [ownedCurrent] : []),
+    ...runnerResults.map((result) => currentPracticeFromResult(result.entry)),
+  ]);
+  const goals = useMemo(() => dailyPracticeGoals(profile, tasks, today), [profile, tasks, today]);
+  const practiceSummary = (
+    <PracticeTimeSummary
+      summary={practiceTime}
+      goals={goals}
+      timezone={profile.timezone}
+      guest={!user}
+      current={ownedCurrent}
+    />
+  );
   const signedIn = async (newUser: User) => {
     setAuthOpen(false);
     setAppError('');
@@ -1231,6 +1295,9 @@ function App() {
                 (user ? (
                   <Overview
                     entries={visibleEntries}
+                    today={today}
+                    practiceTime={practiceTime.practice.totalSeconds / 60}
+                    practiceSummary={practiceSummary}
                     profile={profile}
                     user={user}
                     demo={!user && demo}
@@ -1249,6 +1316,7 @@ function App() {
                               : undefined
                           }
                           profile={profile}
+                          today={today}
                           entries={visibleEntries}
                           tasks={tasks}
                           loading={account.loading}
@@ -1282,11 +1350,16 @@ function App() {
                     }
                   />
                 ) : (
-                  <WelcomePanel
-                    onPractice={(tool) => openPractice({ tool })}
-                    onSignIn={() => setAuthOpen(true)}
-                    onGuide={() => navigate('course')}
-                  />
+                  <>
+                    {(practiceLaunch || localEntries.length > 0 || runnerResults.length > 0) && (
+                      <div className="card studio-time-summary">{practiceSummary}</div>
+                    )}
+                    <WelcomePanel
+                      onPractice={(tool) => openPractice({ tool })}
+                      onSignIn={() => setAuthOpen(true)}
+                      onGuide={() => navigate('course')}
+                    />
+                  </>
                 ))}
               {practiceLaunch && (
                 <section
@@ -1331,6 +1404,8 @@ function App() {
                       onLog={(initial?: Partial<PracticeSession>) =>
                         openLog(initial, practiceLaunch.id)
                       }
+                      onCurrentPracticeChange={onCurrentPracticeChange}
+                      practiceSummary={practiceSummary}
                       onAutoSave={autoSave}
                       onTaskCompletion={(task: PlannedTask, done: boolean) =>
                         updateTaskStatus([task], { done })
@@ -1377,7 +1452,7 @@ function App() {
                       timezone={profile.timezone}
                       entries={visibleEntries}
                       tasks={tasks}
-                      today={dateInTimezone(new Date(), profile.timezone)}
+                      today={today}
                       onSaved={(entry: PracticeSession) => {
                         acceptSavedPractice(entry, practiceLaunch.id);
                         studioUnsaved.current = false;
@@ -1653,7 +1728,13 @@ function Overview({
   openLog,
   onPractice,
   todayPlan,
+  today,
+  practiceTime,
+  practiceSummary,
 }: {
+  today: string;
+  practiceTime: number;
+  practiceSummary: React.ReactNode;
   todayPlan?: React.ReactNode;
   entries: PracticeSession[];
   profile: Profile;
@@ -1663,7 +1744,6 @@ function Overview({
   openLog: (initial?: Partial<PracticeSession>) => void;
   onPractice: () => void;
 }) {
-  const today = dateInTimezone(new Date(), profile.timezone);
   const practiceEntries = entries.filter(
     (e) => e.context !== 'class' && e.date <= today && e.minutes > 0,
   );
@@ -1671,7 +1751,7 @@ function Overview({
   const days = Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
   const weeklyEntries = practiceEntries.filter((e) => days.includes(e.date));
   const weekMinutes = weeklyEntries.reduce((n, e) => n + e.minutes, 0);
-  const dayMinutes = summary.todayMinutes;
+  const dayMinutes = practiceTime;
   const dailyGoal = profile.dailyGoalMinutes || 30;
   const activeDays = new Set(weeklyEntries.map((e) => e.date)).size;
   const speeds = weeklyEntries
@@ -1755,45 +1835,14 @@ function Overview({
           </section>
         )}
         <section className="daily-card">
-          <div className="card-top">
-            <span className="eyebrow">TODAY’S INTENTION</span>
-            <Coffee size={18} />
-          </div>
-          <div
-            className="goal-ring"
-            style={
-              {
-                '--progress': `${Math.min(100, (dayMinutes / dailyGoal) * 100)}%`,
-              } as React.CSSProperties
-            }
-          >
-            <div>
-              <strong>
-                {Math.round(dayMinutes * 10) / 10}
-                <span> / {dailyGoal}</span>
-              </strong>
-              <span>MINUTES PRACTICED</span>
-            </div>
-          </div>
-          <h3>
-            {dayMinutes >= dailyGoal
-              ? 'A good day’s practice.'
-              : dayMinutes
-                ? 'You’re finding your rhythm.'
-                : 'Make a little room for CW.'}
-          </h3>
-          <p>
-            {dayMinutes >= dailyGoal
-              ? 'Goal met. Every minute helps your ear grow.'
-              : `${Math.round(Math.max(0, dailyGoal - dayMinutes) * 10) / 10} more minutes toward your daily goal.`}
-          </p>
+          {practiceSummary}
           {user && (
             <button className="button dark daily-practice-button" onClick={onPractice}>
               <Play size={14} /> Practice now
             </button>
           )}
           <button className="text-button" onClick={() => (user ? navigate('settings') : openLog())}>
-            {user ? 'Change daily goal' : 'Set your own pace'} <ArrowRight size={14} />
+            {user ? 'Change personal target' : 'Set your own pace'} <ArrowRight size={14} />
           </button>
         </section>
       </div>
@@ -1844,7 +1893,7 @@ function Overview({
               <i className="legend-dot green-dot" /> Practice time
             </span>
             <span>
-              <i className="legend-dash" /> Daily goal · {dailyGoal} min
+              <i className="legend-dash" /> Personal target · {dailyGoal} min
             </span>
           </div>
           <div className="practice-chart">
@@ -3450,7 +3499,7 @@ function Account({
                   </select>
                 </label>
                 <label className="field">
-                  Daily practice goal <span className="label-hint">minutes</span>
+                  Daily practice goal <span className="label-hint">personal target · minutes</span>
                   <input
                     type="number"
                     min="5"
@@ -3462,6 +3511,11 @@ function Account({
                     }
                   />
                 </label>
+                <p className="field-hint">
+                  Your personal target is optional on rest days. Exercises dated today use this
+                  amount as the required daily goal; completing them does not change that day’s
+                  goal.
+                </p>
                 <label className="field">
                   First class date <span className="label-hint">optional</span>
                   <input

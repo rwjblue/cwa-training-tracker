@@ -1,3 +1,5 @@
+import { usePracticeTimeProjection } from './usePracticeTimeProjection';
+import type { CurrentPracticeTime } from '../shared/practice-time';
 import {
   forwardRef,
   useEffect,
@@ -74,6 +76,7 @@ interface Props {
   tasks?: readonly PlannedTask[];
   today?: string;
   onProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
+  onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onUnsavedChange: (unsaved: boolean) => void;
 }
@@ -93,6 +96,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     tasks = [],
     today,
     onProgressChange,
+    onCurrentPracticeChange,
     onLog,
     onUnsavedChange,
   },
@@ -152,6 +156,26 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
       // Unknown retained classification must not imply required assignment credit.
     }
   }
+  let currentTime: CurrentPracticeTime | undefined;
+  if (run.runStartedAt && !saved && isDeviceScopeCurrent(scope, deviceToken)) {
+    let currentContext = finished.current?.context ?? attribution.context;
+    if (ended) {
+      try {
+        currentContext =
+          readRunnerReview(scope, `runner:${run.runId}`, deviceToken)?.entry.context ??
+          currentContext;
+      } catch {
+        /* Retention failure keeps the acknowledged in-memory result and its original context. */
+      }
+    }
+    currentTime = {
+      id: `runner:${run.runId}`,
+      date: dateInTimezone(run.runStartedAt, start.current?.timezone ?? timezoneRef.current),
+      seconds: run.elapsedSeconds,
+      classTime: currentContext === 'class',
+    };
+  }
+  usePracticeTimeProjection(currentTime, run.status !== 'running', onCurrentPracticeChange);
   const progressDate = today ?? dateInTimezone(new Date(), timezoneRef.current);
   const savedProgress = useMemo(
     () => runnerAssignmentProgress(tasks, entries, progressDate),

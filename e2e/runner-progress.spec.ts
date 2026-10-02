@@ -43,7 +43,37 @@ for (const mobile of [false, true]) {
     const frame = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
     await frame.getByRole('button', { name: /Run$/ }).click();
     await expect.poll(() => frame.locator('#clock').textContent()).not.toBe('00:00:00');
+    const dailyTime = page.getByRole('region', { name: 'Today’s practice time', exact: true });
+    await expect(
+      dailyTime
+        .getByLabel('Independent practice', { exact: true })
+        .locator('div')
+        .filter({ hasText: /^Current/ })
+        .locator('dd'),
+    ).not.toHaveText('0:00');
     await activate(page, page.getByRole('button', { name: 'Stop run', exact: true }), mobile);
+    await expect(
+      page.getByRole('button', { name: 'Review & save run', exact: true }),
+    ).toBeEnabled();
+    const terminal = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((key) =>
+        key.startsWith('cwa:runner:result:v1:guest:'),
+      );
+      return key ? JSON.parse(localStorage.getItem(key)!).entry : undefined;
+    });
+    await expect
+      .poll(async () =>
+        dailyTime
+          .getByLabel('Independent practice', { exact: true })
+          .locator('div')
+          .filter({ hasText: /^Total/ })
+          .locator('dd')
+          .textContent(),
+      )
+      .toBe(
+        `${Math.floor(Math.round(terminal.minutes * 60) / 60)}:${String(Math.round(terminal.minutes * 60) % 60).padStart(2, '0')}`,
+      );
+
     await expect(page.getByRole('region', { name: 'Runner assignment progress' })).toHaveCount(0);
     expect((await context.request.get('/api/entries')).status()).toBe(401);
     await signIn(page);

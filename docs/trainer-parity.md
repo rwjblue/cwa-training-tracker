@@ -46,6 +46,18 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   character and effective speeds using exact catalog sources and
   [documented timing measurements](recording-speeds.md).
   [Curriculum](../src/shared/curriculum.ts), [daily plan](../src/shared/plan.ts).
+- **Daily time and goals:** Required goals use the existing daily target on
+  dates with assignments, including completed work, and are zero on rest dates.
+  The same optional personal target remains visible every day. Today/Overview
+  and Studio share saved/current/combined independent time and separate class
+  time. Recall stays inside total. Durable local saves transfer stable identities
+  once; upload acknowledgements do not add them again. Studio, Copy and Runner
+  publish readonly observations from their existing measured owners. One learner
+  calendar refresh switches all summaries together; retained blocks keep the day
+  and timezone captured at start. Guest totals contain actual device work only.
+  [Summary](../src/shared/practice-time.ts),
+  [shared display](../src/client/PracticeTimeSummary.tsx). Review and production
+  acceptance are recorded in the #19 ledger below when complete.
 - **Native copy practice:** Code Groups, Word Copy, Callsign Copy and Plain Text
   run in the site, including all 20 Intermediate ICR assignments and 98
   Fundamental blocks. Typed answers, grading, actual time, private evidence,
@@ -164,7 +176,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | ID / priority                                       | Current gap and concrete next behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Evidence                                                                                                                                                                                                                                                                                                                                                                                              |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **R1 · P1** Recoverable practice beyond native copy       | Issue #6 implements one in-memory owner across in-app inspection, preserving content, preferences, measured time and acknowledged results. Finished Copy, listening, manual and Runner sessions retain durable upload queues; issues #2–#4 cover mutable outboxes, selected-scope device backup and destructive lifecycle fencing. Remaining accepted recovery work includes durable report drafts and private material ordering. Elapsed-time reload/crash recovery is excluded. Issue #6 is independently accepted, published and deployed. | Personal [device state](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21); [planning P15–P17](parity/planning.md#instructor-materials-and-records); [current navigation](../src/client/practice-navigation.ts).                                                                                                                |
-| **R2 · P1/P2** Daily guidance                       | Offer resume/next eligible exercise; rotate familiar review without assignment credit; show the separate optional ten-minute word-listening suggestion. Earlier reminders now support dismissal and restoration independently of completion. Issue #18 adds private timed meetings, exceptions and Join class; class logs remain separate from independent credit. Rest-day goals and general saved/current-time guidance remain later issues. | Personal [planner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L270); [planning P03–P11/P38](parity/planning.md#curriculum-and-the-daily-queue). |
+| **R2 · P1/P2** Daily guidance                       | Offer resume/next eligible exercise; rotate familiar review without assignment credit; show the separate optional ten-minute word-listening suggestion. Earlier reminders now support dismissal and restoration independently of completion. Issue #18 adds private timed meetings, exceptions and Join class; class logs remain separate from independent credit. Issue #19 adds exact-date required/rest goals, a preserved optional personal target, and shared saved/current/combined time from the existing owners. Resume/next, review rotation and optional daily listening remain later issues. | Personal [planner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L270); [planning P03–P11/P38](parity/planning.md#curriculum-and-the-daily-queue). |
 | **R3 · P1** Remaining typed results                 | Native copy saves validated attempts. Issue #1 adds validated Runner and timer/recording evidence, immutable measurements, explicit corrections, history/report details and account plan checks. Add performance ratings and structured CWT heard/worked observations for other practice. Imported LCWO history remains readable with source identity and overlap-safe estimated group minutes; optional per-account live LCWO linking remains accepted issue #35, separate from native practice.                                                                                                                                                                  | Personal [result fields](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/practice-results-form.ts#L3), [LCWO accounting](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/lcwo-practice.ts#L8); [planning P14/P18/P20–P24](parity/planning.md).                                      |
 | **R4 · P1** Advisor reports                         | Keep the generic printable report, then add configurable advisor fields, per-class windows, editable durable drafts, evidence-backed suggestions, refresh preserving edits, exact prefilled-form handoff, and confirmed submitted snapshots. Saved imported report snapshots are readable with original answers/evidence in Settings. New report authoring must use actual individual verified Runner results and practiced recording speeds; do not sum scores or infer learned words from exposure.                                          | Personal [report derivation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L196), [handoff](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L282); [planning P27–P31](parity/planning.md#reports-and-evidence).                                         |
 | **R5 · P1** Sending trainer                         | The native scales reader, prescribed sections, PDF reference and timer are present, but capture is absent. Port optional adapter setup/test, keyed MIDI or focus-scoped keyboard input, raw edge timing, cautious decode/target comparison, actual-timing replay, keep/discard takes, and local retention. Keep ordinary key practice available without capture.                                                                                                                                                                                                         | Personal [active panel](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/sending-panel.ts#L68); [sending subsystem](parity/listening.md#sending-practice--large-missing-subsystem-p1).                                                                                                                                                        |
@@ -1648,3 +1660,88 @@ Original trainer remains read-only evidence. Chromium touch/viewport emulation
 is not physical-device or OS lock-screen verification. No attendance inference,
 elapsed reload/crash recovery, public join feed or automatic original conversion
 was added. Rest/disjoint practice windows remain separate #19.
+
+
+### Issue #19 — required/rest goals and shared daily practice time
+
+Fresh issue #19 is OPEN with no comments or native blockers; its body depends on
+completed, previously verified #1. Pinned original plan.ts:278 and
+practice-time.ts:35 at 3106c9b8 were rechecked as read-only evidence. Required
+quota follows assignment presence on the exact date, independent of completion.
+Companion uses its validated existing dailyGoalMinutes on such dates, and zero
+otherwise. Future undated session preparation and earlier work do not invent a
+required date. The unchanged amount remains the optional personal target every
+day; settings and printable reports explain that distinction. Streaks and weekly
+charts continue to describe saved positive independent practice, not required
+quota attainment. Legacy estimates retain their existing explicitly estimated
+meaning and stable identity.
+
+A shared pure summary validates saved evidence, gives server receipts precedence
+over local receipts, and deduplicates saved/current/retained versions by ID.
+Local queued results already own saved time; later acknowledgement adds nothing.
+An edited zero or class receipt also retires its current version. Class has its
+own saved/current/total and cannot meet independent goals. Recall, including
+validated corrections and imported subtotals, stays a subset of total rather
+than an extra duration. Zero, malformed and future/other-day observations add no
+credit. Retained finished Runner results await review in Current until saved.
+
+App owns the scope/device/launch-fenced readonly projection. Existing Studio,
+CopyClock and acknowledged Runner owners supply measured observations, published
+once per readable second and with settled precision; no summary starts a clock.
+Validated saved summaries and plan policy are memoized. Native media/coverage,
+recall integrity, engine bridge, task completion and exact save queues remain
+with their existing owners. Runner assignment progress keeps its separate
+required-placement/purpose contract; this daily summary includes ordinary extra
+practice without granting required task credit.
+
+One app learner-date refresh, including visibility return, feeds Today, Overview
+and Studio even when a block is paused. Ordinary blocks freeze their start zone;
+new Copy drafts capture an optional validated start timezone in existing private
+device inventory. Old drafts omit it unchanged and keep their existing mount-time
+fallback; frozen pending bodies still win. Accepted Runner start attribution is
+reused. Across local midnight, today resets while a retained block explicitly
+shows its start date outside today's totals. A save preserves that same date.
+No profile goal policy, database schema or Worker binding changes are needed.
+Existing account validation, private history, export/import, report provenance,
+queue/lifecycle fences and strict Copy device backups remain the write boundaries.
+Guest practice needs no account and its summary never uses demonstration entries.
+
+Evidence: [domain and receipt policy](../src/shared/practice-time.ts),
+[summary boundary tests](../src/shared/practice-time.test.ts),
+[clock projections](../src/client/usePracticeTimeProjection.ts),
+[calendar refresh](../src/client/useLearnerDate.ts),
+[manual save/midnight journey](../e2e/practice-time.spec.ts), and added real native
+Copy/Runner assertions in their existing representative journeys. No duplicate
+full export/import/report cycle was added. Independent review/deployment gate is
+pending at implementation documentation time; validation results follow below.
+
+No elapsed reload/crash recovery, running engine restoration, new recognition,
+restricted source redistribution, personal data or original-site mutation.
+Existing Copy drafts and completed-result queues keep their established recovery.
+Mobile Chromium viewport/touch checks cannot establish physical-device or locked
+OS behavior. No push is permitted; source publication and issue closure remain
+pending even after local implementation acceptance and production deployment.
+
+
+### Issue #19 — implementation validation before independent review
+
+Required check, all 967 fast tests in 53 files, and production build pass.
+The final serialized browser gate passes all 65 journeys in 13.4 minutes.
+The earlier full run passed 64 with one obsolete goal-ring selector; its retained
+trace showed the correct new summary. That journey now asserts exact saved,
+current and total seconds plus required/personal goals after task completion.
+Its focused correction passes in 14.5 seconds and the clean full gate includes it.
+
+Fifteen new pure summary cases cover stable receipts, stale owners, terminal
+identity, zero/class edits, recall corrections, invalid/future data, legacy
+estimates, three start-day zones and exact assignment presence. Two Copy storage
+cases cover optional captured-zone compatibility and strict device backup.
+Focused 83 tests in four files pass. The mixed desktop-keyboard/mobile-touch
+manual journey verifies cancel, a 503 local save, unchanged retry, two stable
+records and Honolulu midnight attribution. Eight settled Axe reports are empty;
+both midnight screenshots were inspected. Three existing native Copy/Runner
+journeys verify actual current time and terminal/receipt deduplication using
+real audio and AudioWorklet clocks. No native time was accelerated or fabricated.
+
+Binding/config types are unchanged. Independent review follows the implementation
+commit; acceptance and production delivery are not yet claimed.

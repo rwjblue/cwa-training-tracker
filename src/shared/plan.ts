@@ -605,7 +605,7 @@ export function weeklyReport(
     `${fromDate} through ${toDate} (${profile.timezone})`,
     '',
     `${minutes(total)} independent-practice minutes across ${new Set(practice.filter((entry) => entry.minutes > 0).map((entry) => entry.date)).size} days.`,
-    `${profile.dailyGoalMinutes} minutes is the daily target. Class time is listed separately.`,
+    `${profile.dailyGoalMinutes} minutes is the optional personal daily target. Required goals apply only to dates with assignments. Class time is listed separately.`,
     '',
   ];
   for (const date of [...new Set(all.map((entry) => entry.date))]) {
