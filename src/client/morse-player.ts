@@ -12,6 +12,8 @@ export interface MorseProgress {
 export interface MorsePlayerOptions {
   title?: string;
   loop?: boolean;
+  /** Native volume where supported; otherwise retained in the rendered WAV. */
+  volume?: number;
   /** The current in-app owner may pause transport without replacing this source. */
   canPlay?: () => boolean;
   onProgress?: (progress: MorseProgress) => void;
@@ -29,12 +31,27 @@ export class MorsePlayer {
   private options: MorsePlayerOptions = {};
   private status: MorsePlaybackState = 'idle';
   private generation = 0;
+  private rejectLatePlay = false;
+  private nativeVolume = false;
   private pendingSeek: number | undefined;
   private frame: number | undefined;
   private lastFrame = 0;
   private disposed = false;
   private listeners: [string, EventListener][] = [];
   private mediaSession = new MediaSessionController();
+
+  get paused() {
+    return this.audio?.paused ?? true;
+  }
+  get supportsVolume() {
+    return this.nativeVolume;
+  }
+  setVolume(volume: number) {
+    if (!Number.isFinite(volume) || volume < 0 || volume > 1)
+      throw new Error('Choose a valid volume.');
+    if (this.audio && this.nativeVolume) this.audio.volume = volume;
+    return this.nativeVolume;
+  }
 
   get track() {
     return this.recording;
@@ -53,9 +70,16 @@ export class MorsePlayer {
     this.audio = audio;
     audio.preload = 'auto';
     audio.setAttribute('playsinline', '');
+    const priorVolume = audio.volume;
+    audio.volume = 0.5;
+    this.nativeVolume = audio.volume === 0.5;
+    audio.volume = priorVolume;
+    this.listen('play', () => {
+      if (!audio.paused) this.rejectLatePlay = false;
+    });
     this.listen('playing', () => {
       if (!this.recording || audio.paused) return;
-      if (this.options.canPlay?.() === false) {
+      if (this.rejectLatePlay || this.options.canPlay?.() === false) {
         this.pause();
         return;
       }
@@ -64,6 +88,7 @@ export class MorsePlayer {
       this.startFrames();
     });
     this.listen('pause', () => {
+      if (audio.paused) this.rejectLatePlay = true;
       if (audio.paused && !audio.ended && this.status === 'playing') {
         this.generation++;
         this.cancelFrames();
@@ -100,19 +125,37 @@ export class MorsePlayer {
       document.addEventListener('visibilitychange', this.visible);
   }
 
-  prepare(track: MorseTrack, options: MorsePlayerOptions = {}) {
+  prepare(
+    track: MorseTrack,
+    options: MorsePlayerOptions = {},
+    replacement?: {
+      /** Recheck a word boundary after synchronous PCM rendering. */
+      acceptsPosition?: (position: number) => boolean;
+      /** Settle the still-playing old source and map its final native position. */
+      beforeReplace: (position: number) => number;
+    },
+  ): number | false {
     this.disposed = false;
-    const wav = renderMorseWav(track);
+    this.ensureAudio();
+    const volume = options.volume ?? track.volume;
+    const wav = renderMorseWav({ ...track, volume: this.nativeVolume ? 1 : volume });
     const url = URL.createObjectURL(wav);
+    const playbackRate = replacement && this.recording ? this.audio!.playbackRate : 1;
+    const previousPosition = this.position;
+    if (replacement?.acceptsPosition?.(previousPosition) === false) {
+      URL.revokeObjectURL(url);
+      return false;
+    }
+    let start: number;
     try {
-      this.ensureAudio();
+      start = replacement?.beforeReplace(previousPosition) ?? 0;
     } catch (error) {
       URL.revokeObjectURL(url);
       throw error;
     }
     this.generation++;
     this.cancelFrames();
-    this.mediaSession.release();
+    if (!replacement || !this.recording) this.mediaSession.release();
     this.status = 'idle';
     this.options = {};
     this.audio!.pause();
@@ -123,12 +166,15 @@ export class MorsePlayer {
     // Loading a new source already starts at zero. Only defer an explicit seek;
     // seeking again during loadedmetadata can disrupt a pending native play.
     this.pendingSeek = undefined;
+    this.setVolume(volume);
+    this.rejectLatePlay = true;
     this.audio!.loop = options.loop === true;
-    this.audio!.playbackRate = 1;
     this.audio!.src = url;
     this.audio!.load();
+    this.audio!.playbackRate = playbackRate;
     if (previousUrl) URL.revokeObjectURL(previousUrl);
     this.setState('ready');
+    return start;
   }
 
   /** Call directly from a click or media-session action to retain browser playback permission. */
@@ -142,6 +188,7 @@ export class MorsePlayer {
       this.seek(0);
     }
     const run = ++this.generation;
+    this.rejectLatePlay = false;
     try {
       // No await, async render, context.resume(), or timer before this native play call.
       await this.audio.play();
@@ -165,6 +212,7 @@ export class MorsePlayer {
   }
 
   pause() {
+    this.rejectLatePlay = true;
     this.generation++;
     this.cancelFrames();
     this.audio?.pause();

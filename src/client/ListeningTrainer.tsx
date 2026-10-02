@@ -13,6 +13,11 @@ import MorseTranscript from './MorseTranscript';
 import { buildSpokenWordTrack } from './morse-track';
 import { loadWordSpeech } from './word-speech';
 import QsoCopy from './QsoCopy';
+import {
+  nextWordRetimeItem,
+  retimedOccurrencePosition,
+  retimeWordTrack,
+} from './listening-retiming';
 import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import {
   listeningWordRound,
@@ -26,6 +31,10 @@ import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
 
 interface AppliedListeningTrack {
   readonly track: MorseTrack;
+  readonly material: object;
+  readonly resetKey: string;
+  readonly configurations: readonly { at: number; summary: GeneratedListeningSummary }[];
+  readonly mixed?: boolean;
   readonly summary: GeneratedListeningSummary;
   readonly title: string;
   readonly loop: boolean;
@@ -48,6 +57,7 @@ export default forwardRef<
     soundSettings?: ReactNode;
     onPlaying: (playing: boolean) => void;
     onPlayed?: (summary: GeneratedListeningSummary) => void;
+    onBeforeReplace?: () => void;
     onError: (message: string) => void;
   }
 >(function ListeningTrainer(
@@ -58,6 +68,7 @@ export default forwardRef<
     soundSettings,
     onPlaying: onPlayingChange,
     onPlayed,
+    onBeforeReplace,
     onError: onErrorMessage,
   },
   ref,
@@ -66,8 +77,18 @@ export default forwardRef<
   visibleOwner.current = visible;
   const inspecting = useRef(!visible);
   const canPlay = () => visibleOwner.current && !inspecting.current;
-  const callbacks = useRef({ onPlaying: onPlayingChange, onPlayed, onError: onErrorMessage });
-  callbacks.current = { onPlaying: onPlayingChange, onPlayed, onError: onErrorMessage };
+  const callbacks = useRef({
+    onPlaying: onPlayingChange,
+    onPlayed,
+    onBeforeReplace,
+    onError: onErrorMessage,
+  });
+  callbacks.current = {
+    onPlaying: onPlayingChange,
+    onPlayed,
+    onBeforeReplace,
+    onError: onErrorMessage,
+  };
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
   const onError = (message: string) => callbacks.current.onError(message);
   const [custom, setCustom] = useState('');
@@ -85,6 +106,8 @@ export default forwardRef<
   const audio = useRef<HTMLAudioElement>(null);
   const prepared = useRef<AppliedListeningTrack | null>(null);
   const [mediaReady, setMediaReady] = useState(false);
+  const [playingTrack, setPlayingTrack] = useState<MorseTrack | null>(null);
+  const [deviceVolume, setDeviceVolume] = useState(false);
   const [activeWord, setActiveWord] = useState(-1);
   const index = useRef(0);
   const [speech, setSpeech] = useState<{
@@ -101,6 +124,13 @@ export default forwardRef<
   const repeatList = isWords && p.repeatList;
   const wordGap = isWords ? p.wordGap : 0;
   const content = isWords ? wordRound : qso;
+  const resetKey = JSON.stringify([isWords, p.tone, wordGap, repeatList, spokenAnswers]);
+  const materialOwner = useRef(content);
+  materialOwner.current = content;
+  const settingsOwner = useRef(resetKey);
+  settingsOwner.current = resetKey;
+  const volumeOwner = useRef(p.volume / 100);
+  volumeOwner.current = p.volume / 100;
   const checkingCopy = !isWords && copyMode;
   // Object identity prevents a newly generated contact revealing old answers for one frame.
   const copyRevealed = revealedQso === qso;
@@ -123,6 +153,7 @@ export default forwardRef<
   const resetTransport = () => {
     stop();
     prepared.current = null;
+    setPlayingTrack(null);
     setMediaReady(false);
     player.current.clear();
     index.current = 0;
@@ -215,6 +246,9 @@ export default forwardRef<
       const applied: AppliedListeningTrack = Object.freeze({
         track,
         summary,
+        material: content!,
+        resetKey,
+        configurations: [{ at: 0, summary }],
         title: isWords ? listTitle : qso.title,
         loop: repeatList,
       });
@@ -231,14 +265,127 @@ export default forwardRef<
     p.characterWpm,
     p.effectiveWpm,
     p.tone,
-    p.volume,
     wordGap,
   ]);
   const { applied } = trackResult;
-  const track = applied?.track ?? null;
+  const track = playingTrack ?? applied?.track ?? null;
   const available = useRef(applied);
   available.current = applied;
+  const install = (
+    next: AppliedListeningTrack,
+    start: number,
+    resume = false,
+    replacement?: { acceptsPosition?: (at: number) => boolean; position: (at: number) => number },
+  ) => {
+    const { track, summary } = next;
+    const ownsPrepared = () =>
+      prepared.current === next &&
+      player.current.track === track &&
+      materialOwner.current === next.material &&
+      settingsOwner.current === next.resetKey;
+    const acceptsPlayback = () => canPlay() && ownsPrepared();
+    let lastHeard: GeneratedListeningSummary | undefined;
+    const heardConfiguration = (at: number) => {
+      const configuration = next.configurations.findLast((item) => item.at <= at + 0.000001);
+      if (configuration && configuration.summary !== lastHeard) {
+        lastHeard = configuration.summary;
+        callbacks.current.onPlayed?.(configuration.summary);
+      }
+    };
+    let lastPosition = start;
+    try {
+      if (audio.current) audio.current.dataset.wordListening = String(summary.mode === 'words');
+      const installed = player.current.prepare(
+        track,
+        {
+          title: next.title,
+          canPlay: acceptsPlayback,
+          loop: next.loop,
+          volume: volumeOwner.current,
+          onProgress: (progress) => {
+            if (!ownsPrepared()) return;
+            // A changed last item takes effect on the next deliberate native loop.
+            // Explicit seeks still retain the old prefix and never trigger replacement.
+            const wrapped =
+              next.mixed &&
+              next.loop &&
+              lastPosition > track.duration - 0.5 &&
+              progress.position < 0.5 &&
+              progress.position < lastPosition &&
+              progress.state === 'playing';
+            lastPosition = progress.position;
+            if (
+              wrapped &&
+              available.current?.material === next.material &&
+              available.current.resetKey === next.resetKey
+            ) {
+              install(available.current, 0, true);
+              return;
+            }
+            if (progress.state === 'playing') heardConfiguration(progress.position);
+            setActiveWord(progress.wordIndex);
+            const answerStart = track.words[progress.wordIndex]?.answerStart;
+            setAnswer(answerStart !== undefined && progress.position >= answerStart);
+            if (progress.itemIndex >= 0) {
+              index.current = progress.itemIndex;
+              setPosition(progress.itemIndex);
+            }
+          },
+          onState: (state) => {
+            if (!ownsPrepared()) return;
+            const playing = state === 'playing';
+            if (playing && !canPlay()) return;
+            setActive(playing);
+            onPlaying(playing);
+            if (playing) {
+              setComplete(false);
+              heardConfiguration(player.current.position);
+            }
+          },
+          onFinish: () => {
+            if (!acceptsPlayback()) return;
+            setComplete(true);
+            setActiveWord(-1);
+          },
+          onError,
+        },
+        {
+          acceptsPosition: replacement?.acceptsPosition,
+          beforeReplace: (at) => {
+            callbacks.current.onBeforeReplace?.();
+            prepared.current = next;
+            return replacement ? replacement.position(at) : start;
+          },
+        },
+      );
+      if (installed === false) return false;
+      lastPosition = installed;
+      setDeviceVolume(!player.current.supportsVolume);
+      setPlayingTrack(track);
+      setMediaReady(true);
+      player.current.seek(installed);
+      if (resume && acceptsPlayback())
+        void player.current.resume().catch((error: Error) => {
+          if (acceptsPlayback()) onError(error.message);
+        });
+      return true;
+    } catch (error) {
+      prepared.current = null;
+      setPlayingTrack(null);
+      setMediaReady(false);
+      throw error;
+    }
+  };
   const prepare = () => {
+    if (prepared.current?.material === content && prepared.current.resetKey === resetKey) {
+      if (
+        prepared.current.mixed &&
+        applied &&
+        player.current.position >= prepared.current.track.duration
+      )
+        install(applied, 0);
+      return;
+    }
     if (!applied) {
       if (spokenAnswers && words.length) {
         if (speech?.error) setSpeechAttempt((attempt) => attempt + 1);
@@ -249,58 +396,7 @@ export default forwardRef<
       }
       throw new Error(roundError || trackResult.error || 'Add some words to play.');
     }
-    if (prepared.current === applied) return;
-    const { track, summary } = applied;
-    const ownsPrepared = () =>
-      prepared.current === applied &&
-      available.current === applied &&
-      player.current.track === track;
-    const acceptsPlayback = () => canPlay() && ownsPrepared();
-    // Preparing reports position zero synchronously; preserve the requested item first.
-    const start = track.items[index.current]?.start ?? 0;
-    prepared.current = applied;
-    try {
-      // Capture the applied source before native playing, never selected controls.
-      if (audio.current) audio.current.dataset.wordListening = String(summary.mode === 'words');
-      player.current.prepare(track, {
-        title: applied.title,
-        canPlay: acceptsPlayback,
-        loop: applied.loop,
-        onProgress: (progress) => {
-          if (!ownsPrepared()) return;
-          setActiveWord(progress.wordIndex);
-          const answerStart = track.words[progress.wordIndex]?.answerStart;
-          setAnswer(answerStart !== undefined && progress.position >= answerStart);
-          if (progress.itemIndex >= 0) {
-            index.current = progress.itemIndex;
-            setPosition(progress.itemIndex);
-          }
-        },
-        onState: (state) => {
-          if (!ownsPrepared()) return;
-          const playing = state === 'playing';
-          if (playing && !canPlay()) return;
-          setActive(playing);
-          onPlaying(playing);
-          if (playing) {
-            setComplete(false);
-            callbacks.current.onPlayed?.(summary);
-          }
-        },
-        onFinish: () => {
-          if (!acceptsPlayback()) return;
-          setComplete(true);
-          setActiveWord(-1);
-        },
-        onError,
-      });
-    } catch (error) {
-      prepared.current = null;
-      setMediaReady(false);
-      throw error;
-    }
-    setMediaReady(true);
-    player.current.seek(start);
+    install(applied, applied.track.items[index.current]?.start ?? 0);
   };
   const play = async () => {
     if (!canPlay()) return;
@@ -332,25 +428,72 @@ export default forwardRef<
       onError((error as Error).message);
     }
   };
-  // Never leave a native source with settings/text different from the visible transcript.
   useEffect(() => {
-    stop();
-    prepared.current = null;
-    setMediaReady(false);
-    player.current.clear();
-    setActiveWord(-1);
-    setAnswer(false);
-    setComplete(false);
-  }, [
-    applied,
-    p.characterWpm,
-    p.effectiveWpm,
-    p.tone,
-    p.volume,
-    wordGap,
-    repeatList,
-    spokenAnswers,
-  ]);
+    const previous = prepared.current;
+    if (!previous) return;
+    if (!applied) {
+      // An invalid slower edit cannot replace the last valid recording.
+      if (previous.material !== content || previous.resetKey !== resetKey) resetTransport();
+      else stop();
+      return;
+    }
+    if (
+      previous.material !== applied.material ||
+      previous.resetKey !== applied.resetKey ||
+      spokenAnswers
+    ) {
+      resetTransport();
+      return;
+    }
+    if (
+      previous.summary.characterWpm === applied.summary.characterWpm &&
+      previous.summary.effectiveWpm === applied.summary.effectiveWpm
+    )
+      return;
+    try {
+      const playing = !player.current.paused;
+      const at = player.current.position;
+      if (isWords) {
+        let first = nextWordRetimeItem(previous.track, at, playing);
+        while (first <= previous.track.items.length) {
+          const retimed = retimeWordTrack(previous.track, applied.track, first);
+          const boundary = previous.track.items[first]?.start ?? previous.track.duration;
+          const installed = install(
+            {
+              ...applied,
+              track: retimed,
+              mixed: true,
+              configurations:
+                first === previous.track.items.length
+                  ? previous.configurations
+                  : [
+                      ...previous.configurations.filter((item) => item.at < boundary),
+                      { at: boundary, summary: applied.summary },
+                    ],
+            },
+            at,
+            playing,
+            {
+              acceptsPosition: (current) =>
+                first === previous.track.items.length || boundary >= current + (playing ? 0.02 : 0),
+              position: (current) => current,
+            },
+          );
+          if (installed) break;
+          first++;
+        }
+      } else
+        install(applied, at, playing && at < previous.track.duration, {
+          position: (current) => retimedOccurrencePosition(previous.track, applied.track, current),
+        });
+    } catch (error) {
+      stop();
+      onError((error as Error).message);
+    }
+  }, [applied]);
+  useEffect(() => {
+    if (audio.current) setDeviceVolume(!player.current.setVolume(p.volume / 100));
+  }, [p.volume]);
   useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
   const step = (delta: number) => {
     stop();
@@ -359,7 +502,7 @@ export default forwardRef<
     setPosition(index.current);
     setComplete(false);
     setAnswer(false);
-    if (prepared.current === applied && track)
+    if (prepared.current?.track === track && track)
       player.current.seek(track.items[index.current]?.start ?? 0);
   };
   const total = isWords
@@ -504,6 +647,20 @@ export default forwardRef<
       )}
       {trackResult.error && <p role="alert">{trackResult.error}</p>}
       {soundSettings}
+      <p className="field-hint">
+        {isWords && !spokenAnswers
+          ? 'Change speed while listening: the current word and pause finish at their original timing; later words use the new speed.'
+          : !isWords
+            ? 'Change speed to restart the same word occurrence. Playing stays playing; paused stays paused.'
+            : 'Speed changes in spoken-answer mode start a fresh recording.'}{' '}
+        List, pitch, spacing and spoken-answer changes start a fresh round.
+      </p>
+      {deviceVolume && (
+        <p className="field-hint">
+          This browser uses device volume controls during native playback. The app volume is applied
+          when preparing the next recording.
+        </p>
+      )}
       <div className="transmission-panel trainer-transmission">
         <div className="transmission-label">
           <span>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MorsePlayer, type MorseProgress } from './morse-player';
-import { buildMorseTrack } from './morse-track';
+import { buildMorseTrack, renderMorseWav } from './morse-track';
 import { MediaSessionController } from './media-session';
 
 // Native media behavior is covered in Playwright. This small boundary fake lets us
@@ -15,6 +15,7 @@ class MediaElement extends EventTarget {
   preload = '';
   loop = false;
   playbackRate = 1;
+  volume = 1;
   setAttribute() {}
   removeAttribute(name: string) {
     if (name === 'src') this.src = '';
@@ -53,6 +54,144 @@ afterEach(() => {
 });
 
 describe('native media playback boundary', () => {
+  it('keeps previously claimed platform transport through a paused retiming without autoplay', async () => {
+    const handlers = new Map<string, MediaSessionActionHandler | null>();
+    const session = {
+      playbackState: 'none',
+      metadata: null,
+      setPositionState: vi.fn(),
+      setActionHandler: (action: string, handler: MediaSessionActionHandler | null) =>
+        handlers.set(action, handler),
+    };
+    vi.stubGlobal('navigator', { mediaSession: session });
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    attach(player, audio);
+    player.prepare(track());
+    audio.metadata();
+    await player.resume();
+    player.pause();
+    const platformPlay = handlers.get('play');
+    expect(platformPlay).toBeTypeOf('function');
+    audio.playbackRate = 1.25;
+    const at = player.prepare(track(), {}, { beforeReplace: () => 1.25 });
+    expect(audio.playbackRate).toBe(1.25);
+    player.seek(at as number);
+    audio.metadata();
+    expect(handlers.get('play')).toBe(platformPlay);
+    expect(session.playbackState).toBe('paused');
+    expect(player.position).toBe(1.25);
+    expect(audio.paused).toBe(true);
+    platformPlay?.({ action: 'play' });
+    await Promise.resolve();
+    expect(audio.paused).toBe(false);
+    expect(player.position).toBe(1.25);
+    player.dispose();
+  });
+  it('changes native volume without reloading, seeking or interrupting playback', async () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    attach(player, audio);
+    const load = vi.spyOn(audio, 'load');
+    player.prepare(track());
+    audio.metadata();
+    await player.resume();
+    audio.currentTime = 1.25;
+    const source = audio.src;
+    expect(player.supportsVolume).toBe(true);
+    expect(audio.volume).toBe(0.4);
+    player.setVolume(0);
+    expect(audio.volume).toBe(0);
+    player.setVolume(0.9);
+    expect(audio.volume).toBe(0.9);
+    expect(audio.paused).toBe(false);
+    expect(player.position).toBe(1.25);
+    expect(audio.src).toBe(source);
+    expect(load).toHaveBeenCalledOnce();
+    expect(() => player.setVolume(2)).toThrow('valid volume');
+    player.dispose();
+  });
+  it('retains baked volume for native elements that leave volume under device control', async () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    Object.defineProperty(audio, 'volume', { get: () => 1, set: () => {} });
+    attach(player, audio);
+    const wav = vi.spyOn(URL, 'createObjectURL');
+    player.prepare(track(), { volume: 0.2 });
+    expect(player.supportsVolume).toBe(false);
+    expect(player.setVolume(0.8)).toBe(false);
+    expect(wav).toHaveBeenCalledOnce();
+    const actual = wav.mock.calls[0][0] as Blob;
+    expect(new Uint8Array(await actual.arrayBuffer())).toEqual(
+      new Uint8Array(await renderMorseWav({ ...track(), volume: 0.2 }).arrayBuffer()),
+    );
+    expect(audio.volume).toBe(1);
+    player.dispose();
+  });
+  it('rechecks the still-playing native boundary after rendering and settles only an accepted replacement', async () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    attach(player, audio);
+    const prior = track();
+    player.prepare(prior);
+    audio.metadata();
+    await player.resume();
+    audio.currentTime = 1;
+    const source = audio.src;
+    const create = URL.createObjectURL;
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      audio.currentTime = 1.5;
+      return create(blob);
+    });
+    const settle = vi.fn((at: number) => at / 2);
+    expect(
+      player.prepare(track(), {}, { acceptsPosition: (at) => at < 1.4, beforeReplace: settle }),
+    ).toBe(false);
+    expect(settle).not.toHaveBeenCalled();
+    expect(audio.paused).toBe(false);
+    expect(audio.src).toBe(source);
+    expect(player.track).toBe(prior);
+    const at = player.prepare(
+      track(),
+      {},
+      { acceptsPosition: (at) => at < 2, beforeReplace: settle },
+    );
+    expect(at).toBe(0.75);
+    expect(settle).toHaveBeenCalledExactlyOnceWith(1.5);
+    player.seek(at as number);
+    audio.metadata();
+    expect(player.position).toBe(0.75);
+    expect(audio.paused).toBe(true);
+    player.dispose();
+  });
+  it('rejects a late resume after an explicit pause, material replacement or disposal', async () => {
+    for (const cancel of ['pause', 'native-pause', 'replace', 'dispose'] as const) {
+      const player = new MorsePlayer();
+      const audio = new MediaElement();
+      attach(player, audio);
+      player.prepare(track());
+      let resolve!: () => void;
+      audio.play.mockImplementationOnce(
+        () =>
+          new Promise<void>((done) => {
+            resolve = done;
+          }),
+      );
+      const pending = player.resume();
+      if (cancel === 'pause') player.pause();
+      else if (cancel === 'native-pause') audio.pause();
+      else if (cancel === 'replace') player.prepare(track());
+      else player.dispose();
+      if (cancel !== 'dispose') {
+        audio.paused = false;
+        audio.dispatchEvent(new Event('playing'));
+        expect(audio.paused).toBe(true);
+      }
+      resolve();
+      await pending;
+      player.dispose();
+    }
+  });
   it('retains its source and position while an inspected owner rejects platform transport', async () => {
     const handlers = new Map<string, MediaSessionActionHandler | null>();
     vi.stubGlobal('navigator', {

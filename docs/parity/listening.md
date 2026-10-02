@@ -107,7 +107,7 @@ Current active UI routes are [C/src/client/main.tsx:63,422](https://github.com/r
 | Native continuous WAV, pause/resume, seek bar, current-word highlight, full transcript, reveal toggle | **Present** | P [word-player.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts), [qso-panel.ts:105](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L105), [qso-round.ts:39](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-round.ts#L39); C [morse-track.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/morse-track.ts), [morse-player.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/morse-player.ts), [MorseTranscript.tsx](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/MorseTranscript.tsx), [ListeningTrainer.tsx:554,583](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L554). Separate frontend report owns detailed playback/timer verification. |
 | Click a specific word while preserving paused state | **Partial / P2** | P [word-panel.ts:291](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L291), [word-player.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts) seek behavior tested at [tests/cw-training-word-practice.test.mjs:589](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-word-practice.test.mjs#L589). C [ListeningTrainer.tsx:307,318](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L307) always resumes after seeking; spoken branch starts the chosen word too. The word jump exists, but a paused learner cannot silently reposition. |
 | Back 10 seconds | **Missing / P2** | P [player.ts:50](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/player.ts#L50) inserts an explicit rewind action and `word-player` keeps listening credit correct across seek. C has native seek plus previous/next *word/transmission* controls, not relative-time rewind. |
-| Change speed while retaining word occurrence, playback state, and heard prefix | **Partial / P1** | P word path [word-panel.ts:218](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L218) / [word-round.ts:66](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L66) finishes current item at old speed, retimes later items. QSO path [qso-panel.ts:120,137,143](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120), [qso-round.ts:51](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-round.ts#L51) rebuilds at the same word occurrence/station/line, preserving paused/playing; repeated words cannot jump to the wrong occurrence. C dependencies [ListeningTrainer.tsx:251,324](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L251) clear and stop the old track; next prepare starts current *item* (`:255`), so a QSO can restart its whole transmission instead of the exact word. This also happens for volume changes because volume is a track dependency. Frontend owns final remedy/tests. |
+| Change speed while retaining word occurrence, playback state, and heard prefix | **Implemented for Words/QSOs; device check pending** | Issue #26 preserves ordered native word-prefix timing, retimes future items, remaps exact QSO occurrences through word/station gaps, and retains playing/paused state and native rate. Replacement settles the actual old source after rendering, guards stale resume and keeps previously claimed Media Session transport. Supported native volume changes retain source/position; browsers reserving native volume for device controls retain baked volume for preparation and disclose device controls. Source: pinned [word-player.ts:174](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts#L174), [word-round.ts:66](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L66), [qso-panel.ts:120](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120). Shared occurrence mapping covers authored sentence gaps; Stories themselves remain issue #30. See the #26 ledger for exact gates and limits. |
 | Independent Words/QSOs/Stories preferences | **Partial / P2** | P [session.ts:6,9,79](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L6), [storage.ts:16,17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L16) stores each mode's character speed/selection independently. C [practice-preferences.ts:5](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L5) stores one global audio configuration shared among Words/QSO/Free. Selecting a different mode does not restore a mode-specific speed. Caveat: P's preference writer omits `fwpm` for QSOs/Stories at [storage.ts:17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L17), so it does not fully retain effective speed when creating a fresh mode/session; its active session does retain the draft. Do not copy that omission. |
 | Public session durability, exact script, elapsed total, ended-session screen | **Missing / P1** | P [client.ts:30,77,95,107,111](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/client.ts#L30), [storage.ts:3,20](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L3), [session.ts:93](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L93) stores ID/startedAt/actual accumulated time/draft/generated QSO/ended flag, checkpoints every 3s and lifecycle events, restores paused at the beginning, keeps total across public mode changes, End session -> total -> Start another session. C remembers controls only, with QSO/custom/audio position/run state in component state; reload regenerates the QSO. C has explicit private-review logging and unsaved warnings, but that does not recover discarded state. |
 | Shareable exact listening selection | **Missing / P2** | P [cw-listening.astro:17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/pages/radio/cw-listening.astro#L17), [client.ts:44,64](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/client.ts#L44), [session.ts:115,166](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115): Copy link with clipboard fallback; public mode/list/scenario/story/WPM/Farnsworth/text visibility only. P [qso-generator.ts:130](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-generator.ts#L130) encodes versioned bounded pool indices so recipient gets exactly the same contact; explicit invalid/conflicting recipe errors, old-script exact reconstruction check `:153`, no custom text/history/position/time included. C has no query parsing, recipe field, link control or shared-contact decoder. A future port must preserve v1 compatibility or explicitly version new seasonal profiles. |
@@ -535,3 +535,75 @@ was attempted. GitHub commit lookup returned422, so #25 remains OPEN pending
 publication. Original private audio remains unavailable; older unmeasured
 records receive no invented credit. No physical-device or elapsed reload/crash
 recovery claim is made. Required homework stays independent of this activity.
+
+
+### Issue #26 — native listening speed and volume continuity
+
+Rechecked current issue #26, comments and empty native dependency relationships,
+and original pinned word-player:174/word-round:66, word-panel:218 and qso-panel:120
+before implementation. Morse-only Words retain their exact ordered/duplicate
+items, heard prefix and current item/pause at old timing; both speeds apply to
+future items. Post-render native-position checks retry a later boundary if PCM
+rendering crossed the first one. A last-item change applies to the next native
+loop or deliberate ended replay. Generated QSOs retain the same script/stations
+and restart the exact global word occurrence, including repeated tokens and
+word/station gaps. Paused stays paused; playing resumes through the same player.
+Native rate is retained across replacement. The generic occurrence helper also
+accepts authored sentence timelines; the actual Stories mode/corpus is still #30.
+
+The existing PracticeClock settles actual old movement after synchronous WAV
+rendering and before replacement. Seeking/remapping supplies no invented time.
+Prepared content owns the displayed timeline, source marker and bounded played
+configuration evidence; selected unplayed settings are not promoted. Only the
+actually playing prefix/tail configuration is recorded. The same native element,
+MorsePlayer, version 1 private evidence/outbox, history, reports and portable
+backup architecture remain in use. No new entity, Worker binding, configuration,
+migration or elapsed-recovery store is introduced. Native and explicit pause,
+new material, inspection and disposal revoke stale resume. Previously claimed
+Media Session metadata/artwork/transport survive a paused live edit without
+stealing another owner; volume does not change material, position or transport.
+
+On native elements supporting JS volume, amplitude uses the native element
+without regenerating a track; zero/mute and increased volume stay continuous.
+Existing baked WAV volume is retained where the browser reserves volume for
+device controls, with visible guidance that app volume applies to a prepared
+recording and device controls adjust current playback. This platform constraint
+is documented by [Apple's native-media guide](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/Using_HTML5_Audio_Video/Device-SpecificConsiderations/Device-SpecificConsiderations.html).
+No new Web Audio routing displaces native playback, and no physical iPhone or
+lock-screen behavior is claimed. List, pitch, extra spacing and spoken-mode
+changes retain deliberate fresh-round behavior. New recognition/reload recovery
+remain excluded. Public access, private account scope and old backups stay intact.
+
+Three new pure timeline cases and five player boundary cases protect duplicate
+order/prefix/effective-only edits, exact repeated occurrences/gaps, post-render
+veto/settlement, late explicit/native pause/material/disposal, paused platform
+transport, volume continuity and actual baked PCM compatibility. Check, all 1,049
+tests across 63 files and build pass. The final affected browser set passes four journeys
+54.8s: existing applied-configuration/private save/retry/export/history/report
+26.4s; native words 11.4s with retained 1.25x rate, exact paused position/metadata,
+continuous volume, cancel and saved raw source/global equality; QSO occurrence/
+late native acknowledgement/inspection 4.4s; last-item loop/ended replay 8.0s.
+Desktop 1440/mobile 390 keyboard/touch states, six settled Axe/overflow summaries
+and four retained captures are inspected separately. Emulation is not a device
+claim. All 78 final-current browser journeys pass in 15.9 minutes.
+Independent review remains the post-commit gate.
+
+Observed failures were inspected through assertions, pixels and retained traces
+before correction. Initial fixture errors used a nonexistent QSO label, assumed
+Resume below one measured second, and arranged many now-live speed values in the
+older applied-only journey, legitimately overflowing its 15-configuration evidence cap.
+That journey now pauses while arranging settings; new native journeys own live
+editing. A slow preserved PARIS item/pause exceeds a default five-second poll,
+so its bound comes from the actual Morse timeline. The new last-item test found
+and fixed a real loop bug: native looping emits seeking, so a seek veto prevented
+the queued new round. Initial full regression passed 77/78 in 15.9m; its remaining
+Axe scan raced review opening animation. Waiting for actual animation completion
+preserves every contrast rule; the failed journey then passed in 13.3s. Static review
+also caught the old 1x replacement reset; native rate preservation is now verified
+in fast and actual browser checks. Final full-current regression follows these
+corrections before implementation commit, independent review and production.
+
+Final current-code regression passed all 78 serial browser journeys in 15.9
+minutes after those corrections. Six new accessibility/overflow reports are
+empty and all four final desktop/mobile captures were inspected. Original
+source, protected primary user work and signing configuration remain untouched.

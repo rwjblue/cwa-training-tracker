@@ -704,7 +704,17 @@ export default function PracticeStudio({
   }, [onBeforeLeaveChange]);
   const changePreferences = (changes: Partial<PracticePreferences>, regenerate = false) => {
     if (!canPractice()) return;
-    if (!('hideTrainerText' in changes)) stopPlayback();
+    const continuousListeningEdit =
+      !assigned &&
+      (tool === 'words' || tool === 'qso') &&
+      Object.keys(changes).every(
+        (key) =>
+          key === 'characterWpm' ||
+          key === 'effectiveWpm' ||
+          key === 'volume' ||
+          key === 'hideTrainerText',
+      );
+    if (!('hideTrainerText' in changes) && !continuousListeningEdit) stopPlayback();
     setError('');
     const next = normalizePracticePreferences({ ...preferences, ...changes });
     setPreferences(next);
@@ -1690,6 +1700,7 @@ export default function PracticeStudio({
                     }
                     onPlaying={setPlaying}
                     onPlayed={recordGeneratedListening}
+                    onBeforeReplace={() => timer.pauseMedia()}
                     onError={(message) => {
                       pauseTimer();
                       setError(message);

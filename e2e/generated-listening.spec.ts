@@ -4,6 +4,11 @@ import { expectAccessible, expectResponsive, signIn } from './helpers';
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.107' } });
 
 async function speed(page: Page, character: number, effective: number) {
+  // This journey owns selected-but-unplayed setup and save recovery, not live edits.
+  // Pause before arranging multiple keyboard values so intermediate live setups
+  // do not legitimately consume the bounded evidence inventory.
+  const pause = page.getByRole('button', { name: 'Pause practice', exact: true });
+  if (await pause.isVisible()) await pause.click();
   const settings = page.locator('details').filter({ has: page.getByText(/^Sound settings ·/) });
   if (!(await settings.evaluate((element: HTMLDetailsElement) => element.open)))
     await settings.getByText(/^Sound settings ·/).click();
@@ -55,7 +60,8 @@ test(`generated listening saves only applied setups and retains exact content at
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('common-30');
   await speed(page, 25, 15);
   await listen();
-  await speed(page, 30, 20); // A selected setup has not played.
+  await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
+  await speed(page, 30, 20); // A paused selected setup has not played.
   await audio.evaluate((element: HTMLAudioElement) => {
     const original = element.play;
     element.play = function () {
