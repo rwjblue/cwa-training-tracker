@@ -922,3 +922,16 @@ the new binding regression adds two distinct settled states to the original
 five. Actual native recording/Copy/Runner regression journeys also pass.
 Fresh issue body/comments remain unchanged. Follow-up commit and independent
 recheck are next; production acceptance remains pending.
+
+
+Issue #21 independently ACCEPTED after both P2 corrections. Current optional
+event bindings and both fresh timer activation guards pass own add/clear/stale
+click repros; actual native audio owner/position/notes survive edits. Independent
+180tests/four own browser probes/two representative journeys/26emptyAxe across
+13states/six inspected captures and all17committed-byte checks pass. Root
+994tests58files/build/check/full68browser13.9m pass. Production
+`92378d54-1a2d-443d-bae5-31ca912ec440` serves accepted476d0e8b+627fc4f2
+after one D17403 full-task retry; exact assets/private401/public-feed parser
+checks pass. See canonical acceptance ledger for evidence, inspected CSP fixture
+failure and limits. Local main records delivery; #21 stays OPEN under no push.
+Automatic next action remains dependent22. Original and user work unchanged.

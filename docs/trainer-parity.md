@@ -2029,3 +2029,40 @@ the new binding regression adds two distinct settled states to the original
 five. Actual native recording/Copy/Runner regression journeys also pass.
 Fresh issue body/comments remain unchanged. Follow-up commit and independent
 recheck are next; production acceptance remains pending.
+
+
+### Issue #21 — independent acceptance and production delivery
+
+Independent post-commit review ACCEPTS implementation
+`476d0e8b0916ffcbdce9b20c0e948f9abc08e3f4` and correction
+`627fc4f2c8e7128f743451356316d461f91619bd`. Both initial P2 findings
+were fixed and independently rechecked: current manual event add/change/clear
+bindings and central eligibility on both timer controls, including a stale
+activation at exact window end. No substantive finding remains. Native audio
+retains its actual element, position and notes through an event edit and resumes
+with real media movement; manual event projection never replaces native owners.
+
+Independent recheck: 180 tests in five files (2.68s); three own manual/UI probes
+(8.2/1.6/5.6s), one actual native-owner journey (5.5s), and both committed
+representative journeys (25.1s including startup). Twenty-six empty Axe/overflow
+checks cover thirteen settled states at 1440/390; six own captures were inspected.
+The representative journeys include real 503/exact-body retry, history/export,
+cancellation and completion without inferred QSOs. All seventeen changed files
+match committed bytes; protected primary documents and pinned original remain
+intact. An initial native fixture was correctly blocked by CSP; the reviewer
+inspected its context/screenshot/trace, then used an intercepted permitted CWA
+host without relaxing product policy, timing assertions or timeouts.
+
+Root final check, 994 tests/58 files, build and all 68 serialized browser journeys
+(13.9 minutes) pass. Production `92378d54-1a2d-443d-bae5-31ca912ec440`
+serves the accepted code after one complete deploy-task retry for D1 error7403;
+no migration was required. Fresh home/health, four exact JS/CSS assets and pinned
+Runner module match; private entries/account/backup routes return401. Public
+calendar GET/HEAD/304/405, nine unique recurring events and independent parser
+DST expansion agree with shared schedule; no private class data or Set-Cookie.
+
+Local main records acceptance. Issue #21 remains OPEN/unpublished under the
+learner's no-push instruction; no push or original-site mutation occurred.
+Automatic next-block selection and consuming this eligibility predicate remain
+explicit dependent #22 work. No physical-device/background playback or
+reload/crash running-time recovery is claimed.
