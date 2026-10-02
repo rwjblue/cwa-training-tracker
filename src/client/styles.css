@@ -4621,3 +4621,29 @@ body {
     padding: 20px;
   }
 }
+
+.runner-assignment-progress {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--cream);
+  border: 1px solid #d6d7ca;
+  border-radius: 12px;
+}
+.runner-assignment-progress h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+.runner-assignment-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+.runner-assignment-totals dt {
+  font-size: 0.78rem;
+}
+.runner-assignment-totals dd {
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

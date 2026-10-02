@@ -1,3 +1,4 @@
+import type { CurrentRunnerProgress } from '../shared/runner-progress';
 import { officialRecordingIdentity } from '../shared/recordings';
 import { listeningGuidance } from '../shared/listening-guidance';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -110,6 +111,7 @@ export default function PracticeStudio({
   onRecordingMarksChange,
   onBeforeLeaveChange,
   onBeforeInspectChange,
+  onRunnerProgressChange,
 }: {
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
@@ -134,6 +136,7 @@ export default function PracticeStudio({
     marks: RecordingMarkSet[],
   ) => Promise<'server' | 'device'>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
+  onRunnerProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
   onBeforeInspectChange?: (handler: (() => Promise<void>) | undefined) => void;
 }) {
   const notesScope = accountId ?? 'guest';
@@ -1136,6 +1139,10 @@ export default function PracticeStudio({
       ) : isRunner ? (
         <MorseRunnerStudio
           ref={runner}
+          entries={entries}
+          tasks={tasks}
+          today={today}
+          onProgressChange={onRunnerProgressChange}
           accountId={accountId}
           active={active}
           timezone={timezone}

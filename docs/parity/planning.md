@@ -591,3 +591,70 @@ journal and that published head; before this documentation addition its source
 tree is byte-identical to the accepted delivery journal. No product change or
 weakened validation was introduced. Both user scoring history and all local
 implementation/review/deploy journals are retained. No push was attempted.
+
+
+### Issue #16 — cumulative saved and current Runner assignment time
+
+The pinned original plan/client and Runner progress were rechecked against live
+issue #16. Companion now shares validated cumulative Runner accounting between
+Today and the existing native studio. Four totals show saved required time,
+current required engine time, combined time and remaining assigned time. The
+15-minute example is covered exactly: two unique five-minute saved runs plus
+two current minutes produce 10 saved, 2 current, 12 combined and 3 remaining.
+A saved acknowledgement transfers the current identity to saved evidence once.
+
+Shared owned-placement/alias rules exclude extra review, class, future, retired
+placement, duplicates and invalid/nonpositive evidence. Native saved facts are
+validated before contributing; actual float seconds are retained. Remaining
+display rounds positive fractions upward rather than showing premature zero.
+Valid manual/legacy credit and historical imported cumulative Runner completion
+remain compatible; other simulators retain their existing uninterrupted rule.
+No implicit time recommendation appears when the task has no target.
+
+Native completion policy is explicit Complete/Reopen plus a distinct **Time
+requirement met** milestone. Neither the milestone nor clicking Complete invents
+a run, elapsed time or score. Required saves, review/class history and reports
+continue through the existing validated queue/Worker/export/import architecture.
+Public unassigned Runner has ordinary engine progress and creates no account
+plan. No binding/schema changes, restricted assets or live elapsed recovery.
+
+One engine owner remains authoritative. Saved totals are memoized; current Studio
+time comes only from its native events. Today receives acknowledged stopped/reset
+projections after inspection, fenced by account, device token and launch identity.
+Retained canceled/frozen class/review choice controls required current credit.
+The projection is discarded when the owner changes and is never persisted.
+
+Focused progress/plan tests pass 34 cases, including fractions, invalid evidence,
+alias ownership and imported Runner/other-simulator regressions. The actual native
+desktop keyboard/mobile touch journey passes both widths in 50.2 seconds: guest
+use, unique archived fixtures, two real saves, actual Stop/Today/Return, canceled
+notes/class choice, refused pending storage/503/frozen exact retry, no double
+count, time milestone, Complete/Reopen with unchanged entries, and extra review
+class save. Four settled Axe arrays are empty; Today and Studio screenshots
+were inspected with no horizontal overflow. This is Chromium emulation, not
+physical-device/OS lock-screen verification. Final check, all 923 tests/50 files
+and production build pass. The final serialized full browser gate passes all
+79 journeys in 16.3 minutes, including both new Runner journeys and corrected
+difficult-mark journeys. Implementation commit, independent post-commit review
+and production delivery remain pending.
+
+Honest fixture iterations remain retained: same-URL API arrangement left the old
+empty plan visible; a nested locator was invalid; a seven-real-second observation
+used the default five-second poll; and the class checkbox used an incorrect name.
+Actual snapshots/traces were read before targeted fixture corrections. Fresh
+account reload, actual accessible checkbox with Space/tap, and sufficient native
+observation time fix those assumptions. No production timeout, clock or evidence
+rule was weakened. Source: pinned original plan.ts79/111 and client.ts449; current
+`src/shared/runner-progress.ts`, `src/client/RunnerAssignmentProgress.tsx`,
+`src/client/MorseRunnerStudio.tsx`, `src/client/TodayPlan.tsx` and
+`e2e/runner-progress.spec.ts`.
+
+Root self-review aligned current-progress bounds with the existing engine's
+`RUNNER_MAX_SECONDS` and requires a stable Runner identity. Its boundary tests
+pass. The first complete gate passed 77 journeys and failed only two existing
+#12 fixtures dated in UTC against a New York account after midnight UTC; retained
+traces prove that scheduling mismatch. A separate focused #12 fixture correction
+uses the account timezone. Four focused journeys pass in 1.2 minutes, followed
+by the final complete 79-journey passing gate. Independent combined acceptance
+remains pending; the earlier interrupted 23-pass gate is not counted
+as complete.

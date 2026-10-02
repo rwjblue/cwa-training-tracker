@@ -316,3 +316,16 @@ addresses through `CF-Connecting-IP`, as the existing browser fixtures do.
 The local Worker otherwise shares one network's real sign-in rate limit across
 all cases. Keep production limits and timeout assertions intact; inspect the
 actual request/visible error before treating missing simulator email as a delay.
+
+For cumulative Runner assignment progress, unit-test shared owned placement,
+unique identities, native facts, review/class exclusion, future/retired/invalid
+data, fractional seconds and missing targets. Keep imported Runner cumulative
+completion and other-simulator uninterrupted completion regressions. The browser
+journey should use real short native runs and saved synthetic fixtures; inspect
+Today after actual Stop, cancel/edit class choice, retry the exact reviewed body
+after refused pending storage/network failure, and verify saving transfers current
+time once. Complete/Reopen alone must create no entry or score. Test unassigned
+guest use and the separate time milestone at both widths with keyboard/touch.
+A seven-real-second engine observation needs a poll window exceeding seven
+seconds; never fast-forward native AudioWorklet time. API-arranged account data
+requires a real refresh before UI assertions; same-URL navigation is insufficient.

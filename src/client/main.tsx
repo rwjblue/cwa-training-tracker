@@ -1,3 +1,4 @@
+import type { CurrentRunnerProgress } from '../shared/runner-progress';
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
@@ -277,6 +278,12 @@ function App() {
   const practiceNavigation = useRef(new PracticeNavigation());
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
+  const [currentRunnerProgress, setCurrentRunnerProgress] = useState<{
+    scope: string;
+    token: string;
+    ownerId: string;
+    current?: CurrentRunnerProgress;
+  }>();
   const currentLaunch = useRef(practiceLaunch);
   currentLaunch.current = practiceLaunch;
   const initiallyPractice = useRef(page === 'practice');
@@ -350,6 +357,7 @@ function App() {
     studioUnsaved.current = false;
     currentLaunch.current = launch;
     setPracticeLaunch(launch);
+    setCurrentRunnerProgress(undefined);
     setSavedOwnerId(undefined);
     setCourseInspection(undefined);
     setNavigationBusy(false);
@@ -1205,6 +1213,13 @@ function App() {
                       user ? (
                         <TodayPlan
                           accountId={user.id}
+                          currentRunner={
+                            currentRunnerProgress?.scope === scope &&
+                            currentRunnerProgress.token === deviceToken &&
+                            currentRunnerProgress.ownerId === practiceLaunch?.id
+                              ? currentRunnerProgress.current
+                              : undefined
+                          }
                           profile={profile}
                           entries={visibleEntries}
                           tasks={tasks}
@@ -1316,6 +1331,19 @@ function App() {
                       onBeforeInspectChange={(handler: (() => Promise<void>) | undefined) => {
                         if (currentLaunch.current?.id === practiceLaunch.id)
                           beforeInspectStudio.current = handler;
+                      }}
+                      onRunnerProgressChange={(current: CurrentRunnerProgress | undefined) => {
+                        if (
+                          currentLaunch.current?.id === practiceLaunch.id &&
+                          (activeAccount.current ?? 'guest') === scope &&
+                          isDeviceScopeCurrent(scope, deviceToken)
+                        )
+                          setCurrentRunnerProgress({
+                            scope,
+                            token: deviceToken,
+                            ownerId: practiceLaunch.id,
+                            current,
+                          });
                       }}
                       accountId={user?.id}
                       timezone={profile.timezone}

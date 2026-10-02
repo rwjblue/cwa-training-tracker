@@ -3,12 +3,24 @@ import {
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { ArrowRight, CheckCheck, ExternalLink, RotateCcw, Square } from 'lucide-react';
 import type { PlannedTask } from '../shared/plan';
-import { type PracticePurpose, type PracticeSession } from '../shared/training';
+import {
+  runnerAssignmentProgress,
+  runnerProgressWithCurrent,
+  type CurrentRunnerProgress,
+} from '../shared/runner-progress';
+import RunnerAssignmentProgress from './RunnerAssignmentProgress';
+import {
+  dateInTimezone,
+  getPracticePurpose,
+  type PracticePurpose,
+  type PracticeSession,
+} from '../shared/training';
 import {
   createRunnerRun,
   reduceRunnerEvent,
@@ -27,7 +39,7 @@ import { RunnerStopFlight } from './runner-stop-flight';
 import { getConfirmedAccountGeneration } from './account-outbox';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 import { freezePracticeSaveOrigin, type PracticeSaveOrigin } from './practice-autosave';
-import { clearRunnerResult, retainFinishedRunnerResult } from './runner-results';
+import { clearRunnerResult, retainFinishedRunnerResult, readRunnerReview } from './runner-results';
 import './morse-runner.css';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
@@ -57,6 +69,10 @@ interface Props {
   externalUrl?: string;
   savedEntry?: PracticeSession;
   active?: boolean;
+  entries?: readonly PracticeSession[];
+  tasks?: readonly PlannedTask[];
+  today?: string;
+  onProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onUnsavedChange: (unsaved: boolean) => void;
 }
@@ -71,6 +87,10 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     externalUrl = fallbackUrl,
     savedEntry,
     active = true,
+    entries = [],
+    tasks = [],
+    today,
+    onProgressChange,
     onLog,
     onUnsavedChange,
   },
@@ -102,12 +122,55 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const [inspectionStopped, setInspectionStopped] = useState(false);
   const [savedRunId, setSavedRunId] = useState<string>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const callbacks = useRef({ onLog, onUnsavedChange });
-  callbacks.current = { onLog, onUnsavedChange };
+  const callbacks = useRef({ onLog, onUnsavedChange, onProgressChange });
+  callbacks.current = { onLog, onUnsavedChange, onProgressChange };
   const saved = savedRunId === run.runId;
   const ended = terminal(run);
   const hasTime = run.elapsedSeconds >= 1;
   const unsaved = !saved && (run.status === 'running' || hasTime);
+
+  let projection: CurrentRunnerProgress | undefined;
+  const attribution = capturedAttribution.current;
+  if (attribution.task && run.runStartedAt && run.elapsedSeconds > 0 && !saved) {
+    try {
+      const retained = ended
+        ? readRunnerReview(scope, `runner:${run.runId}`, deviceToken)
+        : undefined;
+      projection = {
+        id: `runner:${run.runId}`,
+        taskId: attribution.task.id,
+        date: dateInTimezone(run.runStartedAt, start.current?.timezone ?? timezoneRef.current),
+        seconds: run.elapsedSeconds,
+        purpose: retained
+          ? getPracticePurpose(retained.entry)
+          : (attribution.purpose ?? 'assigned'),
+        classTime: retained?.entry.context === 'class',
+      };
+    } catch {
+      // Unknown retained classification must not imply required assignment credit.
+    }
+  }
+  const progressDate = today ?? dateInTimezone(new Date(), timezoneRef.current);
+  const savedProgress = useMemo(
+    () => runnerAssignmentProgress(tasks, entries, progressDate),
+    [tasks, entries, progressDate],
+  );
+  const progressTask = tasks.find((item) => item.id === task?.id);
+  const progress =
+    progressTask && savedProgress.has(progressTask.id)
+      ? runnerProgressWithCurrent(
+          progressTask,
+          savedProgress.get(progressTask.id)!.savedSeconds,
+          progressDate,
+          projection,
+          entries.some((entry) => entry.id === projection?.id),
+        )
+      : undefined;
+  useEffect(() => {
+    // Today is inspected after Stop acknowledgement. Do not publish a second live
+    // engine owner or rerender the app for every native running observation.
+    if (run.status !== 'running') callbacks.current.onProgressChange?.(projection);
+  }, [run, saved, projection?.purpose, projection?.classTime]);
 
   const retainResult = (next: RunnerRunState): boolean => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
@@ -405,6 +468,9 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
           {saved ? 'Run saved' : 'Review & save run'}
         </button>
       </div>
+      {progress && (
+        <RunnerAssignmentProgress progress={progress} extraReview={purpose === 'review'} />
+      )}
       <details className="runner-help">
         <summary>How to practice</summary>
         <p>

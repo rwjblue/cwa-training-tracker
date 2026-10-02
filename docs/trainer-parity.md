@@ -80,8 +80,10 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
 - **Morse Runner engine:** the same pinned embedded engine, Single Call/WPX,
   assignment settings, actual engine elapsed time, and independent run results
   are present. In-app inspection retains the same acknowledged result; a running
-  engine stops into a partial result before the inspected view opens. Cumulative
-  assignment accounting and the successive-run save workflow remain later work.
+  engine stops into a partial result before the inspected view opens. Issue #16
+  presents validated saved/current/combined/remaining assignment time in Studio
+  and Today, with a separate time milestone and explicit Complete/Reopen.
+  Successive-run Save & next remains issue #17.
   [Runner](../src/client/MorseRunnerStudio.tsx).
 - **Sending scales reader:** Warm-up, Exercise and Drill now display native
   practice rows beside the timer, with adjustable text size and a prominent link
@@ -123,7 +125,7 @@ These baseline gaps no longer describe the current implementation:
 | Native spoken repeats               | Both built-in lists use checked-in generated answer clips. Three Morse plays, speech, and pauses form one native WAV with seeking, pause/resume, looping and media-derived credit. Custom spoken lists require published words. [Listening](../src/client/ListeningTrainer.tsx), [audio provenance](spoken-audio.md), [browser regression](../e2e/spoken-answers.spec.ts).                                                                                                             | Real media decoding/progression and desktop/mobile fit are covered; physical iPhone lock-screen verification remains outstanding. A shuffled round loops its current order; New round reshuffles.                                                                                                                                                    |
 | Duration and explicit completion | The universal 15-minute fallback is removed. Elapsed time and an optional goal are separate from an assigned exercise's explicit Complete/Reopen action; completion is available without starting audio or creating a practice entry. Unknown manual-entry durations require actual learner input. [Studio](../src/client/PracticeStudio.tsx), [plan model](../src/shared/plan.ts). | Completion is a learner decision, not proof of a full listening pass or attainment of a proficiency target. Practice credit continues to come from saved actual time. |
 | Earlier reminders and session links | Today has no completion checkboxes. Dismissal hides earlier unfinished items only, with restoration in the course plan; dates, completion and recorded practice remain intact. All four courses link to the selected session in the official syllabus. [Today](../src/client/TodayPlan.tsx), [course plan](../src/client/Plan.tsx), [curriculum links](../src/shared/curriculum.ts). | Dismissal is not deletion and does not hide a task rescheduled to today or a future date. The Beginner session 2 HTML bookmark is missing, so its link uses the official PDF's page 11. |
-| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Independent review counts once toward useful daily practice and supplies no required assignment credit; class review stays separate. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation and cumulative Runner completion remain separate issues; observed recording passes are delivered below. Independent acceptance and production evidence are tracked in the issue #5 ledger below. |
+| Extra review purpose | Deliberate review retains its task, raw results and captured purpose through save/retry, history, reports and portable backups. Independent review counts once toward useful daily practice and supplies no required assignment credit; class review stays separate. [Purpose](../src/shared/training.ts), [workflow](../e2e/review-purpose.spec.ts). | Familiar-material recommendation rotation remains separate; issue #16 delivers cumulative Runner time with explicit completion; observed recording passes are delivered below. Independent acceptance and production evidence are tracked in the issue #5 ledger below. |
 
 ## Accepted September 30 delivery ledger
 
@@ -1285,3 +1287,70 @@ The latest instruction prohibits pushes. These accepted implementation commits
 remain local and deployed; local main advances with this delivery record, while
 #15 remains open until source publication. No PR or push was attempted; signing
 configuration is preserved. Continue ascending #16–#46.
+
+
+### Issue #16 — cumulative saved and current Runner assignment time
+
+The pinned original plan/client and Runner progress were rechecked against live
+issue #16. Companion now shares validated cumulative Runner accounting between
+Today and the existing native studio. Four totals show saved required time,
+current required engine time, combined time and remaining assigned time. The
+15-minute example is covered exactly: two unique five-minute saved runs plus
+two current minutes produce 10 saved, 2 current, 12 combined and 3 remaining.
+A saved acknowledgement transfers the current identity to saved evidence once.
+
+Shared owned-placement/alias rules exclude extra review, class, future, retired
+placement, duplicates and invalid/nonpositive evidence. Native saved facts are
+validated before contributing; actual float seconds are retained. Remaining
+display rounds positive fractions upward rather than showing premature zero.
+Valid manual/legacy credit and historical imported cumulative Runner completion
+remain compatible; other simulators retain their existing uninterrupted rule.
+No implicit time recommendation appears when the task has no target.
+
+Native completion policy is explicit Complete/Reopen plus a distinct **Time
+requirement met** milestone. Neither the milestone nor clicking Complete invents
+a run, elapsed time or score. Required saves, review/class history and reports
+continue through the existing validated queue/Worker/export/import architecture.
+Public unassigned Runner has ordinary engine progress and creates no account
+plan. No binding/schema changes, restricted assets or live elapsed recovery.
+
+One engine owner remains authoritative. Saved totals are memoized; current Studio
+time comes only from its native events. Today receives acknowledged stopped/reset
+projections after inspection, fenced by account, device token and launch identity.
+Retained canceled/frozen class/review choice controls required current credit.
+The projection is discarded when the owner changes and is never persisted.
+
+Focused progress/plan tests pass 34 cases, including fractions, invalid evidence,
+alias ownership and imported Runner/other-simulator regressions. The actual native
+desktop keyboard/mobile touch journey passes both widths in 50.2 seconds: guest
+use, unique archived fixtures, two real saves, actual Stop/Today/Return, canceled
+notes/class choice, refused pending storage/503/frozen exact retry, no double
+count, time milestone, Complete/Reopen with unchanged entries, and extra review
+class save. Four settled Axe arrays are empty; Today and Studio screenshots
+were inspected with no horizontal overflow. This is Chromium emulation, not
+physical-device/OS lock-screen verification. Final check, all 923 tests/50 files
+and production build pass. The final serialized full browser gate passes all
+79 journeys in 16.3 minutes, including both new Runner journeys and corrected
+difficult-mark journeys. Implementation commit, independent post-commit review
+and production delivery remain pending.
+
+Honest fixture iterations remain retained: same-URL API arrangement left the old
+empty plan visible; a nested locator was invalid; a seven-real-second observation
+used the default five-second poll; and the class checkbox used an incorrect name.
+Actual snapshots/traces were read before targeted fixture corrections. Fresh
+account reload, actual accessible checkbox with Space/tap, and sufficient native
+observation time fix those assumptions. No production timeout, clock or evidence
+rule was weakened. Source: pinned original plan.ts79/111 and client.ts449; current
+`src/shared/runner-progress.ts`, `src/client/RunnerAssignmentProgress.tsx`,
+`src/client/MorseRunnerStudio.tsx`, `src/client/TodayPlan.tsx` and
+`e2e/runner-progress.spec.ts`.
+
+Root self-review aligned current-progress bounds with the existing engine's
+`RUNNER_MAX_SECONDS` and requires a stable Runner identity. Its boundary tests
+pass. The first complete gate passed 77 journeys and failed only two existing
+#12 fixtures dated in UTC against a New York account after midnight UTC; retained
+traces prove that scheduling mismatch. A separate focused #12 fixture correction
+uses the account timezone. Four focused journeys pass in 1.2 minutes, followed
+by the final complete 79-journey passing gate. Independent combined acceptance
+remains pending; the earlier interrupted 23-pass gate is not counted
+as complete.

@@ -1,6 +1,12 @@
+import RunnerAssignmentProgress from './RunnerAssignmentProgress';
+import {
+  runnerAssignmentProgress,
+  type CurrentRunnerProgress,
+  type RunnerAssignmentProgress as RunnerProgress,
+} from '../shared/runner-progress';
 import ListeningPassProgress from './ListeningPassProgress';
 import TaskRecordingChoiceHint from './TaskRecordingChoiceHint';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -31,6 +37,7 @@ import './today-plan.css';
 import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
+  currentRunner?: CurrentRunnerProgress;
   accountId?: string;
   profile: Profile;
   entries: PracticeSession[];
@@ -60,6 +67,7 @@ const minuteLabel = (minutes: number) => Number(minutes.toFixed(1));
 /** The parent owns private data, so course edits and journal saves stay in sync. */
 export default function TodayPlan({
   accountId,
+  currentRunner,
   profile,
   entries,
   tasks,
@@ -80,6 +88,10 @@ export default function TodayPlan({
   const [dismissedCount, setDismissedCount] = useState(0);
   const [saveError, setSaveError] = useState('');
   const today = dateInTimezone(new Date(), profile.timezone);
+  const runnerProgress = useMemo(
+    () => runnerAssignmentProgress(tasks, entries, today, currentRunner),
+    [tasks, entries, today, currentRunner],
+  );
   const plan = dailyPlanSummary(tasks, courseMeetings(profile), entries, today);
   const course = curriculumForLevel(profile.level);
   const curriculum = tasks.some((task) => task.curriculum?.id === course?.id) ? course : undefined;
@@ -110,6 +122,7 @@ export default function TodayPlan({
           scope={accountId}
           key={item.task.id}
           item={item}
+          runnerProgress={runnerProgress.get(item.task.id)}
           today={today}
           onLog={() => onLog(practiceForTask(item.task, today))}
           onPractice={onPracticeTask ? (purpose) => onPracticeTask(item.task, purpose) : undefined}
@@ -342,12 +355,14 @@ export default function TodayPlan({
 function TodayTask({
   scope,
   item,
+  runnerProgress,
   today,
   onLog,
   onPractice,
 }: {
   scope?: string;
   item: DailyPlannedTask;
+  runnerProgress?: RunnerProgress;
   today: string;
   onLog: () => void;
   onPractice?: (purpose: PracticePurpose) => void;
@@ -383,6 +398,7 @@ function TodayTask({
             minimumPasses={task.exercise.minimumPasses}
           />
         )}
+        {runnerProgress && <RunnerAssignmentProgress progress={runnerProgress} />}
         <TaskRecordingChoiceHint scope={scope} task={task} />
         {task.notes && (
           <details className="today-plan-instructions">
