@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectResponsive, signIn } from './helpers';
+import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.227' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -29,6 +30,7 @@ test('word selection, stepping and rewind retain state and save only actual hear
   await page.getByRole('slider', { name: 'Character speed', exact: true }).press('End');
   await page.getByRole('slider', { name: 'Effective speed', exact: true }).press('End');
   await page.getByText('View word list', { exact: true }).click();
+  await observeNativeMovement(media(page));
   // Hold source attachment, not time or events, to exercise a real seek before
   // native decoding/metadata. Release the actual Blob through the native setter.
   await media(page).evaluate((audio: HTMLAudioElement) => {
@@ -133,7 +135,8 @@ test('word selection, stepping and rewind retain state and save only actual hear
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   const evidence = entries[0].metadata.evidence;
   expect(evidence.wordListeningSeconds).toBeGreaterThan(1);
-  expect(evidence.wordListeningSeconds).toBeLessThan(4);
+  const observed = await readNativeMovement(page);
+  expect(Math.abs(evidence.wordListeningSeconds - observed.seconds)).toBeLessThan(0.02);
   expect(evidence.wordListeningSeconds).toBeCloseTo(evidence.measurement.seconds, 6);
 });
 

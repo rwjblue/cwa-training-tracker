@@ -86,8 +86,8 @@ Current active UI routes are [C/src/client/main.tsx:63,422](https://github.com/r
 | Complete 70 Common QSO words + 30 common English words | **Present** | P [src/data/cw-listening/words.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/data/cw-listening/words.ts), [src/lib/cw-listening/word-practice.ts:2](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-practice.ts#L2); C [src/client/word-content.ts:4,12](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/word-content.ts#L4). Catalog strings match. The legacy “77” label did not mean 77 unique words: personal migration deduplicates the old built-in only ([word-practice.ts:73](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-practice.ts#L73)); preserve deliberate custom repeats. C catalog/unit test [listening-content.test.ts:14](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/listening-content.test.ts#L14) verifies counts/contents. |
 | Custom lists, deliberate repeated words, punctuation/prosigns, 1–200 words, max 40 characters per word | **Present, with differences / P3** | P [word-practice.ts:30](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-practice.ts#L30); C [word-content.ts:22](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/word-content.ts#L22). P accepts up to 10,000 input characters, C textarea max 8,200 ([ListeningTrainer.tsx:423](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L423)), but 200 × 40 ordinary words fits both. C validates against its explicit Morse/prosign table ([audio.ts:57,67](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/audio.ts#L57)); P delegates actual encoding to pinned Morse Pro with prosigns ([cw-listening/morse.ts:10,23](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/morse.ts#L10)). Do not promise every arbitrary bracketed token in P's permissive syntax is playable without engine validation. |
 | Keep VVV first when shuffling QSO vocabulary | **Present** | P [word-panel.ts:160](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L160), [word-round.ts:21](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L21); C [word-content.ts:37](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/word-content.ts#L37). Existing C test covers it. |
-| Fresh shuffle for every repeated native-audio round | **Partial / P2** | P [word-panel.ts:123](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L123) prepares a fresh round on ended. C Morse-only [ListeningTrainer.tsx:260](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L260) uses native `loop` on the already-generated shuffled track, repeating the same order. Its *spoken* branch correctly calls `wordPracticeRound` again (`:143`). The visible Shuffle + Repeat combination thus behaves differently depending on spoken mode. |
-| Shuffle/repeat toggles during playback without throwing away the current word | **Partial / P2** | P [word-panel.ts:254](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L254) defers shuffle to next round and changes transport repeat independently; C [ListeningTrainer.tsx:324](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L324) stops/clears on `track`, `repeatList`, or `spokenAnswers` changes and the selection reset effect also handles shuffle. |
+| Fresh shuffle for every repeated native-audio round | **Implemented for Morse-only Words / #28** | P [word-panel.ts:123](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L123) prepares a fresh round on ended. C [ListeningTrainer.tsx](../../src/client/ListeningTrainer.tsx) now generates each round from the latest validated source and Shuffle preference, installs from committed content, preserves duplicate/prosign occurrences and keeps common-QSO VVV first. [wordListeningTrack](../../src/client/listening-configuration.ts) reuses bounded native audio. Existing spoken-answer behavior remains unchanged; see the #28 ledger below. |
+| Shuffle/repeat toggles during playback without throwing away the current word | **Implemented for Morse-only Words / #28** | P [word-panel.ts:254](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L254) defers shuffle to next round and changes repeat independently. C retains the installed source, word, native position and playing/paused state. Shuffle chooses the next round; Repeat controls continuation after the current round. Pause, inspection, replacement and disposal cancel pending continuation. Existing spoken-answer policy is retained. |
 | Directly edit the selected built-in into a custom list | **Missing / P2** | P editable textarea is always available ([word-panel.ts:48](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L48)); editing changes selection to custom (`:277`). C only renders its textarea for explicit custom selection ([ListeningTrainer.tsx:422](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L422)) and initializes it separately; no “copy this list to custom” action. Both allow custom practice, but quickly removing difficult/easy words from the existing list is less direct in C. |
 | Custom draft survives closing/reloading the tool | **Missing / P1** | P [storage.ts:12,16](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L12) persists the word draft, including custom text; [session.ts:46,79](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L46) validates/restores it. C stores only typed preference fields ([practice-preferences.ts:5,47,97](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L5)), custom text is React state, and UI explicitly says it lasts only while the studio is open ([ListeningTrainer.tsx:435](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L435)). |
 | Three Morse repetitions followed by spoken answer | **Partial / P1** | Both expose the option and honor three repetitions. P [word-round.ts:41,48,84](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L41) stitches measured Morse, pauses, and published speech PCM into one native WAV. [word-assets.ts:17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-assets.ts#L17) loads pronunciation clips with bounded concurrency/cache and rejects unsupported custom words clearly. C [ListeningTrainer.tsx:158,170,178](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L158) uses device-local English `speechSynthesis`, dependent on installed/local voice availability, and explicitly stops when hidden (`:333`). P can keep spoken rounds on native background/lock-screen playback; C cannot. C supports arbitrary custom words when a suitable local voice exists, whereas P supports only published speech vocabulary: a tradeoff, not total inferiority. |
@@ -761,3 +761,66 @@ pending publication under the latest instruction. Accepted local/production
 behavior permits the ascending #28 loop. Stories frontend remains #30; physical
 locked-device behavior is unverified. New recognition and unfinished elapsed
 reload/crash recovery remain excluded. Original personal site is unchanged.
+
+### Issue #28 native repeated word rounds
+
+Original pinned word-panel.ts lines 123, 165 and 254 and word-round.ts line 21
+establish fresh rounds on native end, future-round Shuffle and independent
+Repeat, including duplicate occurrences and the common-QSO VVV opening.
+Morse-only Words now prepares each repeating round from the latest validated
+source/preferences rather than looping an already-generated recording.
+A shuffled round draws a fresh order without requiring random outputs to
+necessarily differ. Unshuffled repeat keeps the complete source order.
+
+Changing Shuffle or Repeat while playing or paused retains the current source,
+word, position, rate and transport state. Pending continuation is consumed once
+from committed React content before native installation. Turning Repeat off
+before that commit prepares the next source paused. Pause, inspection, source/
+tool replacement and disposal cancel pending continuation and late native Play
+acknowledgements. Bounded preparation failure preserves earned time and exposes
+an accessible Next round error with deliberate Retry next round; ordinary native
+play errors retain the existing Play retry. No new player, clock or asynchronous
+fetch pipeline is introduced. Existing spoken-answer behavior remains intact.
+
+Actual heard movement and applied configuration summaries continue through the
+existing account-scoped save/queue, history, export/import and report boundaries.
+Selected-but-unheard next material contributes no time or source evidence.
+No new SQL/entity, binding, migration, export schema or configuration is needed.
+Public tools remain account-free. Editable built-ins remain #29, Stories #30
+and retained content/preferences #31. Physical locked-device playback remains
+unverified; new recognition and elapsed reload/crash recovery are excluded.
+
+Two cheap deterministic cases cover source validation, duplicate/prosign
+occurrences, immutable prior rounds, VVV, actual applied Shuffle summaries,
+spacing and bounded duration rejection. Required check, 1,054 tests across
+63 files and build pass. The affected eleven serial native browser journeys
+pass in 2.1 minutes, including both new repeat/cancellation journeys, private
+503 exact retry/export/history/report, seek/retime seams and prerecorded speech.
+Four scoped desktop/mobile accessibility/overflow reports are empty and four
+captures were inspected. Keyboard/touch Repeat/Shuffle, preparation failure,
+late acknowledgement, source/inspection cancellation and ordered/shuffled native
+continuation are exercised. Private raw heard time 10.066430 seconds agrees
+with directly observed native playing movement 10.066481 seconds within 20ms.
+No media event, currentTime, played range or elapsed time is fabricated.
+
+Initial browser evidence found an outer Studio preference handler stopping
+Shuffle/Repeat; its continuity policy was corrected. Two encoded-duration/upper
+bound assertions were corrected to compare real native movement, excluding
+pause/resume gaps and seek destinations; the product clock was unchanged.
+A later unshuffled continuation was observed paused at zero once. Diagnostic
+runs did not reproduce its cause; installation ownership was tightened to the
+committed content boundary and all final affected journeys pass. Failure context,
+pixels and bounded traces are retained in ignored local evidence. Full final
+regression and fresh post-commit independent review remain subsequent gates.
+
+Final regression before the feedback-only correction passes all 83 serial browser
+journeys in 16.5 minutes. A focused native probe then exposed a stale outer Studio
+alert after successful next-round retry; assertion, context, pixels and bounded
+trace were inspected and retained. A deliberate retry callback now clears that
+host-owned feedback without changing the player or time owners. The failing
+journey passes in 9.4 seconds, followed by all eleven affected native journeys
+in 2.0 minutes on final code. Required check, 1,054 tests/63 files and build pass.
+Four final scoped accessibility/overflow reports remain empty and all four
+current captures were inspected. Latest private raw heard time is 10.068418
+seconds against directly observed 10.068388 seconds. Fresh post-commit review
+remains required; this entry does not yet declare independent acceptance.

@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
-import { buildMorseTrack, MorsePlayer, morseTimeline, type MorseTrack } from './audio';
+import { buildMorseTrack, MorsePlayer, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
 import ListeningSeekControls from './ListeningSeekControls';
 import { buildSpokenWordTrack } from './morse-track';
@@ -24,6 +24,7 @@ import {
   listeningWordRound,
   qsoListeningSummary,
   wordListeningSummary,
+  wordListeningTrack,
   type ListeningWordRound,
 } from './listening-configuration';
 import type { PracticePreferences } from './practice-preferences';
@@ -61,6 +62,7 @@ export default forwardRef<
     onBeforeReplace?: () => void;
     onBeforeSeek?: () => void;
     onError: (message: string) => void;
+    onRetry?: () => void;
   }
 >(function ListeningTrainer(
   {
@@ -73,6 +75,7 @@ export default forwardRef<
     onBeforeReplace,
     onBeforeSeek,
     onError: onErrorMessage,
+    onRetry,
   },
   ref,
 ) {
@@ -103,6 +106,13 @@ export default forwardRef<
   const [wordRound, setWordRound] = useState<ListeningWordRound | null>(null);
   const words = wordRound?.words ?? EMPTY_WORDS;
   const [roundError, setRoundError] = useState('');
+  const [continuationError, setContinuationError] = useState('');
+  const retryRound = useRef(false);
+  const pendingRound = useRef<{ round: ListeningWordRound; automatic: boolean } | null>(null);
+  const preferencesOwner = useRef(p);
+  preferencesOwner.current = p;
+  const customOwner = useRef(custom);
+  customOwner.current = custom;
   const [position, setPosition] = useState(0);
   const [answer, setAnswer] = useState(false);
   const [active, setActive] = useState(false);
@@ -129,7 +139,13 @@ export default forwardRef<
   const repeatList = isWords && p.repeatList;
   const wordGap = isWords ? p.wordGap : 0;
   const content = isWords ? wordRound : qso;
-  const resetKey = JSON.stringify([isWords, p.tone, wordGap, repeatList, spokenAnswers]);
+  const resetKey = JSON.stringify([
+    isWords,
+    p.tone,
+    wordGap,
+    spokenAnswers && repeatList,
+    spokenAnswers,
+  ]);
   const materialOwner = useRef(content);
   materialOwner.current = content;
   const settingsOwner = useRef(resetKey);
@@ -143,6 +159,7 @@ export default forwardRef<
   const roundList = wordRound?.listId ?? p.wordList;
   const listTitle = roundList === 'custom' ? 'Your word list' : WORD_LISTS[roundList].title;
   const stop = () => {
+    pendingRound.current = null;
     player.current.pause();
     setActive(false);
     onPlaying(false);
@@ -156,6 +173,8 @@ export default forwardRef<
     else if (!inspecting.current) pauseForInspection();
   }, [visible]);
   const resetTransport = () => {
+    retryRound.current = false;
+    setContinuationError('');
     stop();
     prepared.current = null;
     setPlayingTrack(null);
@@ -181,7 +200,12 @@ export default forwardRef<
   useEffect(() => {
     if (isWords) resetWords();
     else resetTransport();
-  }, [isWords, activeWordList, activeShuffle, activeCustom]);
+  }, [isWords, activeWordList, activeCustom]);
+  useEffect(() => {
+    // A Morse-only installed round keeps its order; Shuffle chooses the next one.
+    // Preserve the existing fresh-recording behavior for spoken answers.
+    if (isWords && (spokenAnswers || !prepared.current)) resetWords();
+  }, [activeShuffle, spokenAnswers]);
   useEffect(() => {
     if (qso.id === p.qsoScenario) return;
     if (!isWords) resetTransport();
@@ -192,6 +216,7 @@ export default forwardRef<
   }, []);
   useEffect(
     () => () => {
+      pendingRound.current = null;
       prepared.current = null;
       player.current.dispose();
     },
@@ -236,14 +261,14 @@ export default forwardRef<
           ...options,
           extraWordGap: wordGap,
         });
+      } else if (isWords) {
+        track = wordListeningTrack(wordRound!, p).track;
       } else {
         track = buildMorseTrack(
           items.map((text, i) => ({
             text,
-            frequency: !isWords && i % 2 ? Math.min(1000, p.tone + 50) : p.tone,
-            gapAfter: isWords
-              ? morseTimeline(text, options.characterWpm, options.effectiveWpm).wordGap + wordGap
-              : 2,
+            frequency: i % 2 ? Math.min(1000, p.tone + 50) : p.tone,
+            gapAfter: 2,
           })),
           options,
         );
@@ -255,7 +280,7 @@ export default forwardRef<
         resetKey,
         configurations: [{ at: 0, summary }],
         title: isWords ? listTitle : qso.title,
-        loop: repeatList,
+        loop: spokenAnswers && repeatList,
       });
       return { applied, error: '' };
     } catch (error) {
@@ -355,6 +380,9 @@ export default forwardRef<
             if (!acceptsPlayback()) return;
             setComplete(true);
             setActiveWord(-1);
+            const latest = preferencesOwner.current;
+            if (latest.tool === 'words' && !latest.spokenAnswers && latest.repeatList)
+              advanceWordRound(true);
           },
           onError,
         },
@@ -385,6 +413,32 @@ export default forwardRef<
       throw error;
     }
   };
+  const failNextRound = (error: Error) => {
+    stop();
+    retryRound.current = true;
+    const message = `Next round could not play. ${error.message}`;
+    setContinuationError(message);
+    onError(message);
+  };
+  const advanceWordRound = (automatic = false) => {
+    if (!canPlay()) return;
+    const latest = preferencesOwner.current;
+    if (latest.tool !== 'words' || latest.spokenAnswers) return;
+    retryRound.current = false;
+    setContinuationError('');
+    try {
+      const round = listeningWordRound(latest.wordList, customOwner.current, latest.shuffleWords);
+      // The committed React round owns the rendered source before native Play.
+      // Pause, inspection, source changes and disposal cancel this pending intent.
+      pendingRound.current = { round, automatic };
+      setWordRound(round);
+      index.current = 0;
+      setPosition(0);
+      setAnswer(false);
+    } catch (error) {
+      failNextRound(error as Error);
+    }
+  };
   const prepare = (restartEnded = true) => {
     if (prepared.current?.material === content && prepared.current.resetKey === resetKey) {
       if (
@@ -410,6 +464,8 @@ export default forwardRef<
   };
   const play = async () => {
     if (!canPlay()) return;
+    if (retryRound.current) return advanceWordRound();
+    pendingRound.current = null;
     prepare();
     setAnswer(false);
     await player.current.resume();
@@ -458,6 +514,22 @@ export default forwardRef<
     }
   };
   useEffect(() => {
+    const pending = pendingRound.current;
+    if (pending?.round === content) {
+      pendingRound.current = null;
+      if (!canPlay()) return;
+      if (!applied) {
+        failNextRound(new Error(trackResult.error || 'This round could not be prepared.'));
+        return;
+      }
+      try {
+        install(applied, 0, !pending.automatic || preferencesOwner.current.repeatList);
+        setComplete(false);
+      } catch (error) {
+        failNextRound(error as Error);
+      }
+      return;
+    }
     const previous = prepared.current;
     if (!previous) return;
     if (!applied) {
@@ -682,6 +754,20 @@ export default forwardRef<
         <p role="status">Loading prerecorded answers…</p>
       )}
       {trackResult.error && <p role="alert">{trackResult.error}</p>}
+      {continuationError && (
+        <div role="alert">
+          <p>{continuationError} Earned listening time is retained.</p>
+          <button
+            className="button outline"
+            onClick={() => {
+              onRetry?.();
+              advanceWordRound();
+            }}
+          >
+            Retry next round
+          </button>
+        </div>
+      )}
       {soundSettings}
       <p className="field-hint">
         {isWords && !spokenAnswers
@@ -690,6 +776,9 @@ export default forwardRef<
             ? 'Change speed to restart the same word occurrence. Playing stays playing; paused stays paused.'
             : 'Speed changes in spoken-answer mode start a fresh recording.'}{' '}
         List, pitch, spacing and spoken-answer changes start a fresh round.
+        {isWords &&
+          !spokenAnswers &&
+          ' Shuffle applies to the next round; Repeat lets this round finish before continuing or stopping.'}
       </p>
       {deviceVolume && (
         <p className="field-hint">

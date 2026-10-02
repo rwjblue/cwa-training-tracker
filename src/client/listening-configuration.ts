@@ -1,3 +1,4 @@
+import { buildMorseTrack, morseTimeline } from './audio';
 import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import type { PracticePreferences } from './practice-preferences';
 import type { PracticeQso } from './qso-content';
@@ -40,6 +41,25 @@ export function wordListeningSummary(
     repeat: p.repeatList,
     spokenAnswers: p.spokenAnswers,
   });
+}
+
+/** One bounded Morse-only recording for the actual ordered source occurrences. */
+export function wordListeningTrack(round: ListeningWordRound, p: PracticePreferences) {
+  const summary = wordListeningSummary(round, p);
+  const options = {
+    characterWpm: summary.characterWpm,
+    effectiveWpm: summary.effectiveWpm,
+    frequency: p.tone,
+    volume: p.volume / 100,
+  };
+  const track = buildMorseTrack(
+    round.words.map((text) => ({
+      text,
+      gapAfter: morseTimeline(text, options.characterWpm, options.effectiveWpm).wordGap + p.wordGap,
+    })),
+    options,
+  );
+  return { track, summary };
 }
 
 export function qsoListeningSummary(

@@ -713,7 +713,10 @@ export default function PracticeStudio({
           key === 'characterWpm' ||
           key === 'effectiveWpm' ||
           key === 'volume' ||
-          key === 'hideTrainerText',
+          key === 'hideTrainerText' ||
+          (tool === 'words' &&
+            !preferences.spokenAnswers &&
+            (key === 'shuffleWords' || key === 'repeatList')),
       );
     if (!('hideTrainerText' in changes) && !continuousListeningEdit) stopPlayback();
     setError('');
@@ -1726,6 +1729,7 @@ export default function PracticeStudio({
                       pauseTimer();
                       setError(message);
                     }}
+                    onRetry={() => setError('')}
                   />
                 ) : (
                   <>

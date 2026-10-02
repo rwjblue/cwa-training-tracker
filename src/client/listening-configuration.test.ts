@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   listeningWordRound,
   qsoListeningSummary,
   wordListeningSummary,
+  wordListeningTrack,
 } from './listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
 import { generateQso } from './qso-content';
@@ -54,6 +55,60 @@ describe('applied listening configurations', () => {
     expect(second).toMatchObject({ listId: 'custom', characterWpm: 30, effectiveWpm: 15 });
     expect(first).not.toHaveProperty('words');
     expect(first).not.toHaveProperty('text');
+  });
+
+  it('generates each next round from the validated source with independent shuffle draws', () => {
+    const random = vi.fn().mockReturnValueOnce(0).mockReturnValue(0.75);
+    const first = listeningWordRound('custom', 'cq e cq <AR>', true, random);
+    const retained = [...first.words];
+    const second = listeningWordRound('custom', 'cq e cq <AR>', true, random);
+    expect(random).toHaveBeenCalledTimes(6);
+    for (const round of [first, second]) {
+      expect([...round.words].sort()).toEqual(['<AR>', 'CQ', 'CQ', 'E']);
+      expect(round.shuffle).toBe(true);
+      expect(Object.isFrozen(round.words)).toBe(true);
+    }
+    expect(first.words).toEqual(retained);
+    expect(second).not.toBe(first);
+    expect(listeningWordRound('custom', 'cq e cq <AR>', false).words).toEqual([
+      'CQ',
+      'E',
+      'CQ',
+      '<AR>',
+    ]);
+    const opening = listeningWordRound('common-qso', '', true, random);
+    expect(opening.words[0]).toBe('VVV');
+    expect(opening.words).toHaveLength(70);
+  });
+
+  it('builds bounded next-round timelines from actual occurrence order and current speed', () => {
+    const round = listeningWordRound('custom', 'e e <AR>', false);
+    const p = {
+      ...DEFAULT_PRACTICE_PREFERENCES,
+      characterWpm: 50,
+      effectiveWpm: 50,
+      wordGap: 0,
+      repeatList: true,
+      shuffleWords: true,
+    };
+    const result = wordListeningTrack(round, p);
+    expect(result.track.items.map((item) => item.text)).toEqual(['E', 'E', '<AR>']);
+    expect(result.track.words.map((word) => word.itemIndex)).toEqual([0, 1, 2]);
+    expect(result.track.items[1].start).toBeGreaterThan(result.track.words[0].end);
+    expect(result.summary).toMatchObject({
+      shuffle: false,
+      repeat: true,
+      characterWpm: 50,
+      entryCount: 3,
+    });
+    expect(() =>
+      wordListeningTrack(listeningWordRound('custom', 'PARIS '.repeat(200), false), {
+        ...p,
+        characterWpm: 5,
+        effectiveWpm: 5,
+        wordGap: 5,
+      }),
+    ).toThrow('20 minutes');
   });
 
   it('captures the actual contact and rendered tone pair without mutating its script or answers', () => {
