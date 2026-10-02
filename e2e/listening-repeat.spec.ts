@@ -12,6 +12,8 @@ const state = (page: Page) =>
     paused: a.paused,
     duration: a.duration,
     ended: a.ended,
+    volume: a.volume,
+    rate: a.playbackRate,
   }));
 const list = (page: Page) =>
   page.getByRole('button', { name: /^Seek to word \d+:/ }).allTextContents();
@@ -173,10 +175,16 @@ test('next-round failure retries visibly and cancels late native continuation on
         });
       };
     });
+  await media(page).evaluate((a: HTMLAudioElement) => {
+    a.volume = 0.3;
+    a.playbackRate = 1.5;
+  });
   await holdAcknowledgement();
   await page.getByRole('button', { name: 'Retry next round', exact: true }).press('Enter');
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
   expect((await state(page)).source).not.toBe(first.source);
+  expect((await state(page)).volume).toBe(0.3);
+  expect((await state(page)).rate).toBe(1.5);
   await expect(
     page.getByRole('alert').filter({ hasText: 'Synthetic next-round preparation unavailable.' }),
   ).toHaveCount(0);
@@ -187,6 +195,8 @@ test('next-round failure retries visibly and cancels late native continuation on
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).tap();
   await expect.poll(async () => (await state(page)).source).not.toBe(orderedSource);
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
+  expect((await state(page)).volume).toBe(0.3);
+  expect((await state(page)).rate).toBe(1.5);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   expect(await list(page)).toEqual(['E', 'T']);
   await holdAcknowledgement();

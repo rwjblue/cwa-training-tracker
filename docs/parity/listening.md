@@ -824,3 +824,16 @@ Four final scoped accessibility/overflow reports remain empty and all four
 current captures were inspected. Latest private raw heard time is 10.068418
 seconds against directly observed 10.068388 seconds. Fresh post-commit review
 remains required; this entry does not yet declare independent acceptance.
+
+Fresh post-commit review found one P2 native-volume regression: changing native
+volume from 0.4 to 0.3 survived mid-round controls but reset to selected 0.4 on
+fresh automatic replacement. Native rate 1.5 already survived. The fix retains
+actual supported native volume for an installed-track replacement, including
+retry and repeat; initial preparation and unsupported-device baked volume keep
+the selected fallback. Explicit settings-panel volume changes still use the
+existing native-volume effect. No player, clock or source-evidence owner changes.
+The existing guest journey now checks volume 0.3/rate 1.5 through deliberate
+retry and actual automatic continuation; it passes in 8.9 seconds. All eleven
+affected native journeys pass in 2.0 minutes. Check, 1,054 tests/63 files and
+build pass. Reviewer recheck and its unclassified initial keyboard-launch probe
+remain required; independent acceptance is not declared yet.

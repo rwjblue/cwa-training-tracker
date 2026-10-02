@@ -332,7 +332,11 @@ export default forwardRef<
           canPlay: acceptsPlayback,
           onBeforeSeek: () => callbacks.current.onBeforeSeek?.(),
           loop: next.loop,
-          volume: volumeOwner.current,
+          // An installed round may have a volume chosen in native controls.
+          volume:
+            player.current.track && player.current.supportsVolume && audio.current
+              ? audio.current.volume
+              : volumeOwner.current,
           onProgress: (progress) => {
             if (!ownsPrepared()) return;
             // A changed last item takes effect on the next deliberate native loop.
