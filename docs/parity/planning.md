@@ -1023,3 +1023,35 @@ reports are empty. Existing account/lifecycle, native listening/Runner, queue,
 backup, history/report, completion and public-tool workflows pass unchanged.
 The focused correction is ready for independent post-commit recheck; production
 deployment and acceptance are not yet claimed.
+
+
+### Issue #22 — independent acceptance and production delivery
+
+Implementation `175741b9caebeb72f0126b2655c1f97953d8a913` and focused
+Copy-purpose correction `6041699e43da6a6c6899ca122e0a9ee7cc876b34` are
+independently ACCEPTED after the one P2 was fixed. The reviewer reran its original
+failing native Copy probe and extended it through a distinct assigned result:
+review facts stayed exactly unchanged (1.67056s); the new assigned result measured
+1.842328s, with no duplicate or implicit homework completion. Its three serialized
+Copy/manual/real-Runner journeys passed in 27.6s, including canceled review,
+503/exact retry and retained ownership. Forty-five focused tests passed; fourteen
+distinct Axe/overflow artifacts were empty; six new Copy desktop/mobile captures
+were independently viewed. All seventeen implementation files exactly match the
+correction commit, and protected primary document hashes remain unchanged.
+
+Root gates pass: check, 1,002 tests in 59 files, build and all 72 serialized browser
+journeys (14.5m); twenty settled next-action Axe/overflow artifacts are empty.
+Production deployment repeated the complete task once after D1 API error7403;
+the retry passed validation/dry-run, found no pending migrations and deployed
+version `f0d4577f-8026-4417-83b1-736be3eb9274`. Fresh production entry/health
+responses are200; all four JS/CSS assets and the pinned Runner bridge exactly
+match built SHA-256 bytes. Entries, account state and lifecycle backup require
+authentication (401). The separate public feed still has exact shared content,
+nine stable distinct UIDs/sequence1, matching DST recurrence, GET/HEAD200,
+conditional304, unsupported-method405 and no Set-Cookie.
+
+Local main records delivery. No push was attempted. GitHub reports the correction
+SHA absent (422), so issue #22 stays OPEN pending publication; accepted local and
+production behavior permits the ascending #23 loop. No new elapsed-time reload
+recovery, physical-device/lock-screen claim or excluded public tool is included.
+Restricted curriculum remains linked; original source and user work are unchanged.
