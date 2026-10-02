@@ -1,3 +1,4 @@
+import { familiarReviewSuggestions } from './familiar-review';
 import { classMeetingStatus } from './class-schedule';
 import { availableForImmediatePractice, liveAssignmentStatus } from './live-assignment';
 import { dailyPlanSummary, type DailyPlannedTask, type PlannedTask } from './plan';
@@ -46,6 +47,8 @@ export function nextPracticePlan(
     activeClass,
     next: activeClass ? undefined : eligible[0],
     eligible,
+    reviews:
+      activeClass || eligible.length ? [] : familiarReviewSuggestions(tasks, entries, profile, now),
     blocked,
     // Undated class preparation is visible, never automatically advanced.
     preparation: plan.preparation.filter(({ task }) => !task.dismissedFromToday),

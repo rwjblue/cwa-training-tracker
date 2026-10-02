@@ -16,6 +16,7 @@ export default function NextPracticeAction({
   onStart,
   onPrepare,
   onManage,
+  onReview,
 }: {
   plan: ReturnType<typeof nextPracticePlan>;
   profile: Profile;
@@ -28,6 +29,7 @@ export default function NextPracticeAction({
   onStart: () => void;
   onPrepare: (task: PlannedTask) => void;
   onManage: () => void;
+  onReview: (taskId: string) => void;
 }) {
   const titleId = useId();
   const next = plan.next;
@@ -134,6 +136,32 @@ export default function NextPracticeAction({
             Future work and extra review are not automatically advanced.
           </p>
         </>
+      )}
+      {!resultPending && plan.reviews.length > 0 && (
+        <section className="familiar-review" aria-label="Optional familiar review">
+          <h3>Optional familiar review</h3>
+          <p>
+            Required work is complete or unavailable now. Choose familiar material when useful.
+            These suggestions rotate with saved practice. Review adds daily practice time and
+            preserves its source; it never completes or credits the required assignment.
+          </p>
+          <ul>
+            {plan.reviews.map(({ task, reason }) => (
+              <li key={task.id}>
+                <h4>{task.title}</h4>
+                <p>{reason}</p>
+                <p>{task.notes}</p>
+                <button
+                  className="button outline"
+                  disabled={busy}
+                  onClick={() => onReview(task.id)}
+                >
+                  {finishing ? 'Finish & review' : 'Review'} {task.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <div className="next-practice-actions">
         <button className="text-button" disabled={busy} onClick={onManage}>

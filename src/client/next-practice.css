@@ -41,3 +41,20 @@
     padding: 18px;
   }
 }
+
+.familiar-review {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.familiar-review ul {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1rem;
+}
+.familiar-review li {
+  padding-top: 0.5rem;
+}
+.familiar-review h4 {
+  margin: 0;
+}

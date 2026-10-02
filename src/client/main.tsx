@@ -980,6 +980,40 @@ function App() {
       },
     );
   };
+  const startFamiliarReview = async (taskId: string) => {
+    if (
+      !nextReady ||
+      !user ||
+      (activeAccount.current ?? 'guest') !== scope ||
+      !isDeviceScopeCurrent(scope, deviceToken)
+    )
+      return;
+    const select = () =>
+      nextPracticePlan(
+        planning.current.tasks,
+        planning.current.entries,
+        planning.current.profile,
+        Date.now(),
+      ).reviews.find(({ task }) => task.id === taskId);
+    const candidate = select();
+    if (!candidate) {
+      notify('This review is no longer eligible. Check your current plan.');
+      return;
+    }
+    await runPracticeTransition(
+      `review:${currentLaunch.current?.id ?? 'none'}:${taskId}`,
+      confirmLeaveStudio,
+      () => {
+        const fresh = select();
+        if (!fresh) {
+          notify('This review is no longer eligible. Your current context remains available.');
+          return;
+        }
+        replaceStudio({ id: crypto.randomUUID(), ...practiceLaunchForTask(fresh.task, 'review') });
+        showPage('practice');
+      },
+    );
+  };
   const nextPracticeAction = user ? (
     <NextPracticeAction
       plan={nextPlan}
@@ -991,6 +1025,7 @@ function App() {
       currentTaskId={practiceLaunch?.task?.id}
       currentPurpose={practiceLaunch?.purpose}
       onStart={() => void startNextPractice()}
+      onReview={(taskId) => void startFamiliarReview(taskId)}
       onPrepare={(task) => void openPractice(practiceLaunchForTask(task))}
       onManage={() => void navigate('course', false, 'week')}
     />

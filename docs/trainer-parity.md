@@ -2289,3 +2289,80 @@ retain their fixed calendar date across timezone changes and become inactive
 after that date without deleting history. No physical-device or elapsed-time
 reload/crash recovery is claimed. Restricted curriculum remains linked;
 original source and protected user work remain unchanged.
+
+### Issue #24 — bounded familiar review, implementation and validation
+
+Rechecked the current open issue, no comments/native dependencies, documented
+#5 dependency and approved finding27. The read-only original at
+`3106c9b8bf20b63be069f4019467cb565cdd17ec` supplies `plan.ts:163`, `:236`
+and `:327`: a recent-date review pool, resource rotation and current-course
+computer recipes. The approved introduction cutoff excludes the original's
+pre-introduction fallback to a future Runner/ICR task.
+
+When no required block is eligible and no class is active, the existing next
+practice card offers at most three optional familiar reviews. Ordinary material
+comes from the three most recent dates with usable introduced material. Runner
+and ICR candidates retain their latest reached course source/settings, including
+rest days. Every choice explains its introduction date and session/day when
+known. Future/undated work, inactive curricula, live work and unresolved audio
+are excluded. Public guest tools remain usable; account-derived suggestions
+are rendered only for the authenticated learner.
+
+The shared selector deduplicates exact private recording URLs and verified
+catalog alternate-speed identities, without guessing filename families. Saved
+positive practice rotates least recently used sources; reviews already used
+today follow unused choices. Native audio rotates from actual heard URLs, not
+unplayed selected recordings. Existing qualified task/legacy aliases retain
+source identity, while real owned IDs remain authoritative.
+
+Deliberate review uses the existing task launch, transition/save policy, native
+player/Copy and Runner owners. Eligibility is recomputed before and after the
+serialized transition; replacement/account/device fences remain authoritative.
+The existing explicit review purpose, task provenance and native evidence flow
+through queues, history, reports and private backups. Review adds useful daily
+time while contributing no required task minutes, passes or completion.
+Unsupported external ICR stays external; no false Code Groups adapter is added.
+No new entity, store, clock, database migration, binding or configuration is
+needed. Existing Worker coverage owns privacy, validated review persistence,
+exact retry, immutable purpose and portable transactional restore.
+
+Eleven cheap domain tests cover cutoff, three-date/three-choice bounds, rotation,
+actual heard recording identity, current recipes, future exclusion, unsupported
+tools, account-local dates/class suppression, source aliases and unchanged
+required progress. The representative browser journey uses actual native media,
+Copy rounds and Runner terminal acknowledgements: keyboard desktop suggestions,
+mobile touch, cancellation, HTTP503 with actual exact retry, rotated choices,
+three saved review results and readable private history. Original plan rows
+remain byte-equivalent; required progress remains zero. Six distinct settled
+states fit both widths with empty Axe reports; four captures were inspected.
+The first browser failure was an engine-selector fixture value (`single` versus
+API `SingleCall`); context/pixels/trace were inspected and preserved before
+correcting the assertion. The native journey passes in15.9s.
+
+Check, all1,029 tests in61 files, build and all eight existing review-provenance
+Worker tests pass. The full74 serialized browser run is pending; independent
+review must follow the implementation commit. No production or acceptance
+claim is made yet. No physical-device or elapsed-time recovery claim is added;
+original source and protected user work remain unchanged. Publication and
+closure remain deferred under the user's no-push instruction.
+
+Issue #24 complete initial browser regression passes all74 journeys in15.1m,
+including its native review workflow in15.5s. Final source recheck confirms
+Runner review was always discoverable in the original: the three-choice set
+now reserves the latest reached Runner/ICR recipes and fills remaining places
+with rotating ordinary material. A cheap domain regression covers a larger
+recording pool with older current recipes, preserving both recipes and rotation.
+The new optional-review divider now uses the defined theme line color. Final
+fast gates and affected interface checks will verify these two corrections;
+the complete run above predates them and is not claimed as their verification.
+
+Issue #24 final gates pass on the reserved-recipe/theme corrections: check,
+all1,030 tests in61 files and build. All six affected familiar-review,
+next-practice and extra-review browser journeys pass in1.1m; the new native
+workflow passes in17.7s with captured ICR recipe and actual Runner settings.
+All twelve settled familiar-review Axe/overflow reports are empty; corrected
+captures were inspected at both widths. The complete initial74-journey run
+passed in15.1m before these final pure-selector/style corrections. Fresh issue
+body/comments/dependencies are unchanged; closed dependency#5 is reverified
+by the real extra-review browser journey and eight Worker provenance/privacy/
+backup tests. Independent post-commit review is the next gate.
