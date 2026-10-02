@@ -658,3 +658,37 @@ uses the account timezone. Four focused journeys pass in 1.2 minutes, followed
 by the final complete 79-journey passing gate. Independent combined acceptance
 remains pending; the earlier interrupted 23-pass gate is not counted
 as complete.
+
+
+### Issue #16 — independent acceptance and production delivery
+
+Implementation `5bba61b24a9e0f8a89b27403a277aec418469e6d` is independently
+ACCEPTED with no substantive scoped findings. The post-commit reviewer authored
+six desktop/mobile journeys, including actual native Stop/inspection, canceled
+class edits, refused terminal and pending writes with a lost committed server
+response, exact retry/one exported identity, Complete/Reopen, guest separation,
+a fifteen-minute milestone and an absent target. Actual short native times were
+3.900952/3.935782 seconds. The exact two-current-minute example is a domain test;
+no two-minute live-engine execution is claimed.
+
+Independent validation passes three new pure probes, 112 focused tests/five files,
+and three actual-SQL Worker tests (134 unrelated tests explicitly skipped).
+Eight specifically named settled Axe reports are empty; eight desktop/mobile
+screenshots were inspected. The shared memoized saved calculation and stopped
+projection retain a single scoped engine owner. No reviewer product correction
+was required. Failed reviewer fixture assumptions and traces remain retained in
+the ignored detailed report; no evidence rule, timeout or native clock changed.
+
+Root check, all 923 tests/50 files and build pass, including deployment. The final
+serialized complete browser gate passes 79 journeys in 16.3 minutes. Production
+version `cce343ac-d4fa-4c78-a704-df84ca331c94` serves the accepted implementation
+at https://cwa.n1rwj.com. Fresh root/health 200, three anonymous private 401s,
+four exact JS/CSS SHA-256 matches and entry-point references, and the public
+Runner integration hash pass. Dry-run and remote migration check pass; there
+are no pending migrations or binding/config changes.
+
+Local main advances with this delivery journal. No push or PR was attempted;
+source publication remains pending and #16 stays OPEN. Mobile checks are
+Chromium touch emulation, not physical-device/OS lock-screen verification.
+Original trainer remains read-only evidence. Save & next is separate #17;
+no elapsed reload/crash recovery or live-engine restoration was added.
