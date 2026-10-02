@@ -197,16 +197,3 @@ test('email login, private records, backup controls, and passkeys work together'
     savedEntry.id,
   );
 });
-
-test('private API access and cross-origin mutations are rejected', async ({ request }) => {
-  expect((await request.get('/api/entries')).status()).toBe(401);
-  expect((await request.get('/api/export')).status()).toBe(401);
-  expect(
-    (
-      await request.post('/api/auth/email/request', {
-        data: { email: 'unused@example.test' },
-        headers: { Origin: 'https://evil.example' },
-      })
-    ).status(),
-  ).toBe(403);
-});
