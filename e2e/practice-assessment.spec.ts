@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { expectResponsive, signIn } from './helpers';
+import { expectResponsive, scopedRequest, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.191' } });
 const rating = (page: Page) => page.getByRole('combobox', { name: /^Performance rating/ });
@@ -135,6 +135,73 @@ test('private monitoring and worked CWT observations retain exact judgments thro
   await page.getByRole('button', { name: 'Import sessions', exact: true }).tap();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await exported()).sessions).toEqual([saved]);
+  // Imported source provenance remains authoritative when an activity is relabeled.
+  const archived = {
+    id: 'assessment-archived-runner',
+    date: '2026-10-02',
+    kind: 'simulator',
+    minutes: 0.25,
+    notes: 'Synthetic archived simulator',
+    source: 'legacy',
+    createdAt: '2026-10-02T00:00:00.000Z',
+    qsoCount: 5,
+    metadata: {
+      legacyTask: { id: 'other:morse-runner', kind: 'simulator' },
+      legacyAttempt: {
+        taskId: 'other:morse-runner',
+        assignmentId: 'other-practice',
+        runnerResult: {
+          version: 1,
+          mode: 'SingleCall',
+          wpm: 20,
+          durationSeconds: 60,
+          elapsedSeconds: 15,
+          status: 'stopped',
+          qsoCount: 5,
+          verifiedPoints: 5,
+          score: 25,
+          speeds: [20],
+          conditions: false,
+          source: 'embedded',
+        },
+      },
+    },
+  };
+  expect((await scopedRequest(context, 'POST', '/api/entries', archived)).status()).toBe(201);
+  await navigate(page, 'Practice log');
+  await page.reload();
+  await page.getByRole('button', { name: 'Edit Simulator on 2026-10-02', exact: true }).tap();
+  await page.getByRole('combobox', { name: 'Activity', exact: true }).selectOption('on-air');
+  await expect(event(page)).toHaveCount(0);
+  await expect(count(page)).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toContainText('historical');
+  await rating(page).selectOption('fair');
+  await page
+    .getByRole('dialog')
+    .evaluate((dialog) =>
+      Promise.all(dialog.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+    );
+  await expectResponsive(page, 'assessment-archived-source');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const retained = (await exported()).sessions.find(
+    (entry: { id: string }) => entry.id === archived.id,
+  );
+  expect(retained.qsoCount).toBe(5);
+  expect(retained.metadata.legacyAttempt).toEqual(archived.metadata.legacyAttempt);
+  expect(retained.metadata.assessment).toEqual({
+    version: 1,
+    source: 'self-reported',
+    performanceRating: 'fair',
+  });
+  await navigate(page, 'Academy guide');
+  await page.getByRole('button', { name: 'Practice report', exact: true }).tap();
+  await page.getByLabel('From', { exact: true }).fill('2026-10-02');
+  await page.getByLabel('Through', { exact: true }).fill('2026-10-02');
+  await expect(page.getByRole('dialog')).toContainText(
+    '5 historical count (not actual on-air QSOs)',
+  );
+  await expect(page.getByRole('dialog')).not.toContainText('5 actual on-air QSOs');
 });
 
 test('guest finished generated listening supports explicit ratings without on-air fields or private upload', async ({

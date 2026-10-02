@@ -73,11 +73,38 @@ export function validatePracticeAssessment(value: unknown): PracticeAssessment {
 
 type PracticeSource = Partial<Pick<PracticeSession, 'kind' | 'source' | 'metadata'>>;
 
+/** Inspect archived source facts without normalizing or promoting their contents. */
+function archivedFields(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+function hasArchivedSyntheticSource(metadata: PracticeSource['metadata']): boolean {
+  const attempt = archivedFields(metadata?.legacyAttempt);
+  const task = archivedFields(metadata?.legacyTask);
+  const taskId = String(attempt.taskId ?? task.id ?? '');
+  const historical = archivedFields(archivedFields(metadata?.historicalTiming).timing);
+  return Boolean(
+    metadata?.legacyLcwoRun !== undefined ||
+    attempt.runnerResult !== undefined ||
+    attempt.lcwoResult !== undefined ||
+    (Array.isArray(attempt.audioResults) && attempt.audioResults.length) ||
+    (Array.isArray(historical.recordings) && historical.recordings.length) ||
+    ['audio', 'icr', 'simulator'].includes(String(task.kind)) ||
+    ['other:morse-runner', 'other:word-recognition', 'other:icr', 'bob-77-words'].includes(
+      taskId,
+    ) ||
+    taskId.startsWith('word-practice') ||
+    taskId.startsWith('qso-practice'),
+  );
+}
+
 /** Generated/recorded practice and simulator contacts are never on-air evidence. */
 export function hasSyntheticContactSource(entry: PracticeSource): boolean {
   const evidence = sessionEvidence(entry.metadata);
   return Boolean(
     entry.source === 'morse' ||
+    hasArchivedSyntheticSource(entry.metadata) ||
     entry.metadata?.copyAttempt ||
     ['words', 'qso', 'stories', 'free', 'copy', 'morse-runner', 'audio'].includes(
       String(entry.metadata?.practiceTool),

@@ -6847,6 +6847,91 @@ describe('private native performance and CWT observations', () => {
     expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
   });
 
+  it('rejects new actual-contact observations on archived sources while retaining exact old bodies and judgments', async () => {
+    const auth = await signIn('assessment-archive-source@example.test');
+    const original = {
+      ...entry('archived-runner-count'),
+      createdAt: new Date(entry('timestamp').createdAt).toISOString(),
+      kind: 'simulator',
+      source: 'legacy',
+      qsoCount: 5,
+      metadata: {
+        legacyTask: { id: 'other:morse-runner', kind: 'simulator' },
+        legacyAttempt: {
+          taskId: 'other:morse-runner',
+          runnerResult: { source: 'embedded', qsoCount: 5, verifiedPoints: 5, score: 25 },
+        },
+      },
+    };
+    const response = await request('/api/entries', 'POST', original, auth.cookie);
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { entry: PracticeSession }).entry).toEqual(original);
+    expect((await request('/api/entries', 'POST', original, auth.cookie)).status).toBe(200);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const spoofed = {
+      ...original,
+      kind: 'on-air',
+      qsoCount: 6,
+      metadata: {
+        ...original.metadata,
+        assessment: {
+          version: 1,
+          source: 'self-reported',
+          cwt: { comments: 'Simulator is not on-air evidence' },
+        },
+      },
+    };
+    expect((await request(`/api/entries/${original.id}`, 'PUT', spoofed, auth.cookie)).status).toBe(
+      400,
+    );
+    const backup = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...backup, sessions: [spoofed] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    const rated = {
+      ...original,
+      kind: 'on-air',
+      metadata: {
+        ...original.metadata,
+        assessment: { version: 1, source: 'self-reported', performanceRating: 'fair' },
+      },
+    };
+    expect(
+      (await request(`/api/entries/${original.id}`, 'PUT', { ...rated, qsoCount: 6 }, auth.cookie))
+        .status,
+    ).toBe(400);
+    expect((await request(`/api/entries/${original.id}`, 'PUT', rated, auth.cookie)).status).toBe(
+      200,
+    );
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0].qsoCount).toBe(5);
+    expect(exported.sessions[0].metadata?.legacyAttempt).toEqual(original.metadata.legacyAttempt);
+    expect(exported.sessions[0].metadata?.assessment?.performanceRating).toBe('fair');
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+  });
+
   it('preserves original rating/CWT archives separately, and retains old synthetic counts without new contact credit', async () => {
     const auth = await signIn('assessment-history@example.test');
     const legacyAttempt = {

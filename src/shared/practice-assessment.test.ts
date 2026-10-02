@@ -191,6 +191,70 @@ describe('explicit practice assessments', () => {
     ).toThrow('on-air practice');
   });
 
+  it.each([
+    { legacyAttempt: { runnerResult: { source: 'embedded', qsoCount: 5 } } },
+    { legacyAttempt: { audioResults: [{ completedPasses: 0 }] } },
+    { legacyAttempt: { lcwoResult: { kind: 'letters', errorPercent: 0 } } },
+    { legacyLcwoRun: { kind: 'callsign', score: 0 } },
+    { legacyTask: { kind: 'audio' } },
+    { legacyTask: { kind: 'simulator' } },
+    { legacyTask: { kind: 'icr' } },
+    { legacyAttempt: { taskId: 'other:word-recognition' } },
+    { legacyAttempt: { taskId: 'other:icr' } },
+    { legacyTask: { id: 'other:morse-runner' } },
+    { legacyAttempt: { taskId: 'word-practice:synthetic' } },
+    { legacyAttempt: { taskId: 'qso-practice:synthetic' } },
+    { legacyAttempt: { taskId: 'bob-77-words', assignmentId: 'daily-listening' } },
+    { historicalTiming: { timing: { recordings: [{ url: 'https://example.test/audio.wav' }] } } },
+  ])('keeps archived source facts separate from actual contact claims: %j', (metadata) => {
+    const archived = validatePracticeSession({ ...base, source: 'legacy', qsoCount: 5, metadata });
+    expect(supportsOnAirObservations(archived)).toBe(false);
+    expect(contactCountDetail(archived)).toBe('5 historical count (not actual on-air QSOs)');
+    expect(() => validateAssessedContactCount(archived)).not.toThrow();
+    const rated = validatePracticeSession({
+      ...archived,
+      metadata: { ...archived.metadata, assessment: { ...assessment, performanceRating: 'fair' } },
+    });
+    expect(() => validateAssessedContactCount(rated, archived)).not.toThrow();
+    expect(() => validateAssessedContactCount({ ...rated, qsoCount: 6 }, archived)).toThrow();
+    expect(() =>
+      validatePracticeSession({
+        ...archived,
+        metadata: { ...archived.metadata, assessment: { ...assessment, cwt: {} } },
+      }),
+    ).toThrow('on-air practice');
+    const backup = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      exportedAt: base.createdAt,
+      sessions: [rated],
+    });
+    expect(backup.sessions[0].metadata).toEqual(rated.metadata);
+  });
+
+  it('allows genuine archived CWT observations without promoting old ratings or difficulty', () => {
+    const metadata = {
+      legacyTask: { id: 'other:cwt', kind: 'live' },
+      legacyAttempt: {
+        taskId: 'other:cwt',
+        performanceRating: 'poor',
+        difficulty: 'easy',
+        cwtResult: { heardCallsigns: 'W1OLD' },
+      },
+    };
+    const archived = validatePracticeSession({ ...base, source: 'legacy', metadata });
+    expect(supportsOnAirObservations(archived)).toBe(true);
+    expect(archived.metadata?.assessment).toBeUndefined();
+    const assessed = validatePracticeSession({
+      ...archived,
+      metadata: {
+        ...metadata,
+        assessment: { ...assessment, cwt: { comments: 'New explicit observation' } },
+      },
+    });
+    expect(assessed.metadata?.legacyAttempt).toEqual(metadata.legacyAttempt);
+  });
+
   it('does not turn generated or simulated counts into actual contact credit, and preserves older facts', () => {
     const generated = validatePracticeSession({
       ...base,

@@ -1442,3 +1442,30 @@ interfaces. Check, all 1,127 tests across 66 files and build pass after the coun
 compatibility correction. The full browser process exited successfully and its
 port 8791 lease is released. This is browser emulation, not physical-device
 verification. Independent post-commit acceptance and production are still pending.
+
+The independent reviewer confirmed R33-1 (P2): an original Runner archive could
+be relabeled on-air and gain new CWT observations/actual-contact count wording.
+The correction classifies known original Runner/audio/LCWO results, generated
+task identities and retained historical recording provenance as synthetic source
+facts regardless of the editable activity. New CWT claims and changed assessed
+counts are rejected; rating-only edits, original archives and unchanged old
+queued bodies remain valid. Genuine historical CWT stays usable without inferred
+ratings. Fourteen cheap source cases, an atomic real-SQL edit/import boundary and
+the existing desktop/mobile monitoring journey protect this correction.
+Focused correction validation passes 203 domain/API tests and both assessment
+browser journeys (16 seconds). An initial new-state Axe probe caught the modal
+appearance animation; assertion/context/pixels/bounded traces were inspected and
+retained, and the probe now awaits actual animation completion with contrast
+checks enabled. Complete final regression and independent correction acceptance
+remain pending; no deployment is claimed yet.
+
+Final correction check, all 1,143 tests across 66 files and build pass. The final
+full browser suite initially passed 91/92 (16.9 minutes): the unchanged course
+replay's extra pass remained incomplete, with the UI withholding full-pass credit.
+Assertions, context, pixels and bounded action traces were inspected and retained.
+That unchanged journey passes in isolation (1.3 minutes), and an unchanged full
+retry passes all 92 journeys (17.7 minutes). The earlier cause remains unconfirmed;
+no native clock, coverage tolerance, result or player workaround was introduced.
+Both final assessment journeys include the archive-source restriction. Browser
+processes have exited and port 8791 is free. Independent correction acceptance and
+production delivery remain pending.
