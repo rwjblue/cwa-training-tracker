@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
-import { buildMorseTrack, MorsePlayer, type MorseTrack } from './audio';
+import { MorsePlayer, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
 import ListeningSeekControls from './ListeningSeekControls';
 import { buildSpokenWordTrack } from './morse-track';
@@ -24,7 +24,7 @@ import {
 import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import {
   listeningWordRound,
-  qsoListeningSummary,
+  qsoListeningTrack,
   storyListeningSummary,
   storyListeningTrack,
   wordListeningSummary,
@@ -281,11 +281,12 @@ export default forwardRef<
     const items = isWords ? words : narrative.lines;
     if (!items.length) return { applied: null, error: '' };
     try {
+      const qsoResult = !isWords && !isStory ? qsoListeningTrack(qso, p) : null;
       const summary = isWords
         ? wordListeningSummary(wordRound!, p)
         : isStory
           ? storyListeningSummary(story, p)
-          : qsoListeningSummary(qso, p);
+          : qsoResult!.summary;
       const options = {
         characterWpm: summary.characterWpm,
         effectiveWpm: summary.effectiveWpm,
@@ -305,14 +306,7 @@ export default forwardRef<
       } else if (isStory) {
         track = storyListeningTrack(story, p);
       } else {
-        track = buildMorseTrack(
-          items.map((text, i) => ({
-            text,
-            frequency: i % 2 ? Math.min(1000, p.tone + 50) : p.tone,
-            gapAfter: 2,
-          })),
-          options,
-        );
+        track = qsoResult!.track;
       }
       const applied: AppliedListeningTrack = Object.freeze({
         track,
@@ -756,6 +750,18 @@ export default forwardRef<
           Callsigns may coincide with real operators.
         </p>
       )}
+      {!isWords && !isStory && applied?.summary.mode === 'qso' && (
+        <p className="field-hint" aria-label="QSO station tones">
+          {hideTranscript ? 'Station 1' : applied.summary.stations[0]}: {applied.summary.tonesHz[0]}{' '}
+          Hz
+          {' · '}
+          {hideTranscript ? 'Station 2' : applied.summary.stations[1]}: {applied.summary.tonesHz[1]}{' '}
+          Hz. Station 1 uses your preferred pitch. Station 2 is 50 Hz{' '}
+          {applied.summary.tonesHz[1] > applied.summary.tonesHz[0]
+            ? 'higher.'
+            : 'lower to stay within the 1000 Hz limit.'}
+        </p>
+      )}
       {isWords && (
         <div className="word-source-editor">
           {p.wordList !== 'custom' ? (
@@ -916,6 +922,11 @@ export default forwardRef<
             </button>
           )}
         </div>
+        {!isWords && !isStory && !hideTranscript && applied?.summary.mode === 'qso' && (
+          <p className="field-hint" aria-label="Current QSO station">
+            {applied.summary.stations[position % 2]} · {applied.summary.tonesHz[position % 2]} Hz
+          </p>
+        )}
         <div className="trainer-current" aria-live="off">
           {hideTranscript ? (
             <p>

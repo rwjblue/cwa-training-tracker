@@ -3001,6 +3001,71 @@ describe('generated listening evidence', () => {
     );
   });
 
+  it('preserves distinct and historical equal QSO tones through private export/import without rewriting facts', async () => {
+    const auth = await signIn('qso-pitch-owner@example.test');
+    const qso: Extract<GeneratedListeningSummary, { mode: 'qso' }> = {
+      mode: 'qso',
+      scenarioId: 'short-contact',
+      stations: ['W1DPN', 'K2MVR'],
+      tonesHz: [1000, 950],
+      characterWpm: 20,
+      effectiveWpm: 10,
+      transmissionGapSeconds: 2,
+    };
+    const source = generated([qso, { ...qso, tonesHz: [1000, 1000], characterWpm: 25 }]);
+    expect((await request('/api/entries', 'POST', source, auth.cookie)).status).toBe(201);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0].metadata?.evidence).toMatchObject({
+      generatedListening: source.metadata.evidence.generatedListening,
+    });
+    expect(exported.sessions[0].qsoCount).toBeUndefined();
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const invalid = { ...generated([{ ...qso, tonesHz: [1000, 1050] }]), id: 'invalid-pitch' };
+    expect((await request('/api/entries', 'POST', invalid, auth.cookie)).status).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...exported, sessions: [invalid] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    const other = await signIn('qso-pitch-other@example.test');
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, other.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries,
+    ).toEqual([]);
+    expect(
+      (
+        await request(
+          `/api/entries/${exported.sessions[0].id}`,
+          'PUT',
+          exported.sessions[0],
+          other.cookie,
+        )
+      ).status,
+    ).toBe(404);
+  });
+
   it('retains precise 55/60 WPM evidence through private writes and transactional import', async () => {
     const auth = await signIn('precise-owner@example.test');
     const sources = [

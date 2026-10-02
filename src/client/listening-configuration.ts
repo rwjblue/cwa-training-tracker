@@ -66,20 +66,46 @@ export function wordListeningTrack(round: ListeningWordRound, p: PracticePrefere
   return { track, summary };
 }
 
+/** Keep the learner's pitch for station 1 and a full 50 Hz cue within both bounds. */
+export function qsoStationTones(preferredHz: number): readonly [number, number] {
+  if (!Number.isFinite(preferredHz) || preferredHz < 300 || preferredHz > 1000)
+    throw new Error('Choose a QSO sidetone from 300 to 1000 Hz.');
+  return Object.freeze([preferredHz, preferredHz <= 950 ? preferredHz + 50 : preferredHz - 50]);
+}
+
 export function qsoListeningSummary(
   qso: PracticeQso,
   p: PracticePreferences,
-): GeneratedListeningSummary {
+): Extract<GeneratedListeningSummary, { mode: 'qso' }> {
   return Object.freeze({
     mode: 'qso',
     // The native generator only produces these four published scenario identities.
     scenarioId: qso.id as Extract<GeneratedListeningSummary, { mode: 'qso' }>['scenarioId'],
     stations: Object.freeze([...qso.stations] as [string, string]),
-    tonesHz: Object.freeze([p.tone, Math.min(1000, p.tone + 50)] as [number, number]),
+    tonesHz: qsoStationTones(p.tone),
     transmissionGapSeconds: 2,
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
   });
+}
+
+/** Render the same ordered station pair that the applied evidence describes. */
+export function qsoListeningTrack(qso: PracticeQso, p: PracticePreferences) {
+  const summary = qsoListeningSummary(qso, p);
+  const track = buildMorseTrack(
+    qso.lines.map((text, index) => ({
+      text,
+      frequency: summary.tonesHz[index % 2],
+      gapAfter: summary.transmissionGapSeconds,
+    })),
+    {
+      characterWpm: summary.characterWpm,
+      effectiveWpm: summary.effectiveWpm,
+      frequency: summary.tonesHz[0],
+      volume: p.volume / 100,
+    },
+  );
+  return { track, summary };
 }
 
 export function storyListeningSummary(

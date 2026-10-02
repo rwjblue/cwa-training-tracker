@@ -1159,3 +1159,46 @@ independent review and production gate permit ascending issue #32. Distinct
 bounded QSO station tones remain #32, exact public recipes #45, and physical
 locked-device playback remains unverified. The original site is read-only;
 approved exclusions and restricted curriculum links remain intact.
+
+
+### Issue #32 distinct bounded QSO station pitches
+
+One pitch-pair policy now keeps station 1 at the learner's preferred 300–1000 Hz
+pitch and station 2 exactly 50 Hz higher through 950 Hz, or 50 Hz lower above
+950 Hz. The five acceptance boundaries produce 300/350, 450/500, 950/1000,
+975/925 and 1000/950 Hz. The shared QSO builder derives native track frequencies
+from the same frozen summary used for actual played evidence. Every authored
+transmission alternates the same station mapping; replay, seek and speed retiming
+reuse the existing native transport and same exchange. Words and Stories remain
+single-tone modes with their independent preferred pitches.
+
+The UI explains the actual pair and upper-bound direction, and shows the current
+station beside a revealed transmission. Hidden transcript/Check your copy uses
+Station 1/Station 2 labels, preserving explicit answer reveal. Private evidence,
+history/report and exports retain actual tones; old valid equal-pitch facts are
+still readable and importable without being rewritten under the new policy.
+Real-SQL tests cover new/historical pairs, transactional invalid-pitch rejection,
+account isolation and exact export/import. No binding, schema, clock or player
+owner is introduced. Original fixed 450/500 Hz behavior and visible-station
+reference at pinned 3106c9b8 were rechecked read-only.
+
+Boundary tests exercise every generated scenario and occurrence mapping through
+retiming. Rendered PCM tests independently measure both frequency bands at all
+five boundaries, soft tone edges and silent two-second handoffs. The affected
+browser journeys pass 3/3 in 41.8 seconds: public native upper-bound feedback,
+seek/replay/retime with actual emitted PCM, private canceled-review/exact 503 retry
+through report/export, and copy-answer privacy. Actual 1000/950 Hz bands remain
+after retiming. Desktop 1440/mobile 390 screenshots were inspected; two new
+Axe/overflow reports are empty. An initial probe fetched a blob under the app's
+content policy; it now observes emitted WAV blobs without bypassing CSP. A later
+probe expected Start instead of the correct retained-practice Resume label.
+Both failures were inspected through assertions, contexts, pixels and bounded
+traces; neither required an application workaround.
+
+Check, all 1,092 tests across 65 files and production build pass. All 90 serial
+browser journeys pass in 17.5 minutes; the harness has exited and port 8791 is
+free. Current original HEAD c2bef7af and the pin both retain the fixed 450/500 Hz
+pair and visible station description. Fresh independent post-commit review and
+strict production delivery remain pending. Physical listening and locked-device behavior
+remain unverified. Restricted curriculum stays linked and the original site
+remains read-only; approved scope/exclusions are preserved.

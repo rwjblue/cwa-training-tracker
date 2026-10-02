@@ -2,11 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   listeningWordRound,
   qsoListeningSummary,
+  qsoListeningTrack,
+  qsoStationTones,
   wordListeningSummary,
   wordListeningTrack,
 } from './listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
-import { generateQso } from './qso-content';
+import { generateQso, QSO_TEMPLATES } from './qso-content';
+import { MORSE_SAMPLE_RATE, renderMorseWav, wordAtTime } from './morse-track';
+import { retimedOccurrencePosition } from './listening-retiming';
+import { practiceStory } from '../shared/listening-stories';
+import { storyListeningTrack } from './listening-configuration';
 
 describe('applied listening configurations', () => {
   it('labels the actual published round while newer source preferences await generation', () => {
@@ -138,7 +144,7 @@ describe('applied listening configurations', () => {
       mode: 'qso',
       scenarioId: 'short-contact',
       stations: qso.stations,
-      tonesHz: [975, 1000],
+      tonesHz: [975, 925],
       transmissionGapSeconds: 2,
     });
     qsoListeningSummary(qso, { ...DEFAULT_PRACTICE_PREFERENCES, characterWpm: 30 });
@@ -150,7 +156,133 @@ describe('applied listening configurations', () => {
     expect(Object.isFrozen(summary.stations)).toBe(true);
     expect(Object.isFrozen(summary.tonesHz)).toBe(true);
     expect(qsoListeningSummary(qso, { ...DEFAULT_PRACTICE_PREFERENCES, tone: 1000 })).toMatchObject(
-      { tonesHz: [1000, 1000] },
+      { tonesHz: [1000, 950] },
     );
+  });
+});
+
+describe('bounded two-station QSO pitch', () => {
+  const boundaries = [
+    [300, 350],
+    [450, 500],
+    [950, 1000],
+    [975, 925],
+    [1000, 950],
+  ] as const;
+
+  it.each(boundaries)(
+    'keeps preferred %i Hz and a distinct %i Hz station across every scenario and retime',
+    (preferred, second) => {
+      expect(qsoStationTones(preferred)).toEqual([preferred, second]);
+      expect(Object.isFrozen(qsoStationTones(preferred))).toBe(true);
+      for (const scenario of QSO_TEMPLATES) {
+        const qso = generateQso(scenario.id, () => 0.25);
+        const original = structuredClone(qso);
+        const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: preferred };
+        const first = qsoListeningTrack(qso, p);
+        const next = qsoListeningTrack(qso, { ...p, characterWpm: 30, effectiveWpm: 12 });
+        expect(first.summary.tonesHz).toEqual([preferred, second]);
+        expect(next.summary.stations).toEqual(qso.stations);
+        expect(next.summary.tonesHz).toEqual(first.summary.tonesHz);
+        expect(first.track.items.map((item) => item.text)).toEqual(
+          next.track.items.map((item) => item.text),
+        );
+        for (const track of [first.track, next.track]) {
+          for (const [index, item] of track.items.entries()) {
+            const tones = track.tones.filter((tone) => tone.at >= item.start && tone.at < item.end);
+            expect(tones.length).toBeGreaterThan(0);
+            expect(new Set(tones.map((tone) => tone.frequency))).toEqual(
+              new Set([index % 2 ? second : preferred]),
+            );
+            if (index) expect(item.start - track.items[index - 1].end).toBeCloseTo(2, 8);
+          }
+        }
+        for (const [index, word] of first.track.words.entries()) {
+          const at = retimedOccurrencePosition(first.track, next.track, word.start + 0.001);
+          expect(at).toBe(next.track.words[index].start);
+          expect(wordAtTime(next.track, at)).toBe(index);
+          expect(next.track.words[index].itemIndex).toBe(word.itemIndex);
+        }
+        expect(qso).toEqual(original);
+      }
+    },
+  );
+
+  it.each([299, 1001, NaN, Infinity])(
+    'rejects an invalid preferred pitch %s before rendering',
+    (tone) => {
+      expect(() =>
+        qsoListeningTrack(
+          generateQso('short-contact', () => 0.25),
+          { ...DEFAULT_PRACTICE_PREFERENCES, tone },
+        ),
+      ).toThrow('300 to 1000');
+    },
+  );
+
+  it.each(boundaries)(
+    'renders both frequency bands at preferred %i Hz, with bounded edges and silent handoffs',
+    async (preferred, second) => {
+      const qso = {
+        ...generateQso('short-contact', () => 0.25),
+        lines: ['T E', 'T E', 'T E', 'T E'],
+      };
+      const { track, summary } = qsoListeningTrack(qso, {
+        ...DEFAULT_PRACTICE_PREFERENCES,
+        tone: preferred,
+      });
+      const data = new DataView(await renderMorseWav(track).arrayBuffer());
+      const sample = (index: number) => data.getInt16(44 + index * 2, true);
+      const measured: number[] = [];
+      for (const [index, item] of track.items.entries()) {
+        const tone = track.tones.find((tone) => tone.at >= item.start && tone.at < item.end)!;
+        const first = Math.round(tone.at * MORSE_SAMPLE_RATE);
+        const last = Math.round((tone.at + tone.duration) * MORSE_SAMPLE_RATE) - 1;
+        expect(sample(first)).toBe(0);
+        expect(sample(last)).toBe(0);
+        const crossings: number[] = [];
+        let maxDelta = 0;
+        let peak = 0;
+        for (let frame = first + 1; frame <= last; frame++) {
+          const before = sample(frame - 1);
+          const value = sample(frame);
+          peak = Math.max(peak, Math.abs(value));
+          maxDelta = Math.max(maxDelta, Math.abs(value - before));
+          if (
+            frame > first + MORSE_SAMPLE_RATE * 0.005 &&
+            frame < last - MORSE_SAMPLE_RATE * 0.005 &&
+            before <= 0 &&
+            value > 0
+          )
+            crossings.push(frame - 1 - before / (value - before));
+        }
+        expect(crossings.length).toBeGreaterThan(10);
+        const hz =
+          ((crossings.length - 1) * MORSE_SAMPLE_RATE) / (crossings.at(-1)! - crossings[0]);
+        measured.push(hz);
+        expect(hz).toBeCloseTo(summary.tonesHz[index % 2], 0);
+        expect(peak).toBeGreaterThan(1000);
+        expect(maxDelta).toBeLessThan(
+          (peak * 2 * Math.PI * tone.frequency) / MORSE_SAMPLE_RATE + 25,
+        );
+        expect(sample(Math.round((item.end + 1) * MORSE_SAMPLE_RATE))).toBe(0);
+      }
+      expect(Math.abs(measured[0] - measured[1])).toBeGreaterThan(49);
+      expect(measured[2]).toBeCloseTo(preferred, 0);
+      expect(measured[3]).toBeCloseTo(second, 0);
+      for (const tone of track.tones) {
+        const end = Math.round((tone.at + tone.duration) * MORSE_SAMPLE_RATE) - 1;
+        expect(sample(Math.round(tone.at * MORSE_SAMPLE_RATE))).toBe(0);
+        expect(sample(end)).toBe(0);
+      }
+    },
+  );
+
+  it('leaves words and Stories at their own single preferred pitch', () => {
+    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 1000 };
+    const words = wordListeningTrack(listeningWordRound('custom', 'E T', false), p).track;
+    const story = storyListeningTrack(practiceStory('story-trail'), p);
+    for (const track of [words, story])
+      expect(new Set(track.tones.map((tone) => tone.frequency))).toEqual(new Set([1000]));
   });
 });

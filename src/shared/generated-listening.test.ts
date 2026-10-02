@@ -51,7 +51,7 @@ const envelope = (
 });
 
 describe('generated listening summaries', () => {
-  it('retains each supported applied mode, including the current equal-pitch QSO clamp', () => {
+  it('retains each supported applied mode, including historical equal-pitch QSO facts', () => {
     const { groupLength: _groupLength, ...freeBase } = free();
     const configurations: GeneratedListeningSummary[] = [
       words(),

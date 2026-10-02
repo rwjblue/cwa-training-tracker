@@ -220,6 +220,10 @@ test(`generated listening saves only applied setups and retains exact content at
     ...new Set([...transcript.matchAll(/\bDE ([A-Z0-9]+)\b/g)].map((match) => match[1])),
   ];
   await speed(page, 20, 10);
+  const qsoPitch = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
+  await qsoPitch.fill('1000');
+  await qsoPitch.press('Enter');
+  await expect(page.getByLabel('QSO station tones', { exact: true })).toContainText('950 Hz');
   await expect.poll(() => page.locator('.trainer-catalog').innerText()).toBe(transcript);
   await listen();
   await speed(page, 25, 15);
@@ -275,9 +279,21 @@ test(`generated listening saves only applied setups and retains exact content at
     (entry: { metadata: { practiceTool: string } }) => entry.metadata.practiceTool === 'qso',
   );
   expect(qso.metadata.evidence.generatedListening.summaries).toMatchObject([
-    { mode: 'qso', scenarioId: 'short-contact', characterWpm: 20, effectiveWpm: 10 },
-    { mode: 'qso', scenarioId: 'short-contact', characterWpm: 25, effectiveWpm: 15 },
-    { mode: 'qso', scenarioId: 'pota', characterWpm: 25, effectiveWpm: 15 },
+    {
+      mode: 'qso',
+      scenarioId: 'short-contact',
+      characterWpm: 20,
+      effectiveWpm: 10,
+      tonesHz: [1000, 950],
+    },
+    {
+      mode: 'qso',
+      scenarioId: 'short-contact',
+      characterWpm: 25,
+      effectiveWpm: 15,
+      tonesHz: [1000, 950],
+    },
+    { mode: 'qso', scenarioId: 'pota', characterWpm: 25, effectiveWpm: 15, tonesHz: [1000, 950] },
   ]);
   expect(qso.metadata.evidence.generatedListening.summaries[0].stations).toEqual(
     qso.metadata.evidence.generatedListening.summaries[1].stations,
@@ -293,6 +309,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await expect(report).toContainText(
     qso.metadata.evidence.generatedListening.summaries[0].stations[0],
   );
+  await expect(report).toContainText('station tones 1000 / 950 Hz');
   await expectAccessible(page, `generated-report-${viewport.width}`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

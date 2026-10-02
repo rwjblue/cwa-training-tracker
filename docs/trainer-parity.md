@@ -200,7 +200,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R11 · P1/P2** Live practice and reminders         | Public SST/MST/CWT agenda, Local/UTC preference and recurring feed are independently accepted and deployed in #20 with current organizer verification. Assigned typed live eligibility and retained manual work are independently accepted and deployed in #21; private reminder subscriptions remain #46. Public schedule does not infer participation or query private data.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
 | **R12 · P2** Exact public listening recipes                  | Bounded, versioned public listening recipes that reproduce the exact exercise remain accepted issue #45. Real-contact operating guidance, contact logs, ADIF export and unrelated public practice tools are excluded from this execution.                                                                                                                                                                                                                                        | Personal [real QSO helper](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-qso.ts#L137), [share recipes](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115); [public-tool inventory](parity/listening.md#standalone-public-tools-distinct-features-not-duplicate-page-names). |
 | **R13 · P1/P2** Migration fidelity                  | Historical imports now expose original scratchpads and structured results, map LCWO group speed correctly, omit pure dismissal bookkeeping, derive Runner completion, and add overlap-safe one-minute LCWO group estimates. A timezone-aware cutoff limits practice/completion while retaining the full source archive. Settings makes reports, LCWO, materials and device drafts readable. Native report/material editing and recoverable device work remain separate migrations; readable preserved records are not complete feature parity. | Tracker baseline [converter](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L502), [completion import](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L425); [planning P33–P36](parity/planning.md#backups-migrations-and-api-fidelity).                      |
-| **R14 · P2/P3** Preference refinements              | Issue #31 implements independent Words/QSO/Stories setups with both speeds, exact/preset entry through 60 WPM, 1 Hz pitch and 0.1-second pauses, local drag preview and explicit storage retry. Independent review accepted the implementation; production delivery and limits are recorded in its ledger. Distinct bounded QSO station pitches remain #32.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
+| **R14 · P2/P3** Preference refinements              | Issue #31 implements independent Words/QSO/Stories setups with both speeds, exact/preset entry through 60 WPM, 1 Hz pitch and 0.1-second pauses, local drag preview and explicit storage retry. Independent review accepted the implementation; production delivery and limits are recorded in its ledger. Issue #32 implements a shared distinct bounded QSO pair; its ledger records pending regression, review and deployment.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
 
 ## Coherent next work
 
@@ -2997,3 +2997,46 @@ independent review and production gate permit ascending issue #32. Distinct
 bounded QSO station tones remain #32, exact public recipes #45, and physical
 locked-device playback remains unverified. The original site is read-only;
 approved exclusions and restricted curriculum links remain intact.
+
+
+### Issue #32 distinct bounded QSO station pitches
+
+One pitch-pair policy now keeps station 1 at the learner's preferred 300–1000 Hz
+pitch and station 2 exactly 50 Hz higher through 950 Hz, or 50 Hz lower above
+950 Hz. The five acceptance boundaries produce 300/350, 450/500, 950/1000,
+975/925 and 1000/950 Hz. The shared QSO builder derives native track frequencies
+from the same frozen summary used for actual played evidence. Every authored
+transmission alternates the same station mapping; replay, seek and speed retiming
+reuse the existing native transport and same exchange. Words and Stories remain
+single-tone modes with their independent preferred pitches.
+
+The UI explains the actual pair and upper-bound direction, and shows the current
+station beside a revealed transmission. Hidden transcript/Check your copy uses
+Station 1/Station 2 labels, preserving explicit answer reveal. Private evidence,
+history/report and exports retain actual tones; old valid equal-pitch facts are
+still readable and importable without being rewritten under the new policy.
+Real-SQL tests cover new/historical pairs, transactional invalid-pitch rejection,
+account isolation and exact export/import. No binding, schema, clock or player
+owner is introduced. Original fixed 450/500 Hz behavior and visible-station
+reference at pinned 3106c9b8 were rechecked read-only.
+
+Boundary tests exercise every generated scenario and occurrence mapping through
+retiming. Rendered PCM tests independently measure both frequency bands at all
+five boundaries, soft tone edges and silent two-second handoffs. The affected
+browser journeys pass 3/3 in 41.8 seconds: public native upper-bound feedback,
+seek/replay/retime with actual emitted PCM, private canceled-review/exact 503 retry
+through report/export, and copy-answer privacy. Actual 1000/950 Hz bands remain
+after retiming. Desktop 1440/mobile 390 screenshots were inspected; two new
+Axe/overflow reports are empty. An initial probe fetched a blob under the app's
+content policy; it now observes emitted WAV blobs without bypassing CSP. A later
+probe expected Start instead of the correct retained-practice Resume label.
+Both failures were inspected through assertions, contexts, pixels and bounded
+traces; neither required an application workaround.
+
+Check, all 1,092 tests across 65 files and production build pass. All 90 serial
+browser journeys pass in 17.5 minutes; the harness has exited and port 8791 is
+free. Current original HEAD c2bef7af and the pin both retain the fixed 450/500 Hz
+pair and visible station description. Fresh independent post-commit review and
+strict production delivery remain pending. Physical listening and locked-device behavior
+remain unverified. Restricted curriculum stays linked and the original site
+remains read-only; approved scope/exclusions are preserved.
