@@ -862,3 +862,14 @@ journeys (13.6 minutes) pass. Two short-height sidebar regressions were correcte
 and confirmed by seven focused checks and the full suite. Independent review and
 production acceptance remain pending. The canonical ledger retains the failed
 run evidence and exact limits.
+
+
+Issue #20 independently ACCEPTED with no substantive findings: nine own fast
+probes, three own browser journeys (25.2s), ten empty Axe/overflow checks and seven
+inspected captures. Native pause/return preserves actual media/notes without save
+or autoplay. Production `2fe8a9b4-ed9d-45ce-9cfa-4b97633a0aef` serves
+`44296a12334fddfc8a3d63970c02847832404e3d`; exact assets/private401s and
+public GET/HEAD/304/405/unique recurring parser agreement pass after one D1 7403
+complete-task retry. The canonical ledger preserves counts, probe failure and
+calendar/physical-device limits. Local main records acceptance; #20 stays OPEN
+under no-push. Private CWT eligibility is #21, reminders #46; no original mutation.

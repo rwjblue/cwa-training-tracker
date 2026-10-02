@@ -130,7 +130,7 @@ Active P page [src/pages/radio/cw-qso.astro](https://github.com/rwjblue/rwjblue.
 
 Focused existing tests: [P/tests/cw-qso.test.mjs:45,52,58,74,82,121](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-qso.test.mjs#L45) cover role fallback, auto greeting, escaped personalized transmissions, role swap, UTC log shape and ADIF. Scope this as an optional public “On-air helper” so it does not complicate daily lesson practice.
 
-### Live practice opportunities / calendar — **implemented #20, review pending**
+### Live practice opportunities / calendar — **accepted and deployed #20**
 
 Active P page [src/pages/radio/cw-practice.astro:296](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/pages/radio/cw-practice.astro#L296) initializes [src/lib/cw-practice-client.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-practice-client.ts). P [src/lib/cw-practice.ts:34,109,131](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-practice.ts#L34) models SST/MST/CWT recurring opportunities and live state. C has generic resource links ([src/shared/training.ts:121](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L121), [main.tsx:1488](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/main.tsx#L1488)) and course exercises; no equivalent live schedule/calendar module or public dashboard was found.
 
@@ -471,3 +471,14 @@ journeys (13.6 minutes) pass. Two short-height sidebar regressions were correcte
 and confirmed by seven focused checks and the full suite. Independent review and
 production acceptance remain pending. The canonical ledger retains the failed
 run evidence and exact limits.
+
+
+Issue #20 independently ACCEPTED with no substantive findings: nine own fast
+probes, three own browser journeys (25.2s), ten empty Axe/overflow checks and seven
+inspected captures. Native pause/return preserves actual media/notes without save
+or autoplay. Production `2fe8a9b4-ed9d-45ce-9cfa-4b97633a0aef` serves
+`44296a12334fddfc8a3d63970c02847832404e3d`; exact assets/private401s and
+public GET/HEAD/304/405/unique recurring parser agreement pass after one D1 7403
+complete-task retry. The canonical ledger preserves counts, probe failure and
+calendar/physical-device limits. Local main records acceptance; #20 stays OPEN
+under no-push. Private CWT eligibility is #21, reminders #46; no original mutation.

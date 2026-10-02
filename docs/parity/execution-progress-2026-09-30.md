@@ -1153,3 +1153,24 @@ of issue #2. Both improvements stay separate from this issue's implementation.
 - Primary user work/protected pending scope docs remain unchanged, signing true.
   Local main advances with this journal. No push/PR; #19 stays OPEN/unpublished.
   Comment with delivered behavior/evidence and continue #20 through #46.
+
+
+## Issue #20 — accepted public agenda and calendar
+
+- One code-owned verified UTC schedule supplies guest current/next/upcoming and
+  nine recurring calendar series; Local/UTC persistence, failed retention retry,
+  clipboard fallback/download and paused Studio inspection are reachable.
+- Implementation `44296a12334fddfc8a3d63970c02847832404e3d`, independently
+  ACCEPTED with no substantive findings. Own9fast/3browser25.2s/10Axe+overflow/
+  seven inspected captures and native no-save pause/return pass. Source integrity
+  matches all23paths; protected user docs and original source remain unchanged.
+- Root check983tests57files/build and clean full66browser13.6m pass. Two real
+  short-height navigation failures were fixed and verified focused7 plus full66;
+  interrupted-run evidence is retained. No native credit used fake clocks.
+- Production `2fe8a9b4-ed9d-45ce-9cfa-4b97633a0aef`, no migrations, after one
+  D17403 full-task retry. Fresh root/health200/private401s/four exact asset hashes/
+  Runner module and publiccalendarGETHEAD304405/9uniqueUIDs/exactsharedbody/DST
+  parser expansion pass. Initial ignored probe oldTSAPI corrected before network.
+- Local main advances with this journal. No push/PR; #20 remains OPEN/unpublished.
+  Parser+Chromium emulation do not establish OS subscription or physical device.
+  Continue #21–#46 with #18/#20 accepted local/deployed dependencies.
