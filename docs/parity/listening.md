@@ -729,3 +729,35 @@ Final six scoped seek accessibility/overflow reports remain empty and all four
 final desktop/mobile captures were re-inspected. Required check, 1,052 tests
 across 63 files and build pass. Fresh independent review follows the focused
 implementation commit; this result does not yet declare that gate accepted.
+
+### Issue #27 accepted review and production delivery
+
+Fresh post-commit independent review ACCEPTS implementation
+d4745cb716092e271c7fca669498bfe31242a792 with no substantive scoped findings.
+It authored three actual student workflows and adapted two independent mixed
+prefix seam probes, then passed seven serial journeys in 41.2 seconds and
+172 fast tests across four files. Fourteen scoped accessibility/overflow checks
+are empty; six independent captures were viewed. Keyboard/touch seeks, item
+steps, relative rewind, intentional replay, actual metadata/end boundaries,
+inspection cancellation and late native Play acknowledgement all pass. Private
+measured time was 1.723396 seconds despite an 8.192-second seek target; a 503
+retry sent identical bodies, export retained evidence, and guest private access
+returned 401. All twelve committed files, four original pinned references,
+protected primary hashes and signing remain intact. No product fix was required.
+The reviewer corrected its guest navigation fixture after inspecting assertion,
+context, pixels and bounded trace; all final probes passed.
+
+Root required check, 1,052 tests/63 files and build pass; full final 81 serial
+browser journeys pass in 16.2 minutes. The initial deploy passed validation and
+dry-run but remote D1 returned API 7403 before publication. A complete task
+retry succeeded with no migration. Production version
+fa5b7aed-7d0d-41d8-b266-7bb2f253ff3d at https://cwa.n1rwj.com serves four
+exact asset hashes and unchanged Runner bridge; home/health 200 and private
+entries/account-state/backup 401 pass. Public calendar GET/HEAD/304/405, nine
+stable UIDs and DST recurrence expansion match the shared schedule.
+
+No push was attempted. GitHub commit lookup returned 422, so #27 remains OPEN
+pending publication under the latest instruction. Accepted local/production
+behavior permits the ascending #28 loop. Stories frontend remains #30; physical
+locked-device behavior is unverified. New recognition and unfinished elapsed
+reload/crash recovery remain excluded. Original personal site is unchanged.
