@@ -1098,3 +1098,30 @@ of issue #2. Both improvements stay separate from this issue's implementation.
 - Latest instruction forbids pushes. Implementation and correction remain local,
   accepted and deployed; advance local main and leave #11 open/unpublished.
   Comment with honest local references/evidence; no PR or push. Then continue #12.
+
+
+## Issue #18 — accepted local implementation and production
+
+- Private ordinary class times, per-session exceptions, explicit meeting zone,
+  local before/during/after phases and access-preserving safe Join are delivered.
+  Curriculum dates/IDs, class credit separation and original archived references
+  remain intact. Scoped settings/outbox/CAS, migration 0007, private backup/import
+  and lifecycle reset/restore share existing authorities.
+- Implementation `2a0dd2731bc5e3621292f98e305dd3c6a6fb87ea`; independent
+  ACCEPTED with no substantive findings. Own two browser journeys, eighteen
+  settled clean Axe scans, eight additional calendar assertions and 23 focused
+  shared/actual-SQL cases pass. See canonical #18 ledger for exact evidence/limits.
+- Root check, all 950 tests/52 files and build pass, including deployment. Complete
+  serialized browser gate passes 64 journeys in 13.1 minutes. Final isolated URL
+  encoding-length guard is followed by check/test/build and focused UI validation.
+- User's separately committed suite cleanup `38d58483` is preserved through
+  integration `c38aa2a4d1c076b079ff085591e67a37fb43b55d`; the updated coverage
+  ownership guide is retained. Primary working copy and pending scope docs remain
+  untouched; no signing changes or push.
+- Production `7618a3f0-72b9-4f77-bf4b-482c80e6e4a3`, migration0007 applied.
+  Fresh root/health200, three private401s, four exact JS/CSS hashes/references
+  and public Runner module hash pass. First D1 request7403 failed before deploy;
+  one complete task retry succeeds. Mobile is emulation, not physical proof.
+- Advance local main with delivery journal; comment #18 honestly and leave OPEN
+  pending source publication under the no-push instruction. Continue ascending
+  queue #19–#46 without routine approval. Original site stays read-only.

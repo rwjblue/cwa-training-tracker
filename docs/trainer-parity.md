@@ -1602,3 +1602,49 @@ Its shared rejection test passes; subsequent check, all 950 tests/52 files, buil
 and the complete focused schedule journey (17.9 seconds) pass. The 64-journey
 gate precedes this isolated validation-boundary correction; no interface or native
 playback wiring changed afterward. Twelve final settled Axe reports are empty.
+
+
+### Issue #18 — independent acceptance and production delivery
+
+Implementation `2a0dd2731bc5e3621292f98e305dd3c6a6fb87ea` is independently
+ACCEPTED with no substantive scoped findings. The reviewer separately authored
+two actual-runtime journeys (17.4 and 11.9 seconds): overnight UTC-midnight class,
+display-timezone travel retaining the exact meeting schedule, exception-only
+editing, keyboard traversal, touch cancel/removal, date-only Join and guest privacy.
+A lost committed acknowledgement retries the identical request with one revision.
+A safe exact-query popup has null opener; skipped DST input stays editable without
+server mutation. Canceled class logging adds no row. One manual 20-minute Class
+record leaves the plan unchanged and appears in actual history/report with zero
+independent-practice minutes and a separate class row.
+
+Independent evidence includes nine distinct states at both widths, eighteen empty
+settled Axe reports, inspected screenshots, eight extra calendar assertions and
+23 focused shared/actual-SQL tests (137 unrelated cases explicitly skipped).
+Apia skipped day, Lord Howe earlier fold, Kathmandu fractional offset, actual DST
+durations, greater-than-24-hour rejection, reordered stable IDs and touching
+intervals pass. Two reviewer fixture assumptions were corrected with retained
+traces; no product assertion or timing rule was weakened. Review confirms shared
+validation, settings state ownership, two-query CAS snapshots, scoped centralized
+writes and reuse of existing private logs/outbox/backups, with no new practice clock.
+
+The user-committed coverage cleanup `38d5848308ed62cdd967ae1cd12d420213aac0c1`
+is integrated separately by `c38aa2a4d1c076b079ff085591e67a37fb43b55d`.
+Its updated testing guide is retained; pending scope documents and primary working
+copy are untouched. The complete serialized runtime gate passes 64 journeys in
+13.1 minutes. After the final isolated encoded-URL size guard, check, all 950
+fast tests/52 files, build and focused schedule journey pass again. Deployment
+repeats the required checks successfully. Binding/config types are unchanged.
+
+Production version `7618a3f0-72b9-4f77-bf4b-482c80e6e4a3` serves the reviewed
+implementation at https://cwa.n1rwj.com. Migration 0007 applies successfully.
+Fresh nonce root/health 200, three anonymous private 401s, four exact JS/CSS
+SHA-256 matches and entry-point references, and public Runner module hash pass.
+The first remote D1 request failed with 7403 before deployment; the single full
+retry succeeded. Both attempts and production evidence remain in ignored notes.
+
+Local main advances with this delivery journal. No push or PR was attempted;
+#18 remains OPEN with source publication pending under the user's instruction.
+Original trainer remains read-only evidence. Chromium touch/viewport emulation
+is not physical-device or OS lock-screen verification. No attendance inference,
+elapsed reload/crash recovery, public join feed or automatic original conversion
+was added. Rest/disjoint practice windows remain separate #19.
