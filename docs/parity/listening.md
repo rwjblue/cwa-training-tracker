@@ -412,3 +412,38 @@ canonical recovered/direct desktop/mobile journeys pass 2/2 in 1.1 minutes; the
 complete serialized regression passes all 81 tests in 17.5 minutes. Existing
 ordinary saves, cancellation, offline/account boundaries and actual native timing
 remain covered. Independent correction recheck and production delivery are pending.
+
+
+### Issue #17 — independent acceptance and production delivery
+
+Implementation `10729b76b86f3e5b5c9dcabd20b41fd6d2ed23dd` and focused recovery-focus
+correction `50620dba6c295309c6f4d46bcc37b4d550dd2ae8` passed independent review.
+The reviewer found one substantive P2: recovered Logbook save-next intermittently
+left focus on the body. Its owner/account/device-fenced post-commit focus request
+resolved the finding. Four repeated independent desktop/mobile native journeys
+pass in 1.2 minutes with hard host-focus and next-Tab assertions. They verify real
+canceled class-draft reload, HTTP503 durable continuation, chosen settings, fresh
+identities, exact retry, current-owner protection, ordinary Save, historical edits
+and deleted-task handling. Independent focused tests pass 40 cases; eight settled
+Axe scans across initial/recheck captures are empty and six screens inspected.
+
+Root final check, all 927 tests/51 files and build pass; the full serialized suite
+passes 81 browser tests in 17.5 minutes. Its native keyboard/touch journeys retain
+five distinct private results, exact measured facts, mixed speeds, class/review
+placement, export/import duplicate handling and report evidence. Eight root Axe
+arrays are empty; ten screenshots were inspected. Earlier failed fixture attempts
+and the actual focus failure remain retained as evidence, not counted as passes.
+
+`mise run deploy` completed after a transient remote D1 error7403 cleared on the
+single retry. No migrations were pending. Production version
+`0800f460-a0c3-43e9-9b98-2ef7759ad4e5` serves matching hashes for all four built
+JS/CSS assets and the public Runner module. Root/health return200; anonymous
+entries, account-state and lifecycle-backup requests return401.
+
+Mobile is Chromium touch emulation, not physical-device/lock-screen verification.
+Short native runs have actual zero contacts/points; no proficiency is inferred.
+No live-engine or elapsed-time reload recovery was added. Original trainer and
+protected scope documents remain unchanged. Per the user's no-push instruction,
+these focused commits remain local and #17 stays open until source publication.
+New primary-checkout browser/testing edits are preserved without rebasing that
+working copy; the local main bookmark tracks the accepted delivery journal.
