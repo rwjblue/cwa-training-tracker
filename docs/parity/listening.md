@@ -1202,3 +1202,41 @@ pair and visible station description. Fresh independent post-commit review and
 strict production delivery remain pending. Physical listening and locked-device behavior
 remain unverified. Restricted curriculum stays linked and the original site
 remains read-only; approved scope/exclusions are preserved.
+
+
+### Issue #32 independent acceptance and production delivery
+
+Implementation `8feae9144ffa39e5edd50969bec9731e115ff848` is independently
+ACCEPTED with no substantive findings. Six independently authored spectral and
+continuity probes verify every bounded pair and all four retimed scenarios;
+230 focused production tests pass. Two independent serial browser journeys
+pass in 24.5 seconds at desktop 1440/mobile 390 with keyboard and touch. Actual
+emitted PCM, paused seek, playing retime, replay, answer privacy, canceled review,
+identical 503 retry, history/report and actual download/file import all pass.
+Two synthetic accounts isolate saved records; anonymous export is 401 and
+cross-account edit is 404. Five independent Axe/overflow reports are empty;
+eight final captures were visually inspected.
+
+Capture-level observation of trusted native playing intervals totals 2.854423
+seconds; saved hearing is 2.854191 seconds, a 232-microsecond difference. Probe
+startup, account-label and listener-attachment errors were inspected and fixed
+only in ignored reviewer code; no application correction, fake clock or event
+was used. All nine changed files match the reviewed commit. Reviewer runtime
+processes closed and the exclusive port 8791 lease was explicitly released.
+Root validation remains check, all 1,092 tests/65 files, build and all 90 serial
+browser journeys in 17.5 minutes, including the three affected journeys.
+
+The strict production task passed check/test/build/dry-run/remote D1/deploy with
+no pending migrations and deployed version
+`b3e829aa-6607-43be-9435-7d6e02b329fb` to https://cwa.n1rwj.com. Exact hashes of
+four production assets and the Runner bridge match the accepted build. Home and
+health are 200; private entries/account/lifecycle endpoints are 401. Public
+calendar GET/HEAD/304/405, nine unique UIDs, sequence 1, exact shared body, DST
+recurrence and no-cookie checks pass. No configuration or binding changed.
+
+No push was attempted. Fresh GitHub main remains accepted #27 (`7e4d66b2`), so
+#32 remains OPEN pending accepted source publication. The local implementation,
+independent review and production gate permit ascending issue #33. Physical
+listening and locked-device behavior remain unverified. Exact public recipes
+remain #45. Restricted curriculum remains linked; approved exclusions and the
+read-only original site are preserved.
