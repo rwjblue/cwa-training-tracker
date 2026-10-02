@@ -63,6 +63,8 @@ export type PracticeEvidence =
       measurement: { seconds: number; recallSeconds?: number };
       recordings: RecordingEvidence[];
       generatedListening?: GeneratedListeningEvidence;
+      /** Actual native generated-word movement; omitted on older measurements. */
+      wordListeningSeconds?: number;
       correction?: TimeCorrection;
     }
   | {
@@ -353,7 +355,15 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
   if (row.type !== 'timed') throw new Error('Unsupported practice evidence source.');
   keys(
     row,
-    ['version', 'type', 'measurement', 'recordings', 'generatedListening', 'correction'],
+    [
+      'version',
+      'type',
+      'measurement',
+      'recordings',
+      'generatedListening',
+      'wordListeningSeconds',
+      'correction',
+    ],
     'Timed evidence',
   );
   const measurement = object(row.measurement, 'Time measurement');
@@ -376,9 +386,26 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
   result.recordings = row.recordings.map(validateRecordingEvidence);
   if (row.generatedListening !== undefined)
     result.generatedListening = validateGeneratedListeningEvidence(row.generatedListening);
+  if (row.wordListeningSeconds !== undefined) {
+    result.wordListeningSeconds = finite(
+      row.wordListeningSeconds,
+      'Measured word listening seconds',
+    );
+    if (
+      result.wordListeningSeconds > 0 &&
+      !result.generatedListening?.summaries.some((summary) => summary.mode === 'words')
+    )
+      throw new Error('Word listening requires an actually played word source.');
+  }
   if (new Set(result.recordings.map((item) => item.url)).size !== result.recordings.length)
     throw new Error('Recording measurements must have distinct URLs.');
   const recordingSeconds = result.recordings.reduce((sum, item) => sum + item.seconds, 0);
+  const sourceSeconds = recordingSeconds + (result.wordListeningSeconds ?? 0);
+  const exceedsWords = (seconds: number, recallSeconds: number) =>
+    result.wordListeningSeconds !== undefined &&
+    exceedsMeasuredTime(sourceSeconds, seconds - recallSeconds, seconds);
+  if (exceedsWords(result.measurement.seconds, result.measurement.recallSeconds ?? 0))
+    throw new Error('Word listening, recordings and recall cannot exceed measured practice time.');
   const hasCompletedPasses = result.recordings.some(
     (item) => (recordingCompletedPasses(item) ?? 0) > 0,
   );
@@ -406,6 +433,10 @@ export function validatePracticeEvidence(value: unknown): PracticeEvidence {
     const corrected = evidenceTime(result);
     if (corrected.recallSeconds > corrected.seconds)
       throw new Error('Corrected recall time cannot exceed corrected total practice time.');
+    if (exceedsWords(corrected.seconds, corrected.recallSeconds))
+      throw new Error(
+        'Corrected time must include measured word listening, recordings and recall.',
+      );
     // Preserve the addition order at the historical v1 correction boundary:
     // subtraction can reject an older valid omitted/zero-pass measurement.
     if (
@@ -543,6 +574,11 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
         : [],
     ),
     ...(evidence.generatedListening ? generatedListeningDetails(evidence.generatedListening) : []),
+    ...(evidence.wordListeningSeconds !== undefined
+      ? [
+          `Measured word listening: ${evidence.wordListeningSeconds.toFixed(2)} seconds. Recall is separate; this source subtotal is not changed by time corrections.`,
+        ]
+      : []),
     ...(evidence.correction
       ? [
           `Learner correction: ${evidenceTime(evidence).seconds.toFixed(2)} total seconds, ${evidenceTime(evidence).recallSeconds.toFixed(2)} recall seconds. ${evidence.correction.reason}`,

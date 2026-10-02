@@ -78,6 +78,21 @@ function input(seconds = 30): StudioSessionInput {
   };
 }
 
+it('saves raw word listening separately from recall with public optional purpose and captured date', () => {
+  const next = input(600);
+  next.measured.recallSeconds = 120;
+  next.measured.wordListeningSeconds = 480;
+  next.launch = { id: 'daily', tool: 'words', purpose: 'review' };
+  const saved = studioSession(next)!;
+  expect(saved.minutes).toBe(10);
+  expect(saved.date).toBe('2026-09-29');
+  expect(saved.metadata).toMatchObject({
+    practicePurpose: 'review',
+    evidence: { wordListeningSeconds: 480, measurement: { seconds: 600, recallSeconds: 120 } },
+  });
+  expect(saved.metadata?.plannedTaskId).toBeUndefined();
+});
+
 function playedWords(characterWpm = 20, effectiveWpm = 10): GeneratedListeningSummary {
   return {
     mode: 'words',

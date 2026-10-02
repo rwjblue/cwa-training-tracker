@@ -6,6 +6,8 @@ import {
   type CurrentPracticeTime,
 } from '../shared/practice-time';
 import PracticeTimeSummary from './PracticeTimeSummary';
+import DailyWordListening from './DailyWordListening';
+import { dailyWordListening } from '../shared/daily-word-listening';
 import { useLearnerDate } from './useLearnerDate';
 import { useLiveEventTime } from './useLiveEventTime';
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
@@ -1038,13 +1040,26 @@ function App() {
   ]);
   const goals = useMemo(() => dailyPracticeGoals(profile, tasks, today), [profile, tasks, today]);
   const practiceSummary = (
-    <PracticeTimeSummary
-      summary={practiceTime}
-      goals={goals}
-      timezone={profile.timezone}
-      guest={!user}
-      current={ownedCurrent}
-    />
+    <>
+      <PracticeTimeSummary
+        summary={practiceTime}
+        goals={goals}
+        timezone={profile.timezone}
+        guest={!user}
+        current={ownedCurrent}
+      />
+      <DailyWordListening
+        summary={dailyWordListening(realEntries, ownedCurrent ? [ownedCurrent] : [], today)}
+        timezone={profile.timezone}
+        retained={practiceLaunch?.tool === 'words' && !practiceLaunch.activity}
+        busy={navigationBusy || booting || deviceMutating}
+        onStart={() => {
+          if (currentLaunch.current?.tool === 'words' && !currentLaunch.current.activity)
+            void navigate('practice');
+          else void openPractice({ tool: 'words', purpose: 'review' });
+        }}
+      />
+    </>
   );
   const signedIn = async (newUser: User) => {
     setAuthOpen(false);

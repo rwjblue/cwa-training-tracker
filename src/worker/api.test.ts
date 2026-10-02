@@ -2801,6 +2801,106 @@ describe('account operation revisions and receipts', () => {
 });
 
 describe('generated listening evidence', () => {
+  it('keeps daily word subtotals private, immutable, repeatable and portable with corrections', async () => {
+    const auth = await signIn('daily-word-owner@example.test');
+    const source = generated();
+    const raw = {
+      ...source.metadata.evidence,
+      measurement: { seconds: 600, recallSeconds: 120 },
+      wordListeningSeconds: 480,
+    };
+    const body = { ...source, metadata: { practicePurpose: 'review', evidence: raw } };
+    const response = await request('/api/entries', 'POST', body, auth.cookie);
+    expect(response.status).toBe(201);
+    const saved = ((await response.json()) as { entry: PracticeSession }).entry;
+    expect(saved).toMatchObject({
+      minutes: 10,
+      metadata: { evidence: raw, practicePurpose: 'review' },
+    });
+    expect((await request('/api/entries', 'POST', body, auth.cookie)).status).toBe(200);
+    expect(
+      (
+        await request(
+          `/api/entries/${saved.id}`,
+          'PUT',
+          {
+            ...saved,
+            metadata: { ...saved.metadata, evidence: { ...raw, wordListeningSeconds: 479 } },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const corrected = {
+      ...saved,
+      metadata: {
+        ...saved.metadata,
+        evidence: {
+          ...raw,
+          correction: { seconds: 630, reason: 'Thirty seconds of additional manual practice' },
+        },
+      },
+    };
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', corrected, auth.cookie)).status).toBe(
+      200,
+    );
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0]).toMatchObject({
+      minutes: 10.5,
+      metadata: { evidence: { ...raw, correction: { seconds: 630 } } },
+    });
+    const other = await signIn('daily-word-other@example.test');
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, other.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries,
+    ).toEqual([]);
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', corrected, other.cookie)).status).toBe(
+      404,
+    );
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, other.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+  });
+
+  it('rejects impossible word budgets through writes and transactional replacement without changing history', async () => {
+    const auth = await signIn('daily-word-invalid@example.test');
+    expect((await request('/api/entries', 'POST', generated(), auth.cookie)).status).toBe(201);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const source = generated();
+    const malformed = {
+      ...source,
+      id: 'impossible-words',
+      metadata: { evidence: { ...source.metadata.evidence, wordListeningSeconds: 61 } },
+    };
+    expect((await request('/api/entries', 'POST', malformed, auth.cookie)).status).toBe(400);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...exported, sessions: [malformed] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+  });
   const words = (characterWpm = 20): GeneratedListeningSummary => ({
     mode: 'words',
     listId: 'custom',

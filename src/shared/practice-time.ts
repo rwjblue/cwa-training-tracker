@@ -14,6 +14,7 @@ export interface CurrentPracticeTime {
   date: string;
   seconds: number;
   recallSeconds?: number;
+  wordListeningSeconds?: number;
   classTime?: boolean;
 }
 export interface PracticeTimeTotals {

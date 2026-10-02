@@ -2,6 +2,36 @@ import { describe, expect, it } from 'vitest';
 import { PracticeClock } from './practice-clock';
 
 describe('practice time', () => {
+  it('owns word listening only during actual word media, through replay/rate/seek and recall boundaries', () => {
+    const clock = new PracticeClock();
+    clock.startMedia(0, 0, 1, undefined, true, true);
+    clock.sample(480, 480_000);
+    clock.suspendMedia();
+    clock.startManual(480_000, true);
+    for (let now = 481_000; now <= 600_000; now += 1000) clock.snapshot(now);
+    clock.pause(600_000);
+    expect(clock.snapshot(600_000)).toMatchObject({
+      seconds: 600,
+      recallSeconds: 120,
+      wordListeningSeconds: 480,
+    });
+    clock.startMedia(0, 600_000, 2, undefined, true, true);
+    clock.sample(10, 605_000, 2);
+    clock.sample(100, 606_000, 2); // rejected seek
+    clock.sample(104, 608_000, 2);
+    clock.suspendMedia();
+    clock.startMedia(0, 610_000); // QSO/free source
+    clock.sample(10, 620_000);
+    clock.startMedia(0, 620_000, 1, { url: 'https://example.test/audio.wav' }, true, true);
+    clock.sample(10, 630_000); // recording cannot also claim words
+    expect(clock.snapshot(630_000)).toMatchObject({
+      seconds: 627,
+      recallSeconds: 120,
+      wordListeningSeconds: 487,
+    });
+    clock.reset();
+    expect(clock.snapshot(640_000).wordListeningSeconds).toBe(0);
+  });
   it('credits heard audio across native play/pause, buffering, and seeks without crediting breaks', () => {
     const clock = new PracticeClock();
     clock.startMedia(0, 0);

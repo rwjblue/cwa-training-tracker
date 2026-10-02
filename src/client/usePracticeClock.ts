@@ -18,6 +18,8 @@ export function usePracticeClock() {
     setState((previous) =>
       Math.floor(previous.seconds) === Math.floor(next.seconds) &&
       Math.floor(previous.recallSeconds) === Math.floor(next.recallSeconds) &&
+      Math.floor(previous.wordListeningSeconds ?? 0) ===
+        Math.floor(next.wordListeningSeconds ?? 0) &&
       previous.running === next.running &&
       previous.recalling === next.recalling &&
       previous.recallInterruption === next.recallInterruption &&
@@ -87,6 +89,7 @@ export function usePracticeClock() {
         audio.playbackRate,
         source,
         !document.hidden,
+        audio.dataset.wordListening === 'true',
       );
     refresh();
   };
@@ -134,6 +137,7 @@ export function usePracticeClock() {
         audio.playbackRate,
         source,
         !document.hidden,
+        audio.dataset.wordListening === 'true',
       );
     } else if (event.type === 'seeking' || event.type === 'emptied') {
       if (media.current === audio || recordingOwner.current === audio) {

@@ -18,6 +18,7 @@ export type RecallInterruption = 'hidden' | 'delayed' | 'invalid';
 export interface PracticeClockSnapshot {
   seconds: number;
   recallSeconds: number;
+  wordListeningSeconds?: number;
   running: boolean;
   recalling: boolean;
   recordings: RecordingTime[];
@@ -43,6 +44,7 @@ const resumeGapLimit = (source: RecordingSource) => {
 export class PracticeClock {
   private seconds = 0;
   private recallSeconds = 0;
+  private wordListeningSeconds = 0;
   private recallInterruption?: RecallInterruption;
   private manual?: { at: number; recall: boolean };
   private media?: {
@@ -50,6 +52,7 @@ export class PracticeClock {
     at: number;
     rate: number;
     recording?: RecordingSource;
+    words: boolean;
     /** Only the first observation after a verified native resume may stabilize. */
     resumePosition?: number;
   };
@@ -86,6 +89,7 @@ export class PracticeClock {
     return {
       seconds: this.seconds,
       recallSeconds: this.recallSeconds,
+      wordListeningSeconds: this.wordListeningSeconds,
       running: Boolean(this.manual || this.media),
       recalling: this.manual?.recall === true,
       recordings: [...this.recordings.values()].map((recording) => {
@@ -113,7 +117,14 @@ export class PracticeClock {
     this.recallInterruption = undefined;
   }
 
-  startMedia(position: number, now: number, rate = 1, recording?: RecordingSource, visible = true) {
+  startMedia(
+    position: number,
+    now: number,
+    rate = 1,
+    recording?: RecordingSource,
+    visible = true,
+    words = false,
+  ) {
     const interruption = this.settleManual(now, visible);
     this.manual = undefined;
     // A repeated playing/seeked anchor is not itself a native pause boundary.
@@ -153,6 +164,7 @@ export class PracticeClock {
       position,
       at: now,
       rate,
+      words: words && !recording,
       ...(recording ? { recording: { ...recording } } : {}),
       ...(resumePosition !== undefined ? { resumePosition } : {}),
     };
@@ -189,6 +201,7 @@ export class PracticeClock {
         return;
       }
       this.seconds += credit;
+      if (previous.words) this.wordListeningSeconds += credit;
       if (previous.recording && credit > 0) {
         const item = this.recordings.get(previous.recording.url) ?? {
           url: previous.recording.url,
@@ -295,6 +308,7 @@ export class PracticeClock {
   reset() {
     this.seconds = 0;
     this.recallSeconds = 0;
+    this.wordListeningSeconds = 0;
     this.recallInterruption = undefined;
     this.manual = undefined;
     this.media = undefined;

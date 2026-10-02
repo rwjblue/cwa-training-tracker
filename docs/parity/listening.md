@@ -482,3 +482,35 @@ public GET/HEAD/304/405/unique recurring parser agreement pass after one D1 7403
 complete-task retry. The canonical ledger preserves counts, probe failure and
 calendar/physical-device limits. Local main records acceptance; #20 stays OPEN
 under no-push. Private CWT eligibility is #21, reminders #46; no original mutation.
+
+### Issue #25 — actual daily word-source listening
+
+The permitted generated-word player now feeds an optional daily600-second goal
+using actual native movement captured by the existing PracticeClock. Applied
+word ownership, rather than selected controls or descriptive configurations,
+supplies an optional raw timed-evidence subtotal. Recall uses existing observed
+foreground timing and is excluded from the goal while retained in total practice.
+Repeat list continues deliberately beyond600 seconds independently of assigned
+recording replay. Old unmeasured evidence is not promoted. Strict disjoint source
+budgets/corrections, stable-ID receipt retirement, class/date exclusion, private
+SQL/portable backup and readable history/report facts are covered by fast tests.
+The representative desktop/mobile native journey passes14.3s including recall,
+cancellation, HTTP503 and exact retry with no required-task mutation. Ten settled
+Axe/overflow checks are empty, and four captures were inspected. Original daily
+recording remains private/unavailable; Common QSO/30 English/custom words are the
+permitted replacement. No new recognition, elapsed reload recovery or physical
+lock-screen claim. Canonical #25 inventory/planning ledger records full gates,
+independent review and eventual production acceptance separately.
+
+Initial full #25 browser checks found the preserved public-word manual timer
+had been hidden by focused recall. It is restored alongside explicit recall
+controls: manual total time and observed recall remain distinct, and neither
+supplies word-listening goal credit. Its existing precision/save journey passes
+3.4s with a new zero-listening assertion. The native journey passes16.6s after
+comparing settled raw source measurements across recall, rather than a premature
+rounded projection. Final full regression and independent review remain gates.
+
+Final #25 check/all1,041 tests62files/build and all75 serialized browser journeys
+pass15.3m; native words14.8s/manual3.3s verify separate source/recall/manual budgets.
+Ten new desktop/mobile Axe summaries are empty. Independent post-commit review
+and production acceptance follow; no physical-device claim is made.

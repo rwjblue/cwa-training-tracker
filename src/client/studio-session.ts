@@ -134,6 +134,9 @@ export function studioSession(
               measurement: { seconds: measured.seconds, recallSeconds: measured.recallSeconds },
               recordings,
               generatedListening,
+              ...(measured.wordListeningSeconds !== undefined
+                ? { wordListeningSeconds: measured.wordListeningSeconds }
+                : {}),
             },
           }
         : {}),

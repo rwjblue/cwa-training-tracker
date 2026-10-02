@@ -260,6 +260,8 @@ export default forwardRef<
     const start = track.items[index.current]?.start ?? 0;
     prepared.current = applied;
     try {
+      // Capture the applied source before native playing, never selected controls.
+      if (audio.current) audio.current.dataset.wordListening = String(summary.mode === 'words');
       player.current.prepare(track, {
         title: applied.title,
         canPlay: acceptsPlayback,

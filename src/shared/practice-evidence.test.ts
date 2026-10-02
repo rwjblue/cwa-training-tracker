@@ -86,6 +86,40 @@ const generated = (): GeneratedListeningEvidence => ({
 });
 
 describe('non-copy native evidence', () => {
+  it('validates disjoint word/listening/recall budgets and retains raw source facts in corrections and backups', () => {
+    const raw = {
+      version: 1,
+      type: 'timed',
+      measurement: { seconds: 600, recallSeconds: 120 },
+      recordings: [],
+      generatedListening: generated(),
+      wordListeningSeconds: 480,
+    };
+    expect(validatePracticeEvidence(raw)).toEqual(raw);
+    expect(
+      validatePracticeEvidence({
+        ...raw,
+        correction: { seconds: 630, reason: 'Added deliberate manual practice' },
+      }),
+    ).toMatchObject({ wordListeningSeconds: 480, measurement: raw.measurement });
+    for (const changed of [
+      { wordListeningSeconds: 481 },
+      { wordListeningSeconds: -1 },
+      { wordListeningSeconds: NaN },
+      { generatedListening: undefined },
+      { recordings: [{ url: 'https://example.test/other.wav', seconds: 1 }] },
+      { correction: { seconds: 599, reason: 'Impossible subtotal' } },
+      { correction: { recallSeconds: 121, reason: 'Impossible recall' } },
+    ])
+      expect(() => validatePracticeEvidence({ ...raw, ...changed })).toThrow();
+    const checked = validatePracticeSession(session(raw));
+    expect(practiceSessionEvidenceDetails(checked.metadata).join(' ')).toContain(
+      'Measured word listening: 480.00 seconds',
+    );
+    expect(
+      validatePracticeEvidence({ ...raw, wordListeningSeconds: undefined }),
+    ).not.toHaveProperty('wordListeningSeconds');
+  });
   it.each([
     { duration: 4, minimum: 3.8 },
     { duration: 0.05, minimum: 0.0475 },

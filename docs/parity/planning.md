@@ -1272,3 +1272,91 @@ arrived; the current computer recipes reserve places in a maximum three-choice
 set and ordinary material rotates within three recent usable dates. No
 physical-device, reload/crash elapsed recovery or new recognition claim is
 made. Restricted curriculum remains linked, and original/user work is intact.
+
+### Issue #25 — optional daily word listening, implementation and validation
+
+The current issue body/comments/dependencies and pinned original
+`daily-listening.ts`8/36 and `client.ts`667 were rechecked. The original accepts
+both its private daily recording and generated word-recognition practice.
+The Companion uses its permitted Common QSO words, 30 common English words
+and custom-list native player; it explains that the original daily recording
+is private and unavailable. No original audio, restricted curriculum, private
+resource URL or new recognition subsystem is published. This missing daily
+resource is separate from the seven historical vocabulary/catalog gaps.
+
+Today and Studio show a clearly optional ten-minute listening goal, local
+date/timezone, saved/current/remaining listening and a milestone. The existing
+word-player Repeat list preference permits deliberate continued listening
+beyond the milestone and remains independent of assigned-recording replay.
+Existing words/settings/transcript/scratchpad and native transport are reused.
+The action returns to a retained word owner or starts a fresh optional review
+through the existing serialized transition; it never creates a required task,
+marks homework complete or links optional time to an assignment.
+
+The existing PracticeClock captures actual applied word-source ownership at
+native media start and credits only accepted movement. Pause/buffering/seeks,
+replay/rates and source changes retain existing admission rules. A readonly
+word subtotal joins the same current-practice projection; no second clock or
+elapsed-recovery store is introduced. Public word listening now has the same
+focused recall controls as recording listening: starting recall pauses audio,
+resuming audio stops recall, and hidden/delayed recall is interrupted. Recall
+remains inside total practice time and outside listening-only progress.
+
+Version1 timed evidence optionally retains raw `wordListeningSeconds`, bounded
+against total minus recall and disjoint recording time, with actual played
+word-source description. Corrections cannot rewrite or exceed these raw facts.
+Old omitted evidence remains valid and supplies no inferred goal credit.
+Receipt-first stable-ID deduplication counts device/server/current transitions
+once; date/class edits retire the current owner without lending goal time.
+Historical accounting and class/wrong-date work remain outside this goal.
+Existing private SQL/outbox, history, reports and portable backups retain the
+subtotal and explicit public review purpose. No entity, binding, configuration
+or migration changes require generated Worker types.
+
+Six daily-domain cases protect eight listened plus two recall minutes,
+receipt/current deduplication, local date/class exclusion, milestone crossing,
+continuation, old omission and arithmetic roundoff. Clock/source, studio save,
+strict evidence/report and two real-SQL tests cover disjoint budgets, corrections,
+immutable measurements, exact retry, account privacy, export/restore and rejected
+transactional replacement without history mutation. The representative browser
+journey passes in14.3s: guest access/private401, original-resource explanation,
+custom-list setup, actual native looping beyond the milestone, real observed
+recall, retained inspection, canceled review, HTTP503/device receipt and byte-exact
+server retry, readable saved source facts and unchanged required plan. All ten
+settled desktop1440/mobile390 Axe/overflow checks are empty across five states;
+four Today/history captures were viewed. Emulation establishes neither physical
+lock-screen playback nor unsaved reload/crash elapsed-time recovery.
+
+Initial browser fixtures were corrected from observed failure context, pixels
+and retained traces: guest entry must first open the public tool; innerText
+comparisons require matching text semantics; installing a fake clock after the
+observation interval does not supply valid recall; exact save control names and
+actual searchable history replace guessed roles. The final journey uses only
+real advancing clocks. Root also corrected stale word-recall help and bounded
+projection roundoff before committing. Full regression, implementation commit,
+independent review and production delivery remain subsequent gates.
+
+Issue #25 initial full browser run completed73/75 passing in16.1m. It exposed
+one useful-Companion regression: public words had lost the existing manual
+Start timer. Manual timing is now preserved beside explicit focused recall;
+the two modes use the same clock, and manual time adds no word-source credit.
+The existing precision/save/cancel/manual-log browser journey now also asserts
+zero listening-goal credit and passes3.4s. The new native test captured a rounded
+projection before its final pause tail settled; it now reads the raw source
+measurement through actual review before recall and requires exactly the same
+source afterward. The corrected native journey passes16.6s with unchanged goal,
+private source facts, exact retry and original required plan. Both failures were
+inspected and retained before correction. Final full-current regression follows;
+no implementation commit, independent acceptance or deployment is claimed yet.
+
+Issue #25 final-current gates pass: check, all1,041 tests in62 files and build.
+All75 serialized Wrangler/D1 browser journeys pass in15.3m after the manual
+regression and settled-source test corrections. The final native-word journey
+passes14.8s; manual precision/save coverage passes3.3s and confirms zero listening
+credit. Ten new settled desktop/mobile Axe/overflow reports are empty; four final
+Today/history captures are retained. Fresh issue25 authority remains OPEN with
+no comments/native dependencies; its documented #1/#5/#10 foundations are
+reverified by current private evidence, extra-review and actual course replay
+workflows rather than skipped by closed status. Protected user documents and
+signing are unchanged. The implementation commit precedes independent review;
+production acceptance and publication are still separate gates.

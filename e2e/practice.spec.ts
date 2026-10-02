@@ -88,6 +88,9 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.clock.fastForward(83_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
   await expect(
+    page.getByRole('region', { name: 'Optional daily word listening', exact: true }),
+  ).toContainText('Total listening: 0:00 / 10:00.');
+  await expect(
     page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
   ).toBeEnabled();
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);

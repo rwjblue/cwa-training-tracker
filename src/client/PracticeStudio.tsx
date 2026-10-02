@@ -282,6 +282,7 @@ export default function PracticeStudio({
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
   const isSending = activity?.type === 'sending' || (!assigned && tool === 'sending');
+  const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
   const [text, setText] = useState(() => {
     const initial = loadPracticePreferences();
     return initial.mode === 'custom' ? '' : generatePractice(initial.mode, initial);
@@ -322,6 +323,7 @@ export default function PracticeStudio({
           date: dateInTimezone(sessionIdentity.current.createdAt, sessionIdentity.current.timezone),
           seconds: timer.seconds,
           recallSeconds: timer.recallSeconds,
+          wordListeningSeconds: timer.wordListeningSeconds,
         }
       : undefined;
   usePracticeTimeProjection(
@@ -557,13 +559,13 @@ export default function PracticeStudio({
     );
     return false;
   };
-  const startTimer = () => {
+  const startTimer = (recall = activity?.type === 'audio') => {
     if (!canPractice() || isRunner || isCopy || !liveCanStart()) return;
-    if (activity?.type === 'audio') stopPlayback();
+    if (activity?.type === 'audio' || isWordListening) stopPlayback();
     else if (running) return;
     identity();
     setConfirmReset(false);
-    timer.startManual(activity?.type === 'audio');
+    timer.startManual(recall);
   };
   const resetTimer = () => {
     stopPlayback();
@@ -980,7 +982,7 @@ export default function PracticeStudio({
         className="button outline"
         aria-pressed={timer.recalling}
         aria-describedby="recall-policy"
-        onClick={() => (timer.recalling ? pauseTimer() : startTimer())}
+        onClick={() => (timer.recalling ? pauseTimer() : startTimer(true))}
       >
         {timer.recalling ? <Square size={14} /> : <Play size={14} />}
         {timer.recalling
@@ -991,7 +993,7 @@ export default function PracticeStudio({
       </button>
       <button
         className="button outline"
-        disabled={playing || recordingPending || !recordingUrl}
+        disabled={playing || (assigned && (recordingPending || !recordingUrl))}
         aria-describedby="recall-policy"
         onClick={() => void play()}
       >
@@ -1873,17 +1875,20 @@ export default function PracticeStudio({
                     </span>
                   </div>
                 )}
+                {isWordListening && recallControls}
                 <p
                   className="studio-playback-help"
-                  id={activity?.type === 'audio' ? 'recall-policy' : undefined}
+                  id={activity?.type === 'audio' || isWordListening ? 'recall-policy' : undefined}
                 >
-                  {isSending
-                    ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
-                    : assigned
-                      ? activity?.type === 'audio'
-                        ? 'Press Play to count listening time. Start recall pauses the recording for focused notes; Resume listening stops recall before playback. Recall pauses if this page is hidden or the timer is delayed.'
-                        : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
-                      : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
+                  {isWordListening
+                    ? 'Start recall pauses word audio for focused notes. Resume listening stops recall before playback. Recall is included in total practice time, but not the optional listening goal; it pauses when this page is hidden or its timer is delayed.'
+                    : isSending
+                      ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
+                      : assigned
+                        ? activity?.type === 'audio'
+                          ? 'Press Play to count listening time. Start recall pauses the recording for focused notes; Resume listening stops recall before playback. Recall pauses if this page is hidden or the timer is delayed.'
+                          : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
+                        : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
                 </p>
                 <div className="studio-scratchpad">
                   <label className="field" htmlFor="practice-scratchpad">
@@ -2105,10 +2110,14 @@ export default function PracticeStudio({
                   )}
                   <p className="studio-timer-scope">
                     {!isSending &&
-                      'Listening time follows the audio, including when your screen locks. '}
-                    {activity?.type === 'audio'
-                      ? 'Recall counts only observed time with this page visible. '
-                      : 'The manual timer keeps counting practice away from this page until you pause it. Inspecting another app view pauses this block. '}
+                      (isWordListening
+                        ? 'Word listening time follows actual audio. '
+                        : 'Listening time follows the audio, including when your screen locks. ')}
+                    {isWordListening
+                      ? 'Recall counts only observed time with this page visible. The manual timer counts intentional practice away from this page until paused; it adds no word-listening credit. Inspecting another app view pauses this block. '
+                      : activity?.type === 'audio'
+                        ? 'Recall counts only observed time with this page visible. Inspecting another app view pauses this block. '
+                        : 'The manual timer keeps counting practice away from this page until you pause it. Inspecting another app view pauses this block. '}
                     Finish or switch saves at least one measured second. Save notes explicitly at
                     zero time. Save before reloading to keep unfinished time.
                   </p>

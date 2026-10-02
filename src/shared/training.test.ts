@@ -136,7 +136,8 @@ describe('practice input validation', () => {
     expect(values[0]).not.toHaveProperty('metadata');
     expect(values[3].metadata).not.toHaveProperty('practicePurpose');
     expect(taskPracticeMetadata('task')).toEqual({ plannedTaskId: 'task' });
-    expect(taskPracticeMetadata(undefined, 'review')).toEqual({});
+    expect(taskPracticeMetadata(undefined, 'review')).toEqual({ practicePurpose: 'review' });
+    expect(taskPracticeMetadata()).toEqual({});
   });
 
   it.each([
