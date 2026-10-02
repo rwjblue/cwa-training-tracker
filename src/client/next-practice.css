@@ -1,0 +1,43 @@
+.next-practice {
+  min-width: 0;
+  padding: 20px 24px;
+  margin-block: 1rem;
+  overflow-wrap: anywhere;
+}
+.next-practice h3 {
+  margin-block: 0.8rem 0.4rem;
+}
+.next-practice p {
+  line-height: 1.6;
+}
+.next-practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.next-practice button,
+.next-practice a.button {
+  min-height: 44px;
+}
+@media (max-width: 600px) {
+  .next-practice .button {
+    width: 100%;
+    white-space: normal;
+  }
+}
+
+.next-practice h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.today-plan > .next-practice {
+  margin-inline: 24px;
+}
+@media (max-width: 600px) {
+  .today-plan > .next-practice {
+    margin-inline: 18px;
+  }
+  .next-practice {
+    padding: 18px;
+  }
+}

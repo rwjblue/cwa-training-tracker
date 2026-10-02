@@ -12,17 +12,21 @@ import './class-schedule.css';
 /** Calendar display only: this clock never measures or credits practice. */
 export default function ClassMeetingCard({
   profile,
+  now,
   onLog,
   accountId,
 }: {
   profile: Profile;
+  now?: number;
   accountId?: string;
   onLog?: (initial: Partial<PracticeSession>) => void;
 }) {
-  const [time, setTime] = useState(() => Date.now());
+  const [observed, setTime] = useState(() => Date.now());
+  const time = now ?? observed;
   const meetings = useMemo(() => timedClassMeetings(profile), [profile]);
   const status = useMemo(() => classMeetingStatus(profile, new Date(time)), [profile, time]);
   useEffect(() => {
+    if (now !== undefined) return;
     const refresh = () => setTime(Date.now());
     const boundary = meetings
       .flatMap((item) => [Date.parse(item.startsAt), Date.parse(item.endsAt)])
@@ -37,8 +41,10 @@ export default function ClassMeetingCard({
       clearTimeout(timer);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [meetings, time]);
-  useEffect(() => setTime(Date.now()), [profile]);
+  }, [meetings, time, now]);
+  useEffect(() => {
+    if (now === undefined) setTime(Date.now());
+  }, [profile, now]);
   if (!accountId || !profile.classSchedule) return null;
   const meeting = status.active ?? status.finished ?? status.next;
   const dateOnly = !meetings.length

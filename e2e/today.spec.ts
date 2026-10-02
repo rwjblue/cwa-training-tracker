@@ -46,7 +46,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.reload();
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(
-    panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true }),
+    panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true, level: 4 }),
   ).toBeVisible();
   await expect(
     panel.getByRole('heading', { name: 'Tomorrow’s listening exercise', exact: true }),
@@ -126,7 +126,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.setViewportSize({ width: 390, height: 844 });
   await panel.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
   await expect(
-    panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true }),
+    panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true, level: 4 }),
   ).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -371,10 +371,11 @@ test('course dates populate Today with playable assignments and preserve linked 
   );
   await expect(audio).toHaveAttribute('src', fasterUrl!); // remembered next-faster default
   await page.clock.resume();
+  const retainedPosition = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
   await audio.evaluate((element: HTMLAudioElement) => element.play());
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
-    .toBeGreaterThan(1.2);
+    .toBeGreaterThan(retainedPosition + 1.2);
   await page.route('**/api/account-operations', (route) => {
     if (route.request().postDataJSON().change.type !== 'task-status') return route.continue();
     return route.fulfill({
@@ -642,7 +643,7 @@ test('earlier work can be dismissed in bulk and restored without completion or c
   }
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
   await expect(
-    panel.getByRole('heading', { name: 'Today’s planned exchange', exact: true }),
+    panel.getByRole('heading', { name: 'Today’s planned exchange', exact: true, level: 4 }),
   ).toBeVisible();
   await expectAccessible(page, 'earlier-dismissed-desktop');
   await page.screenshot({ path: '.tmp/earlier-dismissed-desktop.png', fullPage: true });

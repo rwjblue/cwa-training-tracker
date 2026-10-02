@@ -29,9 +29,11 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await page.reload();
   let mobile = false;
   const activate = async (control: Locator) => {
+    await expect(control).toBeEnabled();
     if (mobile) await control.tap();
     else {
       await control.focus();
+      await expect(control).toBeFocused();
       await page.keyboard.press('Enter');
     }
   };
@@ -220,9 +222,11 @@ test('retained manual work follows event edits and every timer checks current el
   await page.reload();
   let mobile = false;
   const activate = async (control: Locator) => {
+    await expect(control).toBeEnabled();
     if (mobile) await control.tap();
     else {
       await control.focus();
+      await expect(control).toBeFocused();
       await page.keyboard.press('Enter');
     }
   };

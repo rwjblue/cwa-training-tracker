@@ -935,3 +935,65 @@ after one D17403 full-task retry; exact assets/private401/public-feed parser
 checks pass. See canonical acceptance ledger for evidence, inspected CSP fixture
 failure and limits. Local main records delivery; #21 stays OPEN under no push.
 Automatic next action remains dependent22. Original and user work unchanged.
+
+
+### Issue #22 — context-aware next practice implementation
+
+Rechecked the current issue body/comments/dependencies and pinned original
+`plan.ts:278–327`, `client.ts:625` and `navigation.ts:1`. Dependencies #16,
+#18 and #21 are independently accepted and deployed; their unpublished local
+commits remain open under the explicit no-push instruction.
+
+The shared `nextPracticePlan` derives Today’s eligible required work from the
+existing daily plan and saved evidence: today before earlier dates, started
+within a date, stable assignment ties, explicit completion/dismissal, actual
+learner timezone, recording availability and current live deadlines. Actual
+private class intervals suppress new recommendations. Undated preparation,
+future dates and all-complete guidance remain inspectable without automatically
+advancing them. Extra review never supplies required progress.
+
+Today prioritizes the retained in-tab owner. Studio and an otherwise unoccupied
+Today expose a deliberate next-block action that reuses the existing launch
+factory, serialized navigation and save policy. It prepares the selected task’s
+own resource/recipe/purpose without autoplay. Eligibility is sampled again after
+an asynchronous finish so a class/live boundary or changed plan cannot replace
+the owner with newly ineligible work. Saving partial practice remains separate
+from completing the exercise. An acknowledged unsaved Runner result is explicitly
+View/save result; the stopped engine is not resumable. Scoped owner callbacks
+reuse existing result/queue persistence and account/device fences.
+
+App’s existing calendar observer now watches private class boundaries too, and
+passes its clock to class cards rather than adding independent observers. The
+practice/player/Runner timing owners are unchanged. There is no new private
+entity, Worker schema, binding, export format or elapsed-time reload recovery.
+Existing authenticated history, reports and exact completed-result retries remain
+the authority; public tools remain available without an account.
+
+Eight planner tests pass for ordering, dismissal/completion, preparation, class
+phase, missing audio, live boundaries, timezone midnight and progress exclusion.
+Three representative browser journeys pass with desktop keyboard/mobile touch:
+actual native PCM movement through Today/Week/Report inspection and return,
+cancellation, rejected save, exact retry, explicit completion and correct next
+manual context; blocked recording/link, live preparation, class interval and
+all-complete guidance; and an actual held save crossing the class start boundary
+that preserves the originating owner and saves time once. Sixteen settled Axe
+and overflow checks are empty; desktop/mobile card captures were inspected.
+Existing acknowledged native Runner journeys own completed-result navigation.
+Fixture failures were inspected in context, screenshots and traces before fixes;
+no timeout/native timing assertions were weakened. Full gates and independent
+post-commit review are pending. Physical devices and background/lock-screen
+playback were not tested. Original source and protected user work are unchanged.
+
+
+Issue #22 root gates pass: check, 1,002 tests in 59 files and production build.
+The complete 71-case serialized browser run produced 67 passes and four fixture
+failures (14.8m). All seven affected Today/live journeys then passed (57.3s),
+covering all four corrections. Two task-row checks now select their actual level
+4 headings rather than matching the additional level 3 recommendation. Keyboard
+activation waits for enabled controls and verifies focus after fixture reload.
+The native completion journey now observes a fresh 1.2-second playhead advance
+after return rather than reusing an absolute already-heard position. These
+strengthen actual interaction/evidence checks; no product behavior, timeout,
+privacy, failed-save or timing assertion was weakened. All other 67 flows were
+unchanged and passed, including real Runner result/queue/recovery journeys.
+Independent post-implementation review remains pending.

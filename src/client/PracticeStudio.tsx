@@ -118,6 +118,7 @@ export default function PracticeStudio({
   onBeforeLeaveChange,
   onBeforeInspectChange,
   onRunnerProgressChange,
+  onRunnerResultReadyChange,
   onCurrentPracticeChange,
   practiceSummary,
 }: {
@@ -149,6 +150,7 @@ export default function PracticeStudio({
   ) => Promise<'server' | 'device'>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
   onRunnerProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
+  onRunnerResultReadyChange?: (resultId: string | undefined) => void;
   onBeforeInspectChange?: (handler: (() => Promise<void>) | undefined) => void;
 }) {
   const notesScope = accountId ?? 'guest';
@@ -1202,6 +1204,7 @@ export default function PracticeStudio({
           today={today}
           onCurrentPracticeChange={onCurrentPracticeChange}
           onProgressChange={onRunnerProgressChange}
+          onResultReadyChange={onRunnerResultReadyChange}
           accountId={accountId}
           active={active}
           timezone={timezone}

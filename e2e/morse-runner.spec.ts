@@ -137,9 +137,12 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   const stoppedClock = await runner.locator('#clock').textContent();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
-  await retained.getByRole('button', { name: 'Return to practice', exact: true }).focus();
+  await retained.getByRole('button', { name: 'View/save result', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#practice$/);
+  await expect(page.getByRole('region', { name: 'Your next practice', exact: true })).toContainText(
+    'The stopped engine cannot be resumed',
+  );
   expect(page.frames()).toContain(frame);
   await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
   await page.setViewportSize({ width: 390, height: 844 });

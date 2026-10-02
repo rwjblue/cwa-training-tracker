@@ -115,6 +115,8 @@ import CourseCurriculum from './CourseCurriculum';
 import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
+import NextPracticeAction from './NextPracticeAction';
+import { nextPracticePlan } from '../shared/next-practice';
 import type { PlannedTask } from '../shared/plan';
 import {
   nextRunnerLaunchForResult,
@@ -297,6 +299,13 @@ function App() {
   const currentPage = useRef(page);
   currentPage.current = page;
   const studioUnsaved = useRef(false);
+  const [currentUnsaved, setCurrentUnsaved] = useState(false);
+  const [currentRunnerResult, setCurrentRunnerResult] = useState<{
+    scope: string;
+    token: string;
+    ownerId: string;
+    resultId: string;
+  }>();
   const beforeLeaveStudio = useRef<(() => Promise<boolean>) | undefined>(undefined);
   const beforeInspectStudio = useRef<(() => Promise<void>) | undefined>(undefined);
   const practiceNavigation = useRef(new PracticeNavigation());
@@ -392,6 +401,8 @@ function App() {
     beforeLeaveStudio.current = undefined;
     beforeInspectStudio.current = undefined;
     studioUnsaved.current = false;
+    setCurrentUnsaved(false);
+    setCurrentRunnerResult(undefined);
     currentLaunch.current = launch;
     setPracticeLaunch(launch);
     setCurrentRunnerProgress(undefined);
@@ -919,6 +930,70 @@ function App() {
     currentPractice.ownerId === practiceLaunch?.id
       ? currentPractice.current
       : undefined;
+  const ownedRunnerResult =
+    currentRunnerResult?.scope === scope &&
+    currentRunnerResult.token === deviceToken &&
+    currentRunnerResult.ownerId === practiceLaunch?.id
+      ? currentRunnerResult
+      : undefined;
+  const planning = useRef({ tasks, entries: visibleEntries, profile });
+  planning.current = { tasks, entries: visibleEntries, profile };
+  const nextPlan = useMemo(
+    () => nextPracticePlan(tasks, visibleEntries, profile, Date.now()),
+    [tasks, visibleEntries, profile, liveNow, today],
+  );
+  const nextReady = Boolean(
+    user && profileAccountId === user.id && !account.loading && !deviceMutating,
+  );
+  const startNextPractice = async () => {
+    if (
+      !nextReady ||
+      !user ||
+      (activeAccount.current ?? 'guest') !== scope ||
+      !isDeviceScopeCurrent(scope, deviceToken)
+    )
+      return;
+    const select = () =>
+      nextPracticePlan(
+        planning.current.tasks,
+        planning.current.entries,
+        planning.current.profile,
+        Date.now(),
+      ).next;
+    const candidate = select();
+    if (!candidate) {
+      notify('No required block is eligible now. Inspect the plan and preparation guidance.');
+      return;
+    }
+    await runPracticeTransition(
+      `next:${currentLaunch.current?.id ?? 'none'}:${candidate.task.id}`,
+      confirmLeaveStudio,
+      () => {
+        // Recheck after finishing: edits, a class boundary or live expiry can change the choice.
+        const fresh = select();
+        if (!fresh) {
+          notify('The next block is no longer eligible. Your current context remains available.');
+          return;
+        }
+        replaceStudio({ id: crypto.randomUUID(), ...practiceLaunchForTask(fresh.task) });
+        showPage('practice');
+      },
+    );
+  };
+  const nextPracticeAction = user ? (
+    <NextPracticeAction
+      plan={nextPlan}
+      profile={profile}
+      now={liveNow}
+      busy={!nextReady || navigationBusy || booting}
+      finishing={Boolean(practiceLaunch && currentUnsaved)}
+      resultPending={Boolean(ownedRunnerResult)}
+      currentTaskId={practiceLaunch?.task?.id}
+      onStart={() => void startNextPractice()}
+      onPrepare={(task) => void openPractice(practiceLaunchForTask(task))}
+      onManage={() => void navigate('course', false, 'week')}
+    />
+  ) : undefined;
   const realEntries = user ? visibleEntries : localEntries;
   const savedTime = useMemo(() => savedPracticeTime(realEntries, today), [realEntries, today]);
   const practiceTime = practiceTimeWithCurrent(savedTime, [
@@ -1238,8 +1313,9 @@ function App() {
                     </span>
                     <h2>{practiceLaunch.task?.title ?? 'Your current practice'}</h2>
                     <p>
-                      Kept in this app while you look around. Return keeps playback and timers
-                      paused until you start them.
+                      {ownedRunnerResult
+                        ? 'The engine has stopped. Its acknowledged result is ready to review and save; it does not resume the simulator.'
+                        : 'Kept in this app while you look around. Return keeps playback and timers paused until you start them.'}
                     </p>
                   </div>
                   <div className="retained-practice-actions">
@@ -1248,7 +1324,8 @@ function App() {
                       disabled={navigationBusy || booting}
                       onClick={() => navigate('practice')}
                     >
-                      Return to practice <ArrowRight size={16} />
+                      {ownedRunnerResult ? 'View/save result' : 'Return to practice'}{' '}
+                      <ArrowRight size={16} />
                     </button>
                     {user && (
                       <>
@@ -1311,6 +1388,7 @@ function App() {
                     todayPlan={
                       user ? (
                         <TodayPlan
+                          nextAction={!practiceLaunch ? nextPracticeAction : undefined}
                           liveNow={liveNow}
                           accountId={user.id}
                           currentRunner={
@@ -1410,6 +1488,7 @@ function App() {
                       </>
                     )}
                   </div>
+                  {nextPracticeAction}
                   <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                     <PracticeStudio
                       profile={profile}
@@ -1450,6 +1529,22 @@ function App() {
                         if (currentLaunch.current?.id === practiceLaunch.id)
                           beforeInspectStudio.current = handler;
                       }}
+                      onRunnerResultReadyChange={(resultId: string | undefined) => {
+                        if (
+                          currentLaunch.current?.id !== practiceLaunch.id ||
+                          (activeAccount.current ?? 'guest') !== scope ||
+                          !isDeviceScopeCurrent(scope, deviceToken)
+                        )
+                          return;
+                        setCurrentRunnerResult((current) =>
+                          resultId
+                            ? current?.resultId === resultId &&
+                              current.ownerId === practiceLaunch.id
+                              ? current
+                              : { scope, token: deviceToken, ownerId: practiceLaunch.id, resultId }
+                            : undefined,
+                        );
+                      }}
                       onRunnerProgressChange={(current: CurrentRunnerProgress | undefined) => {
                         if (
                           currentLaunch.current?.id === practiceLaunch.id &&
@@ -1481,7 +1576,14 @@ function App() {
                       onFinish={() => void finishPractice()}
                       onToolChange={(tool: PracticeLaunch['tool']) => void openPractice({ tool })}
                       onUnsavedChange={(unsaved: boolean) => {
+                        if (
+                          currentLaunch.current?.id !== practiceLaunch.id ||
+                          (activeAccount.current ?? 'guest') !== scope ||
+                          !isDeviceScopeCurrent(scope, deviceToken)
+                        )
+                          return;
                         studioUnsaved.current = unsaved;
+                        setCurrentUnsaved(unsaved);
                       }}
                     />
                   </React.Suspense>
@@ -2483,7 +2585,7 @@ function Course({
           </div>
         </div>
       )}
-      <ClassMeetingCard accountId={user?.id} profile={profile} onLog={onLog} />
+      <ClassMeetingCard now={liveNow} accountId={user?.id} profile={profile} onLog={onLog} />
       <div className="roadmap-grid">
         {COURSE_ROADMAP.map((week) => {
           const dates = meetings.filter((m) => m.week === week.week);

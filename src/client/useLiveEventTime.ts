@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { liveAssignmentStatus } from '../shared/live-assignment';
+import { timedClassMeetings } from '../shared/class-schedule';
 import type { PlannedTask } from '../shared/plan';
 import type { Profile } from '../shared/training';
 
 /** One application calendar observation; never measures or mutates practice. */
 export function useLiveEventTime(tasks: readonly PlannedTask[], profile: Profile) {
   const [now, setNow] = useState(Date.now);
-  const enabled = tasks.some((task) => task.exercise?.type === 'live-event');
+  const enabled =
+    tasks.some((task) => task.exercise?.type === 'live-event') || Boolean(profile.classSchedule);
   useEffect(() => {
     if (!enabled) return;
     let timer: number;
@@ -20,6 +22,11 @@ export function useLiveEventTime(tasks: readonly PlannedTask[], profile: Profile
           (value): value is number => value !== undefined && value > observed,
         );
       });
+      boundaries.push(
+        ...timedClassMeetings(profile)
+          .flatMap((meeting) => [Date.parse(meeting.startsAt), Date.parse(meeting.endsAt)])
+          .filter((boundary) => boundary > observed),
+      );
       // Re-arm even when the wall clock repeats or moves backwards. Observation
       // must not depend on React accepting a changed timestamp as new state.
       timer = window.setTimeout(

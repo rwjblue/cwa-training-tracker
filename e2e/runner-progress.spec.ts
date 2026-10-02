@@ -189,7 +189,7 @@ for (const mobile of [false, true]) {
     });
     await activate(
       page,
-      page.getByRole('button', { name: 'Return to practice', exact: true }),
+      page.getByRole('button', { name: 'View/save result', exact: true }),
       mobile,
     );
     await expect(

@@ -76,6 +76,7 @@ interface Props {
   tasks?: readonly PlannedTask[];
   today?: string;
   onProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
+  onResultReadyChange?: (resultId: string | undefined) => void;
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onUnsavedChange: (unsaved: boolean) => void;
@@ -96,6 +97,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     tasks = [],
     today,
     onProgressChange,
+    onResultReadyChange,
     onCurrentPracticeChange,
     onLog,
     onUnsavedChange,
@@ -128,8 +130,8 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const [inspectionStopped, setInspectionStopped] = useState(false);
   const [savedRunId, setSavedRunId] = useState<string>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const callbacks = useRef({ onLog, onUnsavedChange, onProgressChange });
-  callbacks.current = { onLog, onUnsavedChange, onProgressChange };
+  const callbacks = useRef({ onLog, onUnsavedChange, onProgressChange, onResultReadyChange });
+  callbacks.current = { onLog, onUnsavedChange, onProgressChange, onResultReadyChange };
   const saved = savedRunId === run.runId;
   const ended = terminal(run);
   const hasTime = run.elapsedSeconds >= 1;
@@ -302,6 +304,13 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     else void pauseForInspection();
   }, [active]);
 
+  useEffect(() => {
+    // Acknowledged terminal state, including a volatile result if storage fails.
+    callbacks.current.onResultReadyChange?.(
+      ended && hasTime && !saved ? `runner:${run.runId}` : undefined,
+    );
+    return () => callbacks.current.onResultReadyChange?.(undefined);
+  }, [run.runId, ended, hasTime, saved]);
   useEffect(() => {
     callbacks.current.onUnsavedChange(unsaved);
   }, [unsaved]);
