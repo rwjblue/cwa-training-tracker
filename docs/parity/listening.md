@@ -397,3 +397,18 @@ and `mise run build` pass. The complete serialized canonical browser suite
 passes all 81 tests in 17.5 minutes, including both expanded save-next journeys,
 Runner recovery/progress, account isolation and existing public tools. Independent
 post-commit review and production delivery remain pending.
+
+
+Independent #17 review identified an intermittent recovered Logbook continuation
+focus race. The explicit save-next action now requests focus once after the new
+owner host and closed dialog commit, guarded by owner/account/device identity.
+Generic navigation retains its user-focus protection. The canonical desktop/mobile
+journey now performs a real guest result reload and recovered save-next with a
+destination-focus assertion. Review correction validation remains pending.
+
+
+The #17 focus correction passes check, all 927 tests/51 files and build. Its
+canonical recovered/direct desktop/mobile journeys pass 2/2 in 1.1 minutes; the
+complete serialized regression passes all 81 tests in 17.5 minutes. Existing
+ordinary saves, cancellation, offline/account boundaries and actual native timing
+remain covered. Independent correction recheck and production delivery are pending.

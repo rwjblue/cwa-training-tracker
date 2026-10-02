@@ -1,5 +1,5 @@
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import type {
@@ -290,6 +290,9 @@ function App() {
   }>();
   const currentLaunch = useRef(practiceLaunch);
   currentLaunch.current = practiceLaunch;
+  const nextRunnerFocus = useRef<{ ownerId: string; scope: string; token: string } | undefined>(
+    undefined,
+  );
   const initiallyPractice = useRef(page === 'practice');
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const [savedPracticeEntry, setSavedPracticeEntry] = useState<PracticeSession>();
@@ -373,6 +376,23 @@ function App() {
     void beforeInspectStudio.current?.().catch(() => {});
     replaceStudio();
   };
+  useLayoutEffect(() => {
+    const requested = nextRunnerFocus.current;
+    if (!requested || sessionEditor) return;
+    nextRunnerFocus.current = undefined;
+    if (
+      page !== 'practice' ||
+      practiceLaunch?.id !== requested.ownerId ||
+      currentLaunch.current?.id !== requested.ownerId ||
+      (activeAccount.current ?? 'guest') !== requested.scope ||
+      !isDeviceScopeCurrent(requested.scope, requested.token)
+    )
+      return;
+    // Modal cleanup restores its opener before layout effects run. Focus the
+    // committed destination once, without changing generic navigation's guard.
+    const host = document.getElementById('current-practice');
+    if (host && !host.hidden && !host.inert) host.focus();
+  }, [page, practiceLaunch?.id, sessionEditor, scope, deviceToken]);
   useEffect(() => {
     if (booting || !initiallyPractice.current) return;
     initiallyPractice.current = false;
@@ -1577,7 +1597,9 @@ function App() {
             if (nextRunner) {
               // autoSavePractice has acknowledged history or verified durable device storage.
               // A new owner receives settings only, never the previous timer/score/identity.
-              replaceStudio({ id: crypto.randomUUID(), ...nextRunner });
+              const launch = { id: crypto.randomUUID(), ...nextRunner };
+              nextRunnerFocus.current = { ownerId: launch.id, scope, token: deviceToken };
+              replaceStudio(launch);
               showPage('practice');
             } else if (
               !wasExisting &&

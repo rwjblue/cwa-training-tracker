@@ -94,9 +94,13 @@ for (const mobile of [false, true]) {
     ).toBeVisible();
     await expect(frame.getByRole('button', { name: /Run$/ })).toHaveCount(0);
     await activate(page, dialog.getByRole('button', { name: 'Cancel', exact: true }), mobile);
+    // A real reload exposes recovery without restoring a live engine. The
+    // cross-view modal must focus the newly committed studio after cleanup.
+    await page.goto('/?runner-next-recovered#logbook');
+    await expect(page.locator('iframe')).toHaveCount(0);
     await activate(
       page,
-      page.getByRole('button', { name: 'Review & save run', exact: true }),
+      page.getByRole('button', { name: 'Review finished Runner result', exact: true }),
       mobile,
     );
     await refuseWrites(page, false);
