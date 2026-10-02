@@ -97,7 +97,11 @@ import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
 import type { PlannedTask } from '../shared/plan';
-import { practiceLaunchForTask, type PracticeLaunch } from './practice-launch';
+import {
+  nextRunnerLaunchForResult,
+  practiceLaunchForTask,
+  type PracticeLaunch,
+} from './practice-launch';
 import { PracticeNavigation } from './practice-navigation';
 import WelcomePanel from './WelcomePanel';
 import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './ImportedHistory';
@@ -327,6 +331,8 @@ function App() {
   };
   const profileAccountId = account.state?.accountId;
   const tasks = account.state?.plan ?? [];
+  const latestTasks = useRef(tasks);
+  latestTasks.current = tasks;
   const [offlineIdentity, setOfflineIdentity] = useState(false);
   const [accountStorageStatus, setAccountStorageStatus] = useState(() => getAccountStorageStatus());
   const [practiceStates, setPracticeStates] = useState(() => loadPracticeSaveStates('guest'));
@@ -1531,7 +1537,12 @@ function App() {
             setSessionEditor(null);
             setSessionEditorOwner(undefined);
           }}
-          onSaved={(entry, destination) => {
+          canStartNextRun={
+            !sessionEditorIsExisting &&
+            Boolean(nextRunnerLaunchForResult(sessionEditor, tasks)) &&
+            (!currentLaunch.current || currentLaunch.current.id === sessionEditorOwner)
+          }
+          onSaved={(entry, destination, action) => {
             if (!isDeviceScopeCurrent(scope, deviceToken)) return;
             if ((activeAccount.current ?? 'guest') !== (user?.id ?? 'guest')) return;
             const wasExisting = sessionEditorIsExisting;
@@ -1547,6 +1558,10 @@ function App() {
               !wasExisting &&
               sessionEditorOwner &&
               currentLaunch.current?.id === sessionEditorOwner;
+            const nextRunner =
+              action === 'runner-next' && !wasExisting && (!currentLaunch.current || matchingOwner)
+                ? nextRunnerLaunchForResult(entry, latestTasks.current)
+                : undefined;
             if (matchingOwner)
               clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
             if (destination === 'history') acceptSavedPractice(entry, sessionEditorOwner);
@@ -1559,7 +1574,12 @@ function App() {
             }
             setSessionEditor(null);
             setSessionEditorOwner(undefined);
-            if (
+            if (nextRunner) {
+              // autoSavePractice has acknowledged history or verified durable device storage.
+              // A new owner receives settings only, never the previous timer/score/identity.
+              replaceStudio({ id: crypto.randomUUID(), ...nextRunner });
+              showPage('practice');
+            } else if (
               !wasExisting &&
               !(entry.metadata?.practiceTool === 'copy' && currentPage.current === 'practice') &&
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
@@ -1571,11 +1591,18 @@ function App() {
               } else void navigate('overview');
             }
             notify(
-              (destination === 'history'
-                ? 'Practice logged. A little progress adds up.'
-                : user
-                  ? 'Practice saved on this device. Waiting to upload.'
-                  : 'Practice saved on this device. Find it in your logbook.') + resultCleanupError,
+              (nextRunner
+                ? destination === 'history'
+                  ? 'Run logged. Your next run is ready; press Run when you are ready.'
+                  : user
+                    ? 'Run saved on this device and waiting to upload. Your next run is ready.'
+                    : 'Run saved on this device. Your next run is ready.'
+                : destination === 'history'
+                  ? 'Practice logged. A little progress adds up.'
+                  : user
+                    ? 'Practice saved on this device. Waiting to upload.'
+                    : 'Practice saved on this device. Find it in your logbook.') +
+                resultCleanupError,
             );
           }}
         />
@@ -2599,11 +2626,14 @@ function AuthModal({
   );
 }
 
+type SessionSaveAction = 'finish' | 'runner-next';
+
 function SessionModal({
   initial: providedInitial,
   isExisting,
   scope,
   generation,
+  canStartNextRun = false,
   onClose,
   onSaved,
 }: {
@@ -2612,7 +2642,12 @@ function SessionModal({
   scope: string;
   generation?: number;
   onClose: () => void;
-  onSaved: (entry: PracticeSession, destination: 'history' | 'device') => void;
+  canStartNextRun?: boolean;
+  onSaved: (
+    entry: PracticeSession,
+    destination: 'history' | 'device',
+    action: SessionSaveAction,
+  ) => void;
 }) {
   const sessionHelpId = useId();
   const saveButton = useRef<HTMLButtonElement>(null);
@@ -2730,6 +2765,11 @@ function SessionModal({
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving.current) return;
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const action: SessionSaveAction =
+      canStartNextRun && submitter instanceof HTMLButtonElement && submitter.value === 'runner-next'
+        ? 'runner-next'
+        : 'finish';
     const minutes = practiceMinutesFromInput(form.minutes, initial.minutes);
     if (minutes === null) {
       setError('Enter time as minutes:seconds or minutes, from 0:00 to 1440:00.');
@@ -2809,7 +2849,7 @@ function SessionModal({
           { accountId: scope, generation: capturedGeneration },
         );
         if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
-          onSaved(result.entry, 'history');
+          onSaved(result.entry, 'history', 'finish');
       } else {
         const result = await autoSavePractice(
           scope,
@@ -2818,7 +2858,7 @@ function SessionModal({
           retainedRunner?.origin,
         );
         if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
-          onSaved(result.entry, result.destination);
+          onSaved(result.entry, result.destination, action);
       }
     } catch (err) {
       if (mounted.current) setError((err as Error).message);
@@ -3073,7 +3113,13 @@ function SessionModal({
             )}
           </div>
         )}
-        <div className="modal-actions">
+        {canStartNextRun && (
+          <p className="field-hint">
+            Save this result before opening a fresh, paused run with the same settings and practice
+            context. Pending uploads stay in your logbook.
+          </p>
+        )}
+        <div className={canStartNextRun ? 'modal-actions runner-review-actions' : 'modal-actions'}>
           <button className="button outline" type="button" onClick={close} disabled={busy}>
             Cancel
           </button>
@@ -3081,6 +3127,17 @@ function SessionModal({
             {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
             <Check size={16} />
           </button>
+          {canStartNextRun && (
+            <button
+              className="button"
+              disabled={busy}
+              type="submit"
+              name="afterSave"
+              value="runner-next"
+            >
+              Save &amp; start next run <ArrowRight size={16} />
+            </button>
+          )}
         </div>
       </form>
     </Modal>

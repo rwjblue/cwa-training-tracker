@@ -66,6 +66,7 @@ interface Props {
   timezone?: string;
   task?: PlannedTask;
   purpose?: PracticePurpose;
+  context?: PracticeSession['context'];
   externalUrl?: string;
   savedEntry?: PracticeSession;
   active?: boolean;
@@ -84,6 +85,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     timezone,
     task,
     purpose,
+    context,
     externalUrl = fallbackUrl,
     savedEntry,
     active = true,
@@ -98,7 +100,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
 ) {
   const [run, setRun] = useState(() => createRunnerRun(crypto.randomUUID(), settings));
   const capturedAttribution = useRef<RunnerPracticeAttribution | undefined>(undefined);
-  capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose);
+  capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose, context);
   const scope = accountId ?? 'guest';
   const [deviceToken] = useState(() => getDeviceScopeToken(scope));
   const start = useRef<{ runId: string; timezone: string; origin: PracticeSaveOrigin } | undefined>(
@@ -144,7 +146,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
         purpose: retained
           ? getPracticePurpose(retained.entry)
           : (attribution.purpose ?? 'assigned'),
-        classTime: retained?.entry.context === 'class',
+        classTime: (retained ? retained.entry.context : attribution.context) === 'class',
       };
     } catch {
       // Unknown retained classification must not imply required assignment credit.
@@ -379,7 +381,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
       ...current.current.settings,
       wpm: current.current.speedHistory?.at(-1)?.wpm ?? current.current.settings.wpm,
     };
-    capturedAttribution.current = captureRunnerPracticeAttribution(task, purpose);
+    capturedAttribution.current = captureRunnerPracticeAttribution(task, purpose, context);
     update(createRunnerRun(crypto.randomUUID(), nextSettings));
   };
   const review = () => {
@@ -424,6 +426,11 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
             ? 'Stopping and collecting results…'
             : messages[run.status]}
       </p>
+      {context === 'class' && (
+        <p className="field-hint">
+          This run is class time, kept separate from required practice and daily goals.
+        </p>
+      )}
       {ended && hasTime && !saved && (
         <p className="field-hint" role="status">
           {resultRetained

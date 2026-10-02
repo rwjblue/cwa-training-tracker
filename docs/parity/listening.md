@@ -316,3 +316,84 @@ The latest instruction prohibits pushes. These accepted implementation commits
 remain local and deployed; local main advances with this delivery record, while
 #15 remains open until source publication. No PR or push was attempted; signing
 configuration is preserved. Continue ascending #16–#46.
+
+
+### Issue #17 — save an exact Runner result and prepare the next run
+
+The live issue and pinned original Runner transition were rechecked. Runner review
+now offers **Save & start next run** alongside ordinary Save. The existing save
+queue returns only after verified durable device retention or a server receipt;
+only then does the existing app owner replacement open a fresh, paused engine.
+No unreviewed result is auto-uploaded and no Run action is triggered automatically.
+
+The next launch retains the current owned assignment and deliberate review/class
+placement, chosen mode, full duration, activity and band conditions, plus the last
+actual recorded speed. It receives new owner/run identities and no old dates,
+elapsed time, score or manual notes. Deleted or non-Runner assignments cannot be
+re-created from retained titles; malformed or legacy unmarked results do not gain
+new native attribution. A different current owner is preserved. Existing account,
+device token and immutable original-generation queue guards remain authoritative.
+
+Successful ordinary Save still returns to Today. Cancel preserves the acknowledged
+result and notes; failed first-submission retries keep its exact body. A durable
+pending result remains in the existing logbook/status/retry UI while the new run
+is usable. Without local retention, a failed or uncertain upload keeps the old
+result and blocks continuation. Late background acknowledgements merge history
+without retiring the new owner. Class context is readable before the next Run.
+No new queue, backend entity, binding or migration was introduced; actual history,
+reports and portable account/device backups retain the existing validated facts.
+
+Three new pure transition probes and one actual Runner queue-receipt test cover
+cloned settings, latest speed, fresh identity/time/score, deliberate placement,
+removed/malformed contexts and persistence-before-reset/late acknowledgement.
+Focused tests pass 33 cases; check, all 927 tests/51 files and build pass. The
+native desktop keyboard/mobile touch journey passes both widths in 1.0 minute
+before its final failed-upload/report extensions: guest refused-storage retry,
+chosen WPX/three-minute/22-to-24-WPM/activity/QRM/QSB setup, canceled notes,
+refused terminal/pending writes with actual committed/lost response and exact
+retry, double Enter while saving, durable pending continuation, live next-run late
+acknowledgement, five separate assigned/class/review results, ordinary Save,
+history and actual export/import. Final expanded browser/full regression,
+post-commit independent review and production delivery remain pending.
+
+Six exact settled Axe arrays were parsed empty and six screenshots inspected.
+Additional scrolled action/Report captures are being checked on the final expanded
+journey. Mobile checks are Chromium emulation, not physical-device verification.
+No native clock was fast-forwarded and no native result event was fabricated.
+Original trainer was read-only evidence; restricted assets were not redistributed.
+Live elapsed recovery and automatic engine resumption after reload remain excluded.
+
+Honest first iterations are retained in ignored evidence: a contrast scan ran
+during modal entrance; three unwrapped actions clipped Cancel outside the mobile
+dialog (fixed with scoped wrapping); an immediate post-Stop fixture read preceded
+real acknowledgement; upload status matched both persistent text and the toast;
+an exact-text query incorrectly treated a sentence as a whole paragraph; export
+was incorrectly sought in Practice log rather than Your account. Actual contexts
+and traces were read and preserved before subsequent harnesses. Only the mobile
+action wrap required product correction; no production timeout or evidence rule
+was weakened. Source: original runner-session.ts48/client.ts635 and1068;
+current `src/client/practice-launch.ts`, `main.tsx`, `MorseRunnerStudio.tsx`,
+`runner-session.ts`, existing `practice-autosave.ts` and `e2e/runner-next.spec.ts`.
+
+
+The final expanded native journeys pass desktop keyboard (25.5 seconds) and
+mobile touch (31.7 seconds), 2/2 in 1.0 minute. An actual HTTP503 upload leaves the
+second run durably queued before opening the third; Retry sends its identical
+body while the third native engine runs, and the delayed real acknowledgement
+leaves that run intact. Five unique private records retain exact measured facts,
+class/review placement and independent identities. Actual export/import skips
+duplicates unchanged. The practice report shows original notes, starting/mixed
+speed evidence and separate class time.
+
+Eight exact settled Axe arrays are empty. Ten screenshots were inspected,
+including scrolled review actions, pending feedback and the report at both
+widths. All three actions fit inside the narrow dialog; keyboard/touch Cancel,
+retry and next/ordinary save remain reachable. Complete canonical regression,
+post-commit review and deployment are the remaining gates.
+
+
+Final pre-implementation gate: `mise run check`, all 927 tests in 51 files,
+and `mise run build` pass. The complete serialized canonical browser suite
+passes all 81 tests in 17.5 minutes, including both expanded save-next journeys,
+Runner recovery/progress, account isolation and existing public tools. Independent
+post-commit review and production delivery remain pending.

@@ -1147,10 +1147,14 @@ export default function PracticeStudio({
           active={active}
           timezone={timezone}
           key={launch?.id ?? 'public-runner'}
-          settings={activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS}
+          settings={
+            launch?.runnerSettings ??
+            (activity?.type === 'morse-runner' ? activity.settings : DEFAULT_RUNNER_SETTINGS)
+          }
           externalUrl={activity?.type === 'morse-runner' ? activity.url : undefined}
           task={launch?.task}
           purpose={launch?.purpose}
+          context={launch?.runnerContext}
           savedEntry={savedEntry}
           onLog={onLog}
           onUnsavedChange={setRunnerUnsaved}

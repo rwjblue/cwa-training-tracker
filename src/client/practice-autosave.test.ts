@@ -13,6 +13,9 @@ import {
   listInFlightPracticeIds,
 } from './practice-autosave';
 import { queueAccountChange, rememberAccount } from './account-outbox';
+import { finishedRunnerSession } from './runner-session';
+import { nextRunnerLaunchForResult } from './practice-launch';
+import { createRunnerRun } from '../shared/runner';
 import { DEFAULT_PROFILE } from '../shared/training';
 import {
   completeDeviceScopeMutation,
@@ -549,4 +552,54 @@ it('rejects foreign or conflicting recovered origins before queuing any result',
   ).rejects.toThrow('different retained original dataset');
   expect(loadLocalPractice(scope)).toEqual([]);
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('permits a separate Runner only after a durable receipt and leaves its identity intact on late upload', async () => {
+  vi.useFakeTimers();
+  const scope = 'runner-next-durable';
+  knownAccount(scope);
+  let acknowledge!: (response: Response) => void;
+  fetchMock.mockImplementation(
+    () =>
+      new Promise<Response>((resolve) => {
+        acknowledge = resolve;
+      }),
+  );
+  const old = finishedRunnerSession(
+    {
+      ...createRunnerRun('queued-old-run', {
+        mode: 'SingleCall',
+        wpm: 20,
+        durationSeconds: 60,
+        activity: 1,
+        conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+      }),
+      status: 'stopped',
+      elapsedSeconds: 2.5,
+      runStartedAt: '2026-10-01T12:00:00.000Z',
+      runEndedAt: '2026-10-01T12:00:03.000Z',
+    },
+    {},
+    'UTC',
+  );
+  let next: ReturnType<typeof createRunnerRun> | undefined;
+  const receipt = autoSavePractice(scope, old).then((saved) => {
+    next = createRunnerRun(
+      'queued-next-run',
+      nextRunnerLaunchForResult(saved.entry, [])!.runnerSettings!,
+    );
+    return saved;
+  });
+  await vi.advanceTimersByTimeAsync(749);
+  expect(next).toBeUndefined();
+  expect(loadLocalPractice(scope)).toEqual([old]);
+  await vi.advanceTimersByTimeAsync(1);
+  expect((await receipt).destination).toBe('device');
+  const snapshot = structuredClone(next);
+  expect(next).toMatchObject({ runId: 'queued-next-run', elapsedSeconds: 0, status: 'loading' });
+  acknowledge(Response.json({ entry: old }));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(next).toEqual(snapshot);
+  expect(loadLocalPractice(scope)).toEqual([]);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
 });

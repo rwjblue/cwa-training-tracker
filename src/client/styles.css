@@ -4647,3 +4647,12 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+
+.runner-review-actions {
+  flex-wrap: wrap;
+}
+.runner-review-actions .button {
+  flex-shrink: 0;
+  max-width: 100%;
+}

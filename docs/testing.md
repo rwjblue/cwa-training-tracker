@@ -329,3 +329,16 @@ guest use and the separate time milestone at both widths with keyboard/touch.
 A seven-real-second engine observation needs a poll window exceeding seven
 seconds; never fast-forward native AudioWorklet time. API-arranged account data
 requires a real refresh before UI assertions; same-URL navigation is insufficient.
+
+
+For Runner Save & start next, protect the actual queue receipt before replacing
+its owner. Pure tests cover current-owned placement, cloned settings, last actual
+speed and absence of carried timer/score/identity; existing queue boundaries cover
+failed storage and scoped retries. The native desktop/mobile journey must block
+continuation without a receipt, keep canceled edits and exact uncertain-save
+bodies, retain settings and review/class context, and prove a pending predecessor's
+late acknowledgement cannot reset the next run. Use an actual failed upload and
+retry, separate actual native runs, ordinary Save, history/report and account
+export/import. Wait for real Stop acknowledgement before reading terminal storage;
+wait for modal entrance animations before contrast checks. Three review actions
+must wrap within the narrow dialog and remain usable through touch and keyboard.

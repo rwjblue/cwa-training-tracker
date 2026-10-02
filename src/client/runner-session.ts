@@ -11,6 +11,7 @@ import {
 export interface RunnerPracticeAttribution {
   task?: Pick<PlannedTask, 'id' | 'title' | 'lesson'>;
   purpose?: PracticePurpose;
+  context?: PracticeSession['context'];
 }
 
 /** New results retain the timezone accepted at Run, never the later review day. */
@@ -43,8 +44,10 @@ export function finishedRunnerSession(
 export function captureRunnerPracticeAttribution(
   task?: PlannedTask,
   purpose?: PracticePurpose,
+  context?: PracticeSession['context'],
 ): RunnerPracticeAttribution {
   return {
+    context,
     task: task ? { id: task.id, title: task.title, lesson: task.lesson } : undefined,
     purpose: task ? (purpose ?? 'assigned') : undefined,
   };
@@ -68,6 +71,7 @@ export function runnerSession(
     qsoCount: run.summary?.qsoCount,
     notes: [attribution.task?.title, runnerResultNote(run)].filter(Boolean).join('\n'),
     source: 'timer',
+    ...(attribution.context ? { context: attribution.context } : {}),
     metadata: {
       practiceTool: 'morse-runner',
       elapsedSeconds: run.elapsedSeconds,
