@@ -1461,3 +1461,62 @@ describe('public live agenda preference in device inventory', () => {
     expect(values.get(EVENT_TIME_MODE_KEY)).toBe('utc');
   });
 });
+
+it('keeps old shared v1 preferences compatible and explicitly restores independent Story settings', () => {
+  seed('guest');
+  const backup = captureDeviceBackup('guest', 'Guest');
+  const { storySettings: omittedStory, ...oldPreferences } = backup.shared.practicePreferences!;
+  const old = { ...backup, shared: { practicePreferences: oldPreferences } };
+  expect(
+    validateDeviceBackup(JSON.stringify(old), 'guest').shared.practicePreferences?.storySettings
+      .storyId,
+  ).toBe('story-trail');
+  const current = {
+    ...backup.shared.practicePreferences!,
+    tool: 'stories' as const,
+    storySettings: {
+      ...omittedStory,
+      storyId: 'story-light' as const,
+      characterWpm: 28,
+      effectiveWpm: 14,
+      tone: 650,
+    },
+  };
+  values.set(PRACTICE_PREFERENCES_KEY, JSON.stringify(current));
+  const captured = captureDeviceBackup('guest', 'Guest');
+  expect(captured.shared.practicePreferences).toEqual(current);
+  restoreDeviceBackup(validateDeviceBackup(JSON.stringify(old), 'guest'), {
+    expectedScope: 'guest',
+  });
+  expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(current);
+  restoreDeviceBackup(validateDeviceBackup(JSON.stringify(old), 'guest'), {
+    expectedScope: 'guest',
+    restoreSharedPreferences: true,
+  });
+  expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(
+    validateDeviceBackup(JSON.stringify(old), 'guest').shared.practicePreferences,
+  );
+  restoreDeviceBackup(captured, { expectedScope: 'guest', restoreSharedPreferences: true });
+  expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(current);
+  for (const change of [
+    { version: 2 },
+    { storyId: 'unknown' },
+    { effectiveWpm: 29 },
+    { privateScript: 'PRIVATE' },
+    { tone: 649 },
+  ]) {
+    const malformed = {
+      ...captured,
+      shared: {
+        practicePreferences: { ...current, storySettings: { ...current.storySettings, ...change } },
+      },
+    };
+    expect(() =>
+      restoreDeviceBackup(validateDeviceBackup(JSON.stringify(malformed), 'guest'), {
+        expectedScope: 'guest',
+        restoreSharedPreferences: true,
+      }),
+    ).toThrow();
+    expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(current);
+  }
+});

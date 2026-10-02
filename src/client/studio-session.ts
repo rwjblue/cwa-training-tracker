@@ -1,3 +1,4 @@
+import { practiceStory } from '../shared/listening-stories';
 import { dateInTimezone, validatePracticeSession, type PracticeSession } from '../shared/training';
 import { taskPracticeMetadata } from '../shared/practice-attribution';
 import type { PracticeLaunch } from './practice-launch';
@@ -60,7 +61,9 @@ export function studioSession(
             : WORD_LISTS[item.listId].title
           : item.mode === 'qso'
             ? QSO_TEMPLATES.find((scenario) => scenario.id === item.scenarioId)?.title
-            : 'Free Morse practice',
+            : item.mode === 'story'
+              ? practiceStory(item.storyId).title
+              : 'Free Morse practice',
       ),
     ),
   ];
@@ -109,7 +112,9 @@ export function studioSession(
               ? 'Word listening'
               : tool === 'qso'
                 ? 'QSO listening'
-                : 'Free Morse practice',
+                : tool === 'stories'
+                  ? 'Story listening'
+                  : 'Free Morse practice',
     ]
       .filter(Boolean)
       .join(' · '),
@@ -334,7 +339,7 @@ export function clearSavedStudioNotes(
   const context =
     typeof taskId === 'string' && taskId
       ? taskId
-      : typeof tool === 'string' && ['words', 'qso', 'free', 'sending'].includes(tool)
+      : typeof tool === 'string' && ['words', 'qso', 'stories', 'free', 'sending'].includes(tool)
         ? `public:${tool}`
         : typeof explicitContext === 'string' && explicitContext
           ? explicitContext

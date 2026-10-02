@@ -1,3 +1,4 @@
+import { type PracticeStory } from '../shared/listening-stories';
 import { buildMorseTrack, morseTimeline } from './audio';
 import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import type { PracticePreferences } from './practice-preferences';
@@ -79,4 +80,34 @@ export function qsoListeningSummary(
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
   });
+}
+
+export function storyListeningSummary(
+  story: PracticeStory,
+  p: PracticePreferences,
+): GeneratedListeningSummary {
+  return Object.freeze({
+    mode: 'story',
+    storyId: story.id,
+    toneHz: p.tone,
+    sentenceGapSeconds: 2,
+    characterWpm: p.characterWpm,
+    effectiveWpm: p.effectiveWpm,
+  });
+}
+/** Public authored sentences share one narrator; no station alternation or trailing handoff. */
+export function storyListeningTrack(story: PracticeStory, p: PracticePreferences) {
+  return buildMorseTrack(
+    story.lines.map((text, index) => ({
+      text,
+      frequency: p.tone,
+      gapAfter: index < story.lines.length - 1 ? 2 : 0,
+    })),
+    {
+      characterWpm: p.characterWpm,
+      effectiveWpm: p.effectiveWpm,
+      frequency: p.tone,
+      volume: p.volume / 100,
+    },
+  );
 }

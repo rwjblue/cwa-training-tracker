@@ -2933,6 +2933,74 @@ describe('generated listening evidence', () => {
     },
   });
 
+  it('round trips public Story evidence privately and rejects forged sources atomically', async () => {
+    const auth = await signIn('story-owner@example.test');
+    const story: GeneratedListeningSummary = {
+      mode: 'story',
+      storyId: 'story-trail',
+      characterWpm: 28,
+      effectiveWpm: 14,
+      toneHz: 650,
+      sentenceGapSeconds: 2,
+    };
+    const source = generated([story]);
+    const created = await request('/api/entries', 'POST', source, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(saved).toMatchObject({
+      characterWpm: 28,
+      effectiveWpm: 14,
+      minutes: 1,
+      metadata: { evidence: source.metadata.evidence },
+    });
+    expect(saved.qsoCount).toBeUndefined();
+    expect((await request('/api/entries', 'POST', source, auth.cookie)).status).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const malformed = generated([
+      { ...story, storyId: 'restricted-course-story' } as unknown as GeneratedListeningSummary,
+    ]);
+    expect(
+      (await request('/api/entries', 'POST', { ...malformed, id: 'invalid-story' }, auth.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...exported, sessions: [malformed] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    const other = await signIn('story-other@example.test');
+    expect(
+      (
+        (await (await request('/api/entries', 'GET', undefined, other.cookie)).json()) as {
+          entries: PracticeSession[];
+        }
+      ).entries,
+    ).toEqual([]);
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', saved, other.cookie)).status).toBe(
+      404,
+    );
+  });
+
   it('round trips mixed actual sources with stable identity and immutable raw evidence', async () => {
     const auth = await signIn('generated-roundtrip@example.test');
     const source = generated();

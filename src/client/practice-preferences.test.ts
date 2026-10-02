@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PRACTICE_PREFERENCES,
+  listeningPreferences,
+  changeListeningPreferences,
   PRACTICE_PREFERENCES_KEY,
   loadPracticePreferences,
   normalizePracticePreferences,
@@ -89,5 +91,61 @@ describe('browser practice preferences', () => {
         },
       }),
     ).toBe(false);
+  });
+});
+
+it('retains both Story speeds/selection independently and migrates old shared settings', () => {
+  let current = normalizePracticePreferences({ characterWpm: 35, effectiveWpm: 17, tone: 725 });
+  const common = { characterWpm: 35, effectiveWpm: 17, tone: 725 };
+  current = changeListeningPreferences(current, { tool: 'stories' });
+  expect(listeningPreferences(current)).toMatchObject({
+    characterWpm: 20,
+    effectiveWpm: 10,
+    tone: 600,
+  });
+  current = changeListeningPreferences(current, {
+    characterWpm: 28,
+    effectiveWpm: 14,
+    tone: 650,
+    hideTrainerText: false,
+  });
+  current = changeListeningPreferences(current, {
+    storySettings: { ...current.storySettings, storyId: 'story-light' },
+  });
+  expect(current).toMatchObject(common);
+  const map = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => map.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      map.set(key, value);
+    },
+  };
+  expect(savePracticePreferences(current, storage)).toBe(true);
+  current = loadPracticePreferences(storage);
+  expect(listeningPreferences(current)).toMatchObject({
+    characterWpm: 28,
+    effectiveWpm: 14,
+    tone: 650,
+    hideTrainerText: false,
+  });
+  expect(current.storySettings.storyId).toBe('story-light');
+  current = changeListeningPreferences(current, { tool: 'qso' });
+  expect(listeningPreferences(current)).toMatchObject(common);
+  current = changeListeningPreferences(current, { tool: 'stories' });
+  expect(listeningPreferences(current)).toMatchObject({ characterWpm: 28, effectiveWpm: 14 });
+  const malformed = normalizePracticePreferences({
+    storySettings: {
+      version: 1,
+      storyId: 'private',
+      characterWpm: 5,
+      effectiveWpm: 50,
+      tone: Infinity,
+    },
+  });
+  expect(malformed.storySettings).toMatchObject({
+    storyId: 'story-trail',
+    characterWpm: 5,
+    effectiveWpm: 5,
+    tone: 600,
   });
 });

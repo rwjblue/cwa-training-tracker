@@ -792,3 +792,30 @@ it.each([
     expect(value.launch!.task!.done).toBe(false);
   },
 );
+
+it('labels actual Story exposure and retains exact source evidence after an unplayed selection', () => {
+  const value = input(1.234567);
+  value.preferences = {
+    ...value.preferences,
+    tool: 'stories',
+    storySettings: { ...value.preferences.storySettings, storyId: 'story-light' },
+  };
+  const played: GeneratedListeningSummary = {
+    mode: 'story',
+    storyId: 'story-trail',
+    characterWpm: 28,
+    effectiveWpm: 14,
+    toneHz: 650,
+    sentenceGapSeconds: 2,
+  };
+  value.generatedListening = { version: 1, summaries: [played], overflow: false };
+  const saved = studioSession(value)!;
+  expect(saved.notes).toBe('The trail marker (short)');
+  expect(saved.minutes).toBe(1.234567 / 60);
+  expect(saved.kind).toBe('listening');
+  expect(saved.metadata?.evidence).toMatchObject({ generatedListening: { summaries: [played] } });
+  expect(saved).not.toHaveProperty('qsoCount');
+  expect(saved.metadata).not.toHaveProperty('qsoScenario');
+  value.generatedListening = undefined;
+  expect(studioSession(value)?.notes).toBe('Story listening');
+});

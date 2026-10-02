@@ -1,0 +1,59 @@
+/** Original fictional stories written for listening practice. */
+export const PRACTICE_STORIES = [
+  {
+    id: 'story-trail',
+    title: 'The trail marker (short)',
+    lines: [
+      'AT THE EDGE OF THE WOODS MAY FOUND A SMALL BLUE STONE.',
+      'SHE LEFT IT BESIDE THE TRAIL AND WALKED UP THE HILL.',
+      'ON HER WAY HOME THE FOG HID THE PATH.',
+      'THEN SHE SAW THE BLUE STONE AND KNEW WHICH WAY TO GO.',
+      'SOMETIMES A SMALL THING CAN MAKE A BIG DIFFERENCE.',
+    ],
+  },
+  {
+    id: 'story-radio',
+    title: 'The quiet band (medium)',
+    lines: [
+      'BEN TOOK HIS SMALL RADIO TO THE PARK ON A COOL AUTUMN MORNING.',
+      'HE PUT A WIRE IN A TREE AND SAT AT A WOODEN TABLE.',
+      'FOR A WHILE HE HEARD ONLY THE WIND AND THE SOFT HISS OF THE RADIO.',
+      'HE CALLED CQ THREE TIMES AND WAITED.',
+      'A FAINT SIGNAL CAME BACK FROM A STATION NEAR THE SEA.',
+      'THE OTHER OPERATOR WAS NAMED ROSE AND SHE WAS USING FIVE WATTS.',
+      'BEN TURNED UP THE VOLUME AND ASKED HER TO SEND HER NAME AGAIN.',
+      'THIS TIME HE COPIED EVERY LETTER.',
+      'THEY TALKED ABOUT THEIR ANTENNAS AND THE WEATHER.',
+      'ROSE HAD RAIN WHILE BEN HAD CLEAR SKIES.',
+      'WHEN THEY SAID GOODBYE THE SUN WAS HIGH ABOVE THE TREES.',
+      'BEN PACKED HIS BAG WITH ONE CONTACT IN HIS LOG AND A SMILE ON HIS FACE.',
+    ],
+  },
+  {
+    id: 'story-light',
+    title: 'A light across the lake (longer)',
+    lines: [
+      'EVERY EVENING ELLA WALKED DOWN THE OLD ROAD TO THE LAKE.',
+      'ONE NIGHT SHE NOTICED A SMALL LIGHT ON THE FAR SHORE.',
+      'IT FLASHED TWICE THEN WENT DARK THEN FLASHED TWICE AGAIN.',
+      'THE NEXT DAY SHE ASKED HER NEIGHBOR TOM ABOUT THE LIGHT.',
+      'HIS FRIEND RUTH HAD JUST MOVED INTO THE CABIN ACROSS THE WATER.',
+      'TOM SMILED AND TOOK A FLASHLIGHT FROM A DRAWER.',
+      'HE SHOWED ELLA HOW SHORT AND LONG FLASHES COULD STAND FOR LETTERS.',
+      'THAT EVENING THEY WALKED TO THE LAKE TOGETHER.',
+      'WHEN THE LIGHT APPEARED TOM SENT A SLOW GREETING ACROSS THE WATER.',
+      'AFTER A SHORT PAUSE THE ANSWER CAME BACK.',
+      'SHE INVITED THEM TO VISIT FOR TEA THE NEXT AFTERNOON.',
+      'ELLA SENT HER NAME AND THEN A CAREFUL THANK YOU.',
+      'THE LAKE WAS JUST AS WIDE AS BEFORE BUT THE FAR SHORE NO LONGER FELT SO FAR AWAY.',
+    ],
+  },
+] as const;
+
+export type StoryId = (typeof PRACTICE_STORIES)[number]['id'];
+export type PracticeStory = (typeof PRACTICE_STORIES)[number];
+export function practiceStory(id: string): PracticeStory {
+  const story = PRACTICE_STORIES.find((item) => item.id === id);
+  if (!story) throw new Error('Choose one of the three public listening stories.');
+  return story;
+}

@@ -51,6 +51,7 @@ import {
 } from './practice-autosave';
 import {
   DEFAULT_PRACTICE_PREFERENCES,
+  DEFAULT_STORY_SETTINGS,
   normalizePracticePreferences,
   PRACTICE_PREFERENCES_KEY,
   type PracticePreferences,
@@ -321,17 +322,26 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
     Object.keys(DEFAULT_PRACTICE_PREFERENCES),
   );
   for (const key of Object.keys(DEFAULT_PRACTICE_PREFERENCES))
-    if (input[key] === undefined)
+    if (key !== 'storySettings' && input[key] === undefined)
       throw new Error(`Shared practice preferences are missing ${key}.`);
   for (const key of ['tool', 'wordList', 'mode', 'qsoScenario'])
     if (typeof input[key] !== 'string')
       throw new Error(`Shared practice preference ${key} must be a supported string value.`);
   const normalized = normalizePracticePreferences(input);
-  for (const [key, normalizedValue] of Object.entries(normalized))
+  for (const [key, normalizedValue] of Object.entries(normalized)) {
+    // Story settings were added as an optional extension to existing v1 files.
+    if (key === 'storySettings') {
+      if (input[key] === undefined) continue;
+      const story = object(input[key], 'Story preferences', Object.keys(DEFAULT_STORY_SETTINGS));
+      for (const [field, expected] of Object.entries(normalized.storySettings))
+        if (story[field] !== expected) throw new Error(`Story preference ${field} is invalid.`);
+      continue;
+    }
     if (input[key] !== normalizedValue)
       throw new Error(
         `Shared practice preference ${key} is invalid. Choose a valid value before exporting.`,
       );
+  }
   return normalized;
 }
 function validateIdentity(value: unknown, scope: string) {

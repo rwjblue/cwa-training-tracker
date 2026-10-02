@@ -41,6 +41,8 @@ import {
 } from './audio';
 import {
   loadPracticePreferences,
+  listeningPreferences,
+  changeListeningPreferences,
   savePracticePreferences,
   normalizePracticePreferences,
   type PracticePreferences,
@@ -287,6 +289,7 @@ export default function PracticeStudio({
   }));
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
+  const activeListeningPreferences = listeningPreferences(preferences);
   const isSending = activity?.type === 'sending' || (!assigned && tool === 'sending');
   const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
   const [text, setText] = useState(() => {
@@ -712,7 +715,7 @@ export default function PracticeStudio({
     if (!canPractice()) return;
     const continuousListeningEdit =
       !assigned &&
-      (tool === 'words' || tool === 'qso') &&
+      (tool === 'words' || tool === 'qso' || tool === 'stories') &&
       Object.keys(changes).every(
         (key) =>
           key === 'characterWpm' ||
@@ -726,7 +729,7 @@ export default function PracticeStudio({
     if (!('hideTrainerText' in changes) && !continuousListeningEdit) stopPlayback();
     setError('');
     if (changes.wordList) wordContent.select(changes.wordList);
-    const next = normalizePracticePreferences({ ...preferences, ...changes });
+    const next = changeListeningPreferences(preferences, changes);
     setPreferences(next);
     if (regenerate && next.mode !== 'custom') setText(generatePractice(next.mode, next));
   };
@@ -1075,7 +1078,7 @@ export default function PracticeStudio({
               ? isRunner
                 ? 'Your assigned simulator settings and engine results, together.'
                 : 'Your course material and practice timer, together.'
-              : 'Copy practice, sending scales, word listening, QSO conversations, and simulator practice. No account required to practice.'}
+              : 'Copy practice, sending scales, word listening, QSO conversations, Stories, and simulator practice. No account required to practice.'}
           </p>
         </div>
         <span className="chip">
@@ -1209,6 +1212,7 @@ export default function PracticeStudio({
             [
               ['words', 'Word listening'],
               ['qso', 'QSO practice'],
+              ['stories', 'Stories'],
               ['free', 'Free practice'],
               ['sending', 'Sending practice'],
             ] as const
@@ -1733,7 +1737,7 @@ export default function PracticeStudio({
                     ref={trainer}
                     active={active}
                     key={tool}
-                    preferences={preferences}
+                    preferences={activeListeningPreferences}
                     wordContent={wordContent}
                     wordScopeLabel={accountId ? 'this account' : 'Guest'}
                     onWordSourceChange={editWordSource}
@@ -1741,7 +1745,7 @@ export default function PracticeStudio({
                     onChange={changePreferences}
                     soundSettings={
                       <ListeningSoundSettings
-                        preferences={preferences}
+                        preferences={activeListeningPreferences}
                         onChange={changePreferences}
                         remembered={remembered}
                       />
@@ -1938,7 +1942,9 @@ export default function PracticeStudio({
                       </button>
                     )}
                     <span className="playback-note">
-                      {characterWpm} / {effectiveWpm} WPM <span>·</span> {tone} Hz
+                      {activeListeningPreferences.characterWpm} /{' '}
+                      {activeListeningPreferences.effectiveWpm} WPM <span>·</span>{' '}
+                      {activeListeningPreferences.tone} Hz
                     </span>
                   </div>
                 )}
@@ -2203,7 +2209,10 @@ export default function PracticeStudio({
                           lesson: launch?.task?.lesson,
                           notes: launch?.task?.title,
                           ...(!assigned && !isSending
-                            ? { characterWpm, effectiveWpm }
+                            ? {
+                                characterWpm: activeListeningPreferences.characterWpm,
+                                effectiveWpm: activeListeningPreferences.effectiveWpm,
+                              }
                             : activity?.type === 'audio'
                               ? selectedRecordingSpeeds
                               : {}),

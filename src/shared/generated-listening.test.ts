@@ -266,3 +266,33 @@ describe('played configuration collector', () => {
     ).toEqual({});
   });
 });
+
+it('keeps strict public Story identities separate from QSO stations and private scripts', () => {
+  const story = {
+    mode: 'story',
+    storyId: 'story-trail',
+    characterWpm: 28,
+    effectiveWpm: 14,
+    toneHz: 650,
+    sentenceGapSeconds: 2,
+  };
+  const checked = validateGeneratedListeningSummary(story);
+  expect(checked).toEqual(story);
+  const collector = new GeneratedListeningCollector();
+  collector.record(checked);
+  expect(generatedListeningDetails(collector.snapshot()!)[0]).toContain('The trail marker (short)');
+  expect(generatedListeningDetails(collector.snapshot()!)[0]).toContain('narrator 650 Hz');
+  expect(generatedListeningSpeeds(collector.snapshot()!)).toEqual({
+    characterWpm: 28,
+    effectiveWpm: 14,
+  });
+  for (const change of [
+    { storyId: 'official-story' },
+    { stations: ['Narrator', 'Narrator'] },
+    { script: 'PRIVATE' },
+    { toneHz: 1001 },
+    { sentenceGapSeconds: 6 },
+    { effectiveWpm: 29 },
+  ])
+    expect(() => validateGeneratedListeningSummary({ ...story, ...change })).toThrow();
+});

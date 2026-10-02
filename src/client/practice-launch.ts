@@ -15,7 +15,7 @@ export interface PracticeLaunch {
   id: string;
   task?: PlannedTask;
   purpose?: PracticePurpose;
-  tool?: 'words' | 'qso' | 'free' | 'copy' | 'sending' | 'runner';
+  tool?: 'words' | 'qso' | 'stories' | 'free' | 'copy' | 'sending' | 'runner';
   activity?: PracticeActivity;
   runnerSettings?: RunnerSettings;
   runnerContext?: PracticeSession['context'];

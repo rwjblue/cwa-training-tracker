@@ -89,8 +89,9 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   word, callsign and plain-text scoring is unchanged.
   [Copy trainer](../src/client/CopyTrainer.tsx),
   [domain](../src/shared/copy-practice.ts), [scope and differences](lcwo-native-trainers-proposal.md).
-- **Word and QSO listening:** the same 70 unique common QSO words and 30 common
-  English words, custom lists, four generated contact scenarios, native Morse
+- **Words, QSO and Stories listening:** the same 70 unique common QSO words and 30 common
+  English words, private custom lists, four generated contact scenarios and three
+  original public authored Stories, native Morse
   audio, transcript highlighting, seeking, and logging are available. Inspecting
   app views pauses and retains the current block without a save; returning keeps
   it paused. Explicit Finish or switching tools automatically saves at least one
@@ -136,7 +137,7 @@ These baseline gaps no longer describe the current implementation:
 | Playback accounting | Native Play and app Play accrue actual media movement. Pauses, seeks, and buffering do not add idle time; replay counts heard time; the target never caps the session. In-app inspection settles and pauses the same clock without resetting its source subtotals. [Clock](../src/client/practice-clock.ts), [event hook](../src/client/usePracticeClock.ts). | Existing Copy recovery remains separate; restoring unfinished non-copy elapsed time after reload/crash is excluded. Physical locked-iOS behavior still needs a device check. |
 | Focused recall | Assigned Start recall physically pauses audio; app, native and Media Session Play stop recall before playback. Every recall settlement rejects hidden, invalid, backward or at least four-second delayed samples, retains prior credit and announces deliberate resume/correction. Review edits recall within total time while retaining raw measurements and per-file listening; the split survives private saves, history, reports and backups. [Clock](../src/client/practice-clock.ts), [journey](../e2e/recall.spec.ts). | Ordinary manual/external practice intentionally continues off-page until paused; in-app inspection pauses its owner. Actual background audio remains media-derived. No reload/crash elapsed-time recovery or physical-device verification is claimed. Issue #8 validation and independent review are recorded below. |
 | Scratchpad                           | Notes can be written during practice, explicitly saved at zero time, edited when saving, and read in history for native and imported records. In-app inspection retains the current notes; unrelated historical edits cannot clear the current block. [Save/history UI](../src/client/main.tsx).                                                                                                                                                                                                                                                                   | Listening notes persist locally by account and tool/assignment. Elapsed-time recovery after reload/crash is excluded; the advisor-report learned-word workflow remains separate.                                                                                                                                                                                                             |
-| Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Validated custom words and selection are retained privately by account/Guest device scope in #29, including explicit device backups; free scripts remain with the active owner. Equal custom label/count/settings deliberately share a descriptive identity. Live retiming is delivered in #26; Stories and public exact recipes remain #30/#45. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
+| Generated listening source summaries | Native accepted playback captures word/list/count, QSO scenario/stations, or free mode together with applied speed, pitch, spacing and relevant shuffle/repeat/answer settings. Up to 15 distinct configurations plus explicit overflow survive review, exact retries, history, reports and account backups. Mixed or overflowed evidence supplies no single session WPM pair. [Model](../src/shared/generated-listening.ts), [journey](../e2e/generated-listening.spec.ts). | Validated custom words and selection are retained privately by account/Guest device scope in #29, including explicit device backups; free scripts remain with the active owner. Equal custom label/count/settings deliberately share a descriptive identity. Live retiming is delivered in #26; authored Stories with independent device settings are implemented in #30, with review/deployment tracked below. Public exact recipes remain #45. Independent review accepted the mobile review-focus correction; signed publication and production verification are recorded in the #7 ledger. |
 | Official recording speeds | Verified native-speed files, shared Assigned/Next default and private device-local exact choices per stable task are supported. New launches prefer a valid scoped override; the player and Today/Plan distinguish future preference from prescribed/current WPM. Actual mixed-file evidence remains native 1x. [Selector](../src/client/RecordingSpeedSelect.tsx), [scoped choices](../src/client/task-recording-choice.ts). | Reset/default changes leave current playback intact. Invalid choices fall back visibly, with fenced cleanup/retry; choices join private device backup/restore/clear, independently of shared defaults. #11 independently accepted validation and production evidence are recorded below. Issue #12 adds exact-file difficult marks and Replay 8 sec; advisor aggregation remains later work. |
 | Assigned listening guidance | Seven verified audio families receive concise mental approaches and optional scratchpad prompts beside native playback. Exact public recording metadata precedes conservative title/instruction matching; unknown audio has an instructor-first fallback. [Guidance](../src/shared/listening-guidance.ts). | Original instructions, speed/pass policy, time, completion and private saved evidence retain their existing owners. No proficiency or learned-word inference. #13 independently accepted and deployed; evidence and limits are recorded below. |
 | Recording coverage and passes | Native 1x movement supplies recording-local coverage and once-only completed passes. Overlap unions, file ownership and measured duration groups remain separate from heard time. Prior saved/current/remaining counts appear in Today, Plan and Studio; per-file facts survive review, history, reports and account/device backups. [Coverage](../src/client/recording-coverage.ts), [progress](../src/shared/plan.ts), [journey](../e2e/listening-passes.spec.ts). | Partial coverage stays in memory during in-app inspection; unfinished elapsed/coverage reload recovery is excluded. Old records remain unmeasured. Explicit imported source counts are labeled separately, and extra review supplies no required-pass credit. Independent validation/review are recorded in the #9 ledger below. |
@@ -2806,3 +2807,62 @@ drafts remain current-scope in-app work. Physical locked-device behavior remains
 unverified. Stories, precise per-mode setups and exact recipes remain #30/#31/#45.
 No push was attempted; local main is advanced and #29 remains open pending
 GitHub publication. The original site and approved exclusions remain unchanged.
+
+### Issue #30 authored Stories listening
+
+The three fictional public stories from the pinned original catalog are now
+reachable through Stories without an account: The trail marker, The quiet band
+and A light across the lake. All 5/12/13 sentences preserve original text and
+catalog identity; restricted curriculum remains linked separately. Shared
+native generation uses one narrator tone, two-second sentence handoffs and no
+trailing handoff. No station generation, QSO copy form or on-air contact credit
+is attached to Stories.
+
+Stories uses the existing player, exact occurrence timeline, speed retiming,
+transcript, pause/seek/cancellation and Media Session title/artwork owners.
+Sentence steps and exact repeated-word seeks preserve playing/paused state;
+Back 10 sec is relative, and Reset story to beginning explicitly prepares a
+paused restart. Inspection/Return retains native position without autoplay.
+Independent version 1 Story selection, both speeds, narrator tone and text
+visibility survive mode return/reload through the existing device preference
+writer. Current storage refusal remains visible while controls stay usable.
+Playback summaries and manual-log defaults use the active Story sound setup.
+Old shared defaults remain unchanged; broader precise settings are issue #31.
+
+Actually played Story identity/settings join strict shared evidence validation,
+private account-scoped SQL, frozen retries, readable history/printable reports
+and account export/import. Selected unplayed stories add no source evidence.
+Native media movement supplies time; navigation, seeks, reset and reload add
+none. Optional Story settings join the existing reviewed device backup/restore/
+clear inventory. Old version 1 backups omitting them remain valid; malformed
+nested fields fail before installation. No new binding, migration, clock,
+player, queue or private script storage was introduced.
+
+Catalog/timing/occurrence/bounds tests, preference migration/roundtrip tests,
+strict evidence and Worker real-SQL/idempotence/export/import/isolation tests
+pass. Check, all 1,072 tests across 65 files and build pass. Seventeen affected
+serial native-listening/device journeys pass in 2.4 minutes. Six Stories
+accessibility/overflow reports are empty; desktop 1440 and mobile 390 screenshots
+were inspected. The guest journey plays all three actual native tracks, checks
+metadata, paused/playing retiming, exact words/sentences, return/reload, storage
+feedback, the 20-minute limit and faster recovery. The signed-in journey checks
+native time, canceled review, simultaneous 503/local-storage refusal and identical
+retry, actual history/report/export UI and outsider 401.
+
+Root source inspection then corrected manual-log initial speeds to the active
+Story setup. The first full suite was deliberately interrupted after 15 passes
+(3.6 minutes), with one interrupted journey and 71 unrun; this is not a full
+validation result. Final Stories guest/private journeys pass again in 20.5
+seconds, including mobile manual-log initialization and cancel. The standalone
+legacy-import regression caught a missing explicit .ts import extension; it
+was corrected without changing the migration command or source records.
+Full regression, fresh independent post-commit review and deployment remain
+pending; acceptance is not yet declared. Exact public recipes remain #45.
+Physical locked-device playback is unverified. New recognition, elapsed-time
+reload/crash recovery and real-contact/ADIF tooling remain excluded.
+
+Root final full regression passes all 87 serial browser journeys in 17.3
+minutes on final code, including actual Stories and existing Copy/Runner/
+account/device workflows. The earlier deliberately interrupted run remains
+recorded above. Six final Stories accessibility/overflow reports remain empty.
+Fresh independent post-commit review and deployment remain pending.

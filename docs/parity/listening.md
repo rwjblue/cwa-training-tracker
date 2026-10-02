@@ -969,3 +969,62 @@ No push was attempted; accepted source remains local main and #29 stays OPEN
 until GitHub publication. Only validated readback source survives reload;
 physical locked-device behavior is unverified. Stories remain #30 and broader
 precise preferences #31. This journal changes no runtime or original-site file.
+
+### Issue #30 authored Stories workflow
+
+The three fictional public stories from the pinned original catalog are now
+reachable through Stories without an account: The trail marker, The quiet band
+and A light across the lake. All 5/12/13 sentences preserve original text and
+catalog identity; restricted curriculum remains linked separately. Shared
+native generation uses one narrator tone, two-second sentence handoffs and no
+trailing handoff. No station generation, QSO copy form or on-air contact credit
+is attached to Stories.
+
+Stories uses the existing player, exact occurrence timeline, speed retiming,
+transcript, pause/seek/cancellation and Media Session title/artwork owners.
+Sentence steps and exact repeated-word seeks preserve playing/paused state;
+Back 10 sec is relative, and Reset story to beginning explicitly prepares a
+paused restart. Inspection/Return retains native position without autoplay.
+Independent version 1 Story selection, both speeds, narrator tone and text
+visibility survive mode return/reload through the existing device preference
+writer. Current storage refusal remains visible while controls stay usable.
+Playback summaries and manual-log defaults use the active Story sound setup.
+Old shared defaults remain unchanged; broader precise settings are issue #31.
+
+Actually played Story identity/settings join strict shared evidence validation,
+private account-scoped SQL, frozen retries, readable history/printable reports
+and account export/import. Selected unplayed stories add no source evidence.
+Native media movement supplies time; navigation, seeks, reset and reload add
+none. Optional Story settings join the existing reviewed device backup/restore/
+clear inventory. Old version 1 backups omitting them remain valid; malformed
+nested fields fail before installation. No new binding, migration, clock,
+player, queue or private script storage was introduced.
+
+Catalog/timing/occurrence/bounds tests, preference migration/roundtrip tests,
+strict evidence and Worker real-SQL/idempotence/export/import/isolation tests
+pass. Check, all 1,072 tests across 65 files and build pass. Seventeen affected
+serial native-listening/device journeys pass in 2.4 minutes. Six Stories
+accessibility/overflow reports are empty; desktop 1440 and mobile 390 screenshots
+were inspected. The guest journey plays all three actual native tracks, checks
+metadata, paused/playing retiming, exact words/sentences, return/reload, storage
+feedback, the 20-minute limit and faster recovery. The signed-in journey checks
+native time, canceled review, simultaneous 503/local-storage refusal and identical
+retry, actual history/report/export UI and outsider 401.
+
+Root source inspection then corrected manual-log initial speeds to the active
+Story setup. The first full suite was deliberately interrupted after 15 passes
+(3.6 minutes), with one interrupted journey and 71 unrun; this is not a full
+validation result. Final Stories guest/private journeys pass again in 20.5
+seconds, including mobile manual-log initialization and cancel. The standalone
+legacy-import regression caught a missing explicit .ts import extension; it
+was corrected without changing the migration command or source records.
+Full regression, fresh independent post-commit review and deployment remain
+pending; acceptance is not yet declared. Exact public recipes remain #45.
+Physical locked-device playback is unverified. New recognition, elapsed-time
+reload/crash recovery and real-contact/ADIF tooling remain excluded.
+
+Root final full regression passes all 87 serial browser journeys in 17.3
+minutes on final code, including actual Stories and existing Copy/Runner/
+account/device workflows. The earlier deliberately interrupted run remains
+recorded above. Six final Stories accessibility/overflow reports remain empty.
+Fresh independent post-commit review and deployment remain pending.

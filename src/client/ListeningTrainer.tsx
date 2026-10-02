@@ -1,3 +1,4 @@
+import { PRACTICE_STORIES, practiceStory, type StoryId } from '../shared/listening-stories';
 import {
   type ReactNode,
   forwardRef,
@@ -23,6 +24,8 @@ import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import {
   listeningWordRound,
   qsoListeningSummary,
+  storyListeningSummary,
+  storyListeningTrack,
   wordListeningSummary,
   wordListeningTrack,
   type ListeningWordRound,
@@ -149,15 +152,19 @@ export default forwardRef<
   } | null>(null);
   const [speechAttempt, setSpeechAttempt] = useState(0);
   const isWords = p.tool === 'words';
+  const isStory = p.tool === 'stories';
+  const story = practiceStory(p.storySettings.storyId);
+  const narrative = isStory ? story : qso;
   const activeWordList = isWords ? p.wordList : null;
   const activeShuffle = isWords ? p.shuffleWords : null;
   const activeCustom = isWords ? custom : null;
   const spokenAnswers = isWords && p.spokenAnswers;
   const repeatList = isWords && p.repeatList;
   const wordGap = isWords ? p.wordGap : 0;
-  const content = isWords ? wordRound : qso;
+  const content = isWords ? wordRound : narrative;
   const resetKey = JSON.stringify([
     isWords,
+    isStory,
     p.tone,
     wordGap,
     spokenAnswers && repeatList,
@@ -169,7 +176,7 @@ export default forwardRef<
   settingsOwner.current = resetKey;
   const volumeOwner = useRef(p.volume / 100);
   volumeOwner.current = p.volume / 100;
-  const checkingCopy = !isWords && copyMode;
+  const checkingCopy = !isWords && !isStory && copyMode;
   // Object identity prevents a newly generated contact revealing old answers for one frame.
   const copyRevealed = revealedQso === qso;
   const hideTranscript = checkingCopy ? !copyRevealed : p.hideTrainerText && !answer;
@@ -227,7 +234,7 @@ export default forwardRef<
   useEffect(() => {
     if (isWords) resetWords();
     else resetTransport();
-  }, [isWords, activeWordList, activeCustom]);
+  }, [isWords, isStory, activeWordList, activeCustom, p.storySettings.storyId]);
   useEffect(() => {
     // A Morse-only installed round keeps its order; Shuffle chooses the next one.
     // Preserve the existing fresh-recording behavior for spoken answers.
@@ -235,7 +242,7 @@ export default forwardRef<
   }, [activeShuffle, spokenAnswers]);
   useEffect(() => {
     if (qso.id === p.qsoScenario) return;
-    if (!isWords) resetTransport();
+    if (p.tool === 'qso') resetTransport();
     setQso(generateQso(p.qsoScenario));
   }, [p.qsoScenario]);
   useEffect(() => {
@@ -270,10 +277,14 @@ export default forwardRef<
   }, [words, spokenAnswers, speechAttempt]);
 
   const trackResult = useMemo(() => {
-    const items = isWords ? words : qso.lines;
+    const items = isWords ? words : narrative.lines;
     if (!items.length) return { applied: null, error: '' };
     try {
-      const summary = isWords ? wordListeningSummary(wordRound!, p) : qsoListeningSummary(qso, p);
+      const summary = isWords
+        ? wordListeningSummary(wordRound!, p)
+        : isStory
+          ? storyListeningSummary(story, p)
+          : qsoListeningSummary(qso, p);
       const options = {
         characterWpm: summary.characterWpm,
         effectiveWpm: summary.effectiveWpm,
@@ -290,6 +301,8 @@ export default forwardRef<
         });
       } else if (isWords) {
         track = wordListeningTrack(wordRound!, p).track;
+      } else if (isStory) {
+        track = storyListeningTrack(story, p);
       } else {
         track = buildMorseTrack(
           items.map((text, i) => ({
@@ -306,7 +319,7 @@ export default forwardRef<
         material: content!,
         resetKey,
         configurations: [{ at: 0, summary }],
-        title: isWords ? listTitle : qso.title,
+        title: isWords ? listTitle : narrative.title,
         loop: spokenAnswers && repeatList,
       });
       return { applied, error: '' };
@@ -656,8 +669,8 @@ export default forwardRef<
       (p.wordList === 'custom'
         ? custom.trim().split(/\s+/).filter(Boolean).length
         : WORD_LISTS[p.wordList].words.length)
-    : qso.lines.length;
-  const current = isWords ? words[position] : qso.lines[position];
+    : narrative.lines.length;
+  const current = isWords ? words[position] : narrative.lines[position];
   return (
     <div className="listening-trainer">
       <div className="practice-generator-controls">
@@ -674,6 +687,24 @@ export default forwardRef<
                 </option>
               ))}
               <option value="custom">Your own words</option>
+            </select>
+          </label>
+        ) : isStory ? (
+          <label>
+            Story
+            <select
+              value={story.id}
+              onChange={(e) =>
+                onChange({
+                  storySettings: { ...p.storySettings, storyId: e.target.value as StoryId },
+                })
+              }
+            >
+              {PRACTICE_STORIES.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
             </select>
           </label>
         ) : (
@@ -694,10 +725,12 @@ export default forwardRef<
         <p>
           {isWords
             ? 'Hear each word as a whole sound. Replay the current word or move at your own pace.'
-            : 'Choose a scenario, then generate as many contacts as you like. New QSO changes both stations; Play replays this contact.'}
+            : isStory
+              ? 'Supplemental public stories, written for listening practice. Hear the meaning one sentence at a time; all sentences use one narrator tone.'
+              : 'Choose a scenario, then generate as many contacts as you like. New QSO changes both stations; Play replays this contact.'}
         </p>
       </div>
-      {!isWords && (
+      {!isWords && !isStory && (
         <div className="qso-practice-mode" role="group" aria-label="QSO practice mode">
           <button type="button" aria-pressed={!copyMode} onClick={() => setCopyMode(false)}>
             Listen
@@ -714,7 +747,7 @@ export default forwardRef<
           </button>
         </div>
       )}
-      {!isWords && (
+      {!isWords && !isStory && (
         <p className="field-hint">
           {!checkingCopy && qso.season
             ? `A fictional ${qso.season} contact.`
@@ -858,7 +891,9 @@ export default forwardRef<
           : !isWords
             ? 'Change speed to restart the same word occurrence. Playing stays playing; paused stays paused.'
             : 'Speed changes in spoken-answer mode start a fresh recording.'}{' '}
-        List, pitch, spacing and spoken-answer changes start a fresh round.
+        {isStory
+          ? 'Story or narrator tone changes prepare a fresh paused recording.'
+          : 'List, pitch, spacing and spoken-answer changes start a fresh round.'}
         {isWords &&
           !spokenAnswers &&
           ' Shuffle applies to the next round; Repeat lets this round finish before continuing or stopping.'}
@@ -874,7 +909,7 @@ export default forwardRef<
           <span>
             {complete
               ? 'ROUND COMPLETE'
-              : `${isWords ? 'WORD' : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
+              : `${isWords ? 'WORD' : isStory ? 'SENTENCE' : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
             {active ? ' · LISTENING' : ''}
           </span>
           {!checkingCopy && (
@@ -905,7 +940,7 @@ export default forwardRef<
           <button className="text-button" disabled={position === 0} onClick={() => step(-1)}>
             <ChevronLeft size={15} /> Previous
           </button>
-          <span>{isWords ? listTitle : qso.title}</span>
+          <span>{isWords ? listTitle : narrative.title}</span>
           <button
             className="text-button"
             disabled={position >= total - 1 || (isWords && !words.length)}
@@ -920,13 +955,15 @@ export default forwardRef<
           className="text-button"
           onClick={() => {
             if (isWords) resetWords();
+            else if (isStory) resetTransport();
             else {
               resetTransport();
               setQso(generateQso(p.qsoScenario, Math.random, qso.stations));
             }
           }}
         >
-          <Shuffle size={14} /> {isWords ? 'New round' : 'New QSO'}
+          <Shuffle size={14} />{' '}
+          {isWords ? 'New round' : isStory ? 'Reset story to beginning' : 'New QSO'}
         </button>
         <span className="field-hint">
           {complete
@@ -940,7 +977,7 @@ export default forwardRef<
       <div className="native-morse-player" hidden={!mediaReady}>
         <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
       </div>
-      {!isWords && (
+      {!isWords && !isStory && (
         <section
           className="qso-copy-region"
           aria-label="Check your QSO copy"
@@ -958,7 +995,9 @@ export default forwardRef<
       )}
       {(!checkingCopy || copyRevealed) && (
         <details className="trainer-catalog">
-          <summary>{isWords ? 'View word list' : 'View full conversation'}</summary>
+          <summary>
+            {isWords ? 'View word list' : isStory ? 'View full story' : 'View full conversation'}
+          </summary>
           {track ? (
             <MorseTranscript track={track} activeWord={activeWord} onSeek={seekWord} />
           ) : (

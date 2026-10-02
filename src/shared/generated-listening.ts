@@ -1,3 +1,5 @@
+import { PRACTICE_STORIES, practiceStory, type StoryId } from './listening-stories.ts';
+
 /** Descriptive configurations actually played; never private text, scripts or per-source time. */
 interface GeneratedListeningSpeeds {
   readonly characterWpm: number;
@@ -23,6 +25,12 @@ export type GeneratedListeningSummary = GeneratedListeningSpeeds &
         readonly stations: readonly [string, string];
         readonly tonesHz: readonly [number, number];
         readonly transmissionGapSeconds: number;
+      }
+    | {
+        readonly mode: 'story';
+        readonly storyId: StoryId;
+        readonly toneHz: number;
+        readonly sentenceGapSeconds: number;
       }
     | {
         readonly mode: 'free';
@@ -181,6 +189,20 @@ export function validateGeneratedListeningSummary(value: unknown): GeneratedList
       transmissionGapSeconds: finite(row.transmissionGapSeconds, 'QSO transmission pause', 0, 5),
     };
   }
+  if (row.mode === 'story') {
+    keys(row, [...common, 'storyId', 'toneHz', 'sentenceGapSeconds'], 'Generated story summary');
+    return {
+      mode: 'story',
+      storyId: choice(
+        row.storyId,
+        PRACTICE_STORIES.map((story) => story.id),
+        'Generated story',
+      ),
+      ...speeds,
+      toneHz: finite(row.toneHz, 'Narrator tone', 300, 1000),
+      sentenceGapSeconds: finite(row.sentenceGapSeconds, 'Sentence pause', 0, 5),
+    };
+  }
   if (row.mode === 'free') {
     const contentMode = choice(
       row.contentMode,
@@ -314,6 +336,8 @@ export function generatedListeningDetails(evidence: GeneratedListeningEvidence):
         return `Played ${summary.listId === 'custom' ? summary.customLabel : WORD_TITLES[summary.listId]}: ${summary.entryCount} entries; ${speed}; ${summary.toneHz} Hz; ${summary.wordGapSeconds}s extra word pause; ${summary.shuffle ? 'shuffled' : 'list order'}; ${summary.spokenAnswers ? 'three repeats + spoken answer' : 'Morse only'}; repeat ${summary.repeat ? 'on' : 'off'}.`;
       if (summary.mode === 'qso')
         return `Played ${QSO_TITLES[summary.scenarioId]}: ${summary.stations.join(' / ')}; ${speed}; station tones ${summary.tonesHz.join(' / ')} Hz; ${summary.transmissionGapSeconds}s transmission pause.`;
+      if (summary.mode === 'story')
+        return `Played ${practiceStory(summary.storyId).title}: supplemental public story; ${speed}; narrator ${summary.toneHz} Hz; ${summary.sentenceGapSeconds}s sentence pause.`;
       const length =
         summary.contentMode === 'words'
           ? `; ${summary.wordLength === 'mixed' ? 'mixed 2–8-letter words' : `${summary.wordLength}-letter words`}`
