@@ -140,7 +140,10 @@ test('next-round failure retries visibly and cancels late native continuation on
   await page.setViewportSize({ width: 390, height: 844 });
   await words(page);
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E T');
-  await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
+  await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  // Start immediately, without waiting for the regenerated catalog to render.
+  await page.getByRole('button', { name: 'Start practice', exact: true }).press('Enter');
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.15);
   const first = await state(page);
   await page.evaluate(() => {

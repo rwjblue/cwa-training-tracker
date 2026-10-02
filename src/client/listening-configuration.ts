@@ -9,6 +9,8 @@ export interface ListeningWordRound {
   readonly words: readonly string[];
   readonly listId: WordList;
   readonly shuffle: boolean;
+  /** Device content identity only; never included in a played summary. */
+  readonly sourceText?: string;
 }
 
 export function listeningWordRound(
@@ -21,6 +23,7 @@ export function listeningWordRound(
     words: Object.freeze(wordPracticeRound(listId, custom, shuffle, random)),
     listId,
     shuffle,
+    ...(listId === 'custom' ? { sourceText: custom } : {}),
   });
 }
 

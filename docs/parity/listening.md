@@ -837,3 +837,22 @@ retry and actual automatic continuation; it passes in 8.9 seconds. All eleven
 affected native journeys pass in 2.0 minutes. Check, 1,054 tests/63 files and
 build pass. Reviewer recheck and its unclassified initial keyboard-launch probe
 remain required; independent acceptance is not declared yet.
+
+The same independent reviewer then confirmed a separate P2 initial keyboard
+race: immediately pressing Enter on Start after changing Shuffle could install
+stale material and have the pending source reset clear it before playback.
+Play now queues the latest validated source through the existing committed-round
+owner when initial content differs. A matching explicit pending round survives
+the older source effect; automatic continuation still obeys cancellation.
+Settled initial Play preserves its preview order and synchronous transport.
+Custom source identity remains in the ephemeral round only and never enters
+played summaries, API bodies or private saved evidence.
+
+One cheap test protects that source-identity/privacy boundary, duplicate/prosign
+normalization and built-in omission. The existing guest browser journey now
+changes Shuffle twice and immediately presses Enter without waiting for a
+reflected catalog, then exercises native preparation retry, volume/rate
+continuity and source cancellation. The isolated journey passes in 9.2 seconds;
+all eleven affected serial native journeys pass in 2.0 minutes. Required check,
+1,055 tests across 63 files and build pass. The reviewer must independently
+recheck both corrections on the committed revision before acceptance.

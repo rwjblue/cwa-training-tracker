@@ -111,6 +111,21 @@ describe('applied listening configurations', () => {
     ).toThrow('20 minutes');
   });
 
+  it('retains exact custom source identity without putting private text in played summaries', () => {
+    const source = ' e\tE <AR> ';
+    const round = listeningWordRound('custom', source, true, () => 0);
+    expect(round.sourceText).toBe(source);
+    expect([...round.words].sort()).toEqual(['<AR>', 'E', 'E']);
+    expect(Object.isFrozen(round)).toBe(true);
+    expect(listeningWordRound('custom', 'E E <AR> T', true, () => 0).sourceText).not.toBe(
+      round.sourceText,
+    );
+    expect(wordListeningSummary(round, DEFAULT_PRACTICE_PREFERENCES)).not.toHaveProperty(
+      'sourceText',
+    );
+    expect(listeningWordRound('common-qso', source, false)).not.toHaveProperty('sourceText');
+  });
+
   it('captures the actual contact and rendered tone pair without mutating its script or answers', () => {
     const qso = generateQso('short-contact', () => 0.25);
     const exact = structuredClone(qso);

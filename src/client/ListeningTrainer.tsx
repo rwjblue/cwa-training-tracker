@@ -42,6 +42,14 @@ interface AppliedListeningTrack {
   readonly loop: boolean;
 }
 const EMPTY_WORDS: readonly string[] = [];
+const matchesWordSource = (
+  round: ListeningWordRound | null,
+  preferences: PracticePreferences,
+  custom: string,
+) =>
+  round?.listId === preferences.wordList &&
+  round.shuffle === preferences.shuffleWords &&
+  (round.listId !== 'custom' || round.sourceText === custom);
 
 export interface ListeningTrainerHandle {
   play: () => Promise<void>;
@@ -187,6 +195,16 @@ export default forwardRef<
     setComplete(false);
   };
   const resetWords = () => {
+    const pending = pendingRound.current;
+    // A deliberate Play already queued this exact source for the next commit.
+    // A source change still cancels it through the ordinary reset below.
+    if (
+      !spokenAnswers &&
+      pending &&
+      !pending.automatic &&
+      matchesWordSource(pending.round, p, custom)
+    )
+      return;
     resetTransport();
     try {
       setWordRound(listeningWordRound(p.wordList, custom, p.shuffleWords));
@@ -469,6 +487,13 @@ export default forwardRef<
   const play = async () => {
     if (!canPlay()) return;
     if (retryRound.current) return advanceWordRound();
+    if (
+      isWords &&
+      !spokenAnswers &&
+      !prepared.current &&
+      !matchesWordSource(wordRound, preferencesOwner.current, customOwner.current)
+    )
+      return advanceWordRound();
     pendingRound.current = null;
     prepare();
     setAnswer(false);
