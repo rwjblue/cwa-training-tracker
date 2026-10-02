@@ -206,7 +206,7 @@ export default function DeviceData({
       setMessage(
         action === 'clear'
           ? `Device work cleared for ${label}. Other accounts, shared preferences and confirmed account history are retained.`
-          : `Device work restored for ${label}.${result.retainedScratchpads ? ` ${result.retainedScratchpads} newer scratchpads were kept.` : ''} Pending work keeps its original save identities.`,
+          : `Device work restored for ${label}.${result.retainedScratchpads ? ` ${result.retainedScratchpads} newer scratchpads were kept.` : ''}${result.retainedWordContent ? ' Current saved words were kept.' : ''} Pending work keeps its original save identities.`,
       );
       refresh();
     } catch (failure) {
@@ -342,6 +342,12 @@ export default function DeviceData({
               <p>
                 {inspection.retainedScratchpads} existing scratchpads differ; your current notes
                 will be kept.
+              </p>
+            )}
+            {inspection?.retainedWordContent && (
+              <p>
+                Your current saved words and list selection differ; they will be kept. Clear saved
+                words in Word listening before restoring an older source.
               </p>
             )}
             {!!inspection?.retainedRecordingChoices && (

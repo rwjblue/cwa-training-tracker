@@ -1,3 +1,4 @@
+import { clearWordContent, readWordContent, saveWordContent, wordContentKey } from './word-storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
@@ -437,6 +438,79 @@ describe('private task recording preference inventory', () => {
     expect(captureDeviceBackup(scope, 'Synthetic learner').stores.recordingChoices).toEqual(
       backup.stores.recordingChoices,
     );
+  });
+});
+
+describe('private word source device inventory', () => {
+  const words = { version: 1 as const, wordList: 'custom' as const, customText: 'E E <AR>' };
+  it('exports only the selected private source and accepts old omitted stores', () => {
+    seed();
+    saveWordContent(scope, 'initial', words);
+    saveWordContent('guest', 'initial', { ...words, customText: 'GUEST' });
+    saveWordContent('another', 'initial', { ...words, customText: 'OTHER' });
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(backup.stores.wordContent).toEqual(words);
+    expect(summarizeDeviceBackup(backup)).toContainEqual({
+      id: 'wordContent',
+      label: 'Saved word source and list selection',
+      count: 1,
+      shared: false,
+    });
+    expect(JSON.stringify(backup)).not.toContain('GUEST');
+    expect(JSON.stringify(backup)).not.toContain('OTHER');
+    const old = structuredClone(backup);
+    delete old.stores.wordContent;
+    expect(validateDeviceBackup(JSON.stringify(old), scope).stores.wordContent).toBeUndefined();
+    restoreDeviceBackup(old);
+    expect(readWordContent(scope)).toEqual(words);
+  });
+  it('restores missing words once, retains a newer source with visible inspection, and clears only its scope', () => {
+    seed();
+    saveWordContent(scope, 'initial', words);
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    saveWordContent(scope, 'initial', { ...words, customText: 'T T' });
+    saveWordContent('another', 'initial', words);
+    expect(inspectDeviceRestore(backup).retainedWordContent).toBe(true);
+    expect(restoreDeviceBackup(backup).retainedWordContent).toBe(true);
+    expect(readWordContent(scope).customText).toBe('T T');
+    clearWordContent(scope, getDeviceScopeToken(scope));
+    restoreDeviceBackup(backup);
+    expect(readWordContent(scope)).toEqual(words);
+    const token = getDeviceScopeToken(scope);
+    restoreDeviceBackup(backup);
+    expect(getDeviceScopeToken(scope)).toBe(token);
+    expect(() => saveWordContent(scope, 'initial', words)).toThrow('changed');
+    values.set(wordContentKey(scope), '{');
+    clearDeviceWork(scope);
+    expect(values.has(wordContentKey(scope))).toBe(false);
+    expect(readWordContent('another')).toEqual(words);
+  });
+  it('rejects malformed source before mutation and rolls back a later failure after source installation', () => {
+    seed();
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    backup.stores.wordContent = words;
+    const old = new Map(values);
+    for (const customText of ['E\u0000T', 'E '.repeat(201)]) {
+      const invalid = structuredClone(backup);
+      invalid.stores.wordContent!.customText = customText;
+      expect(() => restoreDeviceBackup(invalid)).toThrow();
+      expect(values).toEqual(old);
+    }
+    backup.stores.scratchpads.push({ context: 'new-note', text: 'synthetic' });
+    const write = storage.setItem;
+    let installed = false;
+    const spy = vi.spyOn(storage, 'setItem').mockImplementation((key, value) => {
+      if (key === wordContentKey(scope)) installed = true;
+      if (key.includes('new-note') && installed) throw new Error('Synthetic later storage failure');
+      write(key, value);
+    });
+    expect(() => restoreDeviceBackup(backup)).toThrow(DeviceMutationError);
+    expect(installed).toBe(true);
+    expect(values.has(wordContentKey(scope))).toBe(false);
+    expect(isDeviceScopeMutating(scope)).toBe(false);
+    spy.mockRestore();
+    restoreDeviceBackup(backup);
+    expect(readWordContent(scope)).toEqual(words);
   });
 });
 

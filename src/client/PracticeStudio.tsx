@@ -47,6 +47,8 @@ import {
 } from './practice-preferences';
 import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTrainer';
 import ListeningSoundSettings from './ListeningSoundSettings';
+import type { WordContentEditor } from './useWordContent';
+import { DEFAULT_WORD_CONTENT } from './word-storage';
 import MorseTranscript from './MorseTranscript';
 import ListeningSeekControls from './ListeningSeekControls';
 import MorseRunnerStudio, {
@@ -108,6 +110,7 @@ export default function PracticeStudio({
   onToolChange,
   onUnsavedChange,
   accountId,
+  wordContent,
   timezone,
   entries = [],
   tasks = [],
@@ -138,6 +141,7 @@ export default function PracticeStudio({
   onToolChange?: (tool: PracticeLaunch['tool']) => void;
   onUnsavedChange?: (unsaved: boolean) => void;
   accountId?: string;
+  wordContent: WordContentEditor;
   timezone?: string;
   entries?: readonly PracticeSession[];
   tasks?: readonly PlannedTask[];
@@ -276,6 +280,7 @@ export default function PracticeStudio({
   const preparedFree = useRef('');
   const [preferences, setPreferences] = useState(() => ({
     ...loadPracticePreferences(),
+    wordList: wordContent.selection,
     ...(launch?.tool && launch.tool !== 'copy' && launch.tool !== 'runner'
       ? { tool: launch.tool }
       : {}),
@@ -720,9 +725,25 @@ export default function PracticeStudio({
       );
     if (!('hideTrainerText' in changes) && !continuousListeningEdit) stopPlayback();
     setError('');
+    if (changes.wordList) wordContent.select(changes.wordList);
     const next = normalizePracticePreferences({ ...preferences, ...changes });
     setPreferences(next);
     if (regenerate && next.mode !== 'custom') setText(generatePractice(next.mode, next));
+  };
+  const editWordSource = (text: string) => {
+    if (!canPractice()) return;
+    stopPlayback();
+    setError('');
+    wordContent.edit('custom', text);
+    setPreferences((current) => ({ ...current, wordList: 'custom' }));
+  };
+  const clearSavedWords = () => {
+    if (!canPractice()) return;
+    stopPlayback();
+    if (wordContent.clear()) {
+      setError('');
+      setPreferences((current) => ({ ...current, wordList: DEFAULT_WORD_CONTENT.wordList }));
+    }
   };
   const recordGeneratedListening = (summary: GeneratedListeningSummary) => {
     if (!canPractice()) return;
@@ -1713,6 +1734,10 @@ export default function PracticeStudio({
                     active={active}
                     key={tool}
                     preferences={preferences}
+                    wordContent={wordContent}
+                    wordScopeLabel={accountId ? 'this account' : 'Guest'}
+                    onWordSourceChange={editWordSource}
+                    onClearSavedWords={clearSavedWords}
                     onChange={changePreferences}
                     soundSettings={
                       <ListeningSoundSettings

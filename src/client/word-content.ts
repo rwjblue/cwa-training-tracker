@@ -18,6 +18,24 @@ export const WORD_LISTS = {
   },
 } as const;
 export type WordList = keyof typeof WORD_LISTS | 'custom';
+export const MAX_CUSTOM_WORD_CHARACTERS = 8200;
+
+/** Validate source text before normalization, rendering or device retention. */
+export function parseCustomWords(text: string): string[] {
+  if (text.length > MAX_CUSTOM_WORD_CHARACTERS)
+    throw new Error(
+      `Use at most ${MAX_CUSTOM_WORD_CHARACTERS.toLocaleString('en-US')} characters.`,
+    );
+  if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/.test(text))
+    throw new Error('Remove control characters; separate words with spaces, tabs or new lines.');
+  const words = text.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  if (!words.length || words.length > 200) throw new Error('Enter between 1 and 200 words.');
+  if (words.some((word) => word.length > 40 || cleanMorseText(word) !== word))
+    throw new Error(
+      'Use letters, numbers, punctuation, or prosigns such as <AR>; up to 40 characters per word.',
+    );
+  return words;
+}
 
 export function wordPracticeRound(
   list: WordList,
@@ -25,15 +43,7 @@ export function wordPracticeRound(
   shuffle: boolean,
   random = Math.random,
 ): string[] {
-  const words =
-    list === 'custom'
-      ? customText.trim().toUpperCase().split(/\s+/).filter(Boolean)
-      : [...WORD_LISTS[list].words];
-  if (!words.length || words.length > 200) throw new Error('Enter between 1 and 200 words.');
-  if (words.some((word) => word.length > 40 || cleanMorseText(word) !== word))
-    throw new Error(
-      'Use letters, numbers, punctuation, or prosigns such as <AR>; up to 40 characters per word.',
-    );
+  const words = list === 'custom' ? parseCustomWords(customText) : [...WORD_LISTS[list].words];
   const first = list === 'common-qso' ? 1 : 0;
   if (shuffle)
     for (let index = words.length - 1; index > first; index--) {

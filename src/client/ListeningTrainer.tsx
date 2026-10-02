@@ -28,7 +28,8 @@ import {
   type ListeningWordRound,
 } from './listening-configuration';
 import type { PracticePreferences } from './practice-preferences';
-import { WORD_LISTS, type WordList } from './word-content';
+import { MAX_CUSTOM_WORD_CHARACTERS, WORD_LISTS, type WordList } from './word-content';
+import type { WordContentEditor } from './useWordContent';
 import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
 
 interface AppliedListeningTrack {
@@ -62,6 +63,10 @@ export default forwardRef<
   ListeningTrainerHandle,
   {
     preferences: PracticePreferences;
+    wordContent: WordContentEditor;
+    wordScopeLabel: string;
+    onWordSourceChange: (text: string) => void;
+    onClearSavedWords: () => void;
     active?: boolean;
     onChange: (changes: Partial<PracticePreferences>) => void;
     soundSettings?: ReactNode;
@@ -75,6 +80,10 @@ export default forwardRef<
 >(function ListeningTrainer(
   {
     preferences: p,
+    wordContent,
+    wordScopeLabel,
+    onWordSourceChange,
+    onClearSavedWords,
     active: visible = true,
     onChange,
     soundSettings,
@@ -107,7 +116,7 @@ export default forwardRef<
   };
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
   const onError = (message: string) => callbacks.current.onError(message);
-  const [custom, setCustom] = useState('');
+  const custom = wordContent.draft;
   const [qso, setQso] = useState(() => generateQso(p.qsoScenario));
   const [copyMode, setCopyMode] = useState(false);
   const [revealedQso, setRevealedQso] = useState<PracticeQso | null>(null);
@@ -713,23 +722,68 @@ export default forwardRef<
           Callsigns may coincide with real operators.
         </p>
       )}
-      {isWords && p.wordList === 'custom' && (
-        <label className="field">
-          Your word list
-          <textarea
-            rows={3}
-            maxLength={8200}
-            value={custom}
-            onChange={(e) => {
-              stop();
-              setCustom(e.target.value);
-            }}
-            placeholder="Add words separated by spaces…"
-          />
-          <span className="field-hint">
-            Up to 200 words. Custom text is kept only while this studio is open.
-          </span>
-        </label>
+      {isWords && (
+        <div className="word-source-editor">
+          {p.wordList !== 'custom' ? (
+            <button
+              type="button"
+              className="button outline"
+              onClick={() =>
+                onWordSourceChange(
+                  WORD_LISTS[p.wordList as keyof typeof WORD_LISTS].words.join(' '),
+                )
+              }
+            >
+              Edit this list
+            </button>
+          ) : (
+            <label className="field">
+              Your word list
+              <textarea
+                rows={3}
+                maxLength={MAX_CUSTOM_WORD_CHARACTERS}
+                value={custom}
+                onChange={(e) => onWordSourceChange(e.target.value)}
+                placeholder="Add words separated by spaces…"
+              />
+              <span className="field-hint">
+                Up to 200 words, 40 characters per word and 8,200 characters total. Spaces, tabs and
+                new lines separate entries; repeated words and prosigns are kept.
+              </span>
+            </label>
+          )}
+          <p className="field-hint" role="status">
+            {wordContent.remembered
+              ? `Valid words and list selection are saved for ${wordScopeLabel} on this device.`
+              : `Words are active for this visit; saving for ${wordScopeLabel} needs attention.`}{' '}
+            Custom text stays private on this device. Empty or invalid drafts do not replace saved
+            words.
+          </p>
+          {wordContent.error && (
+            <p className="alert error" role="alert">
+              {wordContent.error}
+            </p>
+          )}
+          <div className="device-actions">
+            {custom !== wordContent.saved.customText && wordContent.saved.customText && (
+              <button
+                type="button"
+                className="button outline"
+                onClick={() => onWordSourceChange(wordContent.saved.customText)}
+              >
+                Use saved words
+              </button>
+            )}
+            {!wordContent.remembered && (
+              <button type="button" className="button outline" onClick={wordContent.retry}>
+                Retry saving words
+              </button>
+            )}
+            <button type="button" className="button outline" onClick={onClearSavedWords}>
+              Clear saved words
+            </button>
+          </div>
+        </div>
       )}
       {isWords && (
         <div className="word-options">

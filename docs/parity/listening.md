@@ -88,8 +88,8 @@ Current active UI routes are [C/src/client/main.tsx:63,422](https://github.com/r
 | Keep VVV first when shuffling QSO vocabulary | **Present** | P [word-panel.ts:160](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L160), [word-round.ts:21](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L21); C [word-content.ts:37](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/word-content.ts#L37). Existing C test covers it. |
 | Fresh shuffle for every repeated native-audio round | **Implemented for Morse-only Words / #28** | P [word-panel.ts:123](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L123) prepares a fresh round on ended. C [ListeningTrainer.tsx](../../src/client/ListeningTrainer.tsx) now generates each round from the latest validated source and Shuffle preference, installs from committed content, preserves duplicate/prosign occurrences and keeps common-QSO VVV first. [wordListeningTrack](../../src/client/listening-configuration.ts) reuses bounded native audio. Existing spoken-answer behavior remains unchanged; see the #28 ledger below. |
 | Shuffle/repeat toggles during playback without throwing away the current word | **Implemented for Morse-only Words / #28** | P [word-panel.ts:254](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L254) defers shuffle to next round and changes repeat independently. C retains the installed source, word, native position and playing/paused state. Shuffle chooses the next round; Repeat controls continuation after the current round. Pause, inspection, replacement and disposal cancel pending continuation. Existing spoken-answer policy is retained. |
-| Directly edit the selected built-in into a custom list | **Missing / P2** | P editable textarea is always available ([word-panel.ts:48](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L48)); editing changes selection to custom (`:277`). C only renders its textarea for explicit custom selection ([ListeningTrainer.tsx:422](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L422)) and initializes it separately; no “copy this list to custom” action. Both allow custom practice, but quickly removing difficult/easy words from the existing list is less direct in C. |
-| Custom draft survives closing/reloading the tool | **Missing / P1** | P [storage.ts:12,16](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L12) persists the word draft, including custom text; [session.ts:46,79](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L46) validates/restores it. C stores only typed preference fields ([practice-preferences.ts:5,47,97](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L5)), custom text is React state, and UI explicitly says it lasts only while the studio is open ([ListeningTrainer.tsx:435](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L435)). |
+| Directly edit the selected built-in into a custom list | **Implemented / #29** | P editable textarea is always available ([word-panel.ts:48](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L48)); editing changes selection to custom (`:277`). C only renders its textarea for explicit custom selection ([ListeningTrainer.tsx:422](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L422)) and initializes it separately; no “copy this list to custom” action. Both allow custom practice, but quickly removing difficult/easy words from the existing list is less direct in C. Baseline references describe the audit checkout. Current #29 adds Edit this list for both supplied catalogs, cloning original source order without changing shared words or adopting shuffled playback order. Its implementation gates pass; independent review and deployment remain pending. |
+| Custom draft survives closing/reloading the tool | **Implemented for validated source / #29** | P [storage.ts:12,16](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L12) persists the word draft, including custom text; [session.ts:46,79](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L46) validates/restores it. C stores only typed preference fields ([practice-preferences.ts:5,47,97](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L5)), custom text is React state, and UI explicitly says it lasts only while the studio is open ([ListeningTrainer.tsx:435](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L435)). Baseline references describe the audit checkout. Current #29 retains validated raw custom text and list selection in account/Guest device scope. In-app draft navigation, paused reload, invalid/empty fallback, storage/clear retry and reviewed device backups are verified. Unacknowledged or invalid drafts survive current-scope in-app navigation only. Independent review and deployment remain pending. |
 | Three Morse repetitions followed by spoken answer | **Partial / P1** | Both expose the option and honor three repetitions. P [word-round.ts:41,48,84](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L41) stitches measured Morse, pauses, and published speech PCM into one native WAV. [word-assets.ts:17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-assets.ts#L17) loads pronunciation clips with bounded concurrency/cache and rejects unsupported custom words clearly. C [ListeningTrainer.tsx:158,170,178](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L158) uses device-local English `speechSynthesis`, dependent on installed/local voice availability, and explicitly stops when hidden (`:333`). P can keep spoken rounds on native background/lock-screen playback; C cannot. C supports arbitrary custom words when a suitable local voice exists, whereas P supports only published speech vocabulary: a tradeoff, not total inferiority. |
 | Published compact/spoken MP3 fast path | **Missing / P2** | P [word-assets.ts:34,42](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-assets.ts#L34) picks prebuilt matching word recordings by exact text hash/WPM/Farnsworth/pitch/gap/spoken settings, otherwise generates native WAV; four indexed assets covered in [tests/cw-training-word-assets.test.mjs:32](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-word-assets.test.mjs#L32). C always generates Morse WAV and uses local speech separately; no equivalent word asset index/fetch path. This affects startup/download/repeat reliability rather than the vocabulary itself. |
 | Fine word pause and pitch controls | **Partial / P3** | P [word-panel.ts:44,45](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L44): pitch 300–1000 step 10 Hz; pause 0–5 step 0.1 s. C [practice-preferences.ts:57,76](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L57) normalizes pause at 0.5 s and pitch at 25 Hz; actual pause menu [ListeningTrainer.tsx:449](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L449) offers 0, .5, 1, 2, 3, 4, 5 (no 1.5/2.5/etc). |
@@ -885,3 +885,61 @@ and dependency arrays are unchanged. Issue #28 remains OPEN until publication.
 Accepted local/production delivery permits the ascending #29 loop. Physical
 locked-device playback is unverified; new recognition and elapsed reload/crash
 recovery remain excluded. The original personal site is unchanged.
+
+
+### Issue #29 private editable word sources
+
+The pinned original storage/word-practice/word-panel source establishes retained
+custom words, duplicate/prosign entries and editing built-ins into a custom
+source. Companion now offers Edit this list, cloning original catalog order
+without modifying shared words or copying a shuffled rendering. Source parsing
+consistently bounds 8,200 raw characters, 1–200 entries and 40 characters per
+word, preserves supported prosigns/punctuation and rejects control characters
+before whitespace normalization. Normal spaces, tabs and new lines separate words.
+
+Validated text and selection are retained in a version 1 account/Guest device
+record. Generic shared custom selection never selects another scope's source.
+The scoped React source owner outlives individual player/practice blocks: tool
+changes, Finish/reopen and in-app inspection retain pending drafts and storage
+feedback. Account/device-token/mutation boundaries reset the owner before child
+commit; restored content is paused, with no elapsed clock or automatic audio.
+Invalid/empty editing states keep last valid saved words accessible through
+Use saved words. Readback failure exposes deliberate Retry saving words; clear
+failure retains current words. Clear saved words resets only this source scope.
+
+Private words join the explicit device inventory, download, strict portable
+validation, reviewed restore, lifecycle rollback and scoped clear. Older version 1
+backups omitting the optional source remain compatible. A newer current source
+wins a collision with visible explanation; explicit word-source clear permits
+restoring an older backup. Repeated restore is idempotent. No new Worker entity,
+SQL, binding, config or public recipe; no custom text is implicitly uploaded.
+Actual played source summaries continue through existing private history/report/
+export boundaries without including source text.
+
+Eight cheap tests protect parser/storage bounds, raw occurrence fidelity, private
+keys, unknown/damaged records, readback, stale lifecycle owners, old backup
+compatibility, source collision and transaction rollback after source installation.
+Check, 1,063 tests across 64 files and build pass. Fourteen affected serial
+listening/device browser journeys pass in 2.0 minutes. Two new source journeys
+exercise actual clone/edit/switch/reopen/reload, private account isolation, native
+duplicate/prosign playback, storage/clear refusal and keyboard/touch retry,
+actual backup download/file selection, cancellation and explicit source restore.
+Six settled desktop/mobile accessibility/overflow reports are empty and editor
+pixels were inspected.
+
+The first account fixture attempted a second email code within the existing
+60-second address cooldown. Its assertion, context, pixels, bounded trace and
+429 response were inspected and retained. The fixture now verifies first-account
+reload retention, second-account isolation and clear preserving the first source,
+then returns to Guest. Production limits were not changed; no fake native time
+or event was introduced. The first full run passed 84/85 and timed out while
+starting a later mobile Runner extra-review run; its assertion, context, pixels
+and bounded trace were inspected and retained. The unchanged exact mobile
+journey passed in isolation (38.4 seconds), then all 85 serial browser journeys
+passed in 17.1 minutes. The first failure's cause remains unconfirmed; no timeout,
+authentication limit or native timing was weakened. Fresh post-commit independent
+review and deployment remain pending. Physical locked-device behavior remains
+unverified. Invalid/unretained editing drafts are not reload recovery; only
+validated acknowledged source text survives a reload. Failed storage stays
+visible and retryable in the current scope. Stories remain #30; broader precise
+mode preferences #31. The original site and approved exclusions are preserved.

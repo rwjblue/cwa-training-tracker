@@ -1,3 +1,4 @@
+import { validateWordContent, wordContentKey, type WordContent } from './word-storage';
 import { EVENT_TIME_MODE_KEY, validEventTimeMode, type EventTimeMode } from './event-preferences';
 import { validateAccountOperation, validateAccountSnapshot } from '../shared/account-sync';
 import {
@@ -104,6 +105,7 @@ export interface DeviceBackup {
     scratchpads: { context: string; text: string }[];
     recordingChoices?: TaskRecordingChoice[];
     runnerResults?: RunnerFinishedResult[];
+    wordContent?: WordContent;
   };
   shared: {
     practicePreferences?: PracticePreferences;
@@ -125,8 +127,10 @@ export interface DeviceRestoreInspection {
   replaceCopyDraftRequired: boolean;
   retainedScratchpads: number;
   retainedRecordingChoices: number;
+  retainedWordContent: boolean;
 }
 export interface DeviceMutationResult {
+  retainedWordContent?: boolean;
   uncertain: { practice: string[]; accountOperations: string[] };
   retainedScratchpads: number;
 }
@@ -141,6 +145,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'scratchpads', label: 'Scratchpads', shared: false },
   { id: 'recordingChoices', label: 'Task recording choices', shared: false },
   { id: 'runnerResults', label: 'Finished Runner results awaiting review', shared: false },
+  { id: 'wordContent', label: 'Saved word source and list selection', shared: false },
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
   { id: 'recordingSpeed', label: 'Shared recording speed preference', shared: true },
   { id: 'courseReplay', label: 'Shared course replay preference', shared: true },
@@ -439,6 +444,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     'scratchpads',
     'recordingChoices',
     'runnerResults',
+    'wordContent',
   ]);
   const practice: RetainedPractice[] = list(stores.practice, 'Finished results', MAX_RESULTS).map(
     (value) => {
@@ -610,6 +616,8 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       scratchpads,
       ...(recordingChoices === undefined ? {} : { recordingChoices }),
       ...(runnerResults === undefined ? {} : { runnerResults }),
+      wordContent:
+        stores.wordContent === undefined ? undefined : validateWordContent(stores.wordContent),
     },
     shared: {
       ...(shared.eventTimeMode === undefined
@@ -795,6 +803,9 @@ export function captureDeviceBackup(
     storage === localStorage ? captureStudioNotes(scope) : selectedNotes(scope, storage);
   const retainedRunner = readRunnerResults(scope, storage);
   if (retainedRunner.error) throw new Error(retainedRunner.error);
+  const wordsRaw = storage.getItem(wordContentKey(scope));
+  const wordContent =
+    wordsRaw === null ? undefined : validateWordContent(parse(wordsRaw, 'Saved words', 60_000));
   const preferencesRaw = storage.getItem(PRACTICE_PREFERENCES_KEY);
   const recordingSpeed = storage.getItem(RECORDING_SPEED_STORAGE_KEY);
   const courseReplay = storage.getItem(COURSE_REPLAY_STORAGE_KEY);
@@ -825,6 +836,7 @@ export function captureDeviceBackup(
       scratchpads,
       recordingChoices,
       runnerResults: retainedRunner.results,
+      wordContent,
     },
     shared: {
       ...(eventTimeMode === null ? {} : { eventTimeMode: eventTimeMode as EventTimeMode }),
@@ -1010,6 +1022,10 @@ export function inspectDeviceRestore(
       copy !== JSON.stringify(checked.stores.copyDraft),
     retainedScratchpads,
     retainedRecordingChoices,
+    retainedWordContent:
+      checked.stores.wordContent !== undefined &&
+      storage.getItem(wordContentKey(scope)) !== null &&
+      storage.getItem(wordContentKey(scope)) !== JSON.stringify(checked.stores.wordContent),
   };
 }
 
@@ -1204,6 +1220,9 @@ export function restoreDeviceBackup(
       changes.set(origin, JSON.stringify({ version: 1, ...result.origin }));
     changes.set(key, JSON.stringify(result));
   }
+  // Current private source wins; clear it explicitly before selecting an older backup.
+  if (checked.stores.wordContent && storage.getItem(wordContentKey(scope)) === null)
+    changes.set(wordContentKey(scope), JSON.stringify(checked.stores.wordContent));
   // Current task choices win: restoring an older file must not silently replace them.
   for (const choice of checked.stores.recordingChoices ?? []) {
     const key = taskRecordingChoiceKey(scope, choice.taskId);
@@ -1274,13 +1293,19 @@ export function restoreDeviceBackup(
     return {
       uncertain: { practice: [], accountOperations: [] },
       retainedScratchpads: inspection.retainedScratchpads,
+      ...(inspection.retainedWordContent ? { retainedWordContent: true } : {}),
     };
   const result = applyChanges(scope, changes, recovery, options.recoverInterrupted);
-  return { ...result, retainedScratchpads: inspection.retainedScratchpads };
+  return {
+    ...result,
+    retainedScratchpads: inspection.retainedScratchpads,
+    ...(inspection.retainedWordContent ? { retainedWordContent: true } : {}),
+  };
 }
 
 /** Exact registered scope matching also removes orphan status/origin/lease records. */
 function isScopedStore(name: string, scope: string): boolean {
+  if (name === wordContentKey(scope)) return true;
   if (name.startsWith(runnerResultsPrefix(scope))) return true;
   if (taskRecordingChoiceTaskId(name, scope) !== undefined) return true;
   if (

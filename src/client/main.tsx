@@ -1,3 +1,4 @@
+import { useWordContent } from './useWordContent';
 import {
   dailyPracticeGoals,
   savedPracticeTime,
@@ -344,6 +345,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const scope = user?.id ?? 'guest';
   const deviceToken = getDeviceScopeToken(scope);
+  const wordContent = useWordContent(scope, deviceToken);
   const [deviceRevision, setDeviceRevision] = useState(0);
   const [deviceMutating, setDeviceMutating] = useState(() => isDeviceScopeMutating('guest'));
   const [deviceOpen, setDeviceOpen] = useState(false);
@@ -1619,6 +1621,7 @@ function App() {
                           });
                       }}
                       accountId={user?.id}
+                      wordContent={wordContent}
                       timezone={profile.timezone}
                       entries={visibleEntries}
                       tasks={tasks}

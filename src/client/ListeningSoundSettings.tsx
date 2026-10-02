@@ -20,7 +20,7 @@ export default function ListeningSoundSettings({
         <h3>Your listening preferences</h3>
         <p>
           {remembered
-            ? 'Saved on this device, including when you sign out. Custom text is not saved.'
+            ? 'Sound defaults are saved on this device, including when you sign out. Word sources use the separate account or Guest device scope.'
             : 'Active for this visit. Your browser is not allowing these preferences to be remembered.'}
         </p>
       </div>
