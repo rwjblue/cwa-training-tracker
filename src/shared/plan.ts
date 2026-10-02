@@ -1,4 +1,5 @@
 import {
+  addDays,
   getPracticePurpose,
   isRequiredPractice,
   type PracticeKind,
@@ -17,9 +18,17 @@ import {
 } from './practice-evidence.ts';
 import { recordingVariants } from './recordings.ts';
 import { validateTaskRecordingMarks, type RecordingMarkSet } from './recording-marks.ts';
+import { CW_EVENT_SCHEDULE, type CwEventId } from './cw-events.ts';
 
 export type SendingSection = 'warm-up' | 'drill' | 'exercise';
 export type PracticeExercise =
+  | {
+      type: 'live-event';
+      eventId: CwEventId;
+      url: string;
+      /** Resolve against the owned plan, never a stale copied meeting instant. */
+      deadline: 'associated-class' | 'practice-date';
+    }
   | {
       type: 'audio';
       url?: string;
@@ -153,8 +162,26 @@ function exerciseResource(value: unknown): PracticeExercise {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid exercise resource.');
   const input = value as Record<string, unknown>;
-  if (!['audio', 'sending', 'external', 'morse-runner', 'copy'].includes(String(input.type)))
+  if (
+    !['audio', 'sending', 'external', 'morse-runner', 'copy', 'live-event'].includes(
+      String(input.type),
+    )
+  )
     throw new Error('Choose a valid exercise resource type.');
+  if (input.type === 'live-event') {
+    if (
+      Object.keys(input).some((key) => !['type', 'eventId', 'url', 'deadline'].includes(key)) ||
+      !CW_EVENT_SCHEDULE.events.some((event) => event.id === input.eventId) ||
+      !['associated-class', 'practice-date'].includes(String(input.deadline))
+    )
+      throw new Error('Choose a verified live event and its class or practice-date deadline.');
+    return {
+      type: 'live-event',
+      eventId: input.eventId as CwEventId,
+      url: exerciseUrl(input.url),
+      deadline: input.deadline as 'associated-class' | 'practice-date',
+    };
+  }
   if (input.type === 'copy') {
     const result: Extract<PracticeExercise, { type: 'copy' }> = {
       type: 'copy',
@@ -553,6 +580,9 @@ export function dailyPlanSummary(
     earlier,
     unscheduled,
     upcoming: future.filter((item) => item.dueDate === nextPracticeDate),
+    liveUpcoming: future.filter(
+      (item) => item.task.exercise?.type === 'live-event' && item.dueDate! <= addDays(today, 7),
+    ),
     nextPracticeDate,
     nextMeeting,
     currentCount: current.length,
@@ -707,6 +737,13 @@ export function legacyPlan(
       };
       if (typeof assignment.session === 'number') result.lesson = assignment.session;
       if (typeof assignment.date === 'string') result.dueDate = assignment.date;
+      if (task.kind === 'live')
+        result.exercise = {
+          type: 'live-event',
+          eventId: 'cwt',
+          url: CW_EVENT_SCHEDULE.events.find((event) => event.id === 'cwt')!.rulesUrl,
+          deadline: 'associated-class',
+        };
       if (typeof task.sourceUrl === 'string' && task.sourceUrl) result.link = task.sourceUrl;
       // A task's source is often the syllabus; its resource is the actual recording.
       // Read only the learner's supplied archive and retain a safe source fallback.

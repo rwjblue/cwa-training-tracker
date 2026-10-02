@@ -230,7 +230,7 @@ function practiceDetails(
     title: row.mode === 'contacts' ? 'CWT: contacts or exchange copy' : 'CWT: listen to exchanges',
     kind: 'on-air',
     notes: `Aim for ${row.count} ${row.mode === 'contacts' ? 'contacts, or copy exchanges' : 'copied station exchanges'}. Check the event schedule and your advisor’s directions.`,
-    exercise: { type: 'external', url: CWT_URL },
+    exercise: { type: 'live-event', eventId: 'cwt', url: CWT_URL, deadline: 'associated-class' },
   };
 }
 

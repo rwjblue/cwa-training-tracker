@@ -873,3 +873,30 @@ public GET/HEAD/304/405/unique recurring parser agreement pass after one D1 7403
 complete-task retry. The canonical ledger preserves counts, probe failure and
 calendar/physical-device limits. Local main records acceptance; #20 stays OPEN
 under no-push. Private CWT eligibility is #21, reminders #46; no original mutation.
+
+
+### Issue #21 — P06 assigned live eligibility implementation
+
+Typed live event/class-or-practice-date policies reuse the verified public UTC
+schedule. Actual dated class starts, conservative date-only fallback and explicit
+practice-day ends determine strict start-before-due windows. Today/course/Studio
+show exact local/UTC starts and ends, active/next/unavailable guidance and official
+rules. Future seven-day live previews create no today's goal; actual unavailable
+Start/Resume is gated while preparation, retained work, manual logging and
+completion remain reachable. The shared availability predicate is ready for
+#22's next-block selector, whose absent action is not claimed as delivered here.
+Owned metadata validates/export/imports with real SQL rollback and account privacy;
+public calendars query no private class state. See the [canonical #21 ledger](../trainer-parity.md#issue-21--eligible-assigned-live-windows-before-class)
+for exact fallback, source, evidence, fixture corrections and remaining limits.
+Initial 215 focused cases/typecheck and representative browser journey (22.2s,
+ten clean responsive Axe/overflow checks, keyboard/mobile cancellation and 503
+exact retry) pass; new seven-day preview domain coverage also passes. Final full
+gates, post-commit independent review, deployment and source publication remain
+pending. Approved exclusions and the original read-only policy remain intact.
+
+
+Issue #21 full root gates pass: typecheck, 992 tests in 58 files, production
+build and all 67 serialized browser journeys (13.8 minutes). Final focused
+validation additionally selects the actual “This week” control before checking
+its live opportunity. Independent post-commit review and production acceptance
+remain pending. No binding/configuration change or original-site mutation.

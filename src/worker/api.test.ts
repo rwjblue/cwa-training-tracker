@@ -6098,3 +6098,122 @@ describe('public calendar dispatch privacy', () => {
     expect(unsupported.headers.get('Allow')).toBe('GET, HEAD');
   });
 });
+
+describe('typed private live assignment metadata', () => {
+  it('persists and exports owned event binding, rejects tampering and rolls back failed replacement', async () => {
+    const a = await signIn('live-a@example.test');
+    const b = await signIn('live-b@example.test');
+    const profile = {
+      ...DEFAULT_PROFILE,
+      level: 'intermediate',
+      firstClassDate: '2026-10-08',
+      classDays: [1, 4],
+      classSchedule: {
+        version: 1,
+        timezone: 'UTC',
+        exceptions: [],
+        ordinary: { startTime: '07:30', endTime: '09:00', endsNextDay: false },
+        joinUrl: 'https://meeting.example.test/private?pwd=live-private',
+      },
+    };
+    expect((await request('/api/settings', 'PUT', { settings: profile }, a.cookie)).status).toBe(
+      200,
+    );
+    const task: PlannedTask = {
+      id: 'private-live',
+      title: 'Live objective',
+      kind: 'on-air',
+      lesson: 1,
+      dueDate: '2026-10-07',
+      createdAt: '2026-10-02T00:00:00Z',
+      done: false,
+      notes: 'Private radio notes',
+      exercise: {
+        type: 'live-event',
+        eventId: 'cwt',
+        url: 'https://cwops.org/cwops-tests/',
+        deadline: 'associated-class',
+      },
+    };
+    expect((await request('/api/plan', 'POST', task, a.cookie)).status).toBe(201);
+    expect((await getAccountSnapshot(env, b.user.id)).plan).toEqual([]);
+    expect(
+      (await request('/api/plan/private-live', 'PUT', { ...task, done: true }, b.cookie)).status,
+    ).toBe(404);
+    const before = await getAccountSnapshot(env, a.user.id);
+    const generated = before.plan.find(
+      (item) => item.source === 'curriculum' && item.exercise?.type === 'live-event',
+    )!;
+    expect(generated.exercise).toMatchObject({ eventId: 'cwt', deadline: 'associated-class' });
+    expect(
+      (
+        await request(
+          '/api/account-operations',
+          'POST',
+          {
+            version: 1,
+            id: crypto.randomUUID(),
+            accountId: a.user.id,
+            baseRevision: before.revision,
+            generation: before.generation,
+            createdAt: '2026-10-02T00:00:00Z',
+            change: {
+              type: 'task-edit',
+              id: generated.id,
+              changes: { exercise: { ...generated.exercise, eventId: 'sst' } },
+            },
+          },
+          a.cookie,
+          { 'X-CWA-Account': a.user.id },
+        )
+      ).status,
+    ).toBe(400);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.plan!.find((item) => item.id === task.id)!.exercise).toEqual(task.exercise);
+    const invalid = {
+      ...exported,
+      plan: [{ ...task, exercise: { ...task.exercise, eventId: 'unknown' } }],
+    };
+    expect(
+      (await request('/api/import', 'POST', { data: invalid, mode: 'replace' }, a.cookie)).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    db.sqlite.exec(
+      "CREATE TRIGGER reject_live_import BEFORE INSERT ON training_plan WHEN NEW.id = 'private-live' BEGIN SELECT RAISE(ABORT, 'synthetic_live_failure'); END;",
+    );
+    expect(
+      (await request('/api/import', 'POST', { data: exported, mode: 'replace' }, a.cookie)).status,
+    ).toBe(500);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+    db.sqlite.exec('DROP TRIGGER reject_live_import');
+    expect(
+      (await request('/api/import', 'POST', { data: exported, mode: 'replace' }, a.cookie)).status,
+    ).toBe(200);
+    const restored = await getAccountSnapshot(env, a.user.id);
+    expect(restored.plan.find((item) => item.id === task.id)!.exercise).toEqual(task.exercise);
+    expect(restored.settings.classSchedule).toEqual(profile.classSchedule);
+    expect(await (await request('/api/entries', 'GET', undefined, a.cookie)).json()).toEqual({
+      entries: [],
+      accountId: a.user.id,
+      generation: restored.generation,
+      revision: restored.revision,
+      historyRevision: restored.historyRevision,
+    });
+    const feed = await request(
+      '/api/live-practice/calendar.ics?class=private',
+      'GET',
+      undefined,
+      a.cookie,
+    );
+    const body = await feed.text();
+    expect(body).not.toMatch(/Private radio notes|live-private|meeting.example/);
+    expect(body).toBe(
+      await (await request('/api/live-practice/calendar.ics', 'GET', undefined, b.cookie)).text(),
+    );
+  });
+});

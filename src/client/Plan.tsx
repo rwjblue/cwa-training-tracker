@@ -1,4 +1,6 @@
 import ListeningPassProgress from './ListeningPassProgress';
+import LiveAssignmentWindow from './LiveAssignmentWindow';
+import { CW_EVENT_SCHEDULE, type CwEventId } from '../shared/cw-events';
 import TaskRecordingChoiceHint from './TaskRecordingChoiceHint';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
@@ -38,6 +40,7 @@ import './plan.css';
 import { curriculumForLevel } from '../shared/curriculum';
 
 interface Props {
+  liveNow?: number;
   accountId?: string;
   inspection?: { id: string; view: 'week' | 'report' };
   returnToPractice?: { label: string; onReturn: () => void };
@@ -65,6 +68,7 @@ const dayLabel = (date: string) =>
   });
 
 export default function Plan({
+  liveNow = Date.now(),
   accountId,
   profile,
   entries,
@@ -309,6 +313,7 @@ export default function Plan({
                     />
                   )}
                   <TaskRecordingChoiceHint scope={accountId} task={task} />
+                  <LiveAssignmentWindow task={task} profile={profile} now={liveNow} />
                   {task.notes && (
                     <details className="plan-notes">
                       <summary>Instructions and notes</summary>
@@ -322,7 +327,11 @@ export default function Plan({
                         onClick={() => onPracticeTask(task, 'assigned')}
                       >
                         <Play size={12} />{' '}
-                        {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
+                        {task.exercise?.type === 'audio'
+                          ? 'Listen & practice'
+                          : task.exercise?.type === 'live-event'
+                            ? 'Prepare live practice'
+                            : 'Practice'}
                       </button>
                     )}
                     {onPracticeTask && (
@@ -563,10 +572,19 @@ function TaskEditor({
           'targetMinutes',
           'targetMinutesExplicit',
           'notes',
+          'exercise',
         ] as const;
         const changes = Object.fromEntries(
           fields
-            .filter((field) => valid[field] !== initial[field])
+            .filter((field) => {
+              if (field !== 'exercise') return valid[field] !== initial[field];
+              // This editor only changes explicit live bindings. Catalog facts
+              // and other native resources remain owned by their existing flow.
+              if (task.curriculum) return false;
+              if (valid.exercise?.type !== 'live-event' && initial.exercise?.type !== 'live-event')
+                return false;
+              return JSON.stringify(valid.exercise) !== JSON.stringify(initial.exercise);
+            })
             .map((field) => [field, valid[field] ?? null]),
         ) as AccountTaskChanges;
         if (Object.keys(changes).length)
@@ -609,7 +627,11 @@ function TaskEditor({
               value={task.kind}
               disabled={Boolean(task.curriculum)}
               onChange={(event) =>
-                setTask({ ...task, kind: event.target.value as PlannedTask['kind'] })
+                setTask({
+                  ...task,
+                  kind: event.target.value as PlannedTask['kind'],
+                  ...(task.exercise?.type === 'live-event' ? { exercise: undefined } : {}),
+                })
               }
             >
               {PRACTICE_KINDS.map((kind) => (
@@ -638,6 +660,64 @@ function TaskEditor({
             />
           </label>
         </div>
+        {task.kind === 'on-air' && (
+          <div className="plan-form-grid">
+            <label>
+              Live event (optional)
+              <select
+                disabled={Boolean(task.curriculum)}
+                value={task.exercise?.type === 'live-event' ? task.exercise.eventId : ''}
+                onChange={(event) => {
+                  const definition = CW_EVENT_SCHEDULE.events.find(
+                    (item) => item.id === event.target.value,
+                  );
+                  setTask({
+                    ...task,
+                    exercise: definition
+                      ? {
+                          type: 'live-event',
+                          eventId: definition.id as CwEventId,
+                          url: definition.rulesUrl,
+                          deadline: task.lesson ? 'associated-class' : 'practice-date',
+                        }
+                      : undefined,
+                  });
+                }}
+              >
+                <option value="">Other on-air practice</option>
+                {CW_EVENT_SCHEDULE.events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.id.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {task.exercise?.type === 'live-event' && (
+              <label>
+                Live practice deadline
+                <select
+                  disabled={Boolean(task.curriculum)}
+                  value={task.exercise.deadline}
+                  onChange={(event) =>
+                    setTask({
+                      ...task,
+                      exercise: {
+                        ...(task.exercise as Extract<
+                          NonNullable<PlannedTask['exercise']>,
+                          { type: 'live-event' }
+                        >),
+                        deadline: event.target.value as 'associated-class' | 'practice-date',
+                      },
+                    })
+                  }
+                >
+                  <option value="associated-class">Associated class start</option>
+                  <option value="practice-date">End of practice date</option>
+                </select>
+              </label>
+            )}
+          </div>
+        )}
         <div className="plan-form-grid">
           <label>
             Class session

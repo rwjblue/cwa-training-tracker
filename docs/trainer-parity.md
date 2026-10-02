@@ -190,7 +190,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R8 · P2** Course-audio progress                   | Issue #9 delivers actual coverage and whole passes without seek credit, distinct saved/current/remaining counts, and portable per-file evidence. Task-specific choices are independently accepted in #11; Issue #12 adds bounded private difficult timestamps and relative Replay 8 sec with deliberate native playback; optional daily listening remains #25. Course replay is delivered in #10.                                                                                                                                                                                                                                               | Personal [audio session](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L41); [audio appendix](parity/audio.md#findings-by-behavior).                                                                                                                                                                                      |
 | **R9 · P1/P2** Runner continuity                          | Issue #15 retains acknowledged terminal results on the device before review, with stable run ID, accepted-start timezone/date, terminal creation time and distinct frozen review timestamp. Mixed-speed results omit generic WPM and expose recorded engine speed segments and bounded-history omissions. Logbook recovery, canceled review edits, exact retry and optional device backup inventory reuse the shared save/account/device boundaries. Issue #16 adds shared saved/current/combined/remaining time and an explicit completion policy, independently accepted and deployed. Issue #17 adds receipt-gated Save & next, retained settings/context and a fresh paused owner, including recovered Logbook continuation; no running-clock reload/crash estimate or live-engine resumption. | Personal [Runner transitions](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48); [Runner workflow](parity/listening.md#surrounding-workflow--partial).                                                                                                                                                                  |
 | **R10 · P1/P2** Instructor material                 | Add private session-linked text/link/file material, preparation/class/reference classification, original-plus-revision history, and readable practice context. Imported materials and their revision links are readable in Settings; native material authoring and practice integration remain absent. Current custom activities cover only notes/link/date/session.                                                                                                                                                                           | Personal [materials](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L757); [planning P12](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                                   |
-| **R11 · P1/P2** Live practice and reminders         | Public SST/MST/CWT agenda, Local/UTC preference and recurring feed are independently accepted and deployed in #20 with current organizer verification. Assigned CWT eligibility before class remains #21 and private reminder subscriptions #46. Public schedule does not infer participation or query private data.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
+| **R11 · P1/P2** Live practice and reminders         | Public SST/MST/CWT agenda, Local/UTC preference and recurring feed are independently accepted and deployed in #20 with current organizer verification. Assigned typed live eligibility and retained manual work are implemented in #21, pending independent review/deployment; private reminder subscriptions remain #46. Public schedule does not infer participation or query private data.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
 | **R12 · P2** Exact public listening recipes                  | Bounded, versioned public listening recipes that reproduce the exact exercise remain accepted issue #45. Real-contact operating guidance, contact logs, ADIF export and unrelated public practice tools are excluded from this execution.                                                                                                                                                                                                                                        | Personal [real QSO helper](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-qso.ts#L137), [share recipes](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115); [public-tool inventory](parity/listening.md#standalone-public-tools-distinct-features-not-duplicate-page-names). |
 | **R13 · P1/P2** Migration fidelity                  | Historical imports now expose original scratchpads and structured results, map LCWO group speed correctly, omit pure dismissal bookkeeping, derive Runner completion, and add overlap-safe one-minute LCWO group estimates. A timezone-aware cutoff limits practice/completion while retaining the full source archive. Settings makes reports, LCWO, materials and device drafts readable. Native report/material editing and recoverable device work remain separate migrations; readable preserved records are not complete feature parity. | Tracker baseline [converter](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L502), [completion import](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L425); [planning P33–P36](parity/planning.md#backups-migrations-and-api-fidelity).                      |
 | **R14 · P2/P3** Preference refinements              | Per-mode settings, exact/preset 51–60 WPM support, finer pause/tone choices, and two distinct QSO pitches at the upper tone bound remain different. The personal per-mode writer itself omits QSO/story effective speed; port the intended behavior with both speeds.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
@@ -1915,3 +1915,95 @@ crash recovery, attendance inference or original-site mutation was introduced.
 Local main advances with this acceptance journal. No push or PR is attempted;
 #20 stays OPEN/unpublished until its source is available on GitHub. Accepted local
 and deployed #18/#20 dependencies permit the ascending #21 implementation loop.
+
+
+### Issue #21 — eligible assigned live windows before class
+
+Current issue #21 has no comments or external blockers. Its documented #18/#20
+prerequisites are independently accepted locally and deployed; source publication
+is deferred under the learner's no-push instruction. The original pinned
+[eligibility projection](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135),
+[immediate filtering](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L150)
+and seven-day live preview were rechecked read-only. The policy remains strict
+**event start before deadline**, with a still-running eligible event allowed to
+end after that deadline. Identity comes from typed event metadata, never a title
+regex or another event schedule.
+
+Catalog CWT objectives and original typed live imports carry a `live-event`
+resource with shared verified event identity, safe resource URL and explicit
+`associated-class` or `practice-date` deadline policy. Manual on-air tasks expose
+optional SST/MST/CWT selection and policy; canonical curriculum facts remain
+protected while renamed titles/completion/progress survive projection. Existing
+account operations, SQLite ownership, transactional import, backup validation
+and export round-trip the resource without a new schema or binding. Old valid
+backups remain accepted and catalog projection supplies canonical live identity.
+A resource URL can remain a learner's safe preparation destination; links labeled
+“official rules” come directly from the shared organizer definition.
+
+Associated class deadlines use the actual dated class start and that meeting's
+IANA zone, including exceptions. If only a class date exists, the conservative
+fallback is 00:00 at the start of that class date, explicitly labeled with a
+prompt to set actual timing. An explicit practice-date policy, or no applicable
+dated class, uses the end of the selected practice day in the learner's zone.
+A nonexistent date/midnight or absent date yields a request for a deadline,
+never a fabricated eligible opportunity. Editing class/date/zone resolves a
+fresh deadline from owned current state without rewriting task IDs or practice.
+
+Today, the course plan and retained assigned Studio share exact start/end dates
+in the learner's explicit zone plus UTC and active/next/unavailable guidance.
+Future unfinished typed live tasks within seven practice dates get a separate
+Today preview without adding to today's required goals. Calendar observation
+uses one App owner, bounded shared recurrence queries, boundary/one-minute
+refresh and visibility/pageshow refresh. Its timer re-arms independently of
+whether a repeated/backward wall timestamp changes React state. No calendar
+observation changes the practice clock or makes a network poll.
+
+Preparation remains reachable outside a window. Actual assigned Start/Resume
+checks the current event and deadline again and is disabled when unavailable;
+Pause remains usable on running work. A prepared/manual worked block survives
+in-app navigation, cancellation and deadline edits, and Review/save can record
+already performed work after the opportunity closes. Starting opens the current
+safe preparation resource once through the existing manual timer architecture.
+No new audio/player or Runner owner is introduced. The eligibility predicate is
+used by actual Studio Start and is available to #22's automatic next-block
+selection; that automatic action is not yet present and is not claimed here.
+
+The event's presence, visiting rules, preparing and class attendance produce no
+minutes, QSOs, score or completion. Manual practice, actual measured elapsed
+facts and learner completion retain independent meanings. Completed-result
+queues, exact retry bodies, history and report aggregation use the existing
+account-scoped workflow. Private class details never enter the public feed.
+
+Initial validation: typecheck and 215 focused tests passed, then the seven-day
+preview brought focused domain coverage to 36 passing cases. The mixed desktop
+keyboard/mobile touch browser journey passed in 22.2s with ten empty Axe and
+overflow checks across five settled states at 1440/390 widths: editor, upcoming
+course view, active Studio, unavailable retained block and failed-upload retry.
+It exercises native dropdown selection, the actual official-link popup, manual
+elapsed work, canceled review, a real settings operation, retained time through
+calendar advancement, a 503 with zero server entries, exact-body retry and
+explicit persisted completion with no extra history entry. The Worker probe
+uses two synthetic accounts, current canonical edit rejection, invalid replace,
+real SQLite-trigger rollback, valid export/reimport, no attendance row and public
+feed body equality despite private settings. Pure cases cover exact boundaries,
+start-before-due/end-after-due, exceptions, DST/year rollover, date-only fallback,
+missing deadline, typed validation, catalog merge and original live imports.
+
+Browser fixture failures were inspected and retained before correction: label
+lookup for a visible combobox, Enter submitting the native-select form, an End
+key failing selection, the repeated-wall-time refresh bug, an incorrect retry
+button name, and an exact-two-seconds expectation that omitted real interaction
+milliseconds. Role lookup and letter/Tab selection use the observed controls;
+no timeout was increased. Duration assertions now bound actual manual work,
+compare retained review display and exact saved/retried facts instead of deleting
+real overhead. Required full gates and fresh post-commit independent review and
+production acceptance are pending. Emulation does not establish physical-device
+or background audio behavior. Reload/crash running-time recovery remains outside
+approved scope; no restricted assets or original-site mutation was introduced.
+
+
+Issue #21 full root gates pass: typecheck, 992 tests in 58 files, production
+build and all 67 serialized browser journeys (13.8 minutes). Final focused
+validation additionally selects the actual “This week” control before checking
+its live opportunity. Independent post-commit review and production acceptance
+remain pending. No binding/configuration change or original-site mutation.

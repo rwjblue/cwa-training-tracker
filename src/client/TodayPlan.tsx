@@ -1,4 +1,5 @@
 import RunnerAssignmentProgress from './RunnerAssignmentProgress';
+import LiveAssignmentWindow from './LiveAssignmentWindow';
 import ClassMeetingCard from './ClassMeetingCard';
 import {
   runnerAssignmentProgress,
@@ -38,6 +39,7 @@ import './today-plan.css';
 import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
+  liveNow?: number;
   currentRunner?: CurrentRunnerProgress;
   today?: string;
   accountId?: string;
@@ -68,6 +70,7 @@ const minuteLabel = (minutes: number) => Number(minutes.toFixed(1));
 
 /** The parent owns private data, so course edits and journal saves stay in sync. */
 export default function TodayPlan({
+  liveNow = Date.now(),
   accountId,
   currentRunner,
   profile,
@@ -122,6 +125,8 @@ export default function TodayPlan({
     <ul className="today-plan-list">
       {items.map((item) => (
         <TodayTask
+          profile={profile}
+          liveNow={liveNow}
           scope={accountId}
           key={item.task.id}
           item={item}
@@ -286,6 +291,18 @@ export default function TodayPlan({
               {renderTasks(plan.preparation)}
             </div>
           )}
+          {plan.liveUpcoming.length > 0 && (
+            <div className="today-plan-group">
+              <h3 className="today-plan-group-title">
+                Upcoming live practice <span>{plan.liveUpcoming.length}</span>
+              </h3>
+              <p className="today-plan-group-hint">
+                Plan an eligible event before class. These future exercises do not add to today’s
+                required goal.
+              </p>
+              {renderTasks(plan.liveUpcoming)}
+            </div>
+          )}
           {plan.completed.length > 0 && (
             <details className="today-plan-disclosure">
               <summary>
@@ -357,6 +374,8 @@ export default function TodayPlan({
 }
 
 function TodayTask({
+  profile,
+  liveNow,
   scope,
   item,
   runnerProgress,
@@ -364,6 +383,8 @@ function TodayTask({
   onLog,
   onPractice,
 }: {
+  profile: Profile;
+  liveNow: number;
   scope?: string;
   item: DailyPlannedTask;
   runnerProgress?: RunnerProgress;
@@ -404,6 +425,7 @@ function TodayTask({
         )}
         {runnerProgress && <RunnerAssignmentProgress progress={runnerProgress} />}
         <TaskRecordingChoiceHint scope={scope} task={task} />
+        <LiveAssignmentWindow task={task} profile={profile} now={liveNow} />
         {task.notes && (
           <details className="today-plan-instructions">
             <summary>Instructions</summary>
@@ -419,7 +441,11 @@ function TodayTask({
           {onPractice && !task.done && (
             <button className="today-plan-practice" onClick={() => onPractice('assigned')}>
               <Play size={12} />{' '}
-              {task.exercise?.type === 'audio' ? 'Listen & practice' : 'Practice'}
+              {task.exercise?.type === 'audio'
+                ? 'Listen & practice'
+                : task.exercise?.type === 'live-event'
+                  ? 'Prepare live practice'
+                  : 'Practice'}
             </button>
           )}
           {onPractice && (

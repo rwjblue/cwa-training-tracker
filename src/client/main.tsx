@@ -7,6 +7,7 @@ import {
 } from '../shared/practice-time';
 import PracticeTimeSummary from './PracticeTimeSummary';
 import { useLearnerDate } from './useLearnerDate';
+import { useLiveEventTime } from './useLiveEventTime';
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
 import ClassScheduleFields from './ClassScheduleFields';
 import ClassMeetingCard from './ClassMeetingCard';
@@ -360,6 +361,7 @@ function App() {
   const today = useLearnerDate(profile.timezone);
   const profileAccountId = account.state?.accountId;
   const tasks = account.state?.plan ?? [];
+  const liveNow = useLiveEventTime(tasks, profile);
   const latestTasks = useRef(tasks);
   latestTasks.current = tasks;
   const [offlineIdentity, setOfflineIdentity] = useState(false);
@@ -1309,6 +1311,7 @@ function App() {
                     todayPlan={
                       user ? (
                         <TodayPlan
+                          liveNow={liveNow}
                           accountId={user.id}
                           currentRunner={
                             currentRunnerProgress?.scope === scope &&
@@ -1409,6 +1412,8 @@ function App() {
                   </div>
                   <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                     <PracticeStudio
+                      profile={profile}
+                      liveNow={liveNow}
                       key={practiceLaunch.id}
                       active={page === 'practice' && !navigationBusy}
                       onLog={(initial?: Partial<PracticeSession>) =>
@@ -1535,6 +1540,7 @@ function App() {
               )}
               {page === 'course' && (
                 <Course
+                  liveNow={liveNow}
                   profile={profile}
                   entries={entries}
                   onLog={openLog}
@@ -2319,6 +2325,7 @@ function Logbook({
 }
 
 function Course({
+  liveNow,
   profile,
   entries,
   onLog,
@@ -2336,6 +2343,7 @@ function Course({
   inspection,
   returnToPractice,
 }: {
+  liveNow: number;
   tasks: PlannedTask[];
   pendingTaskIds: string[];
   inspection?: { id: string; view: 'week' | 'report' };
@@ -2377,6 +2385,7 @@ function Course({
       </div>
       {user && (
         <Plan
+          liveNow={liveNow}
           accountId={user.id}
           profile={profile}
           entries={entries}

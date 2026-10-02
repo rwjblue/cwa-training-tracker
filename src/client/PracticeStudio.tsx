@@ -1,4 +1,6 @@
 import type { CurrentPracticeTime } from '../shared/practice-time';
+import LiveAssignmentWindow from './LiveAssignmentWindow';
+import { availableForImmediatePractice } from '../shared/live-assignment';
 import { usePracticeTimeProjection } from './usePracticeTimeProjection';
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
 import { officialRecordingIdentity } from '../shared/recordings';
@@ -17,7 +19,7 @@ import {
   Shuffle,
   Square,
 } from 'lucide-react';
-import { dateInTimezone, type PracticeSession } from '../shared/training';
+import { dateInTimezone, type PracticeSession, type Profile } from '../shared/training';
 import {
   GeneratedListeningCollector,
   type GeneratedListeningSummary,
@@ -92,6 +94,8 @@ interface TaskRecordingPreferenceState {
 }
 
 export default function PracticeStudio({
+  profile,
+  liveNow = Date.now(),
   onLog,
   savedVersion,
   savedOwnerId,
@@ -117,6 +121,8 @@ export default function PracticeStudio({
   onCurrentPracticeChange,
   practiceSummary,
 }: {
+  profile?: Profile;
+  liveNow?: number;
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   practiceSummary?: React.ReactNode;
   onLog: (initial?: Partial<PracticeSession>) => void;
@@ -154,6 +160,17 @@ export default function PracticeStudio({
   const activity = launch?.activity;
   const assigned = Boolean(activity);
   const extraReview = launch?.purpose === 'review';
+  const liveTask =
+    activity?.type === 'live-event'
+      ? (tasks.find((task) => task.id === launch?.task?.id) ?? launch?.task)
+      : undefined;
+  const liveAvailable =
+    !liveTask ||
+    Boolean(
+      liveTask.exercise?.type === 'live-event' &&
+      profile &&
+      availableForImmediatePractice(liveTask, profile, liveNow),
+    );
   const recordingChoiceContext =
     activity?.type === 'audio' && activity.url && launch?.task
       ? { taskId: launch.task.id, assignedUrl: activity.url, assignedWpm: activity.characterWpm }
@@ -890,12 +907,31 @@ export default function PracticeStudio({
   };
   const startPractice = async () => {
     if (!canPractice()) return;
+    if (
+      liveTask &&
+      (liveTask.exercise?.type !== 'live-event' ||
+        !profile ||
+        !availableForImmediatePractice(liveTask, profile, Date.now()))
+    ) {
+      setError(
+        'This live event is not currently eligible. Prepare with the instructions or log work already performed.',
+      );
+      return;
+    }
     if (activity?.type === 'audio' && !recordingUrl) {
       setError(activity.unresolved ?? 'This recording is unavailable.');
       return;
     }
-    if (activity?.type === 'external' && !running && seconds === 0)
-      window.open(activity.url, '_blank', 'noopener,noreferrer');
+    if (
+      (activity?.type === 'external' || activity?.type === 'live-event') &&
+      !running &&
+      seconds === 0
+    )
+      window.open(
+        liveTask?.exercise?.type === 'live-event' ? liveTask.exercise.url : activity.url,
+        '_blank',
+        'noopener,noreferrer',
+      );
     if (((assigned && activity?.type !== 'audio') || isSending) && !running) startTimer();
     if (!playing) await play();
   };
@@ -1043,6 +1079,9 @@ export default function PracticeStudio({
               <summary>Exercise instructions</summary>
               <p>{launch.task.notes}</p>
             </details>
+          )}
+          {liveTask && profile && (
+            <LiveAssignmentWindow task={liveTask} profile={profile} now={liveNow} />
           )}
           {activity?.type === 'copy' &&
             (activity.repetitions || activity.targetAccuracy || activity.maximumAttempts) && (
@@ -1234,7 +1273,9 @@ export default function PracticeStudio({
             >
               <button
                 className="button dark"
-                disabled={activity?.type === 'audio' && !recordingUrl}
+                disabled={
+                  (activity?.type === 'audio' && !recordingUrl) || (!running && !liveAvailable)
+                }
                 onClick={() =>
                   (activity?.type === 'audio' ? playing || recordingPending : running)
                     ? pauseTimer()
@@ -1627,9 +1668,11 @@ export default function PracticeStudio({
                 ) : assigned ? (
                   <div className="assigned-offline">
                     <p>
-                      {activity?.type === 'external'
-                        ? 'Start practice opens the assigned tool in a new tab and starts your timer here.'
-                        : 'Use your key, radio, or other practice material. The timer keeps your time linked to this exercise.'}
+                      {activity?.type === 'live-event'
+                        ? 'Prepare using the official rules. Start practice is available during an eligible window and records manual time; it does not verify participation. Log already performed work separately.'
+                        : activity?.type === 'external'
+                          ? 'Start practice opens the assigned tool in a new tab and starts your timer here.'
+                          : 'Use your key, radio, or other practice material. The timer keeps your time linked to this exercise.'}
                     </p>
                   </div>
                 ) : tool !== 'free' ? (
