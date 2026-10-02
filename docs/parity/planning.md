@@ -1360,3 +1360,24 @@ reverified by current private evidence, extra-review and actual course replay
 workflows rather than skipped by closed status. Protected user documents and
 signing are unchanged. The implementation commit precedes independent review;
 production acceptance and publication are still separate gates.
+
+
+Issue #25 independently ACCEPTED at implementation
+`90a093b28de551a15a18cb2382caf23d8187925b`, with no substantive findings.
+The fresh reviewer inspected all24 changed files, passed361 focused tests and
+17 course-replay tests, then independently ran two actual Wrangler/D1 browser
+journeys (33.6s): native listening/recall/navigation/cancel/503/exact retry14.9s,
+and its own unplayed-material/manual/correction/class-date-edit boundary12.8s.
+Six captures were inspected;16 settled desktop1440/mobile390 Axe reports are
+empty. Raw evidence survives actual historical edits, while class and date
+changes remove goal credit. Browser/runtime lease was released after exit.
+Production `2d3b56a4-e1f5-4bb7-a375-8b776047bff0` now serves that exact
+implementation. The complete deploy task passed after one observed D1 API7403
+retry; no migration was needed. Fresh production health200/private401s, four
+asset SHA256 matches, Runner bridge match and public calendar GET/HEAD/304/405,
+nine stable UIDs/sequence1 and DST parser agreement pass. Protected primary
+work and signing remain unchanged. Local main records this acceptance; no push
+was attempted. GitHub commit lookup returned422, so #25 remains OPEN pending
+publication. Original private audio remains unavailable; older unmeasured
+records receive no invented credit. No physical-device or elapsed reload/crash
+recovery claim is made. Required homework stays independent of this activity.
