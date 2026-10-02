@@ -17,7 +17,7 @@ export default function MorseTranscript({
             {itemIndex === undefined && index > 0 && word.itemIndex !== track.words[index - 1].itemIndex && <><br /><br /></>}
             <button
               type="button"
-              aria-label={`Play from word ${index + 1}: ${word.text}`}
+              aria-label={`Seek to word ${index + 1}: ${word.text}`}
               aria-current={activeWord === index ? 'true' : undefined}
               className={activeWord === index ? 'is-playing-word' : ''}
               onClick={() => onSeek(index)}

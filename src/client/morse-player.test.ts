@@ -324,6 +324,73 @@ describe('native media playback boundary', () => {
     player.dispose();
   });
 
+  it('settles the prior position before clamped seeks without changing paused or playing state', async () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    const positions: number[] = [];
+    attach(player, audio);
+    player.prepare(track(), { onBeforeSeek: () => positions.push(audio.currentTime) });
+    audio.metadata();
+    const source = audio.src;
+    player.seek(1);
+    expect(positions).toEqual([0]);
+    expect(audio.paused).toBe(true);
+    await player.resume();
+    audio.currentTime = 1.2;
+    player.seekWord(2);
+    expect(positions.at(-1)).toBe(1.2);
+    expect(audio.paused).toBe(false);
+    expect(player.selectedWordIndex).toBe(2);
+    player.seekBy(-10);
+    expect(player.position).toBe(0);
+    expect(audio.paused).toBe(false);
+    const calls = positions.length;
+    player.seek(0); // A no-op cannot suspend accounting waiting for a nonexistent seeked.
+    player.seek(Number.NaN);
+    player.seekWord(-1);
+    expect(positions).toHaveLength(calls);
+    player.pause();
+    player.seek(Number.MAX_SAFE_INTEGER);
+    expect(player.position).toBe(player.track!.duration);
+    expect(player.selectedWordIndex).toBe(player.track!.words.length - 1);
+    expect(audio.paused).toBe(true);
+    expect(audio.src).toBe(source);
+    player.dispose();
+  });
+
+  it('retains a duplicate occurrence before metadata and after ended until explicit resume', async () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    const progress: MorseProgress[] = [];
+    const recording = buildMorseTrack([{ text: 'E E E' }], {
+      characterWpm: 30,
+      effectiveWpm: 20,
+      frequency: 600,
+      volume: 0.4,
+    });
+    attach(player, audio);
+    player.prepare(recording, { onProgress: (value) => progress.push(value) });
+    player.seekWord(1);
+    player.seekWord(2);
+    audio.currentTime = 0;
+    expect(player.selectedWordIndex).toBe(2);
+    audio.metadata();
+    audio.currentTime = Math.round(audio.currentTime * 1e6) / 1e6;
+    audio.dispatchEvent(new Event('timeupdate'));
+    expect(progress.at(-1)).toMatchObject({ wordIndex: 2, state: 'ready' });
+    expect(audio.paused).toBe(true);
+    audio.currentTime = recording.duration;
+    audio.ended = true;
+    audio.dispatchEvent(new Event('ended'));
+    player.seekWord(1);
+    expect(progress.at(-1)).toMatchObject({ wordIndex: 1, state: 'paused' });
+    // A native ended flag can remain stale until the pending seeked event.
+    await player.resume();
+    expect(player.position).toBe(recording.words[1].start);
+    expect(audio.paused).toBe(false);
+    player.dispose();
+  });
+
   it('preserves a word seek before metadata, follows native time, and resumes without replacing audio', async () => {
     const player = new MorsePlayer();
     const audio = new MediaElement();

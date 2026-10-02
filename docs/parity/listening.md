@@ -105,8 +105,8 @@ Current active UI routes are [C/src/client/main.tsx:63,422](https://github.com/r
 | Two station voices, two-second handoffs | **Present, small partial / P3** | P [qso-practice.ts:7](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-practice.ts#L7), [qso-round.ts:20](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-round.ts#L20) alternates fixed 450/500 Hz, adds exactly two seconds between transmissions, no trailing handoff. C [ListeningTrainer.tsx:235](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L235) uses preferred sidetone and +50 capped at 1000; at the maximum preference, both stations become 1000 Hz, losing audible distinction. Keep a distinct pair near the bound if parity is desired. |
 | Three authored stories | **Missing / P1** | P [src/data/cw-listening/stories.ts:6,16,33](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/data/cw-listening/stories.ts#L6): short trail story, medium quiet-band story, longer lake/light story. [qso-practice.ts:5](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-practice.ts#L5) combines them with templates; [player.ts:57](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/player.ts#L57) has an active Stories tab. Stories use one narrator pitch/sentence progress, not invented station alternation ([qso-round.ts:22](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-round.ts#L22)). C `PracticePreferences.tool` permits only words/qso/free, QSO catalog has four contacts, and no story content/module is wired. |
 | Native continuous WAV, pause/resume, seek bar, current-word highlight, full transcript, reveal toggle | **Present** | P [word-player.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts), [qso-panel.ts:105](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L105), [qso-round.ts:39](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-round.ts#L39); C [morse-track.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/morse-track.ts), [morse-player.ts](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/morse-player.ts), [MorseTranscript.tsx](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/MorseTranscript.tsx), [ListeningTrainer.tsx:554,583](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L554). Separate frontend report owns detailed playback/timer verification. |
-| Click a specific word while preserving paused state | **Partial / P2** | P [word-panel.ts:291](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L291), [word-player.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts) seek behavior tested at [tests/cw-training-word-practice.test.mjs:589](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-word-practice.test.mjs#L589). C [ListeningTrainer.tsx:307,318](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/ListeningTrainer.tsx#L307) always resumes after seeking; spoken branch starts the chosen word too. The word jump exists, but a paused learner cannot silently reposition. |
-| Back 10 seconds | **Missing / P2** | P [player.ts:50](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/player.ts#L50) inserts an explicit rewind action and `word-player` keeps listening credit correct across seek. C has native seek plus previous/next *word/transmission* controls, not relative-time rewind. |
+| Click a specific word while preserving paused state | **Implemented Words/QSO/Free** | P [word-panel.ts:291](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-panel.ts#L291), [word-player.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts) seek behavior tested at [tests/cw-training-word-practice.test.mjs:589](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-word-practice.test.mjs#L589). C issue #27 now uses exact global occurrences and pure paused/playing seeks, including pre-metadata and ended selections. Previous/Next retains state; separately labeled Replay current word starts deliberately. Shared player/clock behavior and actual private saved credit are verified below. Stories integrates this reusable workflow in #30. |
+| Back 10 seconds | **Implemented Words/QSO/Free** | P [player.ts:50](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/player.ts#L50) inserts an explicit rewind action and `word-player` keeps listening credit correct across seek. C issue #27 adds shared Back 10 sec, clamped to zero with paused/playing state retained. Heard movement settles before changing position; no jump credit is earned. Dedicated Replay current word is distinct, while Media Session uses the same position API. |
 | Change speed while retaining word occurrence, playback state, and heard prefix | **Implemented for Words/QSOs; device check pending** | Issue #26 preserves ordered native word-prefix timing, retimes future items, remaps exact QSO occurrences through word/station gaps, and retains playing/paused state and native rate. Replacement settles the actual old source after rendering, guards stale resume and keeps previously claimed Media Session transport. Supported native volume changes retain source/position; browsers reserving native volume for device controls retain baked volume for preparation and disclose device controls. Source: pinned [word-player.ts:174](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-player.ts#L174), [word-round.ts:66](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/word-round.ts#L66), [qso-panel.ts:120](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120). Shared occurrence mapping covers authored sentence gaps; Stories themselves remain issue #30. See the #26 ledger for exact gates and limits. |
 | Independent Words/QSOs/Stories preferences | **Partial / P2** | P [session.ts:6,9,79](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L6), [storage.ts:16,17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L16) stores each mode's character speed/selection independently. C [practice-preferences.ts:5](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L5) stores one global audio configuration shared among Words/QSO/Free. Selecting a different mode does not restore a mode-specific speed. Caveat: P's preference writer omits `fwpm` for QSOs/Stories at [storage.ts:17](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L17), so it does not fully retain effective speed when creating a fresh mode/session; its active session does retain the draft. Do not copy that omission. |
 | Public session durability, exact script, elapsed total, ended-session screen | **Missing / P1** | P [client.ts:30,77,95,107,111](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/client.ts#L30), [storage.ts:3,20](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/storage.ts#L3), [session.ts:93](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L93) stores ID/startedAt/actual accumulated time/draft/generated QSO/ended flag, checkpoints every 3s and lifecycle events, restores paused at the beginning, keeps total across public mode changes, End session -> total -> Start another session. C remembers controls only, with QSO/custom/audio position/run state in component state; reload regenerates the QSO. C has explicit private-review logging and unsaved warnings, but that does not recover discarded state. |
@@ -674,3 +674,58 @@ JS volume retains baked volume/device-control guidance; no physical-device or
 locked-phone claim is made. Actual Stories mode remains #30, with generic
 occurrence/sentence-gap mapping covered here. New recognition and unfinished
 reload/crash elapsed recovery remain excluded.
+
+### Issue #27 — state-preserving generated listening position controls
+
+Rechecked fresh issue body, comments and empty dependency API, approved scope,
+and original pinned word-player.ts:36, word-panel.ts:291 and player.ts:50.
+Words, QSOs and free text now select exact global word occurrences without
+starting paused audio; playing selection continues in the same native source.
+Previous/Next moves item starts while retaining state, and shared Back 10 sec
+clamps to zero. Accurate Seek to word labels include occurrence indexes, so
+repeated tokens remain distinct. Separately labeled Replay current word and
+start playback is deliberate; the existing Play action still resumes normally.
+An ended track retains its selected occurrence, and repositioning clears only
+the temporary player-complete display. Pure seeking retains a mixed-speed
+prefix; the accepted #26 native-tail loop discriminator remains intact.
+
+MorsePlayer settles the existing PracticeClock via a before-seek callback,
+before assigning native currentTime. A same-position no-op does not suspend
+accounting while waiting for a nonexistent seek event. Metadata applies the
+latest pending target; a stale ended flag cannot rewind a valid selected word
+when explicitly resumed. Native controls, rate, volume, source, highlighting
+and Media Session ownership stay on the same player. Seeking does not promote
+an unheard tail configuration. No new clock, private entity, SQL, binding,
+configuration, migration, export schema or reload-recovery owner is introduced.
+Public tools remain usable without an account; existing account-scoped saves,
+queues, old backup validation, history and reports retain ownership.
+
+Two meaningful player cases cover settlement order, no-op/invalid/clamped
+inputs, paused/playing retention, duplicate occurrences, pending metadata,
+microsecond rounding and ended-selection resume. The three focused player/
+timeline/clock files pass 120 tests. Two new native browser journeys pass:
+private Words at desktop keyboard/mobile touch through exact seek/step/rewind,
+canceled review, deliberate replay and saved raw heard time; public repeated-CQ
+and free text through paused selection and explicit replay. The actual metadata
+boundary delays source attachment only, then decodes the real Blob and restores
+the latest selected occurrence. No media event, elapsed time or played range is
+forged. Native ended/reposition/replay also passes. Six settled desktop/mobile
+accessibility/overflow reports are empty; four captures have been inspected.
+
+The complete affected set passes twelve journeys in 1.9 minutes: new Words
+10.0s/public QSO+Free 6.1s, applied private evidence/retry/export/history/report
+26.3s, the four accepted live-retiming/seam journeys, existing preferences/
+manual timer/native transcript and both prerecorded-answer widths. Existing
+spoken selection now uses explicit replay after the pure seek; no recognition
+subsystem expansion is introduced. The Stories frontend/corpus remains #30,
+using the same reusable transcript/player controls when introduced. Physical
+locked-device behavior remains unverified and elapsed reload/crash recovery
+is excluded. Full final regression and fresh post-commit independent review
+remain required subsequent gates.
+
+Final current-code regression: all 81 serial browser journeys pass in 16.2
+minutes, including real native listening, save recovery and Runner results.
+Final six scoped seek accessibility/overflow reports remain empty and all four
+final desktop/mobile captures were re-inspected. Required check, 1,052 tests
+across 63 files and build pass. Fresh independent review follows the focused
+implementation commit; this result does not yet declare that gate accepted.

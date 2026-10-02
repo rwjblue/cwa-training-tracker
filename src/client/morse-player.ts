@@ -16,6 +16,8 @@ export interface MorsePlayerOptions {
   volume?: number;
   /** The current in-app owner may pause transport without replacing this source. */
   canPlay?: () => boolean;
+  /** Settle heard movement before changing the native position. */
+  onBeforeSeek?: () => void;
   onProgress?: (progress: MorseProgress) => void;
   onState?: (state: MorsePlaybackState) => void;
   onFinish?: () => void;
@@ -72,6 +74,14 @@ export class MorsePlayer {
   get position() {
     const at = this.pendingSeek ?? this.audio?.currentTime ?? 0;
     return Math.max(0, Math.min(this.recording?.duration ?? 0, Number.isFinite(at) ? at : 0));
+  }
+
+  /** An ended track retains its last word as the deliberate replay target. */
+  get selectedWordIndex() {
+    if (!this.recording) return -1;
+    return this.position >= this.recording.duration
+      ? this.recording.words.length - 1
+      : Math.max(0, wordAtTime(this.recording, this.position));
   }
 
   /** Attach a visible <audio controls> supplied by the UI. Its DOM remains owned by React. */
@@ -194,7 +204,7 @@ export class MorsePlayer {
   async resume(): Promise<void> {
     if (this.disposed || !this.audio || !this.recording) return;
     if (this.options.canPlay?.() === false) return;
-    if (this.position >= this.recording.duration || this.audio.ended) {
+    if (this.position >= this.recording.duration || (this.audio.ended && this.status === 'ended')) {
       // Replaying an ended recording is a new start, not a user pause. In
       // particular, foreground spoken sequences must survive this rewind.
       if (this.status === 'ended') this.setState('ready');
@@ -235,6 +245,11 @@ export class MorsePlayer {
   seek(seconds: number) {
     if (!this.audio || !this.recording || !Number.isFinite(seconds)) return;
     const at = Math.min(this.recording.duration, Math.max(0, seconds));
+    if (at === this.position) {
+      this.progress();
+      return;
+    }
+    this.options.onBeforeSeek?.();
     this.pendingSeek = this.audio.readyState === 0 ? at : undefined;
     try {
       this.audio.currentTime = at;
@@ -249,6 +264,10 @@ export class MorsePlayer {
   seekWord(index: number) {
     const word = this.recording?.words[index];
     if (word) this.seek(word.start);
+  }
+
+  seekBy(seconds: number) {
+    this.seek(this.position + seconds);
   }
 
   stop() {

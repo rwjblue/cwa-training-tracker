@@ -42,7 +42,7 @@ test('native word speed edits preserve heard timing, paused position and continu
   expect((await state(page)).at).toBeGreaterThanOrEqual(before.at - 0.02);
   await expect.poll(async () => (await state(page)).paused).toBe(false);
   await expect(
-    page.getByRole('button', { name: 'Play from word 1: PARIS', exact: true }),
+    page.getByRole('button', { name: 'Seek to word 1: PARIS', exact: true }),
   ).toHaveAttribute('aria-current', 'true');
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
   const paused = await state(page);
@@ -80,7 +80,7 @@ test('native word speed edits preserve heard timing, paused position and continu
     .poll(
       () =>
         page
-          .getByRole('button', { name: 'Play from word 2: E', exact: true })
+          .getByRole('button', { name: 'Seek to word 2: E', exact: true })
           .getAttribute('aria-current'),
       {
         timeout:
@@ -146,7 +146,7 @@ test('native QSO retiming retains exact occurrence and rejects canceled asynchro
   await page.getByRole('button', { name: 'Reveal text', exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.25);
-  const occurrence = page.getByRole('button', { name: /^Play from word 3:/ });
+  const occurrence = page.getByRole('button', { name: /^Seek to word 3:/ });
   const exactName = await occurrence.getAttribute('aria-label');
   await occurrence.focus();
   await page.keyboard.press('Enter');
@@ -261,7 +261,7 @@ test('explicit keyboard and native rewinds retain a mixed word prefix near the l
     .toBeGreaterThan(0);
   const source = (await state(page)).source;
   const duration = await audioAt(page).evaluate((a: HTMLAudioElement) => a.duration);
-  const first = page.getByRole('button', { name: 'Play from word 1: PARIS', exact: true });
+  const first = page.getByRole('button', { name: 'Seek to word 1: PARIS', exact: true });
   await first.focus();
   for (const operation of ['keyboard', 'native'] as const) {
     // Arrange the boundary only. The tested rewind is a real control action;

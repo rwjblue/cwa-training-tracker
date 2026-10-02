@@ -312,13 +312,13 @@ test('word and QSO trainers expose the complete material and remember listening 
   await expect
     .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(0);
-  const laterWord = conversation.getByRole('button', { name: /^Play from word 12:/ });
+  const laterWord = conversation.getByRole('button', { name: /^Seek to word 12:/ });
   await laterWord.click();
   await expect(laterWord).toHaveAttribute('aria-current', 'true');
   await expect
     .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(10);
-  await conversation.getByRole('button', { name: 'Play from word 1: CQ', exact: true }).click();
+  await conversation.getByRole('button', { name: 'Seek to word 1: CQ', exact: true }).click();
   await expect
     .poll(() => media.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeLessThan(2);

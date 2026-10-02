@@ -185,7 +185,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R3 · P1** Remaining typed results                 | Native copy saves validated attempts. Issue #1 adds validated Runner and timer/recording evidence, immutable measurements, explicit corrections, history/report details and account plan checks. Add performance ratings and structured CWT heard/worked observations for other practice. Imported LCWO history remains readable with source identity and overlap-safe estimated group minutes; optional per-account live LCWO linking remains accepted issue #35, separate from native practice.                                                                                                                                                                  | Personal [result fields](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/practice-results-form.ts#L3), [LCWO accounting](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/lcwo-practice.ts#L8); [planning P14/P18/P20–P24](parity/planning.md).                                      |
 | **R4 · P1** Advisor reports                         | Keep the generic printable report, then add configurable advisor fields, per-class windows, editable durable drafts, evidence-backed suggestions, refresh preserving edits, exact prefilled-form handoff, and confirmed submitted snapshots. Saved imported report snapshots are readable with original answers/evidence in Settings. New report authoring must use actual individual verified Runner results and practiced recording speeds; do not sum scores or infer learned words from exposure.                                          | Personal [report derivation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L196), [handoff](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L282); [planning P27–P31](parity/planning.md#reports-and-evidence).                                         |
 | **R5 · P1** Sending trainer                         | The native scales reader, prescribed sections, PDF reference and timer are present, but capture is absent. Port optional adapter setup/test, keyed MIDI or focus-scoped keyboard input, raw edge timing, cautious decode/target comparison, actual-timing replay, keep/discard takes, and local retention. Keep ordinary key practice available without capture.                                                                                                                                                                                                         | Personal [active panel](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/sending-panel.ts#L68); [sending subsystem](parity/listening.md#sending-practice--large-missing-subsystem-p1).                                                                                                                                                        |
-| **R6 · P1/P2** Listening content and continuity     | Add the three authored stories as a real third mode. Issue #26 delivers live word-prefix retiming and exact QSO occurrence with playing/paused state, native rate, source accounting and volume continuity; its ledger records validation and platform limits. Preserve paused seeking, reshuffle repeated native rounds and allow editing a built-in into custom in their own issues. Issue #7 now retains bounded actual played configurations; selected-but-unplayed preferences supply no source evidence.                                                                                                                                                                                                                                        | Personal [stories](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/data/cw-listening/stories.ts#L6), [retiming](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120); [listening inventory](parity/listening.md#generated-contacts-stories-and-listening-lifecycle).                 |
+| **R6 · P1/P2** Listening content and continuity     | Add the three authored stories as a real third mode. Issue #26 delivers live word-prefix retiming and exact QSO occurrence with playing/paused state, native rate, source accounting and volume continuity; its ledger records validation and platform limits. Issue #27 delivers state-preserving word/item/relative seeks and explicit replay for Words/QSO/Free. Reshuffle repeated native rounds and allow editing a built-in into custom in their own issues. Issue #7 now retains bounded actual played configurations; selected-but-unplayed preferences supply no source evidence.                                                                                                                                                                                                                                        | Personal [stories](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/data/cw-listening/stories.ts#L6), [retiming](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120); [listening inventory](parity/listening.md#generated-contacts-stories-and-listening-lifecycle).                 |
 | **R7 · Implemented; device check pending** Spoken answers | The September 30 follow-up explicitly adds prerecorded native spoken rounds and credits actual playback through the shared media clock. Runtime browser speech is removed. Physical iPhone locked playback remains unverified; compact prebuilt MP3 optimization remains absent.                                                                                                                                                                                                                                                                                                   | [Implementation](../src/client/morse-track.ts), [asset loader](../src/client/word-speech.ts), [verification](testing.md).                                                                                                                                                                                                                                                                             |
 | **R8 · P2** Course-audio progress                   | Issue #9 delivers actual coverage and whole passes without seek credit, distinct saved/current/remaining counts, and portable per-file evidence. Task-specific choices are independently accepted in #11; Issue #12 adds bounded private difficult timestamps and relative Replay 8 sec with deliberate native playback; optional daily listening remains #25. Course replay is delivered in #10.                                                                                                                                                                                                                                               | Personal [audio session](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L41); [audio appendix](parity/audio.md#findings-by-behavior).                                                                                                                                                                                      |
 | **R9 · P1/P2** Runner continuity                          | Issue #15 retains acknowledged terminal results on the device before review, with stable run ID, accepted-start timezone/date, terminal creation time and distinct frozen review timestamp. Mixed-speed results omit generic WPM and expose recorded engine speed segments and bounded-history omissions. Logbook recovery, canceled review edits, exact retry and optional device backup inventory reuse the shared save/account/device boundaries. Issue #16 adds shared saved/current/combined/remaining time and an explicit completion policy, independently accepted and deployed. Issue #17 adds receipt-gated Save & next, retained settings/context and a fresh paused owner, including recovered Logbook continuation; no running-clock reload/crash estimate or live-engine resumption. | Personal [Runner transitions](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48); [Runner workflow](parity/listening.md#surrounding-workflow--partial).                                                                                                                                                                  |
@@ -2651,3 +2651,58 @@ JS volume retains baked volume/device-control guidance; no physical-device or
 locked-phone claim is made. Actual Stories mode remains #30, with generic
 occurrence/sentence-gap mapping covered here. New recognition and unfinished
 reload/crash elapsed recovery remain excluded.
+
+### Issue #27 — state-preserving generated listening position controls
+
+Rechecked fresh issue body, comments and empty dependency API, approved scope,
+and original pinned word-player.ts:36, word-panel.ts:291 and player.ts:50.
+Words, QSOs and free text now select exact global word occurrences without
+starting paused audio; playing selection continues in the same native source.
+Previous/Next moves item starts while retaining state, and shared Back 10 sec
+clamps to zero. Accurate Seek to word labels include occurrence indexes, so
+repeated tokens remain distinct. Separately labeled Replay current word and
+start playback is deliberate; the existing Play action still resumes normally.
+An ended track retains its selected occurrence, and repositioning clears only
+the temporary player-complete display. Pure seeking retains a mixed-speed
+prefix; the accepted #26 native-tail loop discriminator remains intact.
+
+MorsePlayer settles the existing PracticeClock via a before-seek callback,
+before assigning native currentTime. A same-position no-op does not suspend
+accounting while waiting for a nonexistent seek event. Metadata applies the
+latest pending target; a stale ended flag cannot rewind a valid selected word
+when explicitly resumed. Native controls, rate, volume, source, highlighting
+and Media Session ownership stay on the same player. Seeking does not promote
+an unheard tail configuration. No new clock, private entity, SQL, binding,
+configuration, migration, export schema or reload-recovery owner is introduced.
+Public tools remain usable without an account; existing account-scoped saves,
+queues, old backup validation, history and reports retain ownership.
+
+Two meaningful player cases cover settlement order, no-op/invalid/clamped
+inputs, paused/playing retention, duplicate occurrences, pending metadata,
+microsecond rounding and ended-selection resume. The three focused player/
+timeline/clock files pass 120 tests. Two new native browser journeys pass:
+private Words at desktop keyboard/mobile touch through exact seek/step/rewind,
+canceled review, deliberate replay and saved raw heard time; public repeated-CQ
+and free text through paused selection and explicit replay. The actual metadata
+boundary delays source attachment only, then decodes the real Blob and restores
+the latest selected occurrence. No media event, elapsed time or played range is
+forged. Native ended/reposition/replay also passes. Six settled desktop/mobile
+accessibility/overflow reports are empty; four captures have been inspected.
+
+The complete affected set passes twelve journeys in 1.9 minutes: new Words
+10.0s/public QSO+Free 6.1s, applied private evidence/retry/export/history/report
+26.3s, the four accepted live-retiming/seam journeys, existing preferences/
+manual timer/native transcript and both prerecorded-answer widths. Existing
+spoken selection now uses explicit replay after the pure seek; no recognition
+subsystem expansion is introduced. The Stories frontend/corpus remains #30,
+using the same reusable transcript/player controls when introduced. Physical
+locked-device behavior remains unverified and elapsed reload/crash recovery
+is excluded. Full final regression and fresh post-commit independent review
+remain required subsequent gates.
+
+Final current-code regression: all 81 serial browser journeys pass in 16.2
+minutes, including real native listening, save recovery and Runner results.
+Final six scoped seek accessibility/overflow reports remain empty and all four
+final desktop/mobile captures were re-inspected. Required check, 1,052 tests
+across 63 files and build pass. Fresh independent review follows the focused
+implementation commit; this result does not yet declare that gate accepted.

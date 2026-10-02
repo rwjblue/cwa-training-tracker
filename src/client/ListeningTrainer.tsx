@@ -10,6 +10,7 @@ import {
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { buildMorseTrack, MorsePlayer, morseTimeline, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
+import ListeningSeekControls from './ListeningSeekControls';
 import { buildSpokenWordTrack } from './morse-track';
 import { loadWordSpeech } from './word-speech';
 import QsoCopy from './QsoCopy';
@@ -58,6 +59,7 @@ export default forwardRef<
     onPlaying: (playing: boolean) => void;
     onPlayed?: (summary: GeneratedListeningSummary) => void;
     onBeforeReplace?: () => void;
+    onBeforeSeek?: () => void;
     onError: (message: string) => void;
   }
 >(function ListeningTrainer(
@@ -69,6 +71,7 @@ export default forwardRef<
     onPlaying: onPlayingChange,
     onPlayed,
     onBeforeReplace,
+    onBeforeSeek,
     onError: onErrorMessage,
   },
   ref,
@@ -81,12 +84,14 @@ export default forwardRef<
     onPlaying: onPlayingChange,
     onPlayed,
     onBeforeReplace,
+    onBeforeSeek,
     onError: onErrorMessage,
   });
   callbacks.current = {
     onPlaying: onPlayingChange,
     onPlayed,
     onBeforeReplace,
+    onBeforeSeek,
     onError: onErrorMessage,
   };
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
@@ -300,6 +305,7 @@ export default forwardRef<
         {
           title: next.title,
           canPlay: acceptsPlayback,
+          onBeforeSeek: () => callbacks.current.onBeforeSeek?.(),
           loop: next.loop,
           volume: volumeOwner.current,
           onProgress: (progress) => {
@@ -323,7 +329,9 @@ export default forwardRef<
               install(available.current, 0, true);
               return;
             }
-            if (progress.state === 'playing') heardConfiguration(progress.position);
+            if (progress.state === 'playing' && !player.current.paused && !audio.current?.seeking)
+              heardConfiguration(progress.position);
+            if (progress.wordIndex >= 0) setComplete(false);
             setActiveWord(progress.wordIndex);
             const answerStart = track.words[progress.wordIndex]?.answerStart;
             setAnswer(answerStart !== undefined && progress.position >= answerStart);
@@ -377,9 +385,10 @@ export default forwardRef<
       throw error;
     }
   };
-  const prepare = () => {
+  const prepare = (restartEnded = true) => {
     if (prepared.current?.material === content && prepared.current.resetKey === resetKey) {
       if (
+        restartEnded &&
         prepared.current.mixed &&
         applied &&
         player.current.position >= prepared.current.track.duration
@@ -422,9 +431,28 @@ export default forwardRef<
   const seekWord = (word: number) => {
     if (!canPlay()) return;
     try {
-      prepare();
+      prepare(false);
       player.current.seekWord(word);
-      void player.current.resume().catch((error: Error) => onError(error.message));
+    } catch (error) {
+      onError((error as Error).message);
+    }
+  };
+  const back = () => {
+    if (!canPlay()) return;
+    try {
+      prepare(false);
+      player.current.seekBy(-10);
+    } catch (error) {
+      onError((error as Error).message);
+    }
+  };
+  const replayWord = async () => {
+    if (!canPlay()) return;
+    const word = player.current.selectedWordIndex;
+    try {
+      prepare(false);
+      player.current.seekWord(Math.max(0, word));
+      await player.current.resume();
     } catch (error) {
       onError((error as Error).message);
     }
@@ -497,14 +525,21 @@ export default forwardRef<
   }, [p.volume]);
   useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
   const step = (delta: number) => {
-    stop();
-    const length = isWords ? words.length : qso.lines.length;
-    index.current = Math.min(Math.max(0, index.current + delta), Math.max(0, length - 1));
-    setPosition(index.current);
-    setComplete(false);
-    setAnswer(false);
-    if (prepared.current?.track === track && track)
-      player.current.seek(track.items[index.current]?.start ?? 0);
+    if (!canPlay()) return;
+    const requested = index.current + delta;
+    try {
+      prepare(false);
+      const items = player.current.track?.items;
+      if (!items?.length) return;
+      const next = Math.min(Math.max(0, requested), items.length - 1);
+      player.current.seek(items[next].start);
+      index.current = next;
+      setPosition(next);
+      setComplete(false);
+      setAnswer(false);
+    } catch (error) {
+      onError((error as Error).message);
+    }
   };
   const total = isWords
     ? words.length ||
@@ -726,9 +761,10 @@ export default forwardRef<
             ? 'Round complete. Play to listen again.'
             : checkingCopy && !copyRevealed
               ? 'Replay as often as you need. Your copy stays here.'
-              : 'Pause keeps your place. Select any word to listen from there.'}
+              : 'Words and Previous/Next move your place while keeping playback playing or paused.'}
         </span>
       </div>
+      {mediaReady && <ListeningSeekControls onBack={back} onReplay={() => void replayWord()} />}
       <div className="native-morse-player" hidden={!mediaReady}>
         <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
       </div>

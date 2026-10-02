@@ -70,7 +70,10 @@ for (const viewport of [
     expect(await media.evaluate((node: HTMLAudioElement) => node.currentTime)).toBeGreaterThan(0);
     await page
       .locator('.trainer-current')
-      .getByRole('button', { name: 'Play from word 2: I', exact: true })
+      .getByRole('button', { name: 'Seek to word 2: I', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: 'Replay current word and start playback', exact: true })
       .click();
     await expect(page.getByText('WORD 2 OF 2 · LISTENING', { exact: true })).toBeVisible();
     await expect(page.getByText('WORD 1 OF 2 · LISTENING', { exact: true })).toBeVisible();

@@ -48,6 +48,7 @@ import {
 import ListeningTrainer, { type ListeningTrainerHandle } from './ListeningTrainer';
 import ListeningSoundSettings from './ListeningSoundSettings';
 import MorseTranscript from './MorseTranscript';
+import ListeningSeekControls from './ListeningSeekControls';
 import MorseRunnerStudio, {
   DEFAULT_RUNNER_SETTINGS,
   type MorseRunnerStudioHandle,
@@ -746,6 +747,7 @@ export default function PracticeStudio({
     const summary = freeListeningSummary(next, preferences);
     player.current.prepare(next, {
       title: 'Free Morse practice',
+      onBeforeSeek: () => timer.pauseMedia(),
       canPlay: canPractice,
       onProgress: (progress) => setFreeWord(progress.wordIndex),
       onState: (state) => {
@@ -766,7 +768,25 @@ export default function PracticeStudio({
     try {
       prepareFree();
       player.current.seekWord(index);
-      void player.current.resume().catch((error: Error) => setError(error.message));
+    } catch (error) {
+      setError((error as Error).message);
+    }
+  };
+  const backFree = () => {
+    if (!canPractice()) return;
+    try {
+      prepareFree();
+      player.current.seekBy(-10);
+    } catch (error) {
+      setError((error as Error).message);
+    }
+  };
+  const replayFreeWord = async () => {
+    if (!canPractice()) return;
+    try {
+      prepareFree();
+      player.current.seekWord(Math.max(0, player.current.selectedWordIndex));
+      await player.current.resume();
     } catch (error) {
       setError((error as Error).message);
     }
@@ -1701,6 +1721,7 @@ export default function PracticeStudio({
                     onPlaying={setPlaying}
                     onPlayed={recordGeneratedListening}
                     onBeforeReplace={() => timer.pauseMedia()}
+                    onBeforeSeek={() => timer.pauseMedia()}
                     onError={(message) => {
                       pauseTimer();
                       setError(message);
@@ -1845,6 +1866,12 @@ export default function PracticeStudio({
                     <p id="morse-text-help" className="field-hint">
                       Letters, numbers, and common punctuation. Unsupported characters are skipped.
                     </p>
+                    {freeTrack && (
+                      <ListeningSeekControls
+                        onBack={backFree}
+                        onReplay={() => void replayFreeWord()}
+                      />
+                    )}
                     <div className="native-morse-player" hidden={!freeTrack}>
                       <audio
                         ref={attachFreeAudio}
