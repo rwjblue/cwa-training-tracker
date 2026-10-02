@@ -6701,3 +6701,247 @@ describe('typed private live assignment metadata', () => {
     );
   });
 });
+
+describe('private native performance and CWT observations', () => {
+  const assessment = {
+    version: 1,
+    source: 'self-reported',
+    performanceRating: 'very-good',
+    cwt: {
+      heardCallsigns: 'W1SYN\nK2SYN',
+      heardExchanges: 'SAM 001',
+      workedCallsigns: 'K2SYN',
+      workedNames: 'KIM',
+      comments: 'Report-only synthetic comment',
+    },
+  };
+  it('retains all fields, unknown/zero, exact retries and mutable judgments without changing measured facts', async () => {
+    const auth = await signIn('native-assessment@example.test');
+    const raw = { version: 1, type: 'timed', measurement: { seconds: 60 }, recordings: [] };
+    const body = {
+      ...entry('cwt-observations'),
+      kind: 'on-air',
+      source: 'timer',
+      minutes: 1,
+      notes: 'Private freeform note',
+      metadata: { evidence: raw, assessment },
+    };
+    const created = await request('/api/entries', 'POST', body, auth.cookie);
+    expect(created.status).toBe(201);
+    const saved = ((await created.json()) as { entry: PracticeSession }).entry;
+    expect(saved.qsoCount).toBeUndefined();
+    expect(saved.metadata?.assessment).toEqual(assessment);
+    expect((await request('/api/entries', 'POST', body, auth.cookie)).status).toBe(200);
+    const updated = {
+      ...saved,
+      qsoCount: 0,
+      metadata: {
+        ...saved.metadata,
+        assessment: { ...assessment, performanceRating: 'poor' },
+        evidence: { ...raw, correction: { seconds: 90, reason: 'Extra deliberate practice' } },
+      },
+    };
+    expect((await request(`/api/entries/${saved.id}`, 'PUT', updated, auth.cookie)).status).toBe(
+      200,
+    );
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0]).toMatchObject({
+      qsoCount: 0,
+      minutes: 1.5,
+      notes: body.notes,
+      metadata: { assessment: updated.metadata.assessment, evidence: updated.metadata.evidence },
+    });
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    expect(
+      (
+        await request(
+          `/api/entries/${saved.id}`,
+          'PUT',
+          {
+            ...exported.sessions[0],
+            metadata: {
+              ...exported.sessions[0].metadata,
+              evidence: { ...raw, measurement: { seconds: 59 } },
+            },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const other = await signIn('native-assessment-other@example.test');
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, other.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual([]);
+    expect(
+      (await request(`/api/entries/${saved.id}`, 'PUT', exported.sessions[0], other.cookie)).status,
+    ).toBe(404);
+    expect((await request('/api/entries', 'POST', body)).status).toBe(401);
+  });
+
+  it('rejects bad enum/text/category/reference/count writes and imports atomically', async () => {
+    const auth = await signIn('assessment-invalid@example.test');
+    const valid = { ...entry('valid-cwt'), kind: 'on-air', metadata: { assessment } };
+    expect((await request('/api/entries', 'POST', valid, auth.cookie)).status).toBe(201);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const invalid = [
+      { ...valid, metadata: { assessment: { ...assessment, performanceRating: 'easy' } } },
+      {
+        ...valid,
+        metadata: { assessment: { ...assessment, cwt: { comments: 'x'.repeat(4001) } } },
+      },
+      { ...valid, metadata: { assessment: { ...assessment, cwt: { comments: 'x\0y' } } } },
+      { ...valid, metadata: { assessment: { ...assessment, cwt: { comments: null } } } },
+      { ...valid, kind: 'listening' },
+      { ...valid, source: 'morse' },
+      { ...valid, metadata: { assessment: { ...assessment, sessionId: 'somebody-else' } } },
+      { ...valid, qsoCount: -1 },
+    ];
+    for (const [index, malformed] of invalid.entries()) {
+      const body = { ...malformed, id: `bad-cwt-${index}` };
+      expect((await request('/api/entries', 'POST', body, auth.cookie)).status).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            { mode: 'replace', data: { ...exported, sessions: [exported.sessions[0], body] } },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    }
+    expect(
+      (
+        await request(
+          '/api/entries',
+          'POST',
+          {
+            ...valid,
+            id: 'foreign-task',
+            metadata: { assessment, plannedTaskId: 'other-account-task' },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+  });
+
+  it('preserves original rating/CWT archives separately, and retains old synthetic counts without new contact credit', async () => {
+    const auth = await signIn('assessment-history@example.test');
+    const legacyAttempt = {
+      performanceRating: 'poor',
+      difficulty: 'easy',
+      cwtResult: { qsoCount: 0, heardCallsigns: 'W1OLD', comments: 'Original report comment' },
+    };
+    const original = {
+      ...entry('original-cwt'),
+      kind: 'on-air',
+      source: 'legacy',
+      qsoCount: 0,
+      metadata: { legacyAttempt },
+    };
+    expect((await request('/api/entries', 'POST', original, auth.cookie)).status).toBe(201);
+    const synthetic = {
+      ...entry('old-generated-count'),
+      source: 'morse',
+      qsoCount: 2,
+      metadata: { practiceTool: 'qso' },
+    };
+    expect(
+      (
+        await request(
+          '/api/entries',
+          'POST',
+          {
+            ...synthetic,
+            id: 'new-generated-count',
+            metadata: {
+              ...synthetic.metadata,
+              assessment: { version: 1, source: 'self-reported', performanceRating: 'good' },
+            },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0].metadata?.legacyAttempt).toEqual(legacyAttempt);
+    expect(exported.sessions[0].metadata?.assessment).toBeUndefined();
+    // Older valid pending bodies upload exactly without being promoted to actual contacts.
+    const queued = {
+      ...synthetic,
+      id: 'older-queued-count',
+      createdAt: new Date(synthetic.createdAt).toISOString(),
+    };
+    const queuedResponse = await request('/api/entries', 'POST', queued, auth.cookie);
+    expect(queuedResponse.status).toBe(201);
+    const queuedSaved = ((await queuedResponse.json()) as { entry: PracticeSession }).entry;
+    expect(queuedSaved).toEqual(queued);
+    expect((await request('/api/entries', 'POST', queued, auth.cookie)).status).toBe(200);
+
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...exported, sessions: [...exported.sessions, synthetic] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const preserved = (
+      (await (await request('/api/export', 'GET', undefined, auth.cookie)).json()) as TrainingExport
+    ).sessions.find((row) => row.id === synthetic.id)!;
+    expect(preserved.qsoCount).toBe(2);
+    expect(
+      (
+        await request(
+          `/api/entries/${synthetic.id}`,
+          'PUT',
+          { ...preserved, notes: 'Edited historical note' },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(
+          `/api/entries/${synthetic.id}`,
+          'PUT',
+          {
+            ...preserved,
+            qsoCount: 3,
+            metadata: {
+              ...preserved.metadata,
+              assessment: { version: 1, source: 'self-reported', performanceRating: 'good' },
+            },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+  });
+});

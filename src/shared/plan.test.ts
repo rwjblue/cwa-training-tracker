@@ -983,7 +983,7 @@ describe('advisor practice reports', () => {
     );
     expect(report).toContain('N0CALL — practice report');
     expect(report).toContain('9.5 independent-practice minutes across 1 days.');
-    expect(report).toContain('0 QSOs');
+    expect(report).toContain('0 actual on-air QSOs (self-reported)');
     expect(report).toContain('60 min · on-air · class');
     expect(report).toContain('Listening only');
     expect(report).not.toContain('100 min');

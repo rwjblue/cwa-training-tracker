@@ -1,3 +1,10 @@
+import {
+  CWT_OBSERVATION_FIELDS,
+  PERFORMANCE_RATINGS,
+  supportsOnAirObservations,
+  practiceAssessmentDetails,
+  type CwtObservations,
+} from '../shared/practice-assessment';
 import { useWordContent } from './useWordContent';
 import {
   dailyPracticeGoals,
@@ -2266,6 +2273,7 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
         )}
         <LegacyAttemptDetails entry={entry} />
         <CopyAttemptDetails entry={entry} />
+        <PracticeAssessmentDetails entry={entry} />
         <PracticeEvidenceDetails entry={entry} />
       </div>
       <span className="session-date">
@@ -2278,6 +2286,17 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
       {actions}
     </div>
   );
+}
+function PracticeAssessmentDetails({ entry }: { entry: PracticeSession }) {
+  const details = practiceAssessmentDetails(entry);
+  return details.length ? (
+    <details className="session-scratchpad">
+      <summary>Performance and on-air observations</summary>
+      {details.map((detail) => (
+        <p key={detail}>{detail}</p>
+      ))}
+    </details>
+  ) : null;
 }
 function EmptyState({
   icon: Icon,
@@ -3002,7 +3021,31 @@ function SessionModal({
     scratchpad: typeof initial.metadata?.scratchpad === 'string' ? initial.metadata.scratchpad : '',
     context: initial.context ?? 'practice',
     qsoCount: initial.qsoCount === undefined ? '' : String(initial.qsoCount),
+    performanceRating: initial.metadata?.assessment?.performanceRating ?? '',
+    cwtEvent: initial.metadata?.assessment?.cwt !== undefined ? 'cwt' : '',
+    heardCallsigns: initial.metadata?.assessment?.cwt?.heardCallsigns ?? '',
+    heardExchanges: initial.metadata?.assessment?.cwt?.heardExchanges ?? '',
+    workedCallsigns: initial.metadata?.assessment?.cwt?.workedCallsigns ?? '',
+    workedNames: initial.metadata?.assessment?.cwt?.workedNames ?? '',
+    comments: initial.metadata?.assessment?.cwt?.comments ?? '',
   });
+  const canObserveOnAir = supportsOnAirObservations({ ...initial, kind: form.kind });
+  const metadataFromForm = (value: typeof form) => {
+    const metadata: Record<string, unknown> = { ...initial.metadata, scratchpad: value.scratchpad };
+    delete metadata.assessment;
+    if (value.performanceRating || value.cwtEvent) {
+      const cwt: CwtObservations = {};
+      for (const key of Object.keys(CWT_OBSERVATION_FIELDS) as (keyof CwtObservations)[])
+        if (value[key] !== '') cwt[key] = value[key];
+      metadata.assessment = {
+        version: 1,
+        source: 'self-reported',
+        ...(value.performanceRating ? { performanceRating: value.performanceRating } : {}),
+        ...(value.cwtEvent ? { cwt } : {}),
+      };
+    }
+    return metadata;
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(evidenceError);
   const [draftError, setDraftError] = useState('');
@@ -3018,7 +3061,7 @@ function SessionModal({
           notes: next.notes,
           context: next.context,
           lesson: next.lesson === '' ? undefined : Number(next.lesson),
-          metadata: { ...initial.metadata, scratchpad: next.scratchpad },
+          metadata: metadataFromForm(next),
         });
         retainRunnerReview(scope, entry, false, capturedDeviceToken);
         setDraftError('');
@@ -3050,7 +3093,7 @@ function SessionModal({
       kind: form.kind,
       minutes,
       notes: form.notes,
-      metadata: { ...initial.metadata, scratchpad: form.scratchpad },
+      metadata: metadataFromForm(form),
       context: form.context,
       source: initial.source ?? 'manual',
     };
@@ -3078,7 +3121,7 @@ function SessionModal({
             reason: correction.reason,
           };
         } else delete corrected.correction;
-        data.metadata = { ...initial.metadata, scratchpad: form.scratchpad, evidence: corrected };
+        data.metadata = { ...(data.metadata as Record<string, unknown>), evidence: corrected };
       }
       if (attributedRunner && !isExisting) {
         data.metadata = {
@@ -3328,17 +3371,80 @@ function SessionModal({
               )}
             </>
           )}
-          {form.kind === 'on-air' && (
+          <label className="field">
+            Performance rating <span className="label-hint">optional</span>
+            <select
+              value={form.performanceRating}
+              onChange={(e) => update('performanceRating', e.target.value)}
+            >
+              <option value="">Not rated</option>
+              {Object.entries(PERFORMANCE_RATINGS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <span className="field-hint">
+              Your judgment of this practice. Separate from accuracy and historical difficulty.
+            </span>
+          </label>
+          {(canObserveOnAir || form.cwtEvent) && (
+            <label className="field">
+              Event observations <span className="label-hint">optional</span>
+              <select value={form.cwtEvent} onChange={(e) => update('cwtEvent', e.target.value)}>
+                <option value="">No event observations</option>
+                <option value="cwt">CWops Tests (CWT)</option>
+              </select>
+            </label>
+          )}
+          {form.cwtEvent && (
+            <>
+              <p className="field-hint">
+                Record what you heard or worked during CWT. Leave unknown details blank; hearing a
+                station does not imply working it. Report comments are separate from private notes.
+              </p>
+              {!canObserveOnAir && (
+                <p className="alert error" role="alert">
+                  CWT observations require on-air practice. Choose On air or remove the event
+                  observations.
+                </p>
+              )}
+              <div className="form-grid">
+                {Object.entries(CWT_OBSERVATION_FIELDS).map(([key, label]) => (
+                  <label className="field" key={key}>
+                    {label} <span className="label-hint">optional</span>
+                    <textarea
+                      value={form[key as keyof CwtObservations]}
+                      onChange={(e) => update(key as keyof CwtObservations, e.target.value)}
+                      maxLength={4000}
+                      rows={2}
+                    />
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+          {canObserveOnAir && (
             <label className="field">
               QSO count <span className="label-hint">optional</span>
               <input
                 type="number"
                 min="0"
                 max="100000"
+                step="1"
                 value={form.qsoCount}
                 onChange={(e) => update('qsoCount', e.target.value)}
               />
+              <span className="field-hint">
+                Actual on-air contacts only. Blank means unknown; 0 explicitly records no contacts.
+              </span>
             </label>
+          )}
+          {!canObserveOnAir && form.qsoCount !== '' && (
+            <p className="field-hint">
+              Retained {form.kind === 'simulator' ? 'simulated' : 'historical'} count:{' '}
+              {form.qsoCount}. This is not actual on-air contact credit.
+            </p>
           )}
           <label className="field">
             Notes <span className="label-hint">optional</span>

@@ -120,6 +120,12 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await expect(opportunity).toContainText('No CWT window remains before the deadline.');
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Time practiced/ })).toHaveValue(workedTime);
+  await page.getByRole('combobox', { name: /^Performance rating/ }).selectOption('good');
+  await page.getByRole('combobox', { name: /^Event observations/ }).selectOption('cwt');
+  await page.getByRole('textbox', { name: /^Callsigns heard/ }).fill('W1SYN');
+  await page
+    .getByRole('textbox', { name: /^CWT comments for the report/ })
+    .fill('Assigned monitoring observation');
   const submitted: unknown[] = [];
   await page.route('**/api/entries', async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
@@ -151,6 +157,12 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   expect(entries[0]).toEqual(submitted[0]);
   expect(entries[0].metadata.plannedTaskId).toBe(owned.id);
   expect(entries[0].qsoCount).toBeUndefined();
+  expect(entries[0].metadata.assessment).toEqual({
+    version: 1,
+    source: 'self-reported',
+    performanceRating: 'good',
+    cwt: { heardCallsigns: 'W1SYN', comments: 'Assigned monitoring observation' },
+  });
   expect(
     (await (await context.request.get('/api/plan')).json()).plan.find(
       (task: { id: string }) => task.id === owned.id,

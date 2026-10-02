@@ -1,3 +1,8 @@
+import {
+  supportsOnAirObservations,
+  validatePracticeAssessment,
+  type PracticeAssessment,
+} from './practice-assessment.ts';
 import { legacyPlan, validatePlan, type PlannedTask } from './plan.ts';
 import { validateCopyAttempt, type CopyAttempt } from './copy-practice.ts';
 import { copyAttemptSessionFields } from './copy-report.ts';
@@ -51,6 +56,7 @@ export interface PracticeSession {
     copyAttempt?: CopyAttempt;
     evidence?: PracticeEvidence;
     practicePurpose?: PracticePurpose;
+    assessment?: PracticeAssessment;
   };
 }
 
@@ -631,6 +637,14 @@ export function validatePracticeSession(
       Object.assign(session, measured);
       session.metadata = { ...metadata, ...measured.metadata };
     }
+  }
+  if (session.metadata?.assessment !== undefined) {
+    const assessment = validatePracticeAssessment(session.metadata.assessment);
+    if (assessment.cwt !== undefined && !supportsOnAirObservations(session))
+      throw new Error(
+        'CWT observations require on-air practice, not generated audio, recordings or simulator results.',
+      );
+    session.metadata = { ...session.metadata, assessment };
   }
   if (session.evidenceMode === 'historical' && session.metadata === undefined)
     throw new Error('Historical accounting requires raw timed evidence.');

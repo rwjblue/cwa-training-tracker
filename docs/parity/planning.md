@@ -1381,3 +1381,64 @@ was attempted. GitHub commit lookup returned422, so #25 remains OPEN pending
 publication. Original private audio remains unavailable; older unmeasured
 records receive no invented credit. No physical-device or elapsed reload/crash
 recovery claim is made. Required homework stays independent of this activity.
+
+
+### Issue #33 native performance and structured CWT observations
+
+The common practice form now supports optional Very good/Good/Fair/Poor ratings
+for manual, assigned, measured, Copy and Runner practice. A blank rating remains
+unrated; accuracy and imported difficulty never select one. Explicit CWT event
+selection on on-air practice exposes callsigns/exchanges heard, callsigns/names
+worked and report comments, each bounded at 4,000 characters with null/unknown
+field rejection. Monitoring needs no contact count; blank stays unknown and 0
+remains explicit. The existing generic count is the single count owner.
+
+Versioned `assessment` metadata identifies the learner as the source. Shared
+browser/Worker validation checks its exact enum/envelope and source/category;
+new assessed generated/recorded practice cannot add contact counts or CWT
+observations. Older queued generic count bodies remain exactly uploadable and
+always retain their historical classification, without actual contact credit. Native simulator counts are explicitly simulated. Old valid count
+facts still import and export unchanged, with non-on-air counts labeled historical
+rather than credited as actual contacts. Original rating/difficulty/CWT archives
+remain separate and are never automatically promoted into native assessments.
+
+Existing form, Runner review retention and completed-result queue owners handle
+new fields. Time correction preserves judgments while raw measurements stay
+immutable. History and the generic report show readable observations, learner
+provenance, record ID/date and separate CWT report comments. Typed report evidence
+excludes private notes; configurable advisor suggestions/drafts remain #36–#40.
+No new player, clock, entity, binding, schema or operating/ADIF tool is introduced.
+Pinned original types/CWT model/report enum and Worker source, plus current HEAD,
+were inspected read-only; original source/category rules inform this public model.
+
+Nine affected serial browser journeys pass in 2.2 minutes: desktop keyboard/mobile
+touch manual monitoring/create/edit/cancel/503 retry, unknown/zero count, report,
+actual downloaded backup deletion/file restore, guest actual native QSO rating
+without private upload or contact fields, declared correction, assigned CWT
+queued exact retry and retained real AudioWorklet Runner ratings. Eight new
+Axe/overflow reports are empty; desktop 1440/mobile 390 captures were inspected.
+Initial native-select probes were inspected through assertions, contexts, pixels
+and bounded traces; keyboard typeahead selects the rating without submitting the
+form. Failed probes are retained in ignored evidence; no application or timing
+workaround was introduced.
+
+Initial focused domain/real-SQL suite passes 249 tests. Complete regression,
+post-commit independent review and production deployment are still pending;
+acceptance is not yet declared. Physical-device behavior remains unverified.
+The original site and protected planning files remain read-only. Restricted
+curriculum stays linked; approved exclusions and no-push policy remain intact.
+
+A source-level compatibility check found that an initial strict count guard would
+reject older valid queued generic-count bodies. The first full browser run was
+explicitly interrupted after 14 passes (one interrupted, 77 unrun; 2.4 minutes),
+not counted as complete validation. The guard now applies to new typed assessments;
+older exact requests retain their historical counts and have no actual-contact
+credit. A real-SQL test submits an unchanged older body twice and checks exact
+receipt equality. No old pending body is rewritten or given a new assessment.
+
+The corrected full serial browser suite passes all 92 journeys in 17.6 minutes,
+including the final assessment, native Copy/Runner, assigned CWT and old recovery
+interfaces. Check, all 1,127 tests across 66 files and build pass after the count
+compatibility correction. The full browser process exited successfully and its
+port 8791 lease is released. This is browser emulation, not physical-device
+verification. Independent post-commit acceptance and production are still pending.

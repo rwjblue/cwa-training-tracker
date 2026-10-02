@@ -278,10 +278,12 @@ for (const mobile of [false, true]) {
       'readonly',
       '',
     );
+    await dialog.getByRole('combobox', { name: /^Performance rating/ }).selectOption('fair');
     const notes = 'Synthetic delayed Runner review, keep after cancellation.';
     await dialog.getByLabel(/^Notes/).fill(notes);
     await activate(page, dialog.getByRole('button', { name: 'Cancel', exact: true }), mobile);
     await activate(page, review, mobile);
+    await expect(dialog.getByRole('combobox', { name: /^Performance rating/ })).toHaveValue('fair');
     await expect(dialog.getByLabel(/^Notes/)).toHaveValue(notes);
     await expect(dialog).toContainText('20 WPM starting speed');
     await expect(dialog).toContainText('24 WPM');
@@ -357,6 +359,11 @@ for (const mobile of [false, true]) {
     await expect.poll(async () => (await retainedResults(page, user.id)).length).toBe(0);
     const entries = (await (await context.request.get('/api/entries')).json()).entries;
     expect(entries).toEqual([frozen.entry]);
+    expect(entries[0].metadata.assessment).toEqual({
+      version: 1,
+      source: 'self-reported',
+      performanceRating: 'fair',
+    });
     const storedTask = (await (await context.request.get('/api/plan')).json()).plan.find(
       (item: { id: string }) => item.id === task.id,
     );

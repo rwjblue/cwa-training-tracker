@@ -1,3 +1,4 @@
+import { practiceAssessmentDetails } from './practice-assessment.ts';
 import {
   addDays,
   courseMeetings,
@@ -680,9 +681,9 @@ export function weeklyReport(
             ]
           : []),
         ...(entry.accuracy !== undefined ? [`${entry.accuracy}% accuracy`] : []),
-        ...(entry.qsoCount !== undefined ? [`${entry.qsoCount} QSOs`] : []),
       ];
       lines.push(`- ${details.join(' · ')}${entry.notes ? ` — ${entry.notes}` : ''}`);
+      for (const detail of practiceAssessmentDetails(entry)) lines.push(`  ${detail}`);
       const attempt = savedCopyAttempt(entry);
       if (attempt) {
         for (const detail of copyAttemptReportDetails(attempt)) lines.push(`  ${detail}`);

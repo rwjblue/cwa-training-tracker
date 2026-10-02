@@ -1,3 +1,4 @@
+import { validateAssessedContactCount } from '../shared/practice-assessment';
 import {
   DEFAULT_PROFILE,
   convertLegacyExport,
@@ -231,6 +232,7 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       return json({ entry: previous, duplicate: true, accountId: auth.user.id, generation });
     throw new HttpError(409, 'A different practice entry already uses this session ID.');
   }
+  validated(() => validateAssessedContactCount(entry, previous), undefined);
   if (!id && typeof entry.metadata?.plannedTaskId === 'string')
     return saveNewLinkedEntry(
       env,

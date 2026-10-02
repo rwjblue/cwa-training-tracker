@@ -50,6 +50,7 @@ test(`measured practice review retains raw facts, validates corrections and retr
   await page.keyboard.press('Space');
   await page.getByLabel(/^Corrected total time/).fill('1:00');
   await page.getByLabel(/^Corrected recall time/).fill('0:05');
+  await page.getByRole('combobox', { name: /^Performance rating/ }).selectOption('good');
   await page.getByLabel('Correction reason', { exact: true }).fill('Timer was left running');
   await page.route(
     '**/api/entries/synthetic-evidence',
@@ -69,6 +70,7 @@ test(`measured practice review retains raw facts, validates corrections and retr
   expect(exported.sessions[0]).toMatchObject({
     minutes: 1,
     metadata: {
+      assessment: { version: 1, source: 'self-reported', performanceRating: 'good' },
       evidence: {
         measurement: { seconds: 90.25, recallSeconds: 10 },
         correction: { seconds: 60, recallSeconds: 5, reason: 'Timer was left running' },
