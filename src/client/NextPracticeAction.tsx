@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { Profile } from '../shared/training';
+import type { PracticePurpose, Profile } from '../shared/training';
 import type { PlannedTask } from '../shared/plan';
 import { blockedPracticeExplanation, type nextPracticePlan } from '../shared/next-practice';
 import './next-practice.css';
@@ -12,6 +12,7 @@ export default function NextPracticeAction({
   finishing,
   resultPending,
   currentTaskId,
+  currentPurpose,
   onStart,
   onPrepare,
   onManage,
@@ -23,6 +24,7 @@ export default function NextPracticeAction({
   finishing?: boolean;
   resultPending?: boolean;
   currentTaskId?: string;
+  currentPurpose?: PracticePurpose;
   onStart: () => void;
   onPrepare: (task: PlannedTask) => void;
   onManage: () => void;
@@ -40,7 +42,7 @@ export default function NextPracticeAction({
           Your current Runner result is ready. Use Review &amp; save run before choosing another
           assignment. The stopped engine cannot be resumed.
         </p>
-      ) : next && next.task.id === currentTaskId ? (
+      ) : next && next.task.id === currentTaskId && currentPurpose !== 'review' ? (
         <>
           <h3>Continue your current exercise</h3>
           <p>

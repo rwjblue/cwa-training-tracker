@@ -997,3 +997,29 @@ strengthen actual interaction/evidence checks; no product behavior, timeout,
 privacy, failed-save or timing assertion was weakened. All other 67 flows were
 unchanged and passed, including real Runner result/queue/recovery journeys.
 Independent post-implementation review remains pending.
+
+
+Issue #22 independent review found one P2: a saved native Copy extra-review
+owner matched the next required task by ID alone, suppressing its direct assigned
+launch and labeling retained review as the current assignment. The next card now
+compares the captured practice purpose too. Review remains review until a
+deliberate next-block action creates an assigned owner through the existing
+factory; no saved record or retained Copy round is reattributed.
+
+A new native browser regression passes (8.1s): desktop keyboard extra review,
+real generated audio movement, acknowledged automatic save, desktop/mobile
+settled guidance, mobile next assigned launch, and a second actual native result.
+The first result stays exactly unchanged with review purpose, the second has a
+fresh identity and assigned purpose, and the unfinished task remains explicitly
+unfinished. Four additional Axe/overflow checks are empty. Required final gates,
+full serialized browser coverage and post-fix independent recheck are pending.
+
+
+Issue #22 correction final gates pass: check, all 1,002 fast tests in 59 files,
+production build and all 72 serialized browser journeys (14.5m). All four next
+practice flows pass (8.6s, 9.5s, 3.7s, 7.5s), including two actual native Copy
+results with distinct review/assigned purpose. Twenty next-action Axe/overflow
+reports are empty. Existing account/lifecycle, native listening/Runner, queue,
+backup, history/report, completion and public-tool workflows pass unchanged.
+The focused correction is ready for independent post-commit recheck; production
+deployment and acceptance are not yet claimed.

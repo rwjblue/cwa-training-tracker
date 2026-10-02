@@ -2,6 +2,7 @@ import { expect, test, type Locator, type BrowserContext } from '@playwright/tes
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import { DEFAULT_PROFILE, addDays } from '../src/shared/training';
+import { defaultCopyRecipe } from '../src/shared/copy-practice';
 import type { AccountSnapshot } from '../src/shared/account-sync';
 
 test.use({ hasTouch: true });
@@ -423,4 +424,105 @@ test('next activation rechecks a class boundary after finishing without replacin
   await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
   await expect(studio.getByText(today.title, { exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
+});
+
+
+test('saved Copy review opens the same required objective with a fresh assigned purpose', async ({
+  page,
+  context,
+}) => {
+  await context.setExtraHTTPHeaders({ 'CF-Connecting-IP': '192.0.2.126' });
+  await signIn(page);
+  expect(
+    (
+      await accountRequest(context, 'PUT', '/api/settings', {
+        settings: { ...DEFAULT_PROFILE, timezone: 'UTC' },
+      })
+    ).ok(),
+  ).toBe(true);
+  const task = {
+    id: 'next-copy-purpose',
+    title: 'Required custom Copy objective',
+    kind: 'head-copy',
+    dueDate: new Date().toISOString().slice(0, 10),
+    done: false,
+    notes: '',
+    createdAt: new Date().toISOString(),
+    exercise: {
+      type: 'copy',
+      recipe: {
+        ...defaultCopyRecipe(),
+        groupKind: 'custom',
+        customCharacters: 'E',
+        groupLength: 1,
+        lengthMode: 'duration',
+        durationSeconds: 10,
+        effectiveWpm: 25,
+        startDelaySeconds: 0,
+      },
+    },
+  };
+  expect((await accountRequest(context, 'POST', '/api/plan', { task })).status()).toBe(201);
+  await page.reload();
+  const key = async (control: Locator) => {
+    await expect(control).toBeEnabled();
+    await control.focus();
+    await expect(control).toBeFocused();
+    await page.keyboard.press('Enter');
+  };
+  const row = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) });
+  await key(row.getByRole('button', { name: 'Extra review', exact: true }));
+  await expect(page.getByRole('heading', { name: 'Your extra review.', exact: true })).toBeVisible();
+  const audio = page.getByLabel('Copy practice audio', { exact: true });
+  const finishNative = async () => {
+    await expect
+      .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
+      .toBeGreaterThan(1.2);
+    page.once('dialog', (dialog) => dialog.accept());
+    await key(page.getByRole('button', { name: 'Finish early', exact: true }));
+  };
+  await key(page.getByRole('button', { name: 'Start code groups', exact: true }));
+  await finishNative();
+  await expect
+    .poll(async () => (await (await context.request.get('/api/entries')).json()).entries.length)
+    .toBe(1);
+  const reviewed = (await (await context.request.get('/api/entries')).json()).entries[0];
+  expect(reviewed.metadata).toMatchObject({
+    plannedTaskId: task.id,
+    practicePurpose: 'review',
+  });
+  await expect(page.getByRole('button', { name: 'Start next round', exact: true })).toBeVisible();
+  const next = page.getByRole('region', { name: 'Your next practice', exact: true });
+  await expect(next.getByRole('button', { name: 'Start next block', exact: true })).toBeEnabled();
+  await expectResponsive(page, 'next-saved-copy-review');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await next.getByRole('button', { name: 'Start next block', exact: true }).tap();
+  await expect(
+    page.getByRole('heading', { name: 'Your assigned practice.', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Current practice studio', exact: true }),
+  ).toContainText(task.title);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([reviewed]);
+  await expectResponsive(page, 'next-copy-assigned-purpose');
+  await page.getByRole('button', { name: 'Start code groups', exact: true }).tap();
+  await finishNative();
+  await expect
+    .poll(async () => (await (await context.request.get('/api/entries')).json()).entries.length)
+    .toBe(2);
+  const entries = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(entries.find((entry: { id: string }) => entry.id === reviewed.id)).toEqual(reviewed);
+  const assigned = entries.find((entry: { id: string }) => entry.id !== reviewed.id);
+  expect(assigned.metadata).toMatchObject({
+    plannedTaskId: task.id,
+    practicePurpose: 'assigned',
+  });
+  expect(assigned.minutes * 60).toBeGreaterThanOrEqual(1);
+  expect(
+    (await (await context.request.get('/api/plan')).json()).plan.find(
+      (item: { id: string }) => item.id === task.id,
+    ).done,
+  ).toBe(false);
 });

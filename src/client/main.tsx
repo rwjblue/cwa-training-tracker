@@ -989,6 +989,7 @@ function App() {
       finishing={Boolean(practiceLaunch && currentUnsaved)}
       resultPending={Boolean(ownedRunnerResult)}
       currentTaskId={practiceLaunch?.task?.id}
+      currentPurpose={practiceLaunch?.purpose}
       onStart={() => void startNextPractice()}
       onPrepare={(task) => void openPractice(practiceLaunchForTask(task))}
       onManage={() => void navigate('course', false, 'week')}
