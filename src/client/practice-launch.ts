@@ -21,6 +21,22 @@ export interface PracticeLaunch {
   runnerContext?: PracticeSession['context'];
 }
 
+/** Follow optional event edits for manual blocks without replacing native owners. */
+export function practiceActivityForLaunch(
+  launch: PracticeLaunch | undefined,
+  tasks: readonly PlannedTask[],
+): PracticeActivity | undefined {
+  const captured = launch?.activity;
+  if (!captured || !['timer', 'external', 'live-event'].includes(captured.type)) return captured;
+  const task = tasks.find((task) => task.id === launch?.task?.id);
+  if (!task) return captured;
+  if (task.exercise?.type === 'live-event') return task.exercise;
+  if (captured.type !== 'live-event') return captured;
+  // Clearing an event restores ordinary manual work, retaining the same clock.
+  if (task.exercise?.type === 'external') return task.exercise;
+  return task.link ? { type: 'external', url: task.link } : { type: 'timer' };
+}
+
 /** An assignment always opens its own material, never the last unrelated studio mode. */
 export function practiceLaunchForTask(
   task: PlannedTask,

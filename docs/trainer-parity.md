@@ -2007,3 +2007,25 @@ build and all 67 serialized browser journeys (13.8 minutes). Final focused
 validation additionally selects the actual “This week” control before checking
 its live opportunity. Independent post-commit review and production acceptance
 remain pending. No binding/configuration change or original-site mutation.
+
+
+Issue #21 initial independent review found two P2 failures: retained manual
+blocks used captured event identity after adding/clearing an optional event,
+and the sidebar timer bypassed eligibility. Both are corrected centrally.
+Current owned optional bindings now determine manual preparation and restrictions
+without replacing native audio/Copy/sending/Runner owners or elapsed time.
+Both Start/Resume controls share a fresh activation-time eligibility check;
+active Pause and already-worked Review/save remain available. The added browser
+regression exercises actual add/change/clear edits, retained seconds, active
+after-class policy, both control surfaces and a stale activation race through
+desktop keyboard/mobile touch. Both focused journeys pass (25.8s). Full
+revalidation, focused follow-up commit and independent recheck remain pending.
+
+
+Issue #21 review corrections pass all required root gates: check, 994 tests
+in 58 files, build and all 68 serialized browser journeys (13.9 minutes).
+Fourteen assigned-live settled Axe/overflow reports at 1440/390 are empty;
+the new binding regression adds two distinct settled states to the original
+five. Actual native recording/Copy/Runner regression journeys also pass.
+Fresh issue body/comments remain unchanged. Follow-up commit and independent
+recheck are next; production acceptance remains pending.

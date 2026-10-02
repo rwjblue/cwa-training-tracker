@@ -55,7 +55,7 @@ import MorseRunnerStudio, {
 import CopyTrainer, { type CopyTrainerHandle } from './CopyTrainer';
 import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
-import type { PracticeLaunch } from './practice-launch';
+import { practiceActivityForLaunch, type PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
 import RecordingReviewControls, { type RecordingReviewDraft } from './RecordingReviewControls';
 import {
@@ -157,7 +157,7 @@ export default function PracticeStudio({
   const visible = useRef(active);
   visible.current = active;
   const inspecting = useRef(!active);
-  const activity = launch?.activity;
+  const activity = practiceActivityForLaunch(launch, tasks);
   const assigned = Boolean(activity);
   const extraReview = launch?.purpose === 'review';
   const liveTask =
@@ -547,8 +547,16 @@ export default function PracticeStudio({
     const elapsed = timer.pause();
     return Math.floor(elapsed.seconds);
   };
+  const liveCanStart = () => {
+    if (!liveTask || (profile && availableForImmediatePractice(liveTask, profile, Date.now())))
+      return true;
+    setError(
+      'This live event is not currently eligible. Prepare with the instructions or log work already performed.',
+    );
+    return false;
+  };
   const startTimer = () => {
-    if (!canPractice() || isRunner || isCopy) return;
+    if (!canPractice() || isRunner || isCopy || !liveCanStart()) return;
     if (activity?.type === 'audio') stopPlayback();
     else if (running) return;
     identity();
@@ -907,17 +915,7 @@ export default function PracticeStudio({
   };
   const startPractice = async () => {
     if (!canPractice()) return;
-    if (
-      liveTask &&
-      (liveTask.exercise?.type !== 'live-event' ||
-        !profile ||
-        !availableForImmediatePractice(liveTask, profile, Date.now()))
-    ) {
-      setError(
-        'This live event is not currently eligible. Prepare with the instructions or log work already performed.',
-      );
-      return;
-    }
+    if (!liveCanStart()) return;
     if (activity?.type === 'audio' && !recordingUrl) {
       setError(activity.unresolved ?? 'This recording is unavailable.');
       return;
@@ -927,11 +925,7 @@ export default function PracticeStudio({
       !running &&
       seconds === 0
     )
-      window.open(
-        liveTask?.exercise?.type === 'live-event' ? liveTask.exercise.url : activity.url,
-        '_blank',
-        'noopener,noreferrer',
-      );
+      window.open(activity.url, '_blank', 'noopener,noreferrer');
     if (((assigned && activity?.type !== 'audio') || isSending) && !running) startTimer();
     if (!playing) await play();
   };
@@ -2020,6 +2014,7 @@ export default function PracticeStudio({
                       {activity?.type !== 'audio' && (
                         <button
                           className="button dark full"
+                          disabled={!running && !liveAvailable}
                           onClick={() => (running ? pauseTimer() : startTimer())}
                         >
                           {running ? <Square size={14} /> : <Play size={14} />}

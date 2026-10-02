@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
-import type { PlannedTask } from '../shared/plan';
-import { practiceLaunchForTask } from './practice-launch';
+import type { PlannedTask, PracticeExercise } from '../shared/plan';
+import { defaultCopyRecipe } from '../shared/copy-practice';
+import { practiceActivityForLaunch, practiceLaunchForTask } from './practice-launch';
 
 const task: PlannedTask = {
   id: 'task:purpose',
@@ -38,4 +39,72 @@ it('keeps native Copy conversion and originating task identity for a review laun
     task: { id: task.id, exercise: { type: 'copy', recipe: { mode: 'callsigns' } } },
     activity: { type: 'copy', recipe: { mode: 'callsigns' } },
   });
+});
+
+it('follows current optional event add, change and clear while retaining manual launch identity', () => {
+  const ordinary: PlannedTask = { ...task, kind: 'on-air', exercise: undefined };
+  const cwt: PlannedTask = {
+    ...ordinary,
+    exercise: {
+      type: 'live-event',
+      eventId: 'cwt',
+      url: 'https://cwops.org/cwops-tests/',
+      deadline: 'associated-class',
+    },
+  };
+  const sst: PlannedTask = {
+    ...cwt,
+    exercise: {
+      type: 'live-event',
+      eventId: 'sst',
+      url: 'https://www.k1usn.com/sst_rules.html',
+      deadline: 'practice-date',
+    },
+  };
+  const manual = { id: 'same-manual-owner', ...practiceLaunchForTask(ordinary) };
+  const live = { id: 'same-live-owner', ...practiceLaunchForTask(cwt) };
+  const before = structuredClone({ manual, live, cwt, sst, ordinary });
+  expect(practiceActivityForLaunch(manual, [cwt])).toBe(cwt.exercise);
+  expect(practiceActivityForLaunch(live, [sst])).toBe(sst.exercise);
+  expect(practiceActivityForLaunch(live, [ordinary])).toEqual({ type: 'timer' });
+  const linked = { ...ordinary, link: 'https://example.test/private-preparation' };
+  expect(practiceActivityForLaunch(live, [linked])).toEqual({ type: 'external', url: linked.link });
+  expect(practiceActivityForLaunch(live, [])).toBe(live.activity);
+  expect({ manual, live, cwt, sst, ordinary }).toEqual(before);
+});
+
+it('keeps captured native material and public owners independent of later event edits', () => {
+  const live: PlannedTask = {
+    ...task,
+    kind: 'on-air',
+    exercise: {
+      type: 'live-event',
+      eventId: 'cwt',
+      url: 'https://cwops.org/cwops-tests/',
+      deadline: 'associated-class',
+    },
+  };
+  const nativeActivities: PracticeExercise[] = [
+    { type: 'audio', url: 'https://example.test/exchange.mp3' },
+    { type: 'sending', url: 'https://example.test/scales.pdf', sections: ['warm-up', 'drill'] },
+    { type: 'copy', recipe: defaultCopyRecipe('words') },
+    {
+      type: 'morse-runner',
+      url: '/vendor/web-morse-runner/index.html',
+      settings: {
+        mode: 'SingleCall',
+        wpm: 20,
+        durationSeconds: 60,
+        activity: 1,
+        conditions: { qrm: false, qrn: false, qsb: false, flutter: false, lids: false },
+      },
+    },
+  ];
+  for (const activity of nativeActivities) {
+    const launch = { id: 'native', task, activity };
+    expect(practiceActivityForLaunch(launch, [live])).toBe(activity);
+  }
+  const publicLaunch = { id: 'guest', activity: { type: 'timer' as const } };
+  expect(practiceActivityForLaunch(publicLaunch, [live])).toBe(publicLaunch.activity);
+  expect(practiceActivityForLaunch(undefined, [live])).toBeUndefined();
 });
