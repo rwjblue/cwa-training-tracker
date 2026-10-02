@@ -796,3 +796,21 @@ journeys pass in the focused four-case gate (8.6/14.1 seconds), then in the fina
 79-journey full regression (8.3/14.0 seconds; full gate 16.3 minutes). No failure
 is erased or counted as passing. Independent post-commit combined recheck
 remains required before accepted delivery.
+
+
+The focused account-date fixture correction
+`568890f694f31286e45c23d6bfb4404c54713cd0` is independently ACCEPTED with
+issue #16. The reviewer arranged actual Pacific/Honolulu dates one day behind
+UTC and independently exercised both desktop/mobile marks journeys: private
+mark-only save adds no history; relative replay saves 1.859746/1.929771 actual
+heard seconds, zero passes, exact source/mark and the account practice date.
+This challenges the original date split without changing native clocks.
+Two specifically named marks Axe reports are empty and both screenshots were
+inspected (included in the combined eight-check review inventory).
+
+The final complete 79-journey gate passes in 16.3 minutes; check, all 923 tests
+and build pass. The combined accepted production deployment is version
+`cce343ac-d4fa-4c78-a704-df84ca331c94`. Production asset/health/private-boundary
+checks pass. This is a fixture-only correction; product scheduling, media credit,
+assertions and production timeouts are unchanged. Its two earlier failed traces
+remain retained. No push was attempted; #12 remains OPEN pending publication.
