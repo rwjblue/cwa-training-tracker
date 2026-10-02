@@ -15,6 +15,12 @@ No personal records or private imports were inspected. Pinned links describe tho
 baselines; relative implementation links describe this checkout. Implementation
 status is not a claim about deployment or physical-device testing.
 
+The [October 2 publication journal](parity/publication-2026-10-02.md) confirms
+external signed publication and closure of accepted issues #10–#27. Earlier
+ledger entries describing those revisions as unpublished record their status
+at the time. This agent did not push; subsequent local work follows the current
+commit/main/deploy instruction.
+
 Detailed evidence and source coverage are retained in three appendices:
 
 - [Planning, records, integrations, reports, and migration](parity/planning.md)
