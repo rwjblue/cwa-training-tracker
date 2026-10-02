@@ -200,7 +200,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R11 · P1/P2** Live practice and reminders         | Public SST/MST/CWT agenda, Local/UTC preference and recurring feed are independently accepted and deployed in #20 with current organizer verification. Assigned typed live eligibility and retained manual work are independently accepted and deployed in #21; private reminder subscriptions remain #46. Public schedule does not infer participation or query private data.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
 | **R12 · P2** Exact public listening recipes                  | Bounded, versioned public listening recipes that reproduce the exact exercise remain accepted issue #45. Real-contact operating guidance, contact logs, ADIF export and unrelated public practice tools are excluded from this execution.                                                                                                                                                                                                                                        | Personal [real QSO helper](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-qso.ts#L137), [share recipes](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115); [public-tool inventory](parity/listening.md#standalone-public-tools-distinct-features-not-duplicate-page-names). |
 | **R13 · P1/P2** Migration fidelity                  | Historical imports now expose original scratchpads and structured results, map LCWO group speed correctly, omit pure dismissal bookkeeping, derive Runner completion, and add overlap-safe one-minute LCWO group estimates. A timezone-aware cutoff limits practice/completion while retaining the full source archive. Settings makes reports, LCWO, materials and device drafts readable. Native report/material editing and recoverable device work remain separate migrations; readable preserved records are not complete feature parity. | Tracker baseline [converter](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L502), [completion import](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L425); [planning P33–P36](parity/planning.md#backups-migrations-and-api-fidelity).                      |
-| **R14 · P2/P3** Preference refinements              | Issue #31 implements independent Words/QSO/Stories setups with both speeds, exact/preset entry through 60 WPM, 1 Hz pitch and 0.1-second pauses, local drag preview and explicit storage retry. Its ledger records validation and pending review/deployment. Distinct bounded QSO station pitches remain #32.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
+| **R14 · P2/P3** Preference refinements              | Issue #31 implements independent Words/QSO/Stories setups with both speeds, exact/preset entry through 60 WPM, 1 Hz pitch and 0.1-second pauses, local drag preview and explicit storage retry. Independent review accepted the implementation; production delivery and limits are recorded in its ledger. Distinct bounded QSO station pitches remain #32.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
 
 ## Coherent next work
 
@@ -2958,3 +2958,42 @@ acceptance is not yet declared. Distinct bounded QSO station pitches remain #32,
 and exact public recipes remain #45. Physical locked-device playback is
 unverified. New recognition, reload/crash elapsed-time recovery and real-contact/
 ADIF tools remain excluded. The original site remains read-only.
+
+
+### Issue #31 independent acceptance and production delivery
+
+Implementation `1b0c3a923b67afcfc78d34ad46f365c278e2208c` is independently
+ACCEPTED with no substantive findings. Seven independently authored browser
+journeys cover desktop 1440/mobile 390, native touch dragging and keyboard
+operation, invalid/canceled drafts, separate mode migration and reload,
+preference refusal/explicit retry, failed-save ownership, actual old/new device
+files and exact private upload retry. Two real synthetic accounts isolate their
+saved entries and exports. Actual QSO/Story native playback reaches guest-device
+evidence with exact independent settings. The reviewer ran 265 focused tests;
+six accessibility/overflow reports are clear and six screenshots were inspected.
+
+Independently observed native time is 3.535612 seconds; saved raw time is
+3.535528 seconds, a difference of 84 microseconds. Emitted PCM measures
+616.934202 Hz for selected 617 Hz. The reviewer inspected and corrected probe
+assumptions about the export endpoint, the existing one-second save threshold,
+and navigation after a successful save. No application correction was required.
+All reviewer processes ended and the exclusive port 8791 lease was released.
+Root validation remains 1,076 tests/65 files and 89 full browser journeys before
+the final collapsed-warning/retry refinement, followed by both precise journeys
+on that final refinement and passing check/test/build.
+
+Strict production deployment initially passed check/test/build/dry-run then
+failed at the remote D1 check with Cloudflare API 7403. The full strict retry
+passed every stage, found no pending migrations, and deployed version
+`295f8309-115a-49f5-9603-c01f3d45ebd4` to https://cwa.n1rwj.com. Exact hashes of
+four production assets and the Runner bridge match the accepted build; home and
+health return 200 and private entries/account/lifecycle endpoints return 401.
+Public calendar GET/HEAD/304/405, nine unique UIDs, exact shared body, sequence 1,
+DST recurrence and no-cookie checks pass. No binding/configuration changed.
+
+No push was attempted. Fresh GitHub main remains accepted #27 (`7e4d66b2`), so
+#31 remains OPEN pending accepted source publication. The local implementation,
+independent review and production gate permit ascending issue #32. Distinct
+bounded QSO station tones remain #32, exact public recipes #45, and physical
+locked-device playback remains unverified. The original site is read-only;
+approved exclusions and restricted curriculum links remain intact.
