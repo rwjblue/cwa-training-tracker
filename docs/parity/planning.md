@@ -826,3 +826,13 @@ Axe reports across the changed daily-summary states. The obsolete goal-ring
 selector was corrected to exact shared totals; its original failure trace is
 retained and the final complete gate is clean. Post-commit independent review
 and production delivery remain pending; see the canonical validation ledger.
+
+
+Issue #19 independently ACCEPTED: four own browser journeys, sixteen empty Axe
+and overflow checks, 51 focused tests and ten own boundary groups pass with actual
+native Copy/Runner/listening measurements. No substantive finding or product
+follow-up is required. Production `40d406d3-dede-49c0-b5c5-03e908e084d1`
+serves implementation `bca5901b744f72d6e4d1f095907d29d1ae01fc3f`; exact
+assets/private401 checks pass after one D1 7403 full-task retry. Local main records
+delivery; #19 remains OPEN/unpublished, with no push or original-site mutation.
+See canonical acceptance ledger for complete counts, failed probes and limits.

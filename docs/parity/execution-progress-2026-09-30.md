@@ -1125,3 +1125,31 @@ of issue #2. Both improvements stay separate from this issue's implementation.
 - Advance local main with delivery journal; comment #18 honestly and leave OPEN
   pending source publication under the no-push instruction. Continue ascending
   queue #19–#46 without routine approval. Original site stays read-only.
+
+
+## Issue #19 — accepted local implementation and production
+
+- Rest dates have zero required goal while the existing daily amount remains
+  optional. Exact dated assignment presence, including completion, establishes
+  required dates. Today/Overview/Studio share validated disjoint saved/current/
+  total time with stable receipt transfer, class separation and recall subset.
+- Implementation `bca5901b744f72d6e4d1f095907d29d1ae01fc3f`; independently
+  ACCEPTED with no substantive findings. Four own browser journeys pass with
+  actual native Copy, Runner and generated listening. Sixteen empty settled Axe
+  and overflow checks, nine inspected captures, 51 focused tests and ten own
+  boundary groups pass. Manual failure/retry, class canceled review, failed local
+  retention with server acknowledgement, captured-zone recovery and native
+  midnight/lost acknowledgement all exercise actual controls and stable receipts.
+- Root check, all 967 fast tests/53 files and build pass; complete serialized
+  browser gate passes 65 journeys in 13.4 minutes. Earlier 64/65 run failed only
+  on the obsolete goal-ring selector; the exact shared-summary correction passes
+  focused and in the final clean gate. Setup failures remain honestly retained.
+- Production `40d406d3-dede-49c0-b5c5-03e908e084d1` after one transient D1
+  7403 complete retry; no pending migrations. Fresh homepage/health200, three
+  private401s, four exact built JS/CSS hashes and public Runner module pass.
+- No goal-policy field/schema/binding change, unsaved elapsed reload/crash
+  recovery, running engine restoration or original-site mutation. Existing Copy
+  and completed-result recovery remain. Emulation is not physical-device proof.
+- Primary user work/protected pending scope docs remain unchanged, signing true.
+  Local main advances with this journal. No push/PR; #19 stays OPEN/unpublished.
+  Comment with delivered behavior/evidence and continue #20 through #46.

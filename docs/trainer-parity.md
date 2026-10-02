@@ -1745,3 +1745,41 @@ real audio and AudioWorklet clocks. No native time was accelerated or fabricated
 
 Binding/config types are unchanged. Independent review follows the implementation
 commit; acceptance and production delivery are not yet claimed.
+
+
+### Issue #19 — independent acceptance and production delivery
+
+Implementation `bca5901b744f72d6e4d1f095907d29d1ae01fc3f` is independently
+ACCEPTED with no substantive scoped findings. Four distinct independently
+written browser journeys pass: manual completed-day/zone-change/storage retry
+(8.9 seconds), native mobile Runner class-cancel/terminal dedup/online save with
+local storage refusal (10.3 seconds), guest native Copy captured-zone recovery
+and durable save (15.8 seconds), and generated native listening across midnight
+with an identical lost-acknowledgement retry (6.2 seconds). Native measurements
+use actual media or AudioWorklet movement; the manual calendar case alone advances
+its manual timer. One precise server receipt owns each stable result.
+
+Eight distinct states at both widths pass sixteen settled Axe scans and sixteen
+overflow checks; nine representative captures were visually inspected. Reviewer
+focused verification passes 51 tests in four files and ten own boundary groups
+in one additional test. Reviewed state ownership, readonly projection, old/new
+Copy compatibility, exact assignment goals, class/recall/legacy semantics,
+start-day attribution, guest isolation and existing private write boundaries
+require no correction. Reviewer fixture assumptions were corrected against actual
+source/error contexts, with failures retained and no timing/assertion weakening.
+The complete 65-journey root gate and 967 fast tests remain separate root evidence.
+
+Production version `40d406d3-dede-49c0-b5c5-03e908e084d1` serves the accepted
+implementation at https://cwa.n1rwj.com. Deployment repeats check, all 967 tests
+in 53 files and build successfully; no migrations are pending. Fresh nonce
+homepage/health 200, three anonymous private 401s, all four exact JS/CSS SHA-256
+matches and root references, and public Runner module hash pass. The first remote
+D1 call stopped with 7403 before publication; the single complete retry succeeded.
+Both attempts and production verification are retained in ignored progress notes.
+
+Local main advances with this delivery journal; no push or PR was attempted.
+#19 remains OPEN because source publication is pending under the user's explicit
+no-push instruction. Primary user work and its pending scope documents are
+untouched. Chromium viewport/touch emulation does not establish physical-device
+or lock-screen behavior. No unsaved elapsed reload/crash recovery, running engine
+restoration, restricted redistribution or original-site mutation was added.
