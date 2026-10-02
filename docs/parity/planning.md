@@ -1126,3 +1126,35 @@ actual exact retry and date/timezone transitions. All ten pin-screen Axe reports
 are empty at desktop/mobile widths, with no overflow; captures were inspected.
 The earlier full run also passed 73 journeys before the final boundary correction.
 Independent review is the next gate, after the focused implementation commit.
+
+### Issue #23 — independent acceptance and production delivery
+
+Implementation `0242266997241ba2e84cbb0898b8d63da57929de` is independently
+ACCEPTED with no substantive findings. Four serialized reviewer browser
+journeys pass in 28.9 seconds: the actual backup/import workflow, retained
+manual timer and notes with canceled review, midnight expiry followed by
+byte-equivalent retry, and refused local storage followed by deliberate retry.
+Desktop/mobile keyboard and emulated touch pass; eighteen settled Axe/overflow
+reports are empty and ten captures were independently inspected. All 132
+focused tests plus three new real-SQL pin journeys and an existing integrity
+test pass. All sixteen changed files match committed bytes; protected primary
+hashes and signing remain unchanged. The reviewer released the runtime.
+
+Root final gates pass: check, 1,018 tests in 60 files, build and all 73
+serialized browser journeys (14.7 minutes). Production deploy repeated the
+complete task once after D1 API error7403; the retry passed all gates and
+found no pending migrations. Version
+`4b7bb2e8-8935-4993-90a6-02cc6c3b9643` is deployed. Fresh production entry
+and health responses are200; four JS/CSS assets and the pinned Runner bridge
+match built SHA-256 bytes. Entries, account state and lifecycle backup require
+authentication (401). The public calendar retains the exact shared body,
+nine distinct stable UIDs/sequence1, matching DST recurrence, GET/HEAD200,
+conditional304, unsupported-method405 and no Set-Cookie.
+
+Local main records delivery. No push was attempted; GitHub reports the
+implementation SHA absent (422). Issue #23 remains OPEN pending publication;
+accepted local and production behavior permits the ascending #24 loop. Pins
+retain their fixed calendar date across timezone changes and become inactive
+after that date without deleting history. No physical-device or elapsed-time
+reload/crash recovery is claimed. Restricted curriculum remains linked;
+original source and protected user work remain unchanged.
