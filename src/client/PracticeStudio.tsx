@@ -1748,6 +1748,9 @@ export default function PracticeStudio({
                         preferences={activeListeningPreferences}
                         onChange={changePreferences}
                         remembered={remembered}
+                        onRetry={() => {
+                          if (canPractice()) setRemembered(savePracticePreferences(preferences));
+                        }}
                       />
                     }
                     onPlaying={setPlaying}
@@ -2021,6 +2024,9 @@ export default function PracticeStudio({
                     preferences={preferences}
                     onChange={changePreferences}
                     remembered={remembered}
+                    onRetry={() => {
+                      if (canPractice()) setRemembered(savePracticePreferences(preferences));
+                    }}
                   />
                 )}
               </section>

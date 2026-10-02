@@ -565,3 +565,54 @@
 .course-replay-choice > span {
   font-size: 12px;
 }
+
+.precise-range {
+  min-width: 0;
+}
+.range-control input.precise-number {
+  height: auto;
+  min-height: 44px;
+  margin: 6px 0;
+  padding: 8px 10px;
+  cursor: text;
+}
+.word-options > .precise-range {
+  width: 100%;
+  max-width: 440px;
+}
+.word-options .precise-range input[type='range'] {
+  width: 100%;
+  height: 24px;
+}
+.word-options .precise-range input.precise-number {
+  width: 100%;
+}
+.word-options .precise-range label {
+  display: block;
+}
+.precise-range p[role='alert'] {
+  color: #972a25;
+}
+
+.range-control.precise-range input[type='range'],
+.word-options .precise-range input[type='range'] {
+  min-height: 44px;
+}
+.studio-speed-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.studio-speed-presets label {
+  display: grid;
+  gap: 6px;
+}
+.studio-speed-presets select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #c5d1bb;
+  border-radius: 4px;
+  background: #fffefa;
+  color: #3f5837;
+}

@@ -21,8 +21,8 @@ test('practice preferences persist and generated material follows exact selected
 
   await page.reload();
   await page.getByText(/^Sound settings ·/).click();
-  await expect(characterSpeed).toHaveValue('50');
-  await expect(effectiveSpeed).toHaveValue('50');
+  await expect(characterSpeed).toHaveValue('60');
+  await expect(effectiveSpeed).toHaveValue('60');
   await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toHaveValue('300');
   await expect(page.getByRole('slider', { name: 'Volume', exact: true })).toHaveValue('0');
   await expect(page.getByRole('combobox', { name: 'Word length', exact: true })).toHaveValue('3');
@@ -259,12 +259,17 @@ test('word and QSO trainers expose the complete material and remember listening 
   await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toBeVisible();
   await list.selectOption('common-30');
   expect((await vocabulary.innerText()).trim().split(/\s+/)).toHaveLength(30);
-  await page.getByRole('combobox', { name: 'Extra word pause', exact: true }).selectOption('2');
+  await page
+    .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
+    .fill('2');
+  await page
+    .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
+    .press('Enter');
   await page.reload();
   await expect(list).toHaveValue('common-30');
-  await expect(page.getByRole('combobox', { name: 'Extra word pause', exact: true })).toHaveValue(
-    '2',
-  );
+  await expect(
+    page.getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true }),
+  ).toHaveValue('2');
   await expect(page.getByRole('checkbox', { name: 'Shuffle list', exact: true })).not.toBeChecked();
 
   await list.selectOption('custom');

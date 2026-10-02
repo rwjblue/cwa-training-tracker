@@ -1,59 +1,97 @@
 import React from 'react';
+import PreciseRange from './PreciseRange';
 import type { PracticePreferences } from './practice-preferences';
 
 export default function ListeningSoundSettings({
   preferences,
   onChange: changePreferences,
   remembered,
+  onRetry,
 }: {
   preferences: PracticePreferences;
   onChange: (changes: Partial<PracticePreferences>) => void;
   remembered: boolean;
+  onRetry: () => void;
 }) {
   const { characterWpm, effectiveWpm, tone, volume } = preferences;
   return (
     <details className="studio-sound-settings">
       <summary>
         Sound settings · {characterWpm}/{effectiveWpm} WPM · {tone} Hz
+        {!remembered && <span> · Not saved on this device</span>}
       </summary>
       <div className="studio-preferences-heading">
         <h3>Your listening preferences</h3>
+        <p>Words, QSO, and Stories remember separate speeds and pitch. Volume is shared.</p>
         <p>
           {remembered
             ? 'Sound defaults are saved on this device, including when you sign out. Word sources use the separate account or Guest device scope.'
             : 'Active for this visit. Your browser is not allowing these preferences to be remembered.'}
         </p>
       </div>
+      {!remembered && (
+        <button type="button" className="button outline" onClick={onRetry}>
+          Retry saving listening preferences
+        </button>
+      )}
+      <div className="studio-preferences-heading studio-speed-presets">
+        <label>
+          Character speed preset
+          <select
+            value={characterWpm}
+            onChange={(event) => changePreferences({ characterWpm: Number(event.target.value) })}
+          >
+            {[...new Set([12, 15, 18, 20, 23, 25, 28, 30, 35, 40, 50, 55, 60, characterWpm])]
+              .sort((a, b) => a - b)
+              .map((speed) => (
+                <option key={speed} value={speed}>
+                  {speed} WPM
+                </option>
+              ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="button outline"
+          onClick={() => changePreferences({ effectiveWpm: characterWpm })}
+        >
+          Use normal spacing
+        </button>
+      </div>
       <div className="studio-controls">
-        <Range
+        <PreciseRange
+          key={`${preferences.tool}-character`}
           label="Character speed"
           value={characterWpm}
           min={5}
-          max={50}
+          max={60}
           unit="WPM"
           onChange={(v) => changePreferences({ characterWpm: v })}
-          hint="The speed of each individual character."
+          hint="The speed of each individual character, from 5 to 60 WPM."
         />
-        <Range
+        <PreciseRange
+          key={`${preferences.tool}-effective`}
           label="Effective speed"
           value={effectiveWpm}
           min={3}
           max={characterWpm}
           unit="WPM"
           onChange={(v) => changePreferences({ effectiveWpm: v })}
-          hint="Farnsworth spacing gives you time to hear."
+          hint="Farnsworth spacing: 3 WPM through character speed."
         />
-        <Range
+        <PreciseRange
+          key={`${preferences.tool}-tone`}
           label="Sidetone"
           value={tone}
           min={300}
           max={1000}
-          step={25}
+          step={1}
           unit="Hz"
           onChange={(v) => changePreferences({ tone: v })}
-          hint="Find a comfortable pitch for your ears."
+          hint="Find a comfortable pitch from 300 to 1000 Hz, in 1 Hz steps."
         />
-        <Range
+        <PreciseRange
+          continuous
           label="Volume"
           value={volume}
           min={0}
@@ -68,49 +106,5 @@ export default function ListeningSoundSettings({
         />
       </div>
     </details>
-  );
-}
-
-function Range({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  unit,
-  onChange,
-  hint,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  unit: string;
-  onChange: (value: number) => void;
-  hint: string;
-}) {
-  const id = React.useId();
-  return (
-    <div className="range-control">
-      <div>
-        <label htmlFor={id}>{label}</label>
-        <span>
-          {value} <small>{unit}</small>
-        </span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        aria-valuetext={`${value} ${unit === '%' ? 'percent' : unit}`}
-        aria-describedby={`${id}-hint`}
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-      <p id={`${id}-hint`}>{hint}</p>
-    </div>
   );
 }

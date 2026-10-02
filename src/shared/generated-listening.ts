@@ -127,8 +127,8 @@ function callsign(value: unknown): string {
 export function validateGeneratedListeningSummary(value: unknown): GeneratedListeningSummary {
   const row = object(value, 'Generated listening summary');
   const speeds = {
-    characterWpm: finite(row.characterWpm, 'Generated character speed', 5, 50),
-    effectiveWpm: finite(row.effectiveWpm, 'Generated effective speed', 3, 50),
+    characterWpm: finite(row.characterWpm, 'Generated character speed', 5, 60),
+    effectiveWpm: finite(row.effectiveWpm, 'Generated effective speed', 3, 60),
   };
   if (speeds.effectiveWpm > speeds.characterWpm)
     throw new Error('Generated effective speed cannot exceed character speed.');

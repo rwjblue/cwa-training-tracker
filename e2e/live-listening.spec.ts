@@ -103,7 +103,7 @@ test('native word speed edits preserve heard timing, paused position and continu
   await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
   const review = page.getByRole('dialog');
   await expect(review).toContainText('20 character / 10 effective WPM');
-  await expect(review).toContainText('50 character / 50 effective WPM');
+  await expect(review).toContainText('60 character / 60 effective WPM');
   await review.evaluate((element) =>
     Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)),
   );

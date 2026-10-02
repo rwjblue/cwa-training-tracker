@@ -1,3 +1,4 @@
+import PreciseRange from './PreciseRange';
 import { PRACTICE_STORIES, practiceStory, type StoryId } from '../shared/listening-stories';
 import {
   type ReactNode,
@@ -820,19 +821,16 @@ export default forwardRef<
       )}
       {isWords && (
         <div className="word-options">
-          <label>
-            Extra word pause
-            <select
-              value={p.wordGap}
-              onChange={(e) => onChange({ wordGap: Number(e.target.value) })}
-            >
-              {[0, 0.5, 1, 2, 3, 4, 5].map((seconds) => (
-                <option key={seconds} value={seconds}>
-                  {seconds} {seconds === 1 ? 'second' : 'seconds'}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PreciseRange
+            label="Extra word pause"
+            value={p.wordGap}
+            min={0}
+            max={5}
+            step={0.1}
+            unit="seconds"
+            onChange={(wordGap) => onChange({ wordGap })}
+            hint="Additional silence between words, from 0 to 5 seconds."
+          />
           <label>
             <input
               type="checkbox"

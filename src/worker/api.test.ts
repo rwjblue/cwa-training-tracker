@@ -2901,7 +2901,7 @@ describe('generated listening evidence', () => {
     ).toBe(400);
     expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
   });
-  const words = (characterWpm = 20): GeneratedListeningSummary => ({
+  const words = (characterWpm = 20): Extract<GeneratedListeningSummary, { mode: 'words' }> => ({
     mode: 'words',
     listId: 'custom',
     customLabel: 'Your word list',
@@ -2999,6 +2999,68 @@ describe('generated listening evidence', () => {
     expect((await request(`/api/entries/${saved.id}`, 'PUT', saved, other.cookie)).status).toBe(
       404,
     );
+  });
+
+  it('retains precise 55/60 WPM evidence through private writes and transactional import', async () => {
+    const auth = await signIn('precise-owner@example.test');
+    const sources = [
+      generated([{ ...words(55), effectiveWpm: 55, toneHz: 617, wordGapSeconds: 0.3 }]),
+      {
+        ...generated([
+          {
+            mode: 'story',
+            storyId: 'story-trail',
+            characterWpm: 60,
+            effectiveWpm: 51,
+            toneHz: 419,
+            sentenceGapSeconds: 2,
+          },
+        ]),
+        id: 'precise-story',
+      },
+    ];
+    for (const source of sources) {
+      expect((await request('/api/entries', 'POST', source, auth.cookie)).status).toBe(201);
+    }
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      exported.sessions
+        .map(({ characterWpm, effectiveWpm }) => [characterWpm, effectiveWpm])
+        .sort(),
+    ).toEqual([
+      [55, 55],
+      [60, 51],
+    ]);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions,
+    ).toEqual(exported.sessions);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const invalid = generated([{ ...words(61), effectiveWpm: 61 }]);
+    expect(
+      (await request('/api/entries', 'POST', { ...invalid, id: 'invalid-precise' }, auth.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'replace', data: { ...exported, sessions: [invalid] } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
   });
 
   it('round trips mixed actual sources with stable identity and immutable raw evidence', async () => {

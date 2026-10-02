@@ -153,9 +153,9 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
     .fill('Retained listening notes without invented time');
   await page.getByText(/^Sound settings ·/).click();
   const tone = page.getByRole('slider', { name: 'Sidetone', exact: true });
-  await tone.focus();
-  await page.keyboard.press('Home');
-  for (let index = 0; index < 16; index++) await page.keyboard.press('ArrowRight');
+  const exactTone = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
+  await exactTone.fill('700');
+  await exactTone.press('Enter');
   await expect(tone).toHaveValue('700');
   await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
   await page.getByRole('combobox', { name: 'Target duration', exact: true }).selectOption('10');

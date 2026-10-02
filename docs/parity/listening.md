@@ -1063,3 +1063,60 @@ passed the review gate, permitting ascending issue #31. Exact public recipes
 remain #45; physical locked-device behavior is unverified. Approved exclusions
 and the read-only original site are preserved. This acceptance journal changes
 no runtime, binding or configuration.
+
+
+### Issue #31 precise independent listening settings
+
+Words, QSO and Stories now retain independent character/effective speeds and
+pitch in version 2 device preferences. Words/free keep their compatible base
+sound fields; QSO owns a nested setup, and the existing independent Story setup
+is preserved. Legacy shared values initialize QSO without losing either speed,
+including 5–9 character and 3–4 effective WPM. Word pause, shuffle, repeat and
+spoken-answer choices remain word-specific. Public volume stays shared. The
+original QSO/Story writer's effective-speed omission is not reproduced.
+
+Recognizable presets retain exact custom selections beside numeric/slider entry
+through 60 WPM. Effective speed cannot exceed character speed. Pitch accepts
+300–1000 Hz in 1 Hz steps, and extra word pause accepts 0–5 seconds in 0.1-second
+steps. Reusable controls keep drag previews local and disclose the active value;
+native release/keyboard change applies once. Numeric Enter/blur commits valid
+values; invalid drafts leave applied settings untouched, and Escape/pointer
+cancellation restores the control. Slider and numeric targets are at least
+44 pixels high. Existing live speed retiming preserves native playing/paused
+state and occurrence; committed pitch/extra pause starts a fresh paused round.
+Native volume remains continuous without timing regeneration.
+
+Preferences use the existing device writer and lifecycle fences. Storage refusal
+keeps current controls usable, displays an unsaved notice even when Sound settings
+is collapsed, and offers explicit Retry without replacing/pausing native audio.
+Old device inventory files remain compatible; new optional mode setups are
+strictly validated and restore only through shared-preference opt-in. No clock,
+player, database migration, binding or private-data owner is added.
+
+Exact actually played 55/60 WPM facts pass shared validation, private real-SQL
+writes, transactional import and account export. Native browser playback reaches
+canceled review, identical failed-upload retry, history, report and actual backup
+download; outsiders receive 401. Selected unplayed values add no facts. The guest
+journey verifies low-speed migration, three distinct setups, custom 51 selection,
+55/60 selection, reload, drag preview/release/Escape, invalid entry, precise pitch/
+pause, keyboard/touch and preference refusal/retry. Desktop 1440/mobile 390
+screenshots were inspected and six accessibility/overflow reports are empty.
+
+Check, all 1,076 tests across 65 files and build pass. The first full regression
+was deliberately stopped after a legacy fixture expected 16 pitch arrows to add
+400 Hz; the correct 1 Hz control reached 316 Hz. That run has 22 passes, one
+failure, one interrupted journey and 65 unrun, not a full validation result.
+The fixture now enters its intended 700 Hz through the exact field. Five affected
+device/precision journeys pass in 29 seconds, then all 89 serial browser journeys
+pass in 17.3 minutes. The final collapsed-warning/explicit-retry refinement
+passes both precise journeys again in 19.2 seconds, with check/test/build passing.
+Earlier probe failures were inspected through assertions, context, pixels and
+bounded traces; they assumed open settings after tool switch, a Resume label,
+and modal failure instead of a successful durable local queue. They are retained
+in ignored evidence, with no authentication or audio-clock workaround.
+
+Fresh independent post-commit review and production deployment remain pending;
+acceptance is not yet declared. Distinct bounded QSO station pitches remain #32,
+and exact public recipes remain #45. Physical locked-device playback is
+unverified. New recognition, reload/crash elapsed-time recovery and real-contact/
+ADIF tools remain excluded. The original site remains read-only.

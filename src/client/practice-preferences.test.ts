@@ -51,12 +51,18 @@ describe('browser practice preferences', () => {
       characterWpm: 5,
       effectiveWpm: 5,
       tone: 1000,
+      qsoSettings: {
+        ...DEFAULT_PRACTICE_PREFERENCES.qsoSettings,
+        characterWpm: 5,
+        effectiveWpm: 5,
+        tone: 1000,
+      },
       volume: 0,
       groupLength: 10,
       wordLength: 'mixed',
       mode: 'words',
     });
-    expect(normalizePracticePreferences({ tone: 613 }).tone).toBe(625);
+    expect(normalizePracticePreferences({ tone: 613 }).tone).toBe(613);
   });
 
   it('discards nonfinite and wrong-type values instead of scheduling invalid audio', () => {
@@ -148,4 +154,59 @@ it('retains both Story speeds/selection independently and migrates old shared se
     effectiveWpm: 5,
     tone: 600,
   });
+});
+
+it('migrates low legacy speeds and preserves exact independent mode setups through storage', () => {
+  let current = normalizePracticePreferences({
+    version: 1,
+    characterWpm: 5,
+    effectiveWpm: 3,
+    tone: 617,
+    wordGap: 0.3,
+  });
+  expect(current).toMatchObject({
+    version: 2,
+    characterWpm: 5,
+    effectiveWpm: 3,
+    tone: 617,
+    wordGap: 0.3,
+  });
+  expect(current.qsoSettings).toMatchObject({ characterWpm: 5, effectiveWpm: 3, tone: 617 });
+  current = changeListeningPreferences(current, { characterWpm: 55, effectiveWpm: 55 });
+  current = changeListeningPreferences(current, { tool: 'qso' });
+  current = changeListeningPreferences(current, { characterWpm: 20, effectiveWpm: 8, tone: 731 });
+  current = changeListeningPreferences(current, { tool: 'stories' });
+  current = changeListeningPreferences(current, { characterWpm: 60, effectiveWpm: 51, tone: 419 });
+  let raw = '';
+  expect(
+    savePracticePreferences(current, {
+      setItem: (_key, value) => {
+        raw = value;
+      },
+    }),
+  ).toBe(true);
+  current = loadPracticePreferences({ getItem: () => raw });
+  for (const [tool, characterWpm, effectiveWpm, tone] of [
+    ['words', 55, 55, 617],
+    ['qso', 20, 8, 731],
+    ['stories', 60, 51, 419],
+  ] as const) {
+    current = changeListeningPreferences(current, { tool });
+    expect(listeningPreferences(current)).toMatchObject({ characterWpm, effectiveWpm, tone });
+  }
+  expect(current.wordGap).toBe(0.3);
+  expect(normalizePracticePreferences({ version: 99, characterWpm: 60 })).toEqual(
+    DEFAULT_PRACTICE_PREFERENCES,
+  );
+  expect(
+    normalizePracticePreferences({
+      characterWpm: 70,
+      effectiveWpm: 80,
+      tone: 617.6,
+      wordGap: 0.34,
+    }),
+  ).toMatchObject({ characterWpm: 60, effectiveWpm: 60, tone: 618, wordGap: 0.3 });
+  expect(
+    normalizePracticePreferences({ qsoSettings: { version: 99, characterWpm: 55 } }).qsoSettings,
+  ).toEqual(DEFAULT_PRACTICE_PREFERENCES.qsoSettings);
 });

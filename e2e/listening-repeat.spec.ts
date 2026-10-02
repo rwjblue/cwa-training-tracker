@@ -27,7 +27,12 @@ async function words(page: Page) {
   await settings.getByText(/^Sound settings ·/).click();
   await page.getByRole('slider', { name: 'Character speed', exact: true }).press('End');
   await page.getByRole('slider', { name: 'Effective speed', exact: true }).press('End');
-  await page.getByRole('combobox', { name: 'Extra word pause', exact: true }).selectOption('0.5');
+  await page
+    .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
+    .fill('0.5');
+  await page
+    .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
+    .press('Enter');
   await page.getByText('View word list', { exact: true }).click();
 }
 

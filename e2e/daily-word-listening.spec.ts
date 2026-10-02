@@ -106,7 +106,12 @@ test('optional daily words count actual replay separately from recall and retire
   await activate(daily.getByRole('button', { name: 'Practice words', exact: true }));
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E E');
-  await page.getByRole('combobox', { name: 'Extra word pause', exact: true }).selectOption('0');
+  await page
+    .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
+    .fill('0');
+  await page
+    .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
+    .press('Enter');
   await expect(page.getByRole('checkbox', { name: 'Repeat list', exact: true })).toBeChecked();
   await activate(page.getByRole('button', { name: /^Start practice$/ }));
   const audio = page.getByLabel('Practice audio', { exact: true });

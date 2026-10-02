@@ -90,7 +90,7 @@ describe('generated listening summaries', () => {
 
   it.each([
     { characterWpm: 4 },
-    { characterWpm: 51 },
+    { characterWpm: 61 },
     { effectiveWpm: 2 },
     { effectiveWpm: 21 },
     { characterWpm: NaN },
@@ -295,4 +295,21 @@ it('keeps strict public Story identities separate from QSO stations and private 
     { effectiveWpm: 29 },
   ])
     expect(() => validateGeneratedListeningSummary({ ...story, ...change })).toThrow();
+});
+
+it('retains exact 51–60 WPM facts without rounding or dropping effective speed', () => {
+  for (const speed of [51, 55, 60]) {
+    const summary = {
+      ...words(),
+      characterWpm: speed,
+      effectiveWpm: speed,
+      toneHz: 617,
+      wordGapSeconds: 0.3,
+    };
+    expect(validateGeneratedListeningSummary(summary)).toEqual(summary);
+    expect(generatedListeningSpeeds(envelope([summary]))).toEqual({
+      characterWpm: speed,
+      effectiveWpm: speed,
+    });
+  }
 });

@@ -791,7 +791,7 @@ describe('strict complete file validation', () => {
         item.stores.copyDraft!.heard = 'yes' as unknown as boolean;
       }),
       rewrite(backup, (item) => {
-        item.shared.practicePreferences!.tone = 777;
+        item.shared.practicePreferences!.tone = 777.5;
       }),
       rewrite(backup, (item) => {
         (item.stores as unknown as Record<string, unknown>).credentials = 'never';
@@ -1465,7 +1465,12 @@ describe('public live agenda preference in device inventory', () => {
 it('keeps old shared v1 preferences compatible and explicitly restores independent Story settings', () => {
   seed('guest');
   const backup = captureDeviceBackup('guest', 'Guest');
-  const { storySettings: omittedStory, ...oldPreferences } = backup.shared.practicePreferences!;
+  const {
+    version: omittedVersion,
+    qsoSettings: omittedQso,
+    storySettings: omittedStory,
+    ...oldPreferences
+  } = backup.shared.practicePreferences!;
   const old = { ...backup, shared: { practicePreferences: oldPreferences } };
   expect(
     validateDeviceBackup(JSON.stringify(old), 'guest').shared.practicePreferences?.storySettings
@@ -1503,7 +1508,7 @@ it('keeps old shared v1 preferences compatible and explicitly restores independe
     { storyId: 'unknown' },
     { effectiveWpm: 29 },
     { privateScript: 'PRIVATE' },
-    { tone: 649 },
+    { tone: 649.5 },
   ]) {
     const malformed = {
       ...captured,
@@ -1518,5 +1523,68 @@ it('keeps old shared v1 preferences compatible and explicitly restores independe
       }),
     ).toThrow();
     expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(current);
+  }
+});
+
+it('keeps old device inventories and exact versioned QSO setups compatible without shared opt-in', () => {
+  seed('guest');
+  const backup = captureDeviceBackup('guest', 'Guest');
+  const { version: _version, qsoSettings: _qso, ...legacy } = backup.shared.practicePreferences!;
+  const old = {
+    ...backup,
+    shared: { practicePreferences: { ...legacy, characterWpm: 5, effectiveWpm: 3 } },
+  };
+  const migrated = validateDeviceBackup(JSON.stringify(old), 'guest');
+  expect(
+    validateDeviceBackup(
+      JSON.stringify({
+        ...old,
+        shared: { practicePreferences: { ...old.shared.practicePreferences, version: 1 } },
+      }),
+      'guest',
+    ).shared.practicePreferences,
+  ).toEqual(migrated.shared.practicePreferences);
+  expect(migrated.shared.practicePreferences?.qsoSettings).toMatchObject({
+    characterWpm: 5,
+    effectiveWpm: 3,
+  });
+  const precise = {
+    ...backup.shared.practicePreferences!,
+    characterWpm: 55,
+    effectiveWpm: 55,
+    wordGap: 0.3,
+    qsoSettings: {
+      ...backup.shared.practicePreferences!.qsoSettings,
+      characterWpm: 60,
+      effectiveWpm: 51,
+      tone: 617,
+    },
+  };
+  const exact = { ...backup, shared: { practicePreferences: precise } };
+  expect(validateDeviceBackup(JSON.stringify(exact), 'guest').shared.practicePreferences).toEqual(
+    precise,
+  );
+  const before = values.get(PRACTICE_PREFERENCES_KEY);
+  restoreDeviceBackup(exact, { expectedScope: 'guest' });
+  expect(values.get(PRACTICE_PREFERENCES_KEY)).toBe(before);
+  restoreDeviceBackup(exact, { expectedScope: 'guest', restoreSharedPreferences: true });
+  expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(precise);
+  for (const change of [
+    { version: 99 },
+    { effectiveWpm: 61 },
+    { tone: 617.5 },
+    { script: 'PRIVATE' },
+  ]) {
+    expect(() =>
+      validateDeviceBackup(
+        JSON.stringify({
+          ...exact,
+          shared: {
+            practicePreferences: { ...precise, qsoSettings: { ...precise.qsoSettings, ...change } },
+          },
+        }),
+        'guest',
+      ),
+    ).toThrow();
   }
 });
