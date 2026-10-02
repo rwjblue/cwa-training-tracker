@@ -309,6 +309,7 @@ export default forwardRef<
             const wrapped =
               next.mixed &&
               next.loop &&
+              player.current.playedToEnd &&
               lastPosition > track.duration - 0.5 &&
               progress.position < 0.5 &&
               progress.position < lastPosition &&

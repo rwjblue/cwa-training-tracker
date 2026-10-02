@@ -43,6 +43,19 @@ export class MorsePlayer {
   get paused() {
     return this.audio?.paused ?? true;
   }
+  /** A natural loop reaches the native tail; an explicit rewind does not. */
+  get playedToEnd() {
+    const audio = this.audio;
+    return Boolean(
+      this.recording &&
+      audio &&
+      Number.isFinite(audio.duration) &&
+      audio.duration > 0 &&
+      audio.played.length &&
+      audio.played.end(audio.played.length - 1) >= audio.duration,
+    );
+  }
+
   get supportsVolume() {
     return this.nativeVolume;
   }

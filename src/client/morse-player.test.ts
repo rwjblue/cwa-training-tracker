@@ -88,6 +88,29 @@ describe('native media playback boundary', () => {
     expect(player.position).toBe(1.25);
     player.dispose();
   });
+  it('distinguishes native tail playback from a seek near the loop seam', () => {
+    const player = new MorsePlayer();
+    const audio = new MediaElement();
+    let end = 0;
+    let duration = Number.NaN;
+    Object.defineProperties(audio, {
+      duration: { get: () => duration },
+      played: { get: () => ({ length: end ? 1 : 0, end: () => end }) },
+    });
+    attach(player, audio);
+    player.prepare(track());
+    expect(player.playedToEnd).toBe(false);
+    duration = player.track!.duration;
+    end = duration - 0.35;
+    player.seek(0);
+    expect(player.playedToEnd).toBe(false);
+    end = duration;
+    expect(player.playedToEnd).toBe(true);
+    player.clear();
+    expect(player.playedToEnd).toBe(false);
+    player.dispose();
+  });
+
   it('changes native volume without reloading, seeking or interrupting playback', async () => {
     const player = new MorsePlayer();
     const audio = new MediaElement();

@@ -2584,3 +2584,35 @@ Final current-code regression passed all 78 serial browser journeys in 15.9
 minutes after those corrections. Six new accessibility/overflow reports are
 empty and all four final desktop/mobile captures were inspected. Original
 source, protected primary user work and signing configuration remain untouched.
+
+### Issue #26 — explicit rewind correction after independent review
+
+Post-commit independent review found one P2: a playing keyboard word selection
+or native scrubber rewind from the last half-second to the first half-second
+was mistaken for a native loop. Both real browser probes replaced an 8.192018s
+mixed round with an entirely new-speed 3.392018s source, discarding its retained
+prefix. The assertions, contexts, pixels and bounded action traces were inspected.
+
+Loop replacement now also requires the native played range to reach the native
+recording duration. A rewind cannot establish that tail, while a genuine native
+loop can. Every speed replacement prepares a fresh recording, resetting these
+ranges. This uses native playback evidence solely to distinguish transport;
+PracticeClock remains the accounting owner. It adds no pointer/keyboard guesses,
+parallel clock, loop scheduler or private storage. The current [HTML media
+standard](https://html.spec.whatwg.org/multipage/media.html#dom-media-played)
+defines played ranges from normal monotonic playback; the distinction is verified
+through actual browser controls rather than inferred from UI labels alone.
+
+A focused player boundary case covers missing metadata, partial tail, explicit
+seek, completed native tail and retired source. The new real-native keyboard/
+scrubber regression passes in 4.7s with the mixed source and duration unchanged;
+its saved private word time stays above one and below four seconds despite the
+near-eight-second position jump. The existing natural-loop/ended replay check
+remains part of the affected browser set. Independent corrective-commit recheck
+and verified production delivery remain required before accepting this issue.
+
+Corrected-code validation passes check, all 1,050 tests across 63 files and
+build. All five affected native/save journeys pass in 1.1 minutes (30.1s
+applied/private recovery, 12.0s words, 5.0s QSO, 8.1s genuine loop/ended replay,
+4.7s explicit seam rewinds). The complete final-current 79-journey browser
+regression also passes; independent corrective-commit recheck follows.

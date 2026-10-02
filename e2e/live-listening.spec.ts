@@ -241,3 +241,59 @@ test('a last-word speed edit applies on the next native loop and explicit ended 
   await expect.poll(async () => (await state(page)).paused).toBe(false);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
 });
+
+test('explicit keyboard and native rewinds retain a mixed word prefix near the loop seam', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await studio(page, 'Word listening');
+  await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
+  await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E');
+  await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).check();
+  await page.getByText('View word list', { exact: true }).click();
+  await page.getByRole('button', { name: 'Start practice', exact: true }).click();
+  await expect.poll(async () => (await state(page)).at).toBeGreaterThan(1.1);
+  await page.getByRole('slider', { name: 'Character speed', exact: true }).press('End');
+  await page.getByRole('slider', { name: 'Effective speed', exact: true }).press('End');
+  await expect
+    .poll(() => audioAt(page).evaluate((a: HTMLAudioElement) => a.readyState))
+    .toBeGreaterThan(0);
+  const source = (await state(page)).source;
+  const duration = await audioAt(page).evaluate((a: HTMLAudioElement) => a.duration);
+  const first = page.getByRole('button', { name: 'Play from word 1: PARIS', exact: true });
+  await first.focus();
+  for (const operation of ['keyboard', 'native'] as const) {
+    // Arrange the boundary only. The tested rewind is a real control action;
+    // neither the media clock nor the heard-time owner is fast-forwarded.
+    await audioAt(page).evaluate((a: HTMLAudioElement) => {
+      a.currentTime = a.duration - 0.35;
+    });
+    await expect.poll(() => audioAt(page).evaluate((a: HTMLAudioElement) => a.seeking)).toBe(false);
+    if (operation === 'keyboard') await first.press('Enter');
+    else {
+      // Chromium native controls have no DOM locator for their shadow seek bar.
+      const box = (await audioAt(page).boundingBox())!;
+      await audioAt(page).click({ position: { x: 130, y: box.height / 2 } });
+    }
+    await expect.poll(async () => (await state(page)).at).toBeLessThan(0.5);
+    expect((await state(page)).source).toBe(source);
+    expect((await state(page)).paused).toBe(false);
+    expect(await audioAt(page).evaluate((a: HTMLAudioElement) => a.duration)).toBeCloseTo(
+      duration,
+      3,
+    );
+  }
+  await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & save', exact: true }).first().click();
+  const review = page.getByRole('dialog');
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/entries') && response.request().method() === 'POST',
+  );
+  await review.getByRole('button', { name: 'Save practice', exact: true }).click();
+  expect((await saved).ok()).toBe(true);
+  const entries = await (await page.request.get('/api/entries')).json();
+  const measured = entries.entries[0].metadata.evidence.wordListeningSeconds;
+  expect(measured).toBeGreaterThan(1);
+  expect(measured).toBeLessThan(4);
+});
