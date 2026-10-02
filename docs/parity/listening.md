@@ -639,3 +639,38 @@ build. All five affected native/save journeys pass in 1.1 minutes (30.1s
 applied/private recovery, 12.0s words, 5.0s QSO, 8.1s genuine loop/ended replay,
 4.7s explicit seam rewinds). The complete final-current 79-journey browser
 regression also passes; independent corrective-commit recheck follows.
+
+### Issue #26 — independent acceptance and production delivery
+
+Implementation e759a72e22bac093833b81ca64fe37294ff27472 and correction
+b1c6cb7c2d223b37b80e56f60f2abc928560ab6c passed fresh independent post-commit
+review. The reviewer found the explicit-rewind P2, then independently verified
+both keyboard and actual native scrubber corrections with the same 8.192018s
+mixed source. Native played endpoints remained below the tail. Its separate
+positive loop captured seeking at zero with played [0, 2.585306], followed by
+a 1.48s new source continuing playback. No remaining substantive finding exists.
+
+Independent current-code validation passed 170 fast tests across four files and
+nine serial browser journeys in 1.3 minutes, including its own mobile repeated-CQ,
+touch volume, navigation, injected 503, byte-identical retry/export and natural
+loop probes. Ten scoped desktop/mobile accessibility/overflow reports are empty;
+six current captures were independently inspected. All ten current delivered
+files match committed bytes. Protected primary document hashes and signing
+remain intact. Root final check, 1,050 tests/63 files and build passed; all 79
+final-current serial browser journeys passed in 16.4 minutes. Native listening
+and Runner evidence come from actual media/engine movement.
+
+The complete production deploy passed on its first attempt with no migration.
+Version 36f13b1b-ac63-4bba-938e-b363827c7f88 serves the accepted code at
+https://cwa.n1rwj.com. Fresh production checks passed health, private 401
+responses, four exact asset hashes, unchanged Runner bridge, and the public
+calendar's GET/HEAD/304/405, nine stable UIDs and DST recurrence expansion.
+Original personal site and protected user work remain unchanged.
+
+No push was attempted. GitHub returned 422 for both local commit lookups, so
+#26 remains OPEN pending publication. Accepted local and production behavior
+permits the ascending #27 loop under the latest instruction. Unsupported native
+JS volume retains baked volume/device-control guidance; no physical-device or
+locked-phone claim is made. Actual Stories mode remains #30, with generic
+occurrence/sentence-gap mapping covered here. New recognition and unfinished
+reload/crash elapsed recovery remain excluded.
