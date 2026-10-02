@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { validateRecordingMarkSet, recordingMarkSetDetails } from '../shared/recording-marks';
 import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
 import type { QueuedAccountOperation } from './account-outbox';
+import type { ClassSchedule } from '../shared/class-schedule';
 
 const preferenceLabels: Record<string, string> = {
   displayName: 'Name',
@@ -12,6 +13,7 @@ const preferenceLabels: Record<string, string> = {
   firstClassDate: 'First class date',
   classDays: 'Class meeting days',
   useGravatar: 'Gravatar',
+  classSchedule: 'Private class meetings',
 };
 const valueLabel = (value: unknown) =>
   value === undefined || value === null || value === ''
@@ -23,6 +25,21 @@ const valueLabel = (value: unknown) =>
           ? 'Yes'
           : 'No'
         : String(value);
+const preferenceValueLabel = (key: string, value: unknown) => {
+  if (key !== 'classSchedule' || !value) return valueLabel(value);
+  const schedule = value as ClassSchedule;
+  const time = (item: NonNullable<ClassSchedule['ordinary']>) =>
+    `${item.startTime}–${item.endTime}${item.endsNextDay ? ' next day' : ''}`;
+  return [
+    `meeting timezone ${schedule.timezone}`,
+    `ordinary times ${schedule.ordinary ? time(schedule.ordinary) : 'not set'}`,
+    ...schedule.exceptions.map(
+      (item) =>
+        `session ${item.session}: ${item.date} ${time(item)} ${item.timezone ?? schedule.timezone}`,
+    ),
+    `join link ${schedule.joinUrl ?? 'not set'}`,
+  ].join('; ');
+};
 const taskValueLabel = (key: string, value: unknown) => {
   if (key !== 'recordingMarks') return valueLabel(value);
   if (!Array.isArray(value) || !value.length) return 'None';
@@ -39,7 +56,7 @@ function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
   if (change.type === 'settings')
     return Object.entries(change.changes).map(
       ([key, value]) =>
-        `${preferenceLabels[key] ?? key}: saved online ${valueLabel(state.settings[key as keyof typeof state.settings])}; your edit ${valueLabel(value)}.`,
+        `${preferenceLabels[key] ?? key}: saved online ${preferenceValueLabel(key, state.settings[key as keyof typeof state.settings])}; your edit ${preferenceValueLabel(key, value)}.`,
     );
   if (change.type === 'task-edit') {
     const task = state.plan.find((task) => task.id === change.id);

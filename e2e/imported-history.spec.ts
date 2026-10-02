@@ -111,6 +111,7 @@ test('imported results, original reports, and device drafts remain readable priv
       preferences: {
         blockMinutes: 15,
         reminderTime: '08:30',
+        joinUrl: 'https://meeting.example.test/original?pwd=synthetic-reference',
         carriedTasks: [{ taskId: 'exercise', date: '2026-09-28' }],
       },
       lcwo: {
@@ -166,6 +167,16 @@ test('imported results, original reports, and device drafts remain readable priv
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'View imported history', exact: true }).click();
   const archive = page.getByRole('region', { name: 'Imported history', exact: true });
+  await archive.getByText('Original course & preferences', { exact: true }).click();
+  await archive.getByText('Original class meetings (1)', { exact: true }).click();
+  await expect(archive.getByText('2026-09-07T23:00:00Z', { exact: true })).toBeVisible();
+  await expect(archive.getByText('2026-09-08T00:00:00Z', { exact: true })).toBeVisible();
+  await expect(
+    archive.getByRole('link', { name: 'Original class link', exact: true }),
+  ).toHaveAttribute('href', fixture.snapshot.preferences.joinUrl);
+  expect(
+    (await (await context.request.get('/api/settings')).json()).settings.classSchedule,
+  ).toBeUndefined();
   await archive.getByText('Session 2 · 2026-09-28 · Submitted report', { exact: true }).click();
   await expect(archive.getByText('CQ and TEST', { exact: true })).toBeVisible();
   await expect(

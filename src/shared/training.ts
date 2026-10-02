@@ -3,6 +3,7 @@ import { validateCopyAttempt, type CopyAttempt } from './copy-practice.ts';
 import { copyAttemptSessionFields } from './copy-report.ts';
 import { evidenceTime, sessionEvidence, type PracticeEvidence } from './practice-evidence.ts';
 import { generatedListeningSpeeds } from './generated-listening.ts';
+import { validateClassSchedule, type ClassSchedule } from './class-schedule.ts';
 
 /** Public domain model. Course instructions and personal records stay private. */
 export type CourseLevel = 'beginner' | 'fundamental' | 'intermediate' | 'advanced';
@@ -21,6 +22,8 @@ export interface Profile {
   firstClassDate: string;
   /** JavaScript weekdays: Sunday = 0, Monday = 1, Saturday = 6. */
   classDays: number[];
+  /** Optional versioned private meeting details; null explicitly clears them. */
+  classSchedule?: ClassSchedule | null;
 }
 
 export interface PracticeSession {
@@ -326,7 +329,10 @@ export function addDays(date: string, count: number): string {
   return value.toISOString().slice(0, 10);
 }
 
-export function validateProfile(value: unknown): Profile {
+export function validateProfile(
+  value: unknown,
+  options: { partialSchedule?: boolean } = {},
+): Profile {
   const input = record(value, 'Profile');
   const level = input.level ?? DEFAULT_PROFILE.level;
   if (!COURSE_LEVELS.some((item) => item.id === level))
@@ -347,7 +353,7 @@ export function validateProfile(value: unknown): Profile {
   if (new Set(classDays).size !== classDays.length) throw new Error('Class days must be unique.');
   if (input.useGravatar !== undefined && typeof input.useGravatar !== 'boolean')
     throw new Error('The Gravatar preference must be true or false.');
-  return {
+  const profile: Profile = {
     displayName: text(input.displayName, 'Display name', 100, '').trim(),
     callsign: text(input.callsign, 'Callsign', 30, '').trim().toUpperCase(),
     useGravatar: input.useGravatar !== false,
@@ -363,6 +369,12 @@ export function validateProfile(value: unknown): Profile {
     firstClassDate,
     classDays: [...classDays].sort((a, b) => a - b),
   };
+  if (input.classSchedule !== undefined)
+    profile.classSchedule =
+      input.classSchedule === null
+        ? null
+        : validateClassSchedule(input.classSchedule, profile, !options.partialSchedule);
+  return profile;
 }
 
 function timestamp(value: unknown, label: string): string {

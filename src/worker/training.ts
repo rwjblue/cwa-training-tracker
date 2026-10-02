@@ -9,6 +9,7 @@ import {
   type TrainingExport,
 } from '../shared/training';
 import { requireAuth } from './auth';
+import { settingsStatement } from './settings';
 import { HttpError, isRecord, json, readJson } from './http';
 import { hash, rateLimit } from './security';
 import { deletePlanStatement, getPlanData, planStatementsForImport } from './plan';
@@ -397,12 +398,7 @@ export async function saveSettings(request: Request, env: Env): Promise<Response
   const applied = await mutateAccount(
     env,
     state,
-    [
-      env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
-        JSON.stringify(settings),
-        auth.user.id,
-      ),
-    ],
+    [settingsStatement(env, auth.user.id, settings)],
     undefined,
     retiredTaskIds(state, mergeCurriculumPlan(settings, state.plan)),
   );
@@ -570,12 +566,7 @@ export async function importData(request: Request, env: Env): Promise<Response> 
       settings.callsign ||= existing.callsign;
       settings.displayName ||= existing.displayName;
     }
-    statements.push(
-      env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
-        JSON.stringify(settings),
-        auth.user.id,
-      ),
-    );
+    statements.push(settingsStatement(env, auth.user.id, settings));
   }
   const entryStatementIndexes: number[] = [];
   // Chunk bound JSON rather than issuing a database round trip for every row.
@@ -681,10 +672,7 @@ export async function resetData(request: Request, env: Env): Promise<Response> {
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
       env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
       deletePlanStatement(env, auth.user.id),
-      env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
-        JSON.stringify(DEFAULT_PROFILE),
-        auth.user.id,
-      ),
+      settingsStatement(env, auth.user.id, DEFAULT_PROFILE),
     ]),
   );
 }

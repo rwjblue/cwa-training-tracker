@@ -42,6 +42,7 @@ const profileFields = [
   'dailyGoalMinutes',
   'firstClassDate',
   'classDays',
+  'classSchedule',
 ] as const;
 const editFields = [
   'title',
@@ -134,10 +135,17 @@ export function validateAccountChange(value: unknown): AccountChange {
       keys(changes, profileFields);
       if (
         !Object.keys(changes).length ||
-        Object.values(changes).some((value) => value === undefined || value === null)
+        Object.entries(changes).some(
+          ([key, value]) => value === undefined || (value === null && key !== 'classSchedule'),
+        )
       )
         throw new Error('Choose profile fields to change.');
-      const normalized = validateProfile({ ...DEFAULT_PROFILE, ...changes });
+      // Partial operations cannot know existing course dates. Full projection
+      // below and the Worker validate the resulting schedule before any write.
+      const normalized = validateProfile(
+        { ...DEFAULT_PROFILE, ...changes },
+        { partialSchedule: true },
+      );
       return {
         type: 'settings',
         changes: Object.fromEntries(
@@ -248,7 +256,11 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
   keys(input, ['accountId', 'revision', 'generation', 'historyRevision', 'settings', 'plan']);
   const settings = record(input.settings);
   keys(settings, profileFields);
-  if (profileFields.some((key) => key !== 'useGravatar' && settings[key] === undefined))
+  if (
+    profileFields.some(
+      (key) => !['useGravatar', 'classSchedule'].includes(key) && settings[key] === undefined,
+    )
+  )
     throw new Error('The account snapshot is missing profile fields.');
   return {
     accountId: id(input.accountId),

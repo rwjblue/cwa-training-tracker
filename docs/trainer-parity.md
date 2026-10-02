@@ -164,7 +164,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | ID / priority                                       | Current gap and concrete next behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Evidence                                                                                                                                                                                                                                                                                                                                                                                              |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **R1 · P1** Recoverable practice beyond native copy       | Issue #6 implements one in-memory owner across in-app inspection, preserving content, preferences, measured time and acknowledged results. Finished Copy, listening, manual and Runner sessions retain durable upload queues; issues #2–#4 cover mutable outboxes, selected-scope device backup and destructive lifecycle fencing. Remaining accepted recovery work includes durable report drafts and private material ordering. Elapsed-time reload/crash recovery is excluded. Issue #6 is independently accepted, published and deployed. | Personal [device state](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21); [planning P15–P17](parity/planning.md#instructor-materials-and-records); [current navigation](../src/client/practice-navigation.ts).                                                                                                                |
-| **R2 · P1/P2** Daily guidance                       | Offer resume/next eligible exercise; rotate familiar review without assignment credit; show the separate optional ten-minute word-listening suggestion. Earlier reminders now support dismissal and restoration independently of completion. Class time, Join class, rest-day goals, and saved/current-time breakdown still need explicit policy. | Personal [planner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L270); [planning P03–P11/P38](parity/planning.md#curriculum-and-the-daily-queue). |
+| **R2 · P1/P2** Daily guidance                       | Offer resume/next eligible exercise; rotate familiar review without assignment credit; show the separate optional ten-minute word-listening suggestion. Earlier reminders now support dismissal and restoration independently of completion. Issue #18 adds private timed meetings, exceptions and Join class; class logs remain separate from independent credit. Rest-day goals and general saved/current-time guidance remain later issues. | Personal [planner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L270); [planning P03–P11/P38](parity/planning.md#curriculum-and-the-daily-queue). |
 | **R3 · P1** Remaining typed results                 | Native copy saves validated attempts. Issue #1 adds validated Runner and timer/recording evidence, immutable measurements, explicit corrections, history/report details and account plan checks. Add performance ratings and structured CWT heard/worked observations for other practice. Imported LCWO history remains readable with source identity and overlap-safe estimated group minutes; optional per-account live LCWO linking remains accepted issue #35, separate from native practice.                                                                                                                                                                  | Personal [result fields](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/practice-results-form.ts#L3), [LCWO accounting](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/lcwo-practice.ts#L8); [planning P14/P18/P20–P24](parity/planning.md).                                      |
 | **R4 · P1** Advisor reports                         | Keep the generic printable report, then add configurable advisor fields, per-class windows, editable durable drafts, evidence-backed suggestions, refresh preserving edits, exact prefilled-form handoff, and confirmed submitted snapshots. Saved imported report snapshots are readable with original answers/evidence in Settings. New report authoring must use actual individual verified Runner results and practiced recording speeds; do not sum scores or infer learned words from exposure.                                          | Personal [report derivation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L196), [handoff](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L282); [planning P27–P31](parity/planning.md#reports-and-evidence).                                         |
 | **R5 · P1** Sending trainer                         | The native scales reader, prescribed sections, PDF reference and timer are present, but capture is absent. Port optional adapter setup/test, keyed MIDI or focus-scoped keyboard input, raw edge timing, cautious decode/target comparison, actual-timing replay, keep/discard takes, and local retention. Keep ordinary key practice available without capture.                                                                                                                                                                                                         | Personal [active panel](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/sending-panel.ts#L68); [sending subsystem](parity/listening.md#sending-practice--large-missing-subsystem-p1).                                                                                                                                                        |
@@ -1521,3 +1521,84 @@ protected scope documents remain unchanged. Per the user's no-push instruction,
 these focused commits remain local and #17 stays open until source publication.
 New primary-checkout browser/testing edits are preserved without rebasing that
 working copy; the local main bookmark tracks the accepted delivery journal.
+
+
+### Issue #18 — private timed meetings and safe Join class
+
+Rechecked the live issue body/comments/dependencies and pinned original
+`types.ts:48`, `plan.ts:278`, `client.ts:625`, and Worker `cw-training.ts:347`.
+The approved issue retains meeting access query parameters, superseding the
+original generic URL sanitizer. Original trainer remains read-only evidence.
+
+Learners configure ordinary start/end wall times in an explicit meeting timezone,
+optional next-day ends, and individual session 1–16 date/time/timezone exceptions.
+Curriculum dates and session identities remain unchanged. Skipped DST wall times
+are rejected; repeated hours use their earlier occurrence. Actual duration must
+be 1 minute through 24 hours and meeting intervals cannot overlap. Changing the
+practice/display timezone preserves meeting wall times and absolute instants.
+The preview, Today and Academy guide show local starts/ends and explicit timezone
+context; Today refreshes at calendar boundaries/visibility changes for upcoming,
+active and finished classes. No practice clock or inferred attendance is involved.
+Join class opens the private HTTP/S URL with `noopener noreferrer`, retaining
+meeting query parameters and fragments, and rejects username/password userinfo.
+Neither guest UI nor a public endpoint receives personal meeting details.
+
+Version 1 optional `Profile.classSchedule` travels through the existing settings
+projection, durable semantic outbox, exact-retry/CAS receipts and account lifecycle.
+Migration 0007 adds nullable owner-row `class_schedule_json`, separately bound
+from ordinary preferences. All settings/import/reset writes share one scoped
+statement; existing snapshot/CAS query offsets remain intact. Private account
+exports/backups restore the versioned schedule. Old date-only backups remain
+untimed. Imported original meeting timestamps and join references remain readable
+in Imported history, with no automatic native conversion or published content.
+
+Log class time opens the existing private manual log with class context and stable
+session prefilled. Saved history labels Class; existing goals, required progress
+and reports exclude it from independent totals. Cancellation adds no record.
+Meeting edits can be canceled independently of other preference edits. Validation
+retains invalid input; an unavailable save retains its scoped durable edit and
+Retry account sync reuses the exact request before confirming persistence.
+
+New fast coverage protects DST gaps/folds including Lord Howe, overnight/exact
+boundaries, display/exception timezones, early accepted calendar years, stable
+curriculum dates, overlap/duration/URL validation, partial edits and old/new backup
+compatibility. Five actual-SQL API cases exercise isolated settings/semantic
+operations/private exports, old/native imports and original archives, exact
+receipts, injected replacement rollback, lifecycle reset and restoration.
+
+The representative browser journey uses desktop keyboard and mobile touch once
+across real controls: configuration/exception preview, actual 503 and exact retry,
+synthetic Join popup, before/during/after timing, canceled class log, one private
+class save, unchanged plan, canceled meeting edits, retained validation errors,
+actual downloaded backup, Class history, Academy guide and a stale-revision
+conflict with readable online/local times and deliberate Keep online version. Six distinct screens
+fit 1440/390 pixels with twelve empty settled Axe reports. Screenshots were inspected.
+Calendar Date is fixed independently of actual browser timers; no native media or
+engine credit is fabricated. Emulation is not physical-device verification.
+Check, all 950 tests/52 files and production build pass. The complete serialized
+browser gate passes all 64 journeys in 13.1 minutes, including integrated user
+coverage cleanup. Independent review and deployment remain pending.
+
+Honest fixture failures remain retained: pausing the browser clock froze Axe's own
+timers; checking an entering modal caused transient contrast failures; history's
+actual label is Class. The fixture now fixes only Date, waits actual finite
+animations and asserts the existing label. One new SQL test needed an explicit
+unknown JSON response type. No product timer, validation, evidence rule or contrast
+check was weakened. Binding/config types did not change.
+
+The existing imported-history browser journey now independently opens original
+course/meeting references, reads both preserved timestamps and the exact private
+join URL, and confirms no native schedule was invented. It passes in 5.5 seconds.
+The class-schedule journey with its shared readable conflict comparison passes
+in 18 seconds. New controls retain the existing wrapped private conflict panel.
+The first full gate was deliberately interrupted for this required UX correction
+after 14 passing journeys; it is not a complete gate. Its interrupted native
+course-replay wait and trace remain retained, without treating partial playback
+as a completed pass. The corrected serialized 64-journey gate passes in 13.1 minutes.
+
+Final normalized URL length is checked after percent-encoding as well as before
+parsing, so valid-looking Unicode input cannot exceed the private storage bound.
+Its shared rejection test passes; subsequent check, all 950 tests/52 files, build
+and the complete focused schedule journey (17.9 seconds) pass. The 64-journey
+gate precedes this isolated validation-boundary correction; no interface or native
+playback wiring changed afterward. Twelve final settled Axe reports are empty.

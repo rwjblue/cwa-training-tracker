@@ -37,9 +37,15 @@ function zoneLabel(zone: string): string {
 export default function TimeZoneSelect({
   value,
   onChange,
+  id = 'practice-timezone',
+  label = 'Practice timezone',
+  hint = 'Your daily goals and class dates follow this timezone.',
 }: {
   value: string;
   onChange: (value: string) => void;
+  id?: string;
+  label?: string;
+  hint?: string;
 }) {
   const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const options = useMemo(() => {
@@ -53,20 +59,15 @@ export default function TimeZoneSelect({
   }, [value, detected]);
   return (
     <div className="field timezone-field">
-      <label htmlFor="practice-timezone">Practice timezone</label>
-      <select
-        id="practice-timezone"
-        value={value}
-        required
-        onChange={(event) => onChange(event.target.value)}
-      >
+      <label htmlFor={id}>{label}</label>
+      <select id={id} value={value} required onChange={(event) => onChange(event.target.value)}>
         {options.map(({ zone, label }) => (
           <option key={zone} value={zone}>
             {label}
           </option>
         ))}
       </select>
-      <span className="field-hint">Your daily goals and class dates follow this timezone.</span>
+      <span className="field-hint">{hint}</span>
       {value !== detected && (
         <button type="button" className="text-button" onClick={() => onChange(detected)}>
           Use device timezone: {zoneLabel(detected).split(' — ')[0]}

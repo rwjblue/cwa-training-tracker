@@ -9,9 +9,11 @@ import { DEFAULT_PROFILE } from '../shared/training';
 import { requireAuth } from './auth';
 import { HttpError, json, readJson } from './http';
 import { hash, rateLimit } from './security';
+import { settingsStatement } from './settings';
 
 type AccountRow = {
   profile_json: string;
+  class_schedule_json: string | null;
   account_revision: number;
   dataset_generation: number;
   history_revision: number;
@@ -20,7 +22,7 @@ type AccountRow = {
 export function accountSnapshotStatements(env: Env, accountId: string): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      'SELECT profile_json, account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
+      'SELECT profile_json, class_schedule_json, account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
     ).bind(accountId),
     env.DB.prepare('SELECT task_json FROM training_plan WHERE user_id = ? ORDER BY id').bind(
       accountId,
@@ -30,7 +32,11 @@ export function accountSnapshotStatements(env: Env, accountId: string): D1Prepar
 
 export function snapshotFromResults(accountId: string, results: D1Result[]): AccountSnapshot {
   const row = results[0].results[0] as AccountRow;
-  const settings = { ...DEFAULT_PROFILE, ...JSON.parse(row.profile_json) };
+  const settings = {
+    ...DEFAULT_PROFILE,
+    ...JSON.parse(row.profile_json),
+    ...(row.class_schedule_json ? { classSchedule: JSON.parse(row.class_schedule_json) } : {}),
+  };
   return {
     accountId,
     revision: row.account_revision,
@@ -277,12 +283,7 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
   const statements: D1PreparedStatement[] = [];
   const change = operation.change;
   if (change.type === 'settings')
-    statements.push(
-      env.DB.prepare('UPDATE users SET profile_json = ? WHERE id = ?').bind(
-        JSON.stringify(next.settings),
-        auth.user.id,
-      ),
-    );
+    statements.push(settingsStatement(env, auth.user.id, next.settings));
   else if (change.type === 'task-delete')
     statements.push(
       env.DB.prepare('DELETE FROM training_plan WHERE user_id = ? AND id = ?').bind(

@@ -1,0 +1,81 @@
+.class-schedule-fields {
+  min-width: 0;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.class-schedule-fields legend {
+  font-weight: 700;
+  padding: 0 0.4rem;
+}
+.class-schedule-fields > p,
+.class-schedule-fields .field-hint {
+  line-height: 1.6;
+}
+.class-schedule-check {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  margin: 1rem 0;
+}
+.class-schedule-check input {
+  flex-shrink: 0;
+}
+.class-schedule-fields .field {
+  margin: 0.8rem 0;
+}
+.class-schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.7rem;
+}
+.class-schedule-actions button {
+  min-height: 44px;
+}
+.class-schedule-exceptions ul {
+  padding: 0;
+  list-style: none;
+}
+.class-schedule-exceptions li {
+  margin: 1rem 0;
+  overflow-wrap: anywhere;
+}
+.class-exception-editor {
+  min-width: 0;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+}
+.class-schedule-preview {
+  margin: 1rem 0;
+}
+.class-schedule-preview summary {
+  min-height: 44px;
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+.class-schedule-preview li {
+  margin-bottom: 1rem;
+}
+.class-schedule-preview li span {
+  display: block;
+}
+.class-meeting-card {
+  min-width: 0;
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+.class-meeting-card h3 {
+  margin: 0.5rem 0;
+}
+.class-meeting-card p {
+  line-height: 1.6;
+}
+.class-meeting-card .button {
+  min-height: 44px;
+}

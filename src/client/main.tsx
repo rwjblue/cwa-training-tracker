@@ -1,4 +1,6 @@
 import type { CurrentRunnerProgress } from '../shared/runner-progress';
+import ClassScheduleFields from './ClassScheduleFields';
+import ClassMeetingCard from './ClassMeetingCard';
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
@@ -2390,7 +2392,7 @@ function Course({
           <ArrowRight size={14} />
         </button>
       </div>
-      {meetings.length > 0 && (
+      {meetings.length > 0 && !profile.classSchedule && (
         <div className="schedule-strip">
           <CalendarDays size={20} />
           <div>
@@ -2407,6 +2409,7 @@ function Course({
           </div>
         </div>
       )}
+      <ClassMeetingCard accountId={user?.id} profile={profile} onLog={onLog} />
       <div className="roadmap-grid">
         {COURSE_ROADMAP.map((week) => {
           const dates = meetings.filter((m) => m.week === week.week);
@@ -3526,6 +3529,11 @@ function Account({
                 Save your first class date and meeting days to populate daily assignments for your
                 Academy level. Changing dates keeps recorded practice and completion.
               </p>
+              <ClassScheduleFields
+                profile={form}
+                savedSchedule={profile.classSchedule}
+                onChange={(classSchedule) => editProfile({ ...form, classSchedule })}
+              />
               <div className="account-form-actions">
                 <button className="button dark" type="submit" disabled={saving}>
                   {saving ? 'Saving…' : 'Save preferences'}

@@ -1,4 +1,5 @@
 import RunnerAssignmentProgress from './RunnerAssignmentProgress';
+import ClassMeetingCard from './ClassMeetingCard';
 import {
   runnerAssignmentProgress,
   type CurrentRunnerProgress,
@@ -145,6 +146,7 @@ export default function TodayPlan({
           Your full plan <ArrowRight size={14} />
         </button>
       </header>
+      <ClassMeetingCard accountId={accountId} profile={profile} onLog={onLog} />
       {!loading && curriculum && (
         <p className="today-plan-curriculum">
           {curriculum.title.replace('CW Academy ', '')} · syllabus v{curriculum.version}
@@ -154,7 +156,7 @@ export default function TodayPlan({
           </a>
         </p>
       )}
-      {!loading && plan.nextMeeting && (
+      {!loading && !profile.classSchedule && plan.nextMeeting && (
         <>
           <div className="today-plan-next-class">
             <CalendarDays size={15} />

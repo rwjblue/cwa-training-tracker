@@ -692,3 +692,46 @@ source publication remains pending and #16 stays OPEN. Mobile checks are
 Chromium touch emulation, not physical-device/OS lock-screen verification.
 Original trainer remains read-only evidence. Save & next is separate #17;
 no elapsed reload/crash recovery or live-engine restoration was added.
+
+
+### Issue #18 — private class time and joining workflow
+
+The learner configures ordinary wall times and individual 1–16 session exceptions
+in an explicit IANA meeting timezone, previews local starts/ends and sees upcoming,
+active and finished classes in Today/Academy guide. Exceptions preserve curriculum
+dates and session identities. DST gaps reject, folds choose the earlier occurrence,
+overnight ends are explicit, and coherent 1-minute–24-hour intervals cannot overlap.
+Changing the display timezone does not reinterpret saved meeting wall times.
+Private Join class accepts HTTP/S without userinfo and retains required access
+parameters. Guest/public UI receives no personal join detail. Class logs use the
+existing private log, retain Class history and remain outside independent goals
+and required assignment progress. Calendar display does not measure attendance.
+
+Migration 0007 adds nullable owner-row schedule JSON. Versioned optional profile
+projection reuses scoped settings CAS/outbox/exact retry and transactional private
+import/export/reset/lifecycle. Old date-only records remain untimed; original
+imported schedules/join references remain readable, without automatic conversion.
+Five actual-SQL tests protect ownership, rollback, exact receipts and old/native
+backup/reset compatibility. New pure tests cover DST/overnight boundaries, timezones,
+validation, stable course dates and early calendar years. One representative mixed
+keyboard/touch browser journey passes configuration, failed save/retry, Join popup,
+class phases, cancellation, class history and a real private backup download.
+Six distinct settled screens pass geometry and Axe at 1440/390 pixels (twelve empty
+reports); inspected screenshots are Chromium emulation. Check, all 950 tests/52
+files and build pass. The full serialized browser gate passes all 64 journeys in 13.1 minutes.
+Post-commit independent acceptance and production delivery remain pending. See the canonical issue #18 ledger for exact
+source pins, implementation ownership and retained fixture failures.
+
+The shared conflict panel shows human-readable online/local meeting times,
+exceptions, timezone and exact join link rather than opaque object text. The
+representative journey exercises a real stale-revision conflict and Keep online
+version. Existing imported-history coverage opens both original meeting
+timestamps and the exact original join link and asserts no native time conversion.
+These focused journeys pass in 18/5.5 seconds. The deliberately interrupted
+14-pass full run is not counted as complete; its trace remains retained.
+
+Normalized join-link length is bounded after percent-encoding to keep accepted
+URLs within private storage limits. Its regression plus subsequent check, all
+950 tests/52 files, build and focused schedule browser journey pass. The full gate
+precedes that isolated validation-boundary correction; interface and native media
+wiring are unchanged. No binding/config type regeneration is required.

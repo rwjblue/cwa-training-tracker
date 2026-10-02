@@ -28,6 +28,7 @@ import {
 import type { PracticeEvidence, RecordingEvidence } from '../shared/practice-evidence';
 import { createRunnerRun } from '../shared/runner';
 import { finishedRunnerSession, captureRunnerPracticeAttribution } from '../client/runner-session';
+import { timedClassMeetings, type ClassSchedule } from '../shared/class-schedule';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -5818,5 +5819,253 @@ describe('start-attributed finished Runner results', () => {
     expect(
       exported.sessions.find((entry) => entry.id === legacy.id)?.metadata?.evidence,
     ).not.toHaveProperty('run.attribution');
+  });
+});
+
+describe('private timed class schedule persistence', () => {
+  const classSchedule: ClassSchedule = {
+    version: 1,
+    timezone: 'America/New_York',
+    ordinary: { startTime: '19:00', endTime: '20:00', endsNextDay: false },
+    exceptions: [
+      { session: 2, date: '2026-11-04', startTime: '23:30', endTime: '00:30', endsNextDay: true },
+    ],
+    joinUrl: 'https://meeting.example.test/j/123?pwd=synthetic-access&token=required#join',
+  };
+  const profile = { ...DEFAULT_PROFILE, firstClassDate: '2026-10-29', classSchedule };
+  async function read(cookie: string) {
+    const response = await request('/api/settings', 'GET', undefined, cookie);
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { settings: typeof profile }).settings;
+  }
+  it('stores schedule independently and scopes every read, write and backup to its authenticated owner', async () => {
+    const a = await signIn('class-a@example.test');
+    const b = await signIn('class-b@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await read(a.cookie)).classSchedule).toEqual(classSchedule);
+    expect((await read(b.cookie)).classSchedule).toBeUndefined();
+    const row = db.sqlite
+      .prepare('SELECT profile_json,class_schedule_json FROM users WHERE id = ?')
+      .get(a.user.id)!;
+    expect(JSON.parse(String(row.profile_json))).not.toHaveProperty('classSchedule');
+    expect(JSON.parse(String(row.class_schedule_json))).toEqual(classSchedule);
+    for (const path of [
+      '/api/settings',
+      '/api/account-state',
+      '/api/export',
+      '/api/account-lifecycle/backup',
+    ]) {
+      expect((await request(path)).status).toBe(401);
+      expect(
+        (await request(path, 'GET', undefined, b.cookie, { 'X-CWA-Account': a.user.id })).status,
+      ).toBe(409);
+    }
+    expect(
+      (
+        await request('/api/settings', 'PUT', { settings: profile }, b.cookie, {
+          'X-CWA-Account': a.user.id,
+        })
+      ).status,
+    ).toBe(409);
+    expect((await read(b.cookie)).classSchedule).toBeUndefined();
+    const state = await getAccountSnapshot(env, a.user.id);
+    expect(state.settings.classSchedule).toEqual(classSchedule);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.profile?.classSchedule?.joinUrl).toBe(classSchedule.joinUrl);
+    expect(timedClassMeetings(exported.profile!)).toHaveLength(16);
+  });
+  it('gives offline schedule edits exact receipts and validates the resulting full course before mutation', async () => {
+    const auth = await signIn('class-outbox@example.test');
+    expect(
+      (
+        await request(
+          '/api/settings',
+          'PUT',
+          { settings: { ...profile, classSchedule: null } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const operation: AccountOperation = {
+      version: 1,
+      id: 'class-operation',
+      accountId: auth.user.id,
+      baseRevision: before.revision,
+      generation: before.generation,
+      createdAt: '2026-10-01T00:00:00Z',
+      change: { type: 'settings', changes: { classSchedule } },
+    };
+    expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(
+      200,
+    );
+    const saved = await getAccountSnapshot(env, auth.user.id);
+    expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(
+      200,
+    );
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(saved);
+    const invalid: AccountOperation = {
+      ...operation,
+      id: 'class-invalid',
+      baseRevision: saved.revision,
+      change: { type: 'settings', changes: { firstClassDate: '' } },
+    };
+    expect((await request('/api/account-operations', 'POST', invalid, auth.cookie)).status).toBe(
+      400,
+    );
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(saved);
+    expect(
+      (
+        await request(
+          '/api/account-operations',
+          'POST',
+          {
+            ...invalid,
+            id: 'class-clear',
+            change: { type: 'settings', changes: { classSchedule: null } },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await read(auth.cookie)).classSchedule).toBeUndefined();
+  });
+  it('roundtrips native schedule privately and leaves old date-only/original meeting references untimed', async () => {
+    const a = await signIn('class-backup-a@example.test');
+    const b = await signIn('class-backup-b@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, a.cookie)).status).toBe(
+      200,
+    );
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status,
+    ).toBe(200);
+    expect((await read(b.cookie)).classSchedule).toEqual(classSchedule);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status,
+    ).toBe(200);
+    expect(timedClassMeetings(await read(b.cookie))).toEqual(timedClassMeetings(profile));
+    const old = {
+      ...exported,
+      profile: { ...DEFAULT_PROFILE, firstClassDate: '2026-10-29' },
+      legacy: {
+        source: 'rwjblue.com',
+        data: {
+          course: {
+            meetings: [
+              { session: 1, startsAt: '2026-10-29T23:00:00Z', endsAt: '2026-10-30T00:00:00Z' },
+            ],
+          },
+          preferences: { joinUrl: classSchedule.joinUrl },
+        },
+      },
+    };
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: old }, b.cookie)).status,
+    ).toBe(200);
+    expect((await read(b.cookie)).classSchedule).toBeUndefined();
+    const historical = (await (
+      await request('/api/export', 'GET', undefined, b.cookie)
+    ).json()) as TrainingExport;
+    expect(historical.legacy?.data).toEqual(old.legacy.data);
+    expect(timedClassMeetings(historical.profile!)).toEqual([]);
+    expect((await read(a.cookie)).classSchedule).toEqual(classSchedule);
+  });
+  it('keeps invalid links and failed replacement transactions from altering settings, schedule or history', async () => {
+    const auth = await signIn('class-rollback@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, auth.cookie)).status).toBe(
+      200,
+    );
+    const before = await getAccountSnapshot(env, auth.user.id);
+    for (const joinUrl of ['https://user:password@example.test/j', 'javascript:alert(1)']) {
+      expect(
+        (
+          await request(
+            '/api/settings',
+            'PUT',
+            { settings: { ...profile, classSchedule: { ...classSchedule, joinUrl } } },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            {
+              mode: 'merge',
+              data: {
+                ...backup([]),
+                profile: { ...profile, classSchedule: { ...classSchedule, joinUrl } },
+              },
+            },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    db.sqlite.exec(
+      "CREATE TRIGGER reject_class_import BEFORE INSERT ON practice_entries BEGIN SELECT RAISE(ABORT, 'synthetic_class_failure'); END;",
+    );
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'replace',
+            data: {
+              ...backup(),
+              profile: {
+                ...profile,
+                classSchedule: {
+                  ...classSchedule,
+                  joinUrl: 'https://meeting.example.test/new?pwd=other',
+                },
+              },
+            },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(500);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    expect((await read(auth.cookie)).classSchedule).toEqual(classSchedule);
+    expect(
+      db.sqlite
+        .prepare('SELECT COUNT(*) AS count FROM practice_entries WHERE user_id = ?')
+        .get(auth.user.id)?.count,
+    ).toBe(0);
+  });
+  it('includes meeting details in coherent lifecycle backup and clears them only for the resetting owner', async () => {
+    const a = await signIn('class-reset-a@example.test');
+    const b = await signIn('class-reset-b@example.test');
+    for (const auth of [a, b])
+      expect(
+        (await request('/api/settings', 'PUT', { settings: profile }, auth.cookie)).status,
+      ).toBe(200);
+    const saved = (await (
+      await request('/api/account-lifecycle/backup', 'GET', undefined, a.cookie)
+    ).json()) as AccountLifecycleBackup;
+    expect(saved.data.profile?.classSchedule).toEqual(classSchedule);
+    expect(saved.state.settings.classSchedule).toEqual(classSchedule);
+    expect((await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await read(a.cookie)).classSchedule).toBeUndefined();
+    expect((await read(b.cookie)).classSchedule).toEqual(classSchedule);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: saved.data }, a.cookie))
+        .status,
+    ).toBe(200);
+    expect((await read(a.cookie)).classSchedule).toEqual(classSchedule);
   });
 });
