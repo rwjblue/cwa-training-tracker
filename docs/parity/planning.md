@@ -1235,3 +1235,40 @@ passed in15.1m before these final pure-selector/style corrections. Fresh issue
 body/comments/dependencies are unchanged; closed dependency#5 is reverified
 by the real extra-review browser journey and eight Worker provenance/privacy/
 backup tests. Independent post-commit review is the next gate.
+
+### Issue #24 — independent acceptance and production delivery
+
+Implementation `bb335722f6d4b6d186ae4a8354db291e3166860b` is independently
+ACCEPTED with no substantive findings. Thirty focused tests across three files
+pass, including real-SQL review privacy/provenance/restore boundaries. The
+reviewer independently reran the actual native recording/Copy/Runner journey
+in16.1s: cancellation, HTTP503, exact retry, captured recipes/settings, original
+plan equality and zero required credit all pass. Its separately authored
+large-pool/external Koch/guest-isolation journey passes in3.9s. Current reached
+recipes remain discoverable among many recordings; unsupported Koch launches
+its actual external popup and pauses by mobile touch, without Code Groups or
+an implicit save. Guests see no private suggestions and private plan GET401.
+Sixteen settled Axe/overflow reports are empty at desktop1440/mobile390;
+pixels were independently inspected. All nine implementation files match
+committed bytes, protected primary hashes/signing remain unchanged, and the
+reviewer released the runtime.
+
+Root final gates pass: check, all1,030 tests in61 files and build. The complete
+initial74-browser run passed in15.1m; final pure-selector/theme corrections
+passed all six affected review/next journeys in1.1m (native review17.7s).
+Production deploy passed on its first attempt, found no pending migrations and
+deployed version `f8b82048-1aab-4c15-aeac-60b949ae2692`. Fresh production
+entry/health responses are200; four JS/CSS assets and the pinned Runner bridge
+match built SHA-256 bytes. Entries, account state and lifecycle backup require
+authentication (401). The separate public calendar retains exact shared
+content, nine stable distinct UIDs/sequence1, matching DST recurrence,
+GET/HEAD200, conditional304, unsupported-method405 and no Set-Cookie.
+
+Local main records delivery. No push was attempted; GitHub reports the
+implementation SHA absent (422). Issue #24 stays OPEN pending publication;
+accepted local and production behavior permits the ascending #25 loop.
+Introduction means the source's account-local scheduled practice date has
+arrived; the current computer recipes reserve places in a maximum three-choice
+set and ordinary material rotates within three recent usable dates. No
+physical-device, reload/crash elapsed recovery or new recognition claim is
+made. Restricted curriculum remains linked, and original/user work is intact.
