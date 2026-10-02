@@ -856,3 +856,32 @@ continuity and source cancellation. The isolated journey passes in 9.2 seconds;
 all eleven affected serial native journeys pass in 2.0 minutes. Required check,
 1,055 tests across 63 files and build pass. The reviewer must independently
 recheck both corrections on the committed revision before acceptance.
+
+Fresh independent post-commit review ACCEPTS final keyboard correction
+48f01ff3 after independently rechecking both P2 findings on original repros.
+Eleven independently authored probes pass: repeated source generation, actual
+native endings, cancellation owners, retry feedback, rapid initial/custom Enter,
+selected panel override and baked-volume fallback. Unsupported native volume is
+a labeled simulation; actual generated PCM preserves gain on both sources.
+Twelve settled desktop/mobile accessibility/overflow reports are empty; captures
+were inspected. Private raw heard time 9.231473 seconds matches observed
+9.231456 seconds; exact 503 retry/history/report/export, guest isolation and
+sourceText omission pass. Nine cumulative committed files, original pinned
+references, protected document hashes and signing policy remain intact.
+Reviewer released every process and its exclusive runtime lease. No unresolved
+substantive finding remains. Root final regression/deployment recorded below.
+
+Root final full regression passes all 83 serial browser journeys in 16.7
+minutes on the independently accepted code. The strict deploy task passes check,
+1,055 tests/63 files, build and dry-run; remote D1 has no pending migration.
+Production version ff50292e-4f8f-43b9-be81-10e5a212d1e4 at
+https://cwa.n1rwj.com serves four exact asset hashes and the unchanged Runner
+bridge. Home/health 200, private entries/account-state/backup 401 and public
+calendar GET/HEAD/304/405, nine stable UIDs and DST recurrence expansion pass.
+
+No push was attempted. Fresh GitHub main remains accepted #27; all three #28
+local implementation/follow-up lookups return 422. Fresh issue body/comments
+and dependency arrays are unchanged. Issue #28 remains OPEN until publication.
+Accepted local/production delivery permits the ascending #29 loop. Physical
+locked-device playback is unverified; new recognition and elapsed reload/crash
+recovery remain excluded. The original personal site is unchanged.
