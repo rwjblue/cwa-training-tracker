@@ -1028,3 +1028,38 @@ minutes on final code, including actual Stories and existing Copy/Runner/
 account/device workflows. The earlier deliberately interrupted run remains
 recorded above. Six final Stories accessibility/overflow reports remain empty.
 Fresh independent post-commit review and deployment remain pending.
+
+### Issue #30 independent acceptance and production
+
+Fresh post-implementation review ACCEPTS `3e12fae1` with no substantive findings.
+Five independently authored serial desktop/mobile keyboard/touch journeys,
+290 focused tests across six files and twelve empty accessibility/overflow
+reports pass. All 30 sentences match the pinned public catalog. Actual narrator
+PCM measured 624.75 Hz at selected 625 Hz; exact occurrence/relative rewind/
+replay/sentence controls, latest Play, cancellation, inspection, true native
+ended/replay and retained independent settings pass. Private raw heard time
+3.703308 seconds versus independently observed 3.703359 differs by 51 microseconds.
+Unplayed selections add no facts. Simultaneous 503/local queue-storage refusal,
+identical retries, actual history/report/account export, Guest/two-account draft
+isolation, zero-time notes and reviewed actual old/new device files all pass.
+Reviewer failure evidence identifies only ignored probe assumptions and the
+existing 60-second email cooldown; no implementation/authentication/clock change
+was needed. Every reviewer process closed and its exclusive lease was released.
+
+Root check, 1,072 tests/65 files, build and 87 serial browser journeys pass.
+Strict `mise run deploy` succeeds on the first attempt, including dry-run and
+remote D1 check with no pending migrations. Production version
+`6511d995-2bcd-4507-bfa8-220c34f0b099` at https://cwa.n1rwj.com serves four exact
+built asset hashes and the unchanged Runner bridge. Home/health return 200;
+private entries/account-state/backup return 401 without authentication. Public
+calendar matches the shared body and independent DST recurrence expansion:
+nine distinct stable UIDs, sequence 1, GET/HEAD 200, conditional 304, other
+methods 405 and no cookie issuance.
+
+No push was attempted. Fresh GitHub main remains accepted #27 (`7e4d66b2`);
+the #30 implementation lookup returns 422. Issue #30 remains OPEN until accepted
+source is published. The local implementation and production behavior have
+passed the review gate, permitting ascending issue #31. Exact public recipes
+remain #45; physical locked-device behavior is unverified. Approved exclusions
+and the read-only original site are preserved. This acceptance journal changes
+no runtime, binding or configuration.
