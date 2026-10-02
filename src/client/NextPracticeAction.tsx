@@ -63,7 +63,11 @@ export default function NextPracticeAction({
         <>
           <h3>{next.task.title}</h3>
           <p>
-            {next.dueDate === plan.today ? 'Assigned today' : `Earlier work · ${next.dueDate}`}
+            {next.dueDate === plan.today
+              ? 'Assigned today'
+              : next.task.pinnedForDate === plan.today
+                ? `Added to today · originally ${next.dueDate}`
+                : `Earlier work · ${next.dueDate}`}
             {next.task.lesson ? ` · Session ${next.task.lesson}` : ''}
             {next.status === 'started' ? ' · Started' : ''}
           </p>

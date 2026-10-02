@@ -1,4 +1,4 @@
-import { validatePlannedTask, type PlannedTask } from '../shared/plan';
+import { validatePlannedTask, validateNewTaskPin, type PlannedTask } from '../shared/plan';
 import { curriculumPlan, mergeCurriculumPlan } from '../shared/curriculum';
 import { DEFAULT_PROFILE } from '../shared/training';
 import { requireAuth } from './auth';
@@ -154,6 +154,15 @@ export async function savePlan(request: Request, env: Env, id?: string): Promise
       exercise: assigned.exercise,
       link: assigned.link,
     };
+    try {
+      validateNewTaskPin(
+        state.plan.find((item) => item.id === task.id),
+        task,
+        state.settings,
+      );
+    } catch (error) {
+      throw new HttpError(400, (error as Error).message);
+    }
     const applied = await mutateAccount(env, state, [
       env.DB.prepare(
         `INSERT INTO training_plan (user_id, id, task_json) VALUES (?, ?, ?)
@@ -161,6 +170,15 @@ export async function savePlan(request: Request, env: Env, id?: string): Promise
       ).bind(auth.user.id, task.id, JSON.stringify(task)),
     ]);
     return json({ task, revision: applied.state.revision, generation: applied.state.generation });
+  }
+  try {
+    validateNewTaskPin(
+      state.plan.find((item) => item.id === task.id),
+      task,
+      state.settings,
+    );
+  } catch (error) {
+    throw new HttpError(400, (error as Error).message);
   }
   let statement: D1PreparedStatement;
   if (id) {

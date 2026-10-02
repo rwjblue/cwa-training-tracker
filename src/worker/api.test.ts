@@ -1394,6 +1394,195 @@ describe('account operation revisions and receipts', () => {
     });
   }
 
+  it('persists dated presentation pins with exact retry, unchanged history, private ownership and reversible imports', async () => {
+    const a = await signIn('task-pins-a@example.test');
+    const b = await signIn('task-pins-b@example.test');
+    const task = { ...customTask(), dismissedFromToday: true };
+    expect((await request('/api/plan', 'POST', { task }, a.cookie)).status).toBe(201);
+    expect((await request('/api/entries', 'POST', entry(), a.cookie)).status).toBe(201);
+    const original = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    const op = operation(await snapshot(a.cookie), {
+      type: 'task-edit',
+      id: task.id,
+      changes: { pinnedForDate: '2026-10-07' },
+    });
+    expect((await send(a.cookie, op)).status).toBe(200);
+    const once = await snapshot(a.cookie);
+    expect((await send(a.cookie, op)).status).toBe(200);
+    expect(await snapshot(a.cookie)).toEqual(once);
+    expect(once.plan).toEqual([{ ...task, pinnedForDate: '2026-10-07' }]);
+    expect((await send(b.cookie, op)).status).toBe(409);
+    expect((await send(b.cookie, operation(await snapshot(b.cookie), op.change))).status).toBe(400);
+    expect(
+      (
+        await request(
+          `/api/plan/${task.id}`,
+          'PUT',
+          { task: { ...task, pinnedForDate: '2026-10-07' } },
+          b.cookie,
+        )
+      ).status,
+    ).toBe(404);
+    expect((await snapshot(b.cookie)).plan).toEqual([]);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions).toEqual(original.sessions);
+    expect(exported.plan).toEqual(once.plan);
+    for (const mode of ['merge', 'replace']) {
+      expect(
+        (await request('/api/import', 'POST', { mode, data: exported }, b.cookie)).status,
+      ).toBe(200);
+      expect(
+        (await request('/api/import', 'POST', { mode, data: exported }, b.cookie)).status,
+      ).toBe(200);
+      expect((await snapshot(b.cookie)).plan).toEqual(once.plan);
+    }
+    const before = await snapshot(b.cookie);
+    const invalid = { ...exported, plan: [{ ...task, pinnedForDate: '2026-02-30' }] };
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: invalid }, b.cookie)).status,
+    ).toBe(400);
+    expect(await snapshot(b.cookie)).toEqual(before);
+    db.sqlite.exec(
+      "CREATE TRIGGER reject_pin_import BEFORE INSERT ON training_plan BEGIN SELECT RAISE(ABORT, 'synthetic_pin_failure'); END;",
+    );
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, b.cookie)).status,
+    ).toBe(500);
+    expect(await snapshot(b.cookie)).toEqual(before);
+    expect(
+      ((await (await request('/api/export', 'GET', undefined, b.cookie)).json()) as TrainingExport)
+        .sessions,
+    ).toEqual(exported.sessions);
+    db.sqlite.exec('DROP TRIGGER reject_pin_import');
+    expect(
+      (
+        await send(
+          a.cookie,
+          operation(await snapshot(a.cookie), {
+            type: 'task-edit',
+            id: task.id,
+            changes: { pinnedForDate: null },
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect((await snapshot(a.cookie)).plan).toEqual([task]);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: original }, b.cookie)).status,
+    ).toBe(200);
+    expect((await snapshot(b.cookie)).plan[0]).not.toHaveProperty('pinnedForDate');
+  });
+
+  it('materializes an owned curriculum pin and preserves published assignment facts through direct edits and completion', async () => {
+    const auth = await signIn('curriculum-pin@example.test');
+    const settings = { ...DEFAULT_PROFILE, firstClassDate: '2026-10-01' };
+    expect((await request('/api/settings', 'PUT', { settings }, auth.cookie)).status).toBe(200);
+    const initial = await snapshot(auth.cookie);
+    const task = initial.plan[0];
+    const op = operation(initial, {
+      type: 'task-edit',
+      id: task.id,
+      changes: { pinnedForDate: '2026-11-01' },
+    });
+    expect((await send(auth.cookie, op)).status).toBe(200);
+    const pinned = (await snapshot(auth.cookie)).plan.find((item) => item.id === task.id)!;
+    expect(pinned).toEqual({ ...task, pinnedForDate: '2026-11-01' });
+    const row = db.sqlite
+      .prepare('SELECT task_json FROM training_plan WHERE user_id = ? AND id = ?')
+      .get(auth.user.id, task.id);
+    expect(JSON.parse(String(row?.task_json))).toEqual(pinned);
+    expect(
+      (
+        await request(
+          `/api/plan/${task.id}`,
+          'PUT',
+          { task: { ...pinned, pinnedForDate: '2026-11-02', dueDate: '2026-10-31', lesson: 16 } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await snapshot(auth.cookie)).plan.find((item) => item.id === task.id)).toEqual({
+      ...task,
+      pinnedForDate: '2026-11-02',
+    });
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(await snapshot(auth.cookie), {
+            type: 'task-status',
+            ids: [task.id],
+            done: true,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect((await snapshot(auth.cookie)).plan.find((item) => item.id === task.id)).toEqual({
+      ...task,
+      pinnedForDate: '2026-11-02',
+      done: true,
+    });
+    expect(
+      (
+        await send(
+          auth.cookie,
+          operation(await snapshot(auth.cookie), {
+            type: 'task-edit',
+            id: task.id,
+            changes: { pinnedForDate: null },
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    expect((await snapshot(auth.cookie)).plan.find((item) => item.id === task.id)).toEqual({
+      ...task,
+      done: true,
+    });
+  });
+
+  it('rejects malformed or ineligible new pins through direct and semantic writes without mutating rows or revisions', async () => {
+    const auth = await signIn('invalid-task-pins@example.test');
+    const task = customTask();
+    expect((await request('/api/plan', 'POST', { task }, auth.cookie)).status).toBe(201);
+    const before = await snapshot(auth.cookie);
+    for (const pinnedForDate of ['2026-02-30', '2026-10-01']) {
+      expect(
+        (
+          await request(
+            `/api/plan/${task.id}`,
+            'PUT',
+            { task: { ...task, pinnedForDate } },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await send(
+            auth.cookie,
+            operation(before, { type: 'task-edit', id: task.id, changes: { pinnedForDate } }),
+          )
+        ).status,
+      ).toBe(400);
+      expect(await snapshot(auth.cookie)).toEqual(before);
+    }
+    expect(
+      (
+        await request(
+          '/api/plan',
+          'POST',
+          { task: { ...task, id: 'new-invalid-pin', pinnedForDate: '2026-10-01' } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await snapshot(auth.cookie)).toEqual(before);
+  });
+
   it('persists private mark-only edits with exact retry receipts, export/import fidelity and ownership fences', async () => {
     const auth = await signIn('marks-a@example.test');
     const other = await signIn('marks-b@example.test');

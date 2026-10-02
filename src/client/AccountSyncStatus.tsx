@@ -50,6 +50,12 @@ function title(change: AccountChange, state?: AccountSnapshot): string {
   if (change.type === 'task-create') return `Add ${change.task.title}`;
   if (change.type === 'task-status')
     return `${change.done === undefined ? 'Today visibility' : change.done ? 'Complete' : 'Reopen'} ${change.ids.length === 1 ? (state?.plan.find((task) => task.id === change.ids[0])?.title ?? 'exercise') : `${change.ids.length} exercises`}`;
+  if (
+    change.type === 'task-edit' &&
+    Object.keys(change.changes).length === 1 &&
+    'pinnedForDate' in change.changes
+  )
+    return `${change.changes.pinnedForDate ? 'Add to today' : 'Remove Today pin'}: ${state?.plan.find((task) => task.id === change.id)?.title ?? 'exercise'}${change.changes.pinnedForDate ? ` (${change.changes.pinnedForDate})` : ''}`;
   return `${change.type === 'task-delete' ? 'Delete' : 'Edit'} ${state?.plan.find((task) => task.id === change.id)?.title ?? 'exercise'}`;
 }
 function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
@@ -63,7 +69,7 @@ function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
     if (!task) return ['This exercise is no longer in the online plan.'];
     return Object.entries(change.changes).map(
       ([key, value]) =>
-        `${key === 'targetMinutes' ? 'Suggested minutes' : key === 'recordingMarks' ? 'Difficult recording marks' : key}: saved online ${taskValueLabel(key, task[key as keyof typeof task])}; your edit ${taskValueLabel(key, value)}.`,
+        `${key === 'pinnedForDate' ? 'Today pin date' : key === 'targetMinutes' ? 'Suggested minutes' : key === 'recordingMarks' ? 'Difficult recording marks' : key}: saved online ${taskValueLabel(key, task[key as keyof typeof task])}; your edit ${taskValueLabel(key, value)}.`,
     );
   }
   if (change.type === 'task-create')

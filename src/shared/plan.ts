@@ -1,5 +1,6 @@
 import {
   addDays,
+  courseMeetings,
   getPracticePurpose,
   isRequiredPractice,
   type PracticeKind,
@@ -66,6 +67,8 @@ export interface PlannedTask {
   done: boolean;
   /** Hide earlier unfinished work from Today without completing it. */
   dismissedFromToday?: boolean;
+  /** Calendar-date presentation pin; never an assignment reschedule. */
+  pinnedForDate?: string;
   notes: string;
   createdAt: string;
   source?: 'manual' | 'legacy' | 'curriculum';
@@ -333,6 +336,11 @@ export function validatePlannedTask(value: unknown): PlannedTask {
     task.targetMinutesExplicit = input.targetMinutesExplicit as boolean;
   if (input.dismissedFromToday !== undefined)
     task.dismissedFromToday = input.dismissedFromToday as boolean;
+  if (input.pinnedForDate !== undefined) {
+    if (!validDate(input.pinnedForDate))
+      throw new Error('Choose a real calendar date for the Today pin.');
+    task.pinnedForDate = input.pinnedForDate as string;
+  }
   if (input.lesson !== undefined) {
     if (
       typeof input.lesson !== 'number' ||
@@ -540,6 +548,7 @@ export function dailyPlanSummary(
   const assignedToday: DailyPlannedTask[] = [];
   const preparation: DailyPlannedTask[] = [];
   const earlier: DailyPlannedTask[] = [];
+  const pinned: DailyPlannedTask[] = [];
   const unscheduled: DailyPlannedTask[] = [];
   const future: DailyPlannedTask[] = [];
   const seenTasks = new Set<string>();
@@ -556,7 +565,8 @@ export function dailyPlanSummary(
     };
     if (dueDate === today) assignedToday.push(item);
     else if (dueDate && dueDate < today) {
-      if (!task.done && !task.dismissedFromToday) earlier.push(item);
+      if (!task.done && task.pinnedForDate === today) pinned.push(item);
+      else if (!task.done && !task.dismissedFromToday) earlier.push(item);
     } else if (dueDate && !task.dueDate && nextMeeting && task.lesson === nextMeeting.lesson)
       preparation.push(item);
     else if (dueDate) {
@@ -568,7 +578,7 @@ export function dailyPlanSummary(
     (a.task.lesson ?? 0) - (b.task.lesson ?? 0) ||
     a.task.createdAt.localeCompare(b.task.createdAt) ||
     a.task.id.localeCompare(b.task.id, undefined, { numeric: true });
-  for (const group of [assignedToday, preparation, earlier, unscheduled, future])
+  for (const group of [assignedToday, preparation, pinned, earlier, unscheduled, future])
     group.sort(compare);
   const current = [...assignedToday, ...preparation];
   const completed = current.filter((item) => item.task.done);
@@ -577,6 +587,7 @@ export function dailyPlanSummary(
     assignedToday: assignedToday.filter((item) => !item.task.done),
     preparation: preparation.filter((item) => !item.task.done),
     completed,
+    pinned,
     earlier,
     unscheduled,
     upcoming: future.filter((item) => item.dueDate === nextPracticeDate),
@@ -590,6 +601,18 @@ export function dailyPlanSummary(
     pendingCount: current.length - completed.length,
     hasUndatedLessons: unscheduled.some((item) => item.task.lesson !== undefined),
   };
+}
+
+/** Only new pins need eligibility checks. Historical pins survive completion and schedule edits. */
+export function validateNewTaskPin(
+  previous: PlannedTask | undefined,
+  next: PlannedTask,
+  profile: Profile,
+): void {
+  if (!next.pinnedForDate || next.pinnedForDate === previous?.pinnedForDate) return;
+  const due = taskDueDate(next, courseMeetings(profile));
+  if (next.done || !due || due >= next.pinnedForDate)
+    throw new Error('Only earlier unfinished exercises can be added to Today.');
 }
 
 /** Practice credit and completing homework are deliberately separate decisions. */

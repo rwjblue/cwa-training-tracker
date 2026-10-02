@@ -2186,3 +2186,74 @@ SHA absent (422), so issue #22 stays OPEN pending publication; accepted local an
 production behavior permits the ascending #23 loop. No new elapsed-time reload
 recovery, physical-device/lock-screen claim or excluded public tool is included.
 Restricted curriculum remains linked; original source and user work are unchanged.
+
+### Issue #23 — dated Today pins, implementation and validation
+
+Rechecked the live issue (open, no comments or documented/native dependencies),
+approved finding 29 and the read-only original source at
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`: `plan.ts:300`,
+`client.ts:1941` and `types.ts:109`. The earlier Add to today behavior is a
+calendar-date presentation choice, independent of the assignment schedule.
+
+Today and the full plan now expose Add to today/Remove from today for earlier
+unfinished work. A separate Added to today group and row badges retain the
+original due date and saved progress. Keyboard focus returns to the Today
+heading when a row changes groups. Existing native player/Runner/manual launch
+factories remain authoritative; adding a pin starts no timer, adds no practice,
+and never completes, deletes or reschedules work. Today's assigned work stays
+first, followed by deliberately pinned work and ordinary earlier work in the
+shared next selector. Pins do not create a required goal on a rest day.
+
+The optional private task field `pinnedForDate` is validated as a real calendar
+date and uses the existing semantic account outbox, exact retry receipts and
+user-scoped task JSON. New pins require known earlier unfinished work. Null
+clears only the pin; historical pins remain valid after completion or later
+schedule edits. No new database entity, clock, migration or binding is needed.
+Expired pins cease selecting work without destroying the saved dated choice.
+The date stays fixed across timezone edits; Today compares it with the current
+account's local calendar date. Offline retries retain the original pin date.
+
+Explicitly pinning dismissed work bypasses its dismissal only for presentation.
+The stored dismissal remains visible in the full plan; removing the pin hides it
+again until ordinary Restore to Today is chosen. Full-plan visibility and the
+existing dismiss/restore operations retain their original meanings. Private
+backups include pins, old backups default to no pin, repeated merge/replacement
+preserve values, and invalid dates or a SQL failure roll back replacements.
+Public guest practice has no private pin controls or storage.
+
+Fast coverage lives in `task-pins.test.ts` and the real-SQL Worker suite:
+active/expired pins, timezone boundaries, duplicates, original history/report/
+goal invariants, assignment priority, invalid dates, known references, ownership,
+curriculum projection, exact retry, old/new backups and transactional rollback.
+The representative `task-pins.spec.ts` journey mixes desktop keyboard and mobile
+touch: pin/unpin, dismissed work, restore, failed save, exact retry after reload,
+actual backup download/file selection, import cancellation and merge, timezone
+changes and midnight expiry. Distinct settled states fit both widths with empty
+Axe reports. The first import-dialog Axe ran during its entrance animation;
+context, pixels and trace were inspected and preserved. It now waits for observed
+animation completion, with no arbitrary sleep or disabled contrast rules.
+
+Focused verification: 193 tests in four files and check pass; after the visual
+feedback adjustment, all ten pin/Today/next browser journeys pass in 1.3 minutes.
+The new pin workflow takes 13.0 seconds. Full final gates and independent
+post-commit review remain pending; this entry does not claim acceptance or
+production delivery. No physical-device verification or elapsed-time recovery
+is claimed. Publication/issue closure remain deferred under the no-push order.
+
+Final pre-commit boundary inspection after the full 73-pass run found that a
+historical pin on work later rescheduled to today could bias today's selection
+or bypass dismissal. The selector now takes active pin identities from the
+shared planner's pinned group, preserving today's ordinary started-work order.
+A cheap domain regression protects that case. Save notices name the captured
+calendar date, remaining accurate if acknowledgement arrives after midnight.
+The full plan is keyed to the existing account/device token so a retired
+async pin save cannot publish feedback into replacement data. Final gates and
+relevant browser checks will run on these corrections before the commit.
+
+Issue #23 final root gates pass on the corrected implementation: typecheck,
+all 1,018 tests in 60 files, production build and all 73 serialized browser
+journeys (14.7 minutes). The pin journey passes in 12.7 seconds, including the
+actual exact retry and date/timezone transitions. All ten pin-screen Axe reports
+are empty at desktop/mobile widths, with no overflow; captures were inspected.
+The earlier full run also passed 73 journeys before the final boundary correction.
+Independent review is the next gate, after the focused implementation commit.

@@ -1389,6 +1389,7 @@ function App() {
                     todayPlan={
                       user ? (
                         <TodayPlan
+                          key={`${user.id}:${deviceToken}`}
                           nextAction={!practiceLaunch ? nextPracticeAction : undefined}
                           liveNow={liveNow}
                           accountId={user.id}
@@ -1407,6 +1408,14 @@ function App() {
                           error={account.error}
                           onRetry={() =>
                             void account.refresh().catch((error: Error) => notify(error.message))
+                          }
+                          pendingIds={pendingTaskIds}
+                          onPin={(task, date) =>
+                            account.mutate({
+                              type: 'task-edit',
+                              id: task.id,
+                              changes: { pinnedForDate: date },
+                            })
                           }
                           onDismiss={(tasks) =>
                             updateTaskStatus(tasks, { dismissedFromToday: true })
@@ -2488,6 +2497,7 @@ function Course({
       </div>
       {user && (
         <Plan
+          key={`${user.id}:${getDeviceScopeToken(user.id)}`}
           liveNow={liveNow}
           accountId={user.id}
           profile={profile}

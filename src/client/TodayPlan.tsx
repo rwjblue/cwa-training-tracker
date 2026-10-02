@@ -8,7 +8,7 @@ import {
 } from '../shared/runner-progress';
 import ListeningPassProgress from './ListeningPassProgress';
 import TaskRecordingChoiceHint from './TaskRecordingChoiceHint';
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -36,6 +36,7 @@ import {
   type PlannedTask,
 } from '../shared/plan';
 import './today-plan.css';
+import TaskTodayPin from './TaskTodayPin';
 import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
@@ -51,6 +52,8 @@ export interface TodayPlanProps {
   error?: string;
   onRetry?: () => void;
   onDismiss: (tasks: PlannedTask[]) => Promise<void>;
+  onPin: (task: PlannedTask, date: string | null) => Promise<unknown>;
+  pendingIds?: string[];
   onLog: (initial?: Partial<PracticeSession>) => void;
   onManagePlan: () => void;
   onImport: () => void;
@@ -83,6 +86,8 @@ export default function TodayPlan({
   error,
   onRetry,
   onDismiss,
+  onPin,
+  pendingIds = [],
   onLog,
   onManagePlan,
   onImport,
@@ -95,6 +100,9 @@ export default function TodayPlan({
   const [dismissing, setDismissing] = useState(false);
   const [dismissedCount, setDismissedCount] = useState(0);
   const [saveError, setSaveError] = useState('');
+  const [pinning, setPinning] = useState('');
+  const [pinNotice, setPinNotice] = useState('');
+  const title = useRef<HTMLHeadingElement>(null);
   const today = learnerDate ?? dateInTimezone(new Date(), profile.timezone);
   const runnerProgress = useMemo(
     () => runnerAssignmentProgress(tasks, entries, today, currentRunner),
@@ -123,6 +131,26 @@ export default function TodayPlan({
       setDismissing(false);
     }
   }
+  async function pinTask(task: PlannedTask, date: string | null) {
+    if (pinning) return;
+    setPinning(task.id);
+    setPinNotice('');
+    setSaveError('');
+    try {
+      await onPin(task, date);
+      setPinNotice(
+        date
+          ? `Pinned for ${date}. Original assignment unchanged.`
+          : 'Removed from today. Original assignment unchanged.',
+      );
+      // The row moves groups after a save. Keep keyboard focus in the plan.
+      title.current?.focus();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save the pin. Try again.');
+    } finally {
+      setPinning('');
+    }
+  }
   const renderTasks = (items: DailyPlannedTask[]) => (
     <ul className="today-plan-list">
       {items.map((item) => (
@@ -134,19 +162,24 @@ export default function TodayPlan({
           item={item}
           runnerProgress={runnerProgress.get(item.task.id)}
           today={today}
+          pinBusy={pinning}
+          onPin={(date) => void pinTask(item.task, date)}
+          pending={pendingIds.includes(item.task.id)}
           onLog={() => onLog(practiceForTask(item.task, today))}
           onPractice={onPracticeTask ? (purpose) => onPracticeTask(item.task, purpose) : undefined}
         />
       ))}
     </ul>
   );
-  const hasCurrent = plan.pendingCount > 0;
+  const hasCurrent = plan.pendingCount > 0 || plan.pinned.length > 0;
   return (
     <section className="card today-plan" aria-labelledby={titleId} aria-busy={loading}>
       <header className="today-plan-heading">
         <div>
           <span className="eyebrow">YOUR NEXT SMALL STEPS</span>
-          <h2 id={titleId}>What should I do today?</h2>
+          <h2 id={titleId} ref={title} tabIndex={-1}>
+            What should I do today?
+          </h2>
           <p>
             {dayLabel(today)} <span>· {profile.timezone.replaceAll('_', ' ')}</span>
           </p>
@@ -188,6 +221,11 @@ export default function TodayPlan({
             For general practice, you can leave the session blank.
           </p>
         </>
+      )}
+      {pinNotice && (
+        <p className="today-plan-dismissed" role="status">
+          {pinNotice}
+        </p>
       )}
       {(error || saveError) && (
         <div className="today-plan-error" role="alert">
@@ -294,6 +332,18 @@ export default function TodayPlan({
               {renderTasks(plan.preparation)}
             </div>
           )}
+          {plan.pinned.length > 0 && (
+            <div className="today-plan-group" role="region" aria-label="Added to today">
+              <h3 className="today-plan-group-title">
+                Added to today <span>{plan.pinned.length}</span>
+              </h3>
+              <p className="today-plan-group-hint">
+                These pins last for {today} in {profile.timezone}. Original assignment dates,
+                completion and dismissal stay unchanged. Changing timezone keeps the pin date fixed.
+              </p>
+              {renderTasks(plan.pinned)}
+            </div>
+          )}
           {plan.liveUpcoming.length > 0 && (
             <div className="today-plan-group">
               <h3 className="today-plan-group-title">
@@ -385,6 +435,9 @@ function TodayTask({
   today,
   onLog,
   onPractice,
+  onPin,
+  pinBusy,
+  pending,
 }: {
   profile: Profile;
   liveNow: number;
@@ -393,6 +446,9 @@ function TodayTask({
   runnerProgress?: RunnerProgress;
   today: string;
   onLog: () => void;
+  onPin: (date: string | null) => void;
+  pinBusy: string;
+  pending: boolean;
   onPractice?: (purpose: PracticePurpose) => void;
 }) {
   const { task, dueDate, status } = item;
@@ -402,6 +458,10 @@ function TodayTask({
       <div className="today-plan-task-content">
         <div className="today-plan-task-title">
           <h4>{task.title}</h4>
+          {overdue && !task.done && task.pinnedForDate === today && (
+            <span className="today-plan-started">Pinned for today</span>
+          )}
+          {pending && <span role="status">Waiting to sync</span>}
           {status === 'started' && <span className="today-plan-started">Started</span>}
         </div>
         <p className="today-plan-task-meta">
@@ -441,6 +501,7 @@ function TodayTask({
           </p>
         )}
         <div className="today-plan-task-actions">
+          <TaskTodayPin task={task} dueDate={dueDate} today={today} busy={pinBusy} onPin={onPin} />
           {onPractice && !task.done && (
             <button className="today-plan-practice" onClick={() => onPractice('assigned')}>
               <Play size={12} />{' '}

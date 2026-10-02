@@ -1,5 +1,5 @@
 import { mergeCurriculumPlan } from './curriculum';
-import { MAX_PLAN_TASKS, validatePlannedTask, type PlannedTask } from './plan';
+import { MAX_PLAN_TASKS, validatePlannedTask, validateNewTaskPin, type PlannedTask } from './plan';
 import { DEFAULT_PROFILE, validateProfile, type Profile } from './training';
 
 export interface AccountSnapshot {
@@ -54,6 +54,7 @@ const editFields = [
   'targetMinutesExplicit',
   'done',
   'dismissedFromToday',
+  'pinnedForDate',
   'notes',
   'exercise',
   'recordingMarks',
@@ -65,6 +66,7 @@ const clearFields = [
   'targetMinutes',
   'targetMinutesExplicit',
   'dismissedFromToday',
+  'pinnedForDate',
   'exercise',
   'recordingMarks',
 ];
@@ -74,6 +76,7 @@ const curriculumEditFields = [
   'targetMinutesExplicit',
   'done',
   'dismissedFromToday',
+  'pinnedForDate',
   'notes',
   'recordingMarks',
 ];
@@ -88,6 +91,7 @@ const taskFields = [
   'targetMinutesExplicit',
   'done',
   'dismissedFromToday',
+  'pinnedForDate',
   'notes',
   'createdAt',
   'source',
@@ -284,6 +288,7 @@ export function applyAccountChange(state: AccountSnapshot, change: AccountChange
   if (change.type === 'task-create') {
     if (plan.some((task) => task.id === change.task.id))
       throw new Error('This exercise is already in your plan.');
+    validateNewTaskPin(undefined, change.task, state.settings);
     plan = effectivePlan([...plan, change.task]);
   } else {
     const ids = change.type === 'task-status' ? change.ids : [change.id];
@@ -313,7 +318,9 @@ export function applyAccountChange(state: AccountSnapshot, change: AccountChange
         const next = { ...task, ...patch };
         for (const [key, value] of Object.entries(patch))
           if (value === null) delete next[key as keyof typeof next];
-        return validatePlannedTask(next);
+        const validated = validatePlannedTask(next);
+        validateNewTaskPin(task, validated, state.settings);
+        return validated;
       });
   }
   return { ...state, plan };

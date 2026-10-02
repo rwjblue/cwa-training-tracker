@@ -19,12 +19,14 @@ export function nextPracticePlan(
   const date = new Date(now);
   const today = dateInTimezone(date, profile.timezone);
   const plan = dailyPlanSummary(tasks, courseMeetings(profile), entries, today);
+  const pinnedIds = new Set(plan.pinned.map(({ task }) => task.id));
   // Stable ties retain the shared plan's lesson/creation/identity ordering.
-  const candidates = [...plan.assignedToday, ...plan.earlier]
-    .filter(({ task }) => !task.done && !task.dismissedFromToday)
+  const candidates = [...plan.assignedToday, ...plan.pinned, ...plan.earlier]
+    .filter(({ task }) => !task.done && (!task.dismissedFromToday || pinnedIds.has(task.id)))
     .sort(
       (a, b) =>
         Number(b.dueDate === today) - Number(a.dueDate === today) ||
+        Number(pinnedIds.has(b.task.id)) - Number(pinnedIds.has(a.task.id)) ||
         a.dueDate!.localeCompare(b.dueDate!) ||
         Number(b.status === 'started') - Number(a.status === 'started'),
     );

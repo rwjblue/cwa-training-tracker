@@ -37,6 +37,7 @@ import {
 } from '../shared/plan';
 import type { AccountChange, AccountTaskChanges } from '../shared/account-sync';
 import './plan.css';
+import TaskTodayPin from './TaskTodayPin';
 import { curriculumForLevel } from '../shared/curriculum';
 
 interface Props {
@@ -87,6 +88,7 @@ export default function Plan({
   returnToPractice,
 }: Props) {
   const [mutationError, setMutationError] = useState('');
+  const [pinNotice, setPinNotice] = useState('');
   const [view, setView] = useState<'next' | 'week' | 'all'>('next');
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing] = useState<{
@@ -143,6 +145,28 @@ export default function Plan({
     setMutationError('');
     try {
       await onChange({ type: 'task-status', ids: [task.id], ...changes }, revision);
+    } catch (error) {
+      setMutationError((error as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function pinTask(task: PlannedTask, date: string | null) {
+    if (busy) return;
+    setBusy(task.id);
+    setMutationError('');
+    setPinNotice('');
+    try {
+      await onChange(
+        { type: 'task-edit', id: task.id, changes: { pinnedForDate: date } },
+        revision,
+      );
+      setPinNotice(
+        date
+          ? `Pinned for ${date}. Original assignment unchanged.`
+          : 'Removed from today. Original assignment unchanged.',
+      );
     } catch (error) {
       setMutationError((error as Error).message);
     } finally {
@@ -261,6 +285,7 @@ export default function Plan({
           </button>
         </div>
       )}
+      {pinNotice && <p role="status">{pinNotice}</p>}
       {mutationError && (
         <div className="alert error" role="alert">
           {mutationError}
@@ -286,6 +311,9 @@ export default function Plan({
                 <div className="plan-task-body">
                   <div className="plan-task-title">
                     <h3>{task.title}</h3>
+                    {overdue && task.pinnedForDate === today && (
+                      <span className="plan-overdue">Pinned for today</span>
+                    )}
                     {overdue && <span className="plan-overdue">Earlier work</span>}
                     {task.dismissedFromToday && (
                       <span className="plan-dismissed">Dismissed from Today</span>
@@ -321,6 +349,13 @@ export default function Plan({
                     </details>
                   )}
                   <div className="plan-task-links">
+                    <TaskTodayPin
+                      task={task}
+                      dueDate={due}
+                      today={today}
+                      busy={busy}
+                      onPin={(date) => void pinTask(task, date)}
+                    />
                     {onPracticeTask && !task.done && (
                       <button
                         className="plan-task-practice"
