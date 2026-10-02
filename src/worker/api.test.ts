@@ -6069,3 +6069,32 @@ describe('private timed class schedule persistence', () => {
     expect((await read(a.cookie)).classSchedule).toEqual(classSchedule);
   });
 });
+
+describe('public calendar dispatch privacy', () => {
+  it('reaches the real public handler without database, auth or assets access', async () => {
+    const database = vi.spyOn(db, 'prepare').mockImplementation(() => {
+      throw new Error('Public feed queried private DB');
+    });
+    const assets = vi.spyOn(env.ASSETS, 'fetch');
+    const response = await worker.fetch(
+      new Request(`${origin}/api/live-practice/calendar.ics?account=private&token=private`, {
+        headers: {
+          Cookie: '__Host-cwa-session=synthetic-private',
+          Authorization: 'Bearer synthetic-private',
+        },
+      }),
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).not.toMatch(/synthetic-private|account=private|token=private/);
+    expect(database).not.toHaveBeenCalled();
+    expect(assets).not.toHaveBeenCalled();
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    const unsupported = await worker.fetch(
+      new Request(`${origin}/api/live-practice/calendar.ics`, { method: 'POST' }),
+      env,
+    );
+    expect(unsupported.status).toBe(405);
+    expect(unsupported.headers.get('Allow')).toBe('GET, HEAD');
+  });
+});

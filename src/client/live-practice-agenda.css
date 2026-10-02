@@ -1,0 +1,99 @@
+.live-practice-agenda {
+  display: grid;
+  gap: 1.25rem;
+}
+.live-practice-agenda .page-heading {
+  margin-bottom: 0;
+}
+.live-agenda-controls,
+.live-event-card,
+.live-calendar,
+.live-upcoming {
+  padding: 1.5rem;
+}
+.live-agenda-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+.live-agenda-controls label,
+.live-calendar label {
+  display: grid;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+.live-agenda-controls select {
+  min-width: 8rem;
+}
+.live-practice-agenda p {
+  line-height: 1.6;
+}
+.live-event-featured {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+}
+.live-event-card h3,
+.live-upcoming h3 {
+  margin: 0.6rem 0;
+  font-size: 1.1rem;
+}
+.live-event-window {
+  margin: 0.5rem 0;
+}
+.live-event-countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.live-upcoming ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.live-upcoming li {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.live-upcoming li:last-child {
+  border-bottom: 0;
+}
+.live-calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.live-calendar input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.live-agenda-note {
+  font-size: 0.9rem;
+}
+@media (max-width: 600px) {
+  .live-agenda-controls,
+  .live-event-card,
+  .live-calendar,
+  .live-upcoming {
+    padding: 1rem;
+  }
+  .live-calendar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.live-practice-agenda .field {
+  margin-bottom: 0;
+}
+.live-practice-agenda .field > input,
+.live-practice-agenda .field > select {
+  min-height: 44px;
+  margin-top: 0;
+}
+.live-practice-agenda a:not(.button) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

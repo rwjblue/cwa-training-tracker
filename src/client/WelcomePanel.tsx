@@ -5,9 +5,15 @@ interface WelcomePanelProps {
   onPractice: (tool?: 'words' | 'qso' | 'free' | 'copy' | 'sending') => void;
   onSignIn: () => void;
   onGuide: () => void;
+  onEvents: () => void;
 }
 
-export default function WelcomePanel({ onPractice, onSignIn, onGuide }: WelcomePanelProps) {
+export default function WelcomePanel({
+  onPractice,
+  onSignIn,
+  onGuide,
+  onEvents,
+}: WelcomePanelProps) {
   return (
     <div className="welcome-panel">
       <section className="welcome-intro" aria-labelledby="welcome-title">
@@ -113,6 +119,9 @@ export default function WelcomePanel({ onPractice, onSignIn, onGuide }: WelcomeP
       </section>
 
       <div className="welcome-guide">
+        <button className="text-button" onClick={onEvents}>
+          <Radio size={16} /> See SST, MST and CWT live practice <ArrowRight size={14} />
+        </button>
         <button className="text-button" onClick={onGuide}>
           <BookOpen size={16} /> Explore the Academy guide <ArrowRight size={14} />
         </button>

@@ -47,6 +47,7 @@ import {
 import { DEFAULT_PRACTICE_PREFERENCES, PRACTICE_PREFERENCES_KEY } from './practice-preferences';
 import { COURSE_REPLAY_STORAGE_KEY } from './course-replay';
 import { RECORDING_SPEED_STORAGE_KEY } from './recording-variants';
+import { EVENT_TIME_MODE_KEY } from './event-preferences';
 import {
   saveTaskRecordingChoice,
   taskRecordingChoiceKey,
@@ -484,6 +485,7 @@ describe('the explicit device inventory', () => {
       'practicePreferences',
       'recordingSpeed',
       'courseReplay',
+      'eventTimeMode',
     ]);
     expect(inventory.map((item) => item.id)).toEqual(DEVICE_STORE_INVENTORY.map((item) => item.id));
     expect(Object.keys(backup.stores).sort()).toEqual(
@@ -1355,4 +1357,33 @@ describe('portable public course replay choice', () => {
       expect(snapshot()).toEqual(before);
     },
   );
+});
+
+describe('public live agenda preference in device inventory', () => {
+  it('preserves old omission and validates only Local/UTC without account authority', () => {
+    const old = captureDeviceBackup(scope, 'Synthetic learner');
+    expect(old.shared).not.toHaveProperty('eventTimeMode');
+    expect(validateDeviceBackup(JSON.stringify(old), scope)).toEqual(old);
+    for (const mode of ['local', 'utc'] as const) {
+      values.set(EVENT_TIME_MODE_KEY, mode);
+      expect(captureDeviceBackup(scope, 'Synthetic learner').shared.eventTimeMode).toBe(mode);
+    }
+    for (const invalid of ['UTC', '', 'private-account', 1, null, ['utc'], {}]) {
+      expect(() =>
+        validateDeviceBackup(JSON.stringify({ ...old, shared: { eventTimeMode: invalid } }), scope),
+      ).toThrow(/Local or UTC/);
+    }
+  });
+  it('restores only through shared opt-in and leaves the public choice during private clear', async () => {
+    values.set(EVENT_TIME_MODE_KEY, 'utc');
+    const backup = captureDeviceBackup(scope, 'Synthetic learner');
+    values.set(EVENT_TIME_MODE_KEY, 'local');
+    rememberAccount({ id: scope, email: 'synthetic@example.test' }, account());
+    restoreDeviceBackup(backup);
+    expect(values.get(EVENT_TIME_MODE_KEY)).toBe('local');
+    restoreDeviceBackup(backup, { restoreSharedPreferences: true });
+    expect(values.get(EVENT_TIME_MODE_KEY)).toBe('utc');
+    await clearDeviceWork(scope);
+    expect(values.get(EVENT_TIME_MODE_KEY)).toBe('utc');
+  });
 });

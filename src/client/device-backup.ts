@@ -1,3 +1,4 @@
+import { EVENT_TIME_MODE_KEY, validEventTimeMode, type EventTimeMode } from './event-preferences';
 import { validateAccountOperation, validateAccountSnapshot } from '../shared/account-sync';
 import {
   COPY_MODES,
@@ -108,6 +109,7 @@ export interface DeviceBackup {
     practicePreferences?: PracticePreferences;
     recordingSpeed?: 'assigned' | 'next';
     courseReplay?: boolean;
+    eventTimeMode?: EventTimeMode;
   };
 }
 export interface DeviceRestoreOptions {
@@ -142,6 +144,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
   { id: 'recordingSpeed', label: 'Shared recording speed preference', shared: true },
   { id: 'courseReplay', label: 'Shared course replay preference', shared: true },
+  { id: 'eventTimeMode', label: 'Shared live agenda time display', shared: true },
 ] as const;
 
 const encoded = (scope: string) => encodeURIComponent(scope);
@@ -581,7 +584,10 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     'practicePreferences',
     'recordingSpeed',
     'courseReplay',
+    'eventTimeMode',
   ]);
+  if (shared.eventTimeMode !== undefined && !validEventTimeMode(shared.eventTimeMode))
+    throw new Error('Choose Local or UTC for the shared live agenda time display.');
   if (shared.courseReplay !== undefined && typeof shared.courseReplay !== 'boolean')
     throw new Error('Choose a valid shared course replay preference.');
   if (
@@ -606,6 +612,9 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       ...(runnerResults === undefined ? {} : { runnerResults }),
     },
     shared: {
+      ...(shared.eventTimeMode === undefined
+        ? {}
+        : { eventTimeMode: shared.eventTimeMode as EventTimeMode }),
       ...(shared.courseReplay === undefined
         ? {}
         : { courseReplay: shared.courseReplay as boolean }),
@@ -789,6 +798,7 @@ export function captureDeviceBackup(
   const preferencesRaw = storage.getItem(PRACTICE_PREFERENCES_KEY);
   const recordingSpeed = storage.getItem(RECORDING_SPEED_STORAGE_KEY);
   const courseReplay = storage.getItem(COURSE_REPLAY_STORAGE_KEY);
+  const eventTimeMode = storage.getItem(EVENT_TIME_MODE_KEY);
   const recordingChoices = names(storage).flatMap((name) => {
     const taskId = taskRecordingChoiceTaskId(name, scope);
     if (taskId === undefined) return [];
@@ -817,6 +827,7 @@ export function captureDeviceBackup(
       runnerResults: retainedRunner.results,
     },
     shared: {
+      ...(eventTimeMode === null ? {} : { eventTimeMode: eventTimeMode as EventTimeMode }),
       ...(courseReplay === null
         ? {}
         : { courseReplay: parse(courseReplay, 'Shared course replay preference', 10) as boolean }),
@@ -1249,6 +1260,8 @@ export function restoreDeviceBackup(
     if (!currentNotes.has(note.context))
       changes.set(notesKey(scope, note.context), note.text || null);
   if (options.restoreSharedPreferences) {
+    if (checked.shared.eventTimeMode !== undefined)
+      changes.set(EVENT_TIME_MODE_KEY, checked.shared.eventTimeMode);
     if (checked.shared.courseReplay !== undefined)
       changes.set(COURSE_REPLAY_STORAGE_KEY, JSON.stringify(checked.shared.courseReplay));
     if (checked.shared.practicePreferences)

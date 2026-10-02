@@ -130,7 +130,7 @@ Active P page [src/pages/radio/cw-qso.astro](https://github.com/rwjblue/rwjblue.
 
 Focused existing tests: [P/tests/cw-qso.test.mjs:45,52,58,74,82,121](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-qso.test.mjs#L45) cover role fallback, auto greeting, escaped personalized transmissions, role swap, UTC log shape and ADIF. Scope this as an optional public “On-air helper” so it does not complicate daily lesson practice.
 
-### Live practice opportunities / calendar — **missing, P2**
+### Live practice opportunities / calendar — **implemented #20, review pending**
 
 Active P page [src/pages/radio/cw-practice.astro:296](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/pages/radio/cw-practice.astro#L296) initializes [src/lib/cw-practice-client.ts](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-practice-client.ts). P [src/lib/cw-practice.ts:34,109,131](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-practice.ts#L34) models SST/MST/CWT recurring opportunities and live state. C has generic resource links ([src/shared/training.ts:121](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L121), [main.tsx:1488](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/main.tsx#L1488)) and course exercises; no equivalent live schedule/calendar module or public dashboard was found.
 
@@ -447,3 +447,27 @@ protected scope documents remain unchanged. Per the user's no-push instruction,
 these focused commits remain local and #17 stays open until source publication.
 New primary-checkout browser/testing edits are preserved without rebasing that
 working copy; the local main bookmark tracks the accepted delivery journal.
+
+
+### Issue #20 — public live agenda/calendar delivered behavior
+
+Guest and account navigation now reach current/next/future SST/MST/CWT windows
+with dates/ends, official rules, explicit Local/UTC zone and retained shared choice.
+A single pure UTC definition, verified October 2, 2026 against all three current
+organizers, also generates the public recurring calendar and later private #21
+eligibility queries. Studio inspection pauses/retains the existing block. Clipboard
+denial leaves a focused selectable URL; real calendar download is parser-imported.
+Nine logical UIDs survive time revision with deliberate sequence/version changes;
+UTF-8 folding, GET/HEAD/conditional/cache/method/privacy boundaries are tested.
+No public account/class query, result credit, restricted redistribution or original
+site mutation. Shared choice joins optional device inventory/opt-in restore.
+Initial focused/browser checks pass; independent post-commit acceptance and
+production gate remain pending. See [canonical #20 ledger](../trainer-parity.md#issue-20--verified-public-sstmstcwt-agenda-and-recurring-calendar)
+for organizer links, validation and limits. Private reminders, eligibility and
+submission remain their own issues; unrelated guides/contact ADIF are excluded.
+
+Final root gates: check, 983 tests/57 files, build and all 66 serialized browser
+journeys (13.6 minutes) pass. Two short-height sidebar regressions were corrected
+and confirmed by seven focused checks and the full suite. Independent review and
+production acceptance remain pending. The canonical ledger retains the failed
+run evidence and exact limits.

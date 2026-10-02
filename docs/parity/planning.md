@@ -836,3 +836,29 @@ serves implementation `bca5901b744f72d6e4d1f095907d29d1ae01fc3f`; exact
 assets/private401 checks pass after one D1 7403 full-task retry. Local main records
 delivery; #19 remains OPEN/unpublished, with no push or original-site mutation.
 See canonical acceptance ledger for complete counts, failed probes and limits.
+
+
+### Issue #20 — P26 public agenda and calendar implementation
+
+The accepted SST/MST/CWT public agenda/calendar is implemented using one shared
+UTC schedule, freshly verified against all three organizers October 2, 2026.
+Current windows remain active until exact end; next and bounded future windows,
+explicit IANA Local/UTC display, retained preference and clipboard-denied manual
+copy are reachable without an account. Studio inspection pauses/retains practice.
+Nine stable recurring UIDs, deliberate sequence/version, UTF-8 folding and actual
+parser recurrence expansion agree with shared queries across DST/year rollover.
+Public GET/HEAD/cache/conditional/405 routing queries no auth, class or D1 data.
+Shared display preference joins optional strict device inventory and opt-in restore;
+old backups stay compatible. No schema/binding/config change or attendance credit.
+Initial check/focused58cases/runtime journey8.8s and ten clean responsive Axe checks
+pass; full gates, post-commit independent review and deployment remain pending.
+See [canonical #20 ledger](../trainer-parity.md#issue-20--verified-public-sstmstcwt-agenda-and-recurring-calendar)
+for official sources, concrete behavior and honest limits. P06 private CWT deadline
+eligibility remains #21; P25 private subscriptions #46. Historical unrelated public
+NNN/Giving Back/resource/contact recommendations are superseded by approved scope.
+
+Final root gates: check, 983 tests/57 files, build and all 66 serialized browser
+journeys (13.6 minutes) pass. Two short-height sidebar regressions were corrected
+and confirmed by seven focused checks and the full suite. Independent review and
+production acceptance remain pending. The canonical ledger retains the failed
+run evidence and exact limits.

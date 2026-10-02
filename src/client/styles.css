@@ -98,6 +98,7 @@ a {
   min-height: 100vh;
 }
 .sidebar {
+  overflow-y: auto;
   width: 232px;
   position: fixed;
   inset: 0 auto 0 0;
@@ -107,6 +108,14 @@ a {
   z-index: 30;
   display: flex;
   flex-direction: column;
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+@media (max-height: 800px) {
+  .sidebar-note {
+    display: none;
+  }
 }
 .brand {
   display: flex;
@@ -4647,7 +4656,6 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-
 
 .runner-review-actions {
   flex-wrap: wrap;

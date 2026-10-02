@@ -58,6 +58,11 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   [Summary](../src/shared/practice-time.ts),
   [shared display](../src/client/PracticeTimeSummary.tsx). Review and production
   acceptance are recorded in the #19 ledger below when complete.
+- **Public live practice:** SST/MST/CWT current/next windows, Local/UTC choice,
+  rules links and public recurring calendar are implemented in #20. Shared UTC
+  rules are verified October 2, 2026; class/reminder data stays private. Studio
+  inspection retains practice. Independent acceptance/deployment remain pending
+  until their ledger is recorded. [Schedule](../src/shared/cw-events.ts).
 - **Native copy practice:** Code Groups, Word Copy, Callsign Copy and Plain Text
   run in the site, including all 20 Intermediate ICR assignments and 98
   Fundamental blocks. Typed answers, grading, actual time, private evidence,
@@ -185,7 +190,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R8 · P2** Course-audio progress                   | Issue #9 delivers actual coverage and whole passes without seek credit, distinct saved/current/remaining counts, and portable per-file evidence. Task-specific choices are independently accepted in #11; Issue #12 adds bounded private difficult timestamps and relative Replay 8 sec with deliberate native playback; optional daily listening remains #25. Course replay is delivered in #10.                                                                                                                                                                                                                                               | Personal [audio session](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L41); [audio appendix](parity/audio.md#findings-by-behavior).                                                                                                                                                                                      |
 | **R9 · P1/P2** Runner continuity                          | Issue #15 retains acknowledged terminal results on the device before review, with stable run ID, accepted-start timezone/date, terminal creation time and distinct frozen review timestamp. Mixed-speed results omit generic WPM and expose recorded engine speed segments and bounded-history omissions. Logbook recovery, canceled review edits, exact retry and optional device backup inventory reuse the shared save/account/device boundaries. Issue #16 adds shared saved/current/combined/remaining time and an explicit completion policy, independently accepted and deployed. Issue #17 adds receipt-gated Save & next, retained settings/context and a fresh paused owner, including recovered Logbook continuation; no running-clock reload/crash estimate or live-engine resumption. | Personal [Runner transitions](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48); [Runner workflow](parity/listening.md#surrounding-workflow--partial).                                                                                                                                                                  |
 | **R10 · P1/P2** Instructor material                 | Add private session-linked text/link/file material, preparation/class/reference classification, original-plus-revision history, and readable practice context. Imported materials and their revision links are readable in Settings; native material authoring and practice integration remain absent. Current custom activities cover only notes/link/date/session.                                                                                                                                                                           | Personal [materials](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L757); [planning P12](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                                   |
-| **R11 · P1/P2** Live practice and reminders         | Connect assigned CWT work to eligible event windows before class. Later add private reminder subscriptions and the optional public SST/MST/CWT live agenda, timezone toggle, and event calendar. Generic resource links do not supply scheduling. Reverify official schedules before implementation.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
+| **R11 · P1/P2** Live practice and reminders         | Public SST/MST/CWT agenda, Local/UTC preference and recurring feed are implemented in #20 with current organizer verification; independent review/deployment gate is pending. Assigned CWT eligibility before class remains #21 and private reminder subscriptions #46. Public schedule does not infer participation or query private data.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
 | **R12 · P2** Exact public listening recipes                  | Bounded, versioned public listening recipes that reproduce the exact exercise remain accepted issue #45. Real-contact operating guidance, contact logs, ADIF export and unrelated public practice tools are excluded from this execution.                                                                                                                                                                                                                                        | Personal [real QSO helper](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-qso.ts#L137), [share recipes](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115); [public-tool inventory](parity/listening.md#standalone-public-tools-distinct-features-not-duplicate-page-names). |
 | **R13 · P1/P2** Migration fidelity                  | Historical imports now expose original scratchpads and structured results, map LCWO group speed correctly, omit pure dismissal bookkeeping, derive Runner completion, and add overlap-safe one-minute LCWO group estimates. A timezone-aware cutoff limits practice/completion while retaining the full source archive. Settings makes reports, LCWO, materials and device drafts readable. Native report/material editing and recoverable device work remain separate migrations; readable preserved records are not complete feature parity. | Tracker baseline [converter](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L502), [completion import](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L425); [planning P33–P36](parity/planning.md#backups-migrations-and-api-fidelity).                      |
 | **R14 · P2/P3** Preference refinements              | Per-mode settings, exact/preset 51–60 WPM support, finer pause/tone choices, and two distinct QSO pitches at the upper tone bound remain different. The personal per-mode writer itself omits QSO/story effective speed; port the intended behavior with both speeds.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
@@ -1783,3 +1788,95 @@ no-push instruction. Primary user work and its pending scope documents are
 untouched. Chromium viewport/touch emulation does not establish physical-device
 or lock-screen behavior. No unsaved elapsed reload/crash recovery, running engine
 restoration, restricted redistribution or original-site mutation was added.
+
+
+### Issue #20 — verified public SST/MST/CWT agenda and recurring calendar
+
+Fresh #20 is OPEN with no comments, native blockers or documented prerequisite.
+Pinned original cw-practice.ts, public page/client and feed handler at 3106c9b8
+were rechecked as read-only evidence. The approved scope retains these three
+organizer events/calendar; historical NNN/Giving Back/resource/contact guides
+remain excluded. Current sources were verified October 2, 2026, rather than
+copying the original table's older verification date:
+
+| Organizer event | Weekly UTC windows, each 60 minutes | Current official source |
+| --- | --- | --- |
+| SST | Monday 00:00–01:00; Friday 20:00–21:00 | [K1USN rules](https://www.k1usn.com/sst_rules.html), including its [published embedded rules](https://docs.google.com/document/d/e/2PACX-1vTFtjDXVkS_wGX2XmBV4P8VyT40iSx_NJcx-m2C9Gb9ANJiCMwNeZdpqk_P8DMNJ2OvIGHydv5e36lQ/pub?embedded=true) |
+| MST | Monday 13:00–14:00 and 19:00–20:00; Tuesday 03:00–04:00 | [ICWC MST](https://internationalcwcouncil.org/mst-contest/) |
+| CWT | Wednesday 13:00–14:00 and 19:00–20:00; Thursday 03:00–04:00 and 07:00–08:00 | [CWops Tests](https://cwops.org/cwops-tests/) |
+
+The MST web reader timed out; a successful direct current organizer-page fetch
+and official indexed text independently confirmed both time lines. This is not
+an unavailable organizer fact. Source provenance/verification date, explicit
+UTC basis, durations and stable logical slot IDs live in one readonly shared
+[cw-events module](../src/shared/cw-events.ts). Its half-open bounded queries
+include running windows until exact end; UI, recurring calendar and later #21
+eligibility consume that same definition. Public list queries return 1–100 future
+windows; range consumers can request at most 366 days without a second table.
+
+Guests can reach Live practice from the welcome page, public navigation and the
+Studio's existing inspection path. Opening it pauses/retains the current owner;
+returning does not save, replace or autoplay practice. Current, next and eight
+further windows show both dates/ends and official rules. Boundary-aligned local
+wall-clock refresh handles starts/ends and visibility/pageshow without backend
+polling or repeated screen-reader countdown announcements. Local uses the
+browser's explicit IANA zone, independently of private course timezone; UTC stays
+UTC. Native date formatting handles DST/local-midnight weekday changes.
+
+The display preference tolerates unavailable/corrupt storage, offers explicit
+failed-retention feedback/retry, and joins strict optional shared device inventory,
+capture, existing reviewed opt-in restore and rollback. Old valid v1 backups
+omit it unchanged. Private clear preserves shared choice; choice confers no
+account authority. Calendar viewing produces no practice row, completion, score,
+on-air contact or report evidence. Private history/import/export remain unchanged.
+
+The public route `/api/live-practice/calendar.ics` matches existing Worker-first
+routing and bypasses auth/origin/private database dispatch, retaining outer
+security headers. GET/HEAD, strong/weak/list/star ETags, date conditions with
+If-None-Match precedence, 304 bodies, 405/Allow and deployment-origin variants are
+tested. SHA-256 ETag identifies serialized content; caching is public max-age300/
+s-maxage3600. No account, private meeting, reminder token or result enters it.
+No schema, binding or configuration change is needed.
+
+Recurring ICS uses nine stable logical UIDs, a fixed Monday UTC anchor, one-hour
+ends, weekly RRULE, deterministic DTSTAMP/LAST-MODIFIED, sequence1 and current
+version. Rechecking published schedule changes must deliberately advance sequence
+and modifiedAt while retaining an existing slot ID when its time changes. New
+slots receive new IDs; retired-series handling requires an intentional calendar
+publication decision rather than reusing an ID. Dates before verification are
+recurrence extrapolation, not a claim of historical organizer schedules. Text
+escaping, CRLF and UTF-8 octet folding follow RFC5545. Calendar URLs and agenda
+links use this deployment; no personal-site defaults are inherited.
+
+Subscribe uses webcal; the exact HTTPS URL remains selectable. Clipboard denial
+focuses/selects the field with manual-copy feedback. Download imports through an
+independent iCalendar parser. Refresh hints request six hours, but clients choose
+their own cadence and imports are snapshots. External OS/calendar subscription
+behavior and physical-device operation are not claimed from Chromium emulation.
+
+Initial validation: 58 focused schedule/calendar/HTTP/device cases pass. A new
+restore fixture used the wrong existing API arguments and was corrected without
+weakening assertions. The parser's narrow sequence typing was handled with
+explicit numeric conversion. Check passes. One representative mixed desktop
+keyboard/mobile touch runtime journey passes (8.8 seconds, 13.7 total), including
+boundary states, preference/reload/storage retry, denied clipboard selection,
+actual downloaded/parser-imported feed, HEAD/304 and guest401, plus manual Studio
+inspection/return retaining time. Ten settled responsive Axe/overflow checks pass.
+Both widths' screenshots were inspected; subscription actions were moved before
+the longer list and the duplicate next row removed. Full required gates and the
+post-commit independent review/deployment are pending; evidence follows below.
+
+
+Final implementation validation: typecheck, all 983 tests in 57 files and build
+pass. The complete serialized browser gate passes all 66 journeys in 13.6 minutes,
+including native audio and Runner workflows. The new agenda journey passes in
+8.3 seconds. An earlier full run was deliberately stopped after two confirmed
+720px-high sidebar reachability failures (34 passed, two failed, one interrupted,
+29 unrun, exit130). Added navigation had pushed account controls outside the
+viewport. Sidebar scrolling, nonshrinking children and hiding only the decorative
+quote at short heights fixed the cause; seven focused checks pass in 33 seconds
+and both failures pass in the final clean full gate. Screenshots, contexts and
+traces from the interrupted run remain retained; its interrupted continuity case
+is not counted as a product failure. No assertions or timeouts were weakened.
+The implementation commit is ready for fresh independent review. Review and
+production acceptance remain pending; this source remains local under no-push.

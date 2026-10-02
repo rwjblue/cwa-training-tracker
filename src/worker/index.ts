@@ -22,6 +22,8 @@ import {
 import { deletePlan, listPlan, savePlan, updatePlanStatus } from './plan';
 import { applyAccountOperation, getAccountState } from './account-sync';
 import { cancelLifecycle, getLifecycleOutcome, prepareLifecycle } from './account-lifecycle';
+import { PUBLIC_CW_CALENDAR_PATH } from '../shared/cw-events';
+import { publicCwCalendarResponse } from './cw-calendar';
 
 async function api(request: Request, env: Env, path: string): Promise<Response> {
   const method = request.method;
@@ -78,9 +80,12 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
       const url = new URL(request.url);
-      const response = url.pathname.startsWith('/api/')
-        ? await api(request, env, url.pathname)
-        : await env.ASSETS.fetch(request);
+      const response =
+        url.pathname === PUBLIC_CW_CALENDAR_PATH
+          ? await publicCwCalendarResponse(request, env.APP_ORIGIN)
+          : url.pathname.startsWith('/api/')
+            ? await api(request, env, url.pathname)
+            : await env.ASSETS.fetch(request);
       return securityHeaders(response, env);
     } catch (error) {
       if (

@@ -122,6 +122,7 @@ import {
 } from './practice-launch';
 import { PracticeNavigation } from './practice-navigation';
 import WelcomePanel from './WelcomePanel';
+import LivePracticeAgenda from './LivePracticeAgenda';
 import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './ImportedHistory';
 import CopyResult, { CopyAttemptDetails } from './CopyResult';
 import { savedCopyAttempt } from '../shared/copy-report';
@@ -150,7 +151,7 @@ import {
   PRACTICE_UPLOADED_EVENT,
 } from './practice-autosave';
 
-type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings';
+type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
 // Choose once per page load so navigation keeps the decoration still.
 const sidebarLetters = Object.keys(MORSE).filter((letter) => /^[A-Z]$/.test(letter));
 const sidebarLetter = sidebarLetters[Math.floor(Math.random() * sidebarLetters.length)];
@@ -287,7 +288,7 @@ const sampleEntries: PracticeSession[] = [
 function App() {
   const readPage = (): Page => {
     const value = window.location.hash.slice(1);
-    return ['overview', 'practice', 'logbook', 'course', 'settings'].includes(value)
+    return ['overview', 'practice', 'logbook', 'course', 'settings', 'events'].includes(value)
       ? (value as Page)
       : 'overview';
   };
@@ -977,6 +978,7 @@ function App() {
   const navItems: { page: Page; label: string; icon: LucideIcon }[] = [
     { page: 'overview', label: user ? 'Today' : 'Overview', icon: LayoutDashboard },
     { page: 'practice', label: 'Practice studio', icon: AudioLines },
+    { page: 'events', label: 'Live practice', icon: Radio },
     { page: 'logbook', label: 'Practice log', icon: BookOpen },
     { page: 'course', label: 'Academy guide', icon: CalendarDays },
   ];
@@ -1358,6 +1360,7 @@ function App() {
                       onPractice={(tool) => openPractice({ tool })}
                       onSignIn={() => setAuthOpen(true)}
                       onGuide={() => navigate('course')}
+                      onEvents={() => navigate('events')}
                     />
                   </>
                 ))}
@@ -1371,6 +1374,13 @@ function App() {
                   inert={page !== 'practice' || navigationBusy}
                 >
                   <div className="practice-view-actions" aria-label="Inspect other views">
+                    <button
+                      className="button outline small"
+                      disabled={navigationBusy || booting}
+                      onClick={() => navigate('events')}
+                    >
+                      Inspect live practice
+                    </button>
                     <button
                       className="button outline small"
                       disabled={navigationBusy || booting}
@@ -1482,6 +1492,12 @@ function App() {
                     Start practice <Play size={16} />
                   </button>
                 </section>
+              )}
+              {page === 'events' && (
+                <LivePracticeAgenda
+                  key={`${scope}:${deviceToken}`}
+                  onReturn={practiceLaunch ? () => void navigate('practice') : undefined}
+                />
               )}
               {page === 'logbook' && (
                 <Logbook
