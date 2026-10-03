@@ -1377,3 +1377,25 @@ inspected. The earlier complete 97-browser gate precedes this validator-only
 correction; it is not claimed as a rerun. The same independent reviewer must
 recheck the committed correction before acceptance and deployment. No push,
 source publication or physical-device verification is claimed.
+
+
+Issue #36 is independently accepted at implementation
+`24e50159c4e7d1be1f97fe8e2ec9b1fa825be319` plus focused correction
+`1ee19e48559a5acad693a9b58d19c4defe80ad1d`. The independent reviewer
+exercised five original desktop/mobile journeys, actual copy/print and private
+backup controls, lost committed acknowledgements, conflicts, storage refusal,
+privacy and source-window fidelity. Its sole P2 safe-integer finding was fixed
+and independently rechecked in two further runtime journeys: six rejected
+API writes are atomic and both adjacent edge values save and validate. Fifteen
+settled accessibility/overflow scans are clear; all 524 tracked file hashes and
+original reference/dirty-path integrity are preserved. No scoped finding remains.
+
+Production version `f5e37000-1fb3-4029-9718-8a7fd63af3ef` now serves that
+accepted tree. The complete deployment retry passed check, 1,374 tests, build,
+dry run, remote migration 0009 and deployment; the initial D1 authorization
+7403 failure is retained separately. Read-only production verification confirms
+health/root 200, private history/state/backup/LCWO 401, exact hashes of all four
+JS/CSS assets and the public Runner module. No production private data was
+written. Source commits remain local, with main updated; no push is authorized
+or attempted. The issue stays open pending source publication. Durable reports,
+evidence selection, handoff and learned words remain #37–#40.
