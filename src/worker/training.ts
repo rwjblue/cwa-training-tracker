@@ -1,3 +1,11 @@
+import {
+  clearLcwoStatements,
+  lcwoReadStatements,
+  lcwoFromResults,
+  lcwoWriteStatements,
+  readLcwo,
+} from './lcwo';
+import { mergeLcwoIdentity, mergeLcwoRuns } from '../shared/lcwo';
 import { validateAssessedContactCount } from '../shared/practice-assessment';
 import {
   DEFAULT_PROFILE,
@@ -427,13 +435,16 @@ async function readAccountBackup(env: Env, accountId: string): Promise<AccountLi
       `SELECT source_json FROM import_sources WHERE user_id = ? AND source_hash =
       (SELECT source_hash FROM import_sources WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) ORDER BY chunk`,
     ).bind(accountId, accountId),
+    ...lcwoReadStatements(env, accountId),
   ]);
   const state = snapshotFromResults(accountId, results.slice(0, 2));
   const [plan, sessions, archive] = results.slice(1) as D1Result<Record<string, string>>[];
+  const lcwo = lcwoFromResults(results.slice(4));
   const exported: TrainingExport = {
     format: 'cwa-training-tracker',
     version: 1,
     evidenceVersion: 1,
+    ...(lcwo ? { lcwo: { ...lcwo, connected: false as const } } : {}),
     exportedAt: new Date().toISOString(),
     profile: state.settings,
     sessions: sessions.results.map((row) =>
@@ -554,6 +565,26 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   if (known.size + additions.length > MAX_ENTRIES)
     throw new HttpError(400, 'An account can hold up to 20,000 practice entries.');
   const statements: D1PreparedStatement[] = [];
+  const priorLcwo = input.mode === 'merge' ? await readLcwo(env, auth.user.id) : null;
+  if (input.mode === 'replace') statements.push(...clearLcwoStatements(env, auth.user.id));
+  let lcwoRetained: number | undefined;
+  if (data.lcwo) {
+    const identity = validated(
+      () => mergeLcwoIdentity(priorLcwo?.identity, data.lcwo!.identity),
+      undefined,
+    );
+    const runs = validated(() => mergeLcwoRuns(priorLcwo?.runs ?? [], data.lcwo!.runs), undefined);
+    lcwoRetained = runs.length;
+    // Portable source history cannot authorize an external login, including merge.
+    statements.push(
+      ...lcwoWriteStatements(
+        env,
+        auth.user.id,
+        { ...data.lcwo, identity, runs, connected: false },
+        runs,
+      ),
+    );
+  }
   if (input.mode === 'replace') {
     statements.push(
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
@@ -630,6 +661,7 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     return json(
       await applyLifecycle(env, state, lifecycle.identity, statements, {
         imported: uniqueEntries.size,
+        ...(lcwoRetained === undefined ? {} : { lcwoRetained }),
         skipped: data.sessions.length - uniqueEntries.size,
         ...(historicalLinkIds.size ? { historicalLinks: historicalLinkIds.size } : {}),
       }),
@@ -659,6 +691,7 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   );
   return json({
     imported,
+    ...(lcwoRetained === undefined ? {} : { lcwoRetained }),
     skipped: data.sessions.length - imported,
     ...(historicalLinks ? { historicalLinks } : {}),
   });
@@ -682,6 +715,7 @@ export async function resetData(request: Request, env: Env): Promise<Response> {
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
       env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
       deletePlanStatement(env, auth.user.id),
+      ...clearLcwoStatements(env, auth.user.id),
       settingsStatement(env, auth.user.id, DEFAULT_PROFILE),
     ]),
   );

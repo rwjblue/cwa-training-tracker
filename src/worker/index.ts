@@ -1,3 +1,4 @@
+import { getLcwo, changeLcwo } from './lcwo';
 import { getAuth, logout, requestEmailCode, verifyEmailCode } from './auth';
 import { HttpError, json, requireSameOrigin, securityHeaders } from './http';
 import {
@@ -29,6 +30,8 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   const method = request.method;
   if (!['GET', 'HEAD'].includes(method)) requireSameOrigin(request, env);
   if (method === 'GET' && path === '/api/health') return json({ ok: true });
+  if (method === 'GET' && path === '/api/lcwo') return getLcwo(request, env);
+  if (method === 'POST' && path === '/api/lcwo') return changeLcwo(request, env);
   if (method === 'GET' && path === '/api/account-state') return getAccountState(request, env);
   if (method === 'GET' && path === '/api/account-lifecycle/backup')
     return exportLifecycleBackup(request, env);
@@ -99,7 +102,7 @@ export default {
       }
       if (
         error instanceof Error &&
-        /account_storage_limit|practice_entry_limit/.test(error.message)
+        /account_storage_limit|practice_entry_limit|lcwo_result_limit/.test(error.message)
       ) {
         return securityHeaders(
           json(

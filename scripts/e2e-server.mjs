@@ -22,7 +22,8 @@ const configuration = parse(readFileSync(join(root, 'wrangler.jsonc'), 'utf8'), 
 });
 if (configErrors.length) throw new Error('The Worker configuration contains invalid JSONC.');
 configuration.name = 'cwa-e2e';
-configuration.main = join(root, 'src/worker/index.ts');
+// Synthetic LCWO upstream only; all Companion routes, auth and SQL stay real.
+configuration.main = join(root, 'e2e/runtime-worker.ts');
 configuration.assets.directory = join(root, 'dist');
 configuration.routes = [];
 configuration.d1_databases = [

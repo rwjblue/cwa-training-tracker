@@ -1,3 +1,9 @@
+import { validateLcwoBackup } from '../shared/lcwo';
+import { useLcwoData, type LcwoController } from './useLcwoData';
+import LcwoSettings from './LcwoSettings';
+import LcwoHistory from './LcwoHistory';
+import type { LcwoData } from '../shared/lcwo';
+import { lcwoContributions, estimatedLcwoSessions } from '../shared/lcwo-practice';
 import { createManualTiming, isExternalPracticeTimer } from '../shared/external-practice';
 import ManualPracticeFields, {
   manualPracticeDraft,
@@ -379,6 +385,7 @@ function App() {
   const runnerError = runnerHistory.scope === scope ? runnerHistory.error : '';
   const [entries, setEntries] = useState<PracticeSession[]>([]);
   const account = useAccountData(user);
+  const lcwo = useLcwoData(account.confirmed, deviceToken);
   const profile = account.state?.settings ?? {
     ...DEFAULT_PROFILE,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -952,6 +959,15 @@ function App() {
     currentRunnerResult.ownerId === practiceLaunch?.id
       ? currentRunnerResult
       : undefined;
+  const lcwoRows = useMemo(
+    () => lcwoContributions(lcwo.data, visibleEntries, profile.timezone),
+    [lcwo.data, visibleEntries, profile.timezone, today],
+  );
+  const lcwoEstimates = useMemo(() => estimatedLcwoSessions(lcwoRows), [lcwoRows]);
+  const summaryEntries = useMemo(
+    () => [...visibleEntries, ...lcwoEstimates],
+    [visibleEntries, lcwoEstimates],
+  );
   const planning = useRef({ tasks, entries: visibleEntries, profile });
   planning.current = { tasks, entries: visibleEntries, profile };
   const nextPlan = useMemo(
@@ -1047,7 +1063,16 @@ function App() {
     />
   ) : undefined;
   const realEntries = user ? visibleEntries : localEntries;
-  const savedTime = useMemo(() => savedPracticeTime(realEntries, today), [realEntries, today]);
+  const savedTime = useMemo(() => {
+    const saved = savedPracticeTime(realEntries, today);
+    const estimate = lcwoRows
+      .filter((row) => row.date === today)
+      .reduce((sum, row) => sum + row.additionalSeconds, 0);
+    return {
+      ...saved,
+      practice: { ...saved.practice, savedSeconds: saved.practice.savedSeconds + estimate },
+    };
+  }, [realEntries, today, lcwoRows]);
   const practiceTime = practiceTimeWithCurrent(savedTime, [
     ...(ownedCurrent ? [ownedCurrent] : []),
     ...runnerResults.map((result) => currentPracticeFromResult(result.entry)),
@@ -1062,6 +1087,19 @@ function App() {
         guest={!user}
         current={ownedCurrent}
       />
+      {lcwoEstimates.some((entry) => entry.date === today) && (
+        <p className="lcwo-estimate-note">
+          Today includes{' '}
+          {Number(
+            lcwoEstimates
+              .filter((entry) => entry.date === today)
+              .reduce((sum, entry) => sum + entry.minutes, 0)
+              .toFixed(2),
+          )}{' '}
+          explicitly estimated LCWO group minutes. Inspect source results in Logbook; change the
+          assumption in Settings.
+        </p>
+      )}
       <DailyWordListening
         summary={dailyWordListening(realEntries, ownedCurrent ? [ownedCurrent] : [], today)}
         timezone={profile.timezone}
@@ -1440,7 +1478,7 @@ function App() {
               {page === 'overview' &&
                 (user ? (
                   <Overview
-                    entries={visibleEntries}
+                    entries={summaryEntries}
                     today={today}
                     practiceTime={practiceTime.practice.totalSeconds / 60}
                     practiceSummary={practiceSummary}
@@ -1682,41 +1720,51 @@ function App() {
                 />
               )}
               {page === 'logbook' && (
-                <Logbook
-                  entries={visibleEntries}
-                  profile={profile}
-                  demo={!user && localEntries.length === 0 && !runnerResults.length}
-                  scope={scope}
-                  runnerResults={runnerResults}
-                  runnerError={runnerError}
-                  pendingIds={user ? localEntries.map((entry) => entry.id) : []}
-                  openLog={openLog}
-                  onEdit={(entry) => openLog(entry)}
-                  onReviewRunner={(entry) => openLog(entry, undefined, true)}
-                  onDelete={async (id) => {
-                    if (!user) {
-                      removeLocalPractice('guest', id);
-                      notify('Local practice entry deleted.');
-                      return;
-                    }
-                    const owner = user.id;
-                    const token = deviceToken;
-                    const authority = historyGeneration.current;
-                    if (!authority || authority.accountId !== owner)
-                      throw new Error('Refresh this practice log before deleting a record.');
-                    await api(`/entries/${id}`, {}, 'DELETE', AbortSignal.timeout(10_000), {
-                      accountId: owner,
-                      generation: authority.generation,
-                    });
-                    if (activeAccount.current !== owner || !isDeviceScopeCurrent(owner, token))
-                      return;
-                    setEntries((current) => current.filter((entry) => entry.id !== id));
-                    notify('Practice entry deleted.');
-                  }}
-                />
+                <>
+                  <Logbook
+                    hasLcwo={lcwoRows.length > 0}
+                    estimates={lcwoEstimates}
+                    entries={visibleEntries}
+                    profile={profile}
+                    demo={!user && localEntries.length === 0 && !runnerResults.length}
+                    scope={scope}
+                    runnerResults={runnerResults}
+                    runnerError={runnerError}
+                    pendingIds={user ? localEntries.map((entry) => entry.id) : []}
+                    openLog={openLog}
+                    onEdit={(entry) => openLog(entry)}
+                    onReviewRunner={(entry) => openLog(entry, undefined, true)}
+                    onDelete={async (id) => {
+                      if (!user) {
+                        removeLocalPractice('guest', id);
+                        notify('Local practice entry deleted.');
+                        return;
+                      }
+                      const owner = user.id;
+                      const token = deviceToken;
+                      const authority = historyGeneration.current;
+                      if (!authority || authority.accountId !== owner)
+                        throw new Error('Refresh this practice log before deleting a record.');
+                      await api(`/entries/${id}`, {}, 'DELETE', AbortSignal.timeout(10_000), {
+                        accountId: owner,
+                        generation: authority.generation,
+                      });
+                      if (activeAccount.current !== owner || !isDeviceScopeCurrent(owner, token))
+                        return;
+                      setEntries((current) => current.filter((entry) => entry.id !== id));
+                      notify('Practice entry deleted.');
+                    }}
+                  />
+                  <LcwoHistory
+                    rows={lcwoRows}
+                    estimateSeconds={lcwo.data?.estimateSeconds ?? 0}
+                    timezone={profile.timezone}
+                  />
+                </>
               )}
               {page === 'course' && (
                 <Course
+                  lcwo={lcwo.data}
                   liveNow={liveNow}
                   profile={profile}
                   entries={entries}
@@ -1762,6 +1810,7 @@ function App() {
                   profile={profile}
                   revision={account.state?.revision ?? 0}
                   confirmed={account.confirmed}
+                  lcwo={lcwo}
                   onChange={account.mutate}
                   notify={notify}
                   logout={logout}
@@ -2088,6 +2137,12 @@ function Overview({
               <CalendarDays size={13} /> Last 7 days
             </span>
           </div>
+          {entries.some((entry) => entry.id.startsWith('lcwo-estimate:')) && (
+            <p className="lcwo-estimate-note">
+              Practice totals include explicitly estimated LCWO group time. Inspect source results
+              in Practice log for the per-result assumption and overlap checks.
+            </p>
+          )}
           <div className="chart-legend">
             <span>
               <i className="legend-dot green-dot" /> Practice time
@@ -2328,6 +2383,8 @@ function EmptyState({
 }
 
 function Logbook({
+  hasLcwo,
+  estimates,
   entries,
   profile,
   demo,
@@ -2340,6 +2397,8 @@ function Logbook({
   onDelete,
   pendingIds = [],
 }: {
+  hasLcwo: boolean;
+  estimates: PracticeSession[];
   entries: PracticeSession[];
   profile: Profile;
   demo: boolean;
@@ -2357,7 +2416,7 @@ function Logbook({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
   const practiceSummary = summarizePractice(
-    entries,
+    [...entries, ...estimates],
     dateInTimezone(new Date(), profile.timezone),
     profile.dailyGoalMinutes,
   );
@@ -2384,6 +2443,18 @@ function Logbook({
           <Plus size={17} /> Log practice
         </button>
       </div>
+      {hasLcwo && (
+        <button
+          className="text-button"
+          onClick={() => {
+            const heading = document.querySelector<HTMLElement>('#lcwo-source-results h2');
+            heading?.focus();
+            heading?.scrollIntoView({ block: 'start' });
+          }}
+        >
+          View LCWO source results
+        </button>
+      )}
       <RunnerRecovery
         scope={scope}
         results={runnerResults}
@@ -2404,6 +2475,14 @@ function Logbook({
           <span>days you showed up</span>
         </div>
       </div>
+      {estimates.length > 0 && (
+        <p className="lcwo-estimate-note">
+          These totals include{' '}
+          {Number(estimates.reduce((sum, entry) => sum + entry.minutes, 0).toFixed(2))} explicitly
+          estimated LCWO group minutes. Source results are separate from your logged practice
+          sessions.
+        </p>
+      )}
       <section className="card logbook-card">
         <div className="logbook-toolbar">
           <h2>Practice log {demo && <span className="sample-label">SAMPLE DATA</span>}</h2>
@@ -2515,6 +2594,7 @@ function Logbook({
 }
 
 function Course({
+  lcwo,
   liveNow,
   profile,
   entries,
@@ -2533,6 +2613,7 @@ function Course({
   inspection,
   returnToPractice,
 }: {
+  lcwo: LcwoData | null;
   liveNow: number;
   tasks: PlannedTask[];
   pendingTaskIds: string[];
@@ -2575,6 +2656,7 @@ function Course({
       </div>
       {user && (
         <Plan
+          lcwo={lcwo}
           key={`${user.id}:${getDeviceScopeToken(user.id)}`}
           liveNow={liveNow}
           accountId={user.id}
@@ -3588,6 +3670,7 @@ function SessionModal({
 }
 
 function Account({
+  lcwo,
   user,
   profile,
   revision,
@@ -3602,6 +3685,7 @@ function Account({
   onReset,
   onReplace,
 }: {
+  lcwo: LcwoController;
   user: User;
   profile: Profile;
   revision: number;
@@ -3748,6 +3832,8 @@ function Account({
     try {
       if (file.size > 8 * 1024 * 1024) throw new Error('Choose a JSON backup smaller than 8 MB.');
       const data = JSON.parse(await file.text());
+      if (data?.format === 'cwa-training-tracker' && data.lcwo !== undefined)
+        data.lcwo = validateLcwoBackup(data.lcwo);
       const count =
         data.sessions?.length ?? data.snapshot?.attempts?.length ?? data.attempts?.length;
       if (!Number.isInteger(count))
@@ -3775,7 +3861,12 @@ function Account({
     try {
       if (!confirmed || confirmed.accountId !== user.id)
         throw new Error('Refresh your account before importing a backup.');
-      const result = await api<{ imported: number; skipped: number; historicalLinks?: number }>(
+      const result = await api<{
+        imported: number;
+        skipped: number;
+        historicalLinks?: number;
+        lcwoRetained?: number;
+      }>(
         '/import',
         {
           data: importData.data,
@@ -3789,7 +3880,7 @@ function Account({
       setArchiveVersion((value) => value + 1);
       setImportData(null);
       notify(
-        `Imported ${result.imported} sessions${result.skipped ? `; ${result.skipped} duplicates skipped` : ''}.${result.historicalLinks ? ` Retained ${result.historicalLinks} old exercise links as history without current assignment credit.` : ''}`,
+        `Imported ${result.imported} sessions${result.lcwoRetained === undefined ? '' : `; ${result.lcwoRetained} retained LCWO source results, link disconnected`}${result.skipped ? `; ${result.skipped} duplicates skipped` : ''}.${result.historicalLinks ? ` Retained ${result.historicalLinks} old exercise links as history without current assignment credit.` : ''}`,
       );
       try {
         await reload();
@@ -4043,6 +4134,11 @@ function Account({
           </section>
         </div>
       </div>
+      <LcwoSettings
+        key={`${user.id}:${confirmed?.generation}:${getDeviceScopeToken(user.id)}`}
+        source={lcwo}
+        onChanged={reload}
+      />
       <section id="training-backups" className="card data-card">
         <div className="section-heading">
           <div>
@@ -4060,7 +4156,7 @@ function Account({
             <p>
               Download your practice log, homework plan, account preferences, and any preserved
               import data as a JSON file. It contains only your account’s training data, never your
-              passkeys.
+              passkeys or LCWO credentials. Restored LCWO links are disconnected.
             </p>
             <p>Pending device saves, copy drafts and scratchpads need a separate device backup.</p>
             <button className="button outline" onClick={exportData} disabled={dataBusy}>
@@ -4102,8 +4198,8 @@ function Account({
             </span>
             <h3>A fresh page</h3>
             <p>
-              Clear your sessions, private plan, and course preferences, then reimport whenever
-              you’re ready. Your sign-in stays.
+              Clear your sessions, private plan, retained LCWO identity/results, and course
+              preferences, then reimport whenever you’re ready. Your sign-in stays.
             </p>
             <button className="button outline danger-text" onClick={onReset} disabled={dataBusy}>
               Reset practice data
@@ -4159,8 +4255,20 @@ function Account({
           <p className="modal-intro">
             <strong>{importData.name}</strong>
             <br />
-            {importData.count} records found. The server will validate the file before saving any
-            changes.
+            {importData.count} practice records found. The server will validate the file before
+            saving any changes.
+            {(() => {
+              const incoming = (importData.data as { lcwo?: LcwoData }).lcwo;
+              return incoming ? (
+                <>
+                  <br />
+                  {incoming.runs?.length ?? 0} retained LCWO source results for{' '}
+                  {incoming.identity?.username}; estimate assumption {incoming.estimateSeconds}{' '}
+                  seconds per group. Import keeps the link disconnected and rejects a different
+                  retained identity on merge.
+                </>
+              ) : null;
+            })()}
           </p>
           <label className="import-choice">
             <input

@@ -17,7 +17,12 @@ adapter. Keep those tests focused on observable responses and stored outcomes;
 use direct database assertions when the storage property matters, such as hashed
 credentials or transaction rollback. This adapter does not replace checking a
 real Workers runtime. The browser suite provides that boundary with local
-Wrangler, D1, static assets, and simulated email delivery.
+Wrangler, D1, static assets, and simulated email delivery. Its isolated entrypoint
+`e2e/runtime-worker.ts` additionally substitutes only the fixed LCWO upstream
+origin with synthetic current-response fixtures. Companion auth, routes,
+migrations and transactions remain real; production uses `src/worker/index.ts`
+with no fixture entrypoint, endpoint or binding. Do not describe fixture LCWO
+refresh as authenticated live-service verification.
 
 Keep boundary cases cheap. Test code expiry, cross-account access, malformed
 imports, rollback, and date arithmetic below the browser. For Morse generation,

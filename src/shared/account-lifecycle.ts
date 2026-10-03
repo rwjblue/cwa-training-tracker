@@ -27,6 +27,7 @@ export interface LifecycleApplied {
   imported?: number;
   skipped?: number;
   historicalLinks?: number;
+  lcwoRetained?: number;
 }
 
 export interface LifecycleResult {
@@ -102,7 +103,14 @@ export function validateLifecycleResult(value: unknown): LifecycleResult {
   let applied: LifecycleApplied | undefined;
   if (input.outcome === 'applied') {
     const result = record(input.applied);
-    keys(result, ['revision', 'generation', 'imported', 'skipped', 'historicalLinks']);
+    keys(result, [
+      'revision',
+      'generation',
+      'imported',
+      'skipped',
+      'historicalLinks',
+      'lcwoRetained',
+    ]);
     applied = { revision: counter(result.revision), generation: counter(result.generation) };
     if (
       applied.revision !== identity.baseRevision + 1 ||
@@ -111,7 +119,7 @@ export function validateLifecycleResult(value: unknown): LifecycleResult {
       throw new Error('Invalid applied lifecycle authority.');
     if (state.revision < applied.revision || state.generation < applied.generation)
       throw new Error('Lifecycle state precedes its applied outcome.');
-    for (const key of ['imported', 'skipped', 'historicalLinks'] as const)
+    for (const key of ['imported', 'skipped', 'historicalLinks', 'lcwoRetained'] as const)
       if (result[key] !== undefined) applied[key] = counter(result[key]);
   } else if (input.applied !== undefined)
     throw new Error('Only an applied lifecycle has an applied result.');

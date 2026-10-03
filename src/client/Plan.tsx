@@ -1,3 +1,4 @@
+import type { LcwoData } from '../shared/lcwo';
 import ListeningPassProgress from './ListeningPassProgress';
 import LiveAssignmentWindow from './LiveAssignmentWindow';
 import { CW_EVENT_SCHEDULE, type CwEventId } from '../shared/cw-events';
@@ -42,6 +43,7 @@ import { curriculumForLevel } from '../shared/curriculum';
 
 interface Props {
   liveNow?: number;
+  lcwo?: LcwoData | null;
   accountId?: string;
   inspection?: { id: string; view: 'week' | 'report' };
   returnToPractice?: { label: string; onReturn: () => void };
@@ -70,6 +72,7 @@ const dayLabel = (date: string) =>
 
 export default function Plan({
   liveNow = Date.now(),
+  lcwo,
   accountId,
   profile,
   entries,
@@ -500,6 +503,7 @@ export default function Plan({
       )}
       {reportOpen && (
         <Report
+          lcwo={lcwo}
           entries={entries}
           profile={profile}
           fromDate={weekStart}
@@ -829,6 +833,7 @@ function TaskEditor({
 }
 
 function Report({
+  lcwo,
   entries,
   profile,
   fromDate,
@@ -836,6 +841,7 @@ function Report({
   onClose,
   returnToPractice,
 }: {
+  lcwo?: LcwoData | null;
   entries: PracticeSession[];
   profile: Profile;
   fromDate: string;
@@ -849,7 +855,7 @@ function Report({
   const [copyError, setCopyError] = useState('');
   let report = '';
   try {
-    report = weeklyReport(entries, profile, from, to);
+    report = weeklyReport(entries, profile, from, to, lcwo);
   } catch {
     report = 'Choose a valid date range.';
   }

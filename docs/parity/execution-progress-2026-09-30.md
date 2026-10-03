@@ -1174,3 +1174,45 @@ of issue #2. Both improvements stay separate from this issue's implementation.
 - Local main advances with this journal. No push/PR; #20 remains OPEN/unpublished.
   Parser+Chromium emulation do not establish OS subscription or physical device.
   Continue #21–#46 with #18/#20 accepted local/deployed dependencies.
+
+
+## Issue #35 — optional account-scoped LCWO source history (review pending)
+
+Rechecked current issue body/comments/dependencies and pinned/current original
+transport, category types, sync and full-block estimate accounting. Current
+canonical LCWO source still has a maintainable request-only login/export path;
+authenticated canonical filename headers and consistent UID verify identity,
+including empty-account username with an unknown numeric UID. Current TIMESTAMP
+retrieval uses UTC; original source timestamp remains preserved verbatim.
+
+Consent/link/explicit refresh/disconnect now reaches the scoped Worker and atomic
+D1 storage. All four categories validate before commit; source-ID conflicts,
+identity changes, malformed/oversized/partial exports, timeout and quota errors
+retain rows and last-success. Revision/generation guards fence disconnect/reset
+races. No passwords/cookies are persisted or exported. Read-only history/reports
+preserve exact source facts and meanings; explicit disabled-by-default bounded
+group assumptions suppress full-history overlaps, unknown same-day blocks and
+historical source-ID duplicates. No guessed words/callsigns/Koch duration or
+assignment completion. Export/merge/replace/reset preserve private lifecycle
+semantics; restored links stay disconnected, including merge into a linked account.
+
+Focused check/types and 239 domain/transport/real-SQL tests pass; two serial
+real-runtime browser workflows cover desktop/mobile, keyboard/touch, consent,
+source inspector, report overlap, cancellation/partial failure/retry/disconnect,
+focus and actual portable file download/merge. Axe/overflow screens and inspected
+captures are retained. Source upstream is synthetic; no real credentials, source
+site mutation, physical device, new speech recognition or crash/reload elapsed
+recovery is claimed. Full checks, implementation commit, required independent
+review, deployment and final issue comment remain pending. Main remains #34's
+accepted journal; no push will be attempted.
+
+Root full check/all 1,312 fast tests in 70 files/build pass. The full browser
+attempt passed 95 and failed one mobile native course-replay count; the unchanged
+isolated journey passes. Retained evidence and unconfirmed cause are documented
+in the parity inventory. No native workaround; complete serial rerun pending.
+
+Final root gate passes check/all 1,312 tests in 70 files/build and all 96 serial
+browser journeys in 18.1 minutes (actual exit 0). The unchanged mobile replay
+journey passes in the complete rerun. Earlier failures/interruption remain
+retained and honestly documented. Implementation commit and independent review
+follow this gate; production delivery remains pending. No push is authorized.

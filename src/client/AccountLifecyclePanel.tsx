@@ -1,3 +1,4 @@
+import type { TrainingExport } from '../shared/training';
 import { useEffect, useRef, useState } from 'react';
 import { Download, RotateCcw } from 'lucide-react';
 import type { AccountSnapshot } from '../shared/account-sync';
@@ -469,15 +470,34 @@ export default function AccountLifecyclePanel({
           <p className="modal-intro">
             Only <strong>{user.email}</strong> is affected.{' '}
             {reset ? (
-              'Delete this account’s practice sessions, private plan, imported archive, and course preferences.'
+              'Delete this account’s practice sessions, private plan, imported archive, LCWO identity/results, and course preferences.'
             ) : (
               <>
-                Replace this account’s sessions, private plan, imported archive, and course
-                preferences using <strong>{review.name}</strong> ({review.count} records).
+                Replace this account’s sessions, private plan, imported archive, LCWO
+                identity/results, and course preferences using <strong>{review.name}</strong> (
+                {review.count} records).
               </>
             )}{' '}
             Your account and passkeys stay active.
           </p>
+          {!reset &&
+            (() => {
+              const portable = (review.payload as { data?: TrainingExport }).data;
+              const incoming =
+                portable?.format === 'cwa-training-tracker' ? portable.lcwo : undefined;
+              return incoming ? (
+                <p>
+                  {incoming.runs.length} LCWO source results for {incoming.identity.username} will
+                  be restored disconnected, with an explicit estimate assumption of{' '}
+                  {incoming.estimateSeconds} seconds per group.
+                </p>
+              ) : (
+                <p>
+                  No LCWO source history in this backup; replacement clears the current LCWO
+                  identity and results.
+                </p>
+              );
+            })()}
           <p>
             Old finished Runner results, waiting results, edits, notes, and Copy drafts will leave
             the active device workspace after success. They will never upload into the new log.

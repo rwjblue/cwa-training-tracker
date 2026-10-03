@@ -67,7 +67,10 @@ published non-LCWO activities, official links and recording metadata. No prototy
 is selected silently. Generic historical ICR links and supported LCWO trainer
 links adapt at launch without rewriting source records; unrelated LCWO tools
 remain external. No LCWO account connection, fetch, or live synchronization is
-needed for this workflow.
+needed for this workflow. The learner-approved issue #35 separately adds optional
+account-scoped live refresh of a learner's external results. Its explicit consent,
+request-only credentials, inactive backup restore and labeled group estimates
+do not change native curriculum launches or imply identical native/LCWO scoring.
 
 Generation/scoring, clocks, curriculum, report selection and API validation have
 focused unit/API coverage. An independent agent reviewed guest and signed-in

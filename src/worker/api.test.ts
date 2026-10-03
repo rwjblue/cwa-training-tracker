@@ -1,3 +1,4 @@
+import { lcwoFixtureResponse } from '../../e2e/lcwo-fixture';
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -146,6 +147,7 @@ async function request(
     (path.startsWith('/api/entries') ||
       path.startsWith('/api/plan') ||
       path === '/api/settings' ||
+      path === '/api/lcwo' ||
       path === '/api/import') &&
     method !== 'GET' &&
     !Object.hasOwn(headers, 'X-CWA-Account')
@@ -196,7 +198,8 @@ async function request(
     );
   if (
     auth &&
-    ((path === '/api/settings' && method === 'PUT') ||
+    ((path === '/api/lcwo' && method === 'POST') ||
+      (path === '/api/settings' && method === 'PUT') ||
       (path.startsWith('/api/plan') && method !== 'GET')) &&
     !Object.hasOwn(headers, 'If-Match')
   )
@@ -7318,5 +7321,333 @@ describe('private native performance and CWT observations', () => {
         )
       ).status,
     ).toBe(400);
+  });
+});
+
+describe('private request-only LCWO linking and retained history', () => {
+  const credentials = {
+    action: 'link',
+    consent: true,
+    username: 'Student7',
+    password: 'fixture-normal',
+  };
+  function upstream() {
+    return vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input, init) => lcwoFixtureResponse(input, init));
+  }
+  async function retained(cookie: string) {
+    return (await (await request('/api/lcwo', 'GET', undefined, cookie)).json()) as {
+      data: import('../shared/lcwo').LcwoData | null;
+      state: AccountSnapshot;
+    };
+  }
+  it('atomically links all source families, retains missing rows and refreshes without duplicates or secrets', async () => {
+    const owner = await signIn('lcwo-owner@example.test');
+    const fetcher = upstream();
+    expect((await request('/api/lcwo')).status).toBe(401);
+    expect(
+      (
+        await request('/api/lcwo', 'POST', credentials, owner.cookie, {
+          Origin: 'https://foreign.example',
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await request('/api/lcwo', 'POST', credentials, owner.cookie, { 'If-Match': '' })).status,
+    ).toBe(428);
+    expect(
+      (await request('/api/lcwo', 'POST', { ...credentials, consent: false }, owner.cookie)).status,
+    ).toBe(400);
+    const linked = await request('/api/lcwo', 'POST', credentials, owner.cookie);
+    expect(linked.status).toBe(200);
+    expect(((await linked.json()) as { imported: number }).imported).toBe(4);
+    const first = await retained(owner.cookie);
+    expect(first.data).toMatchObject({
+      connected: true,
+      estimateSeconds: 0,
+      identity: { username: 'Student7', sourceUserId: '7' },
+    });
+    expect(first.data?.runs).toHaveLength(4);
+    const refreshed = await request(
+      '/api/lcwo',
+      'POST',
+      { ...credentials, action: 'refresh' },
+      owner.cookie,
+    );
+    expect(refreshed.status).toBe(200);
+    expect(((await refreshed.json()) as { imported: number }).imported).toBe(0);
+    const empty = await request(
+      '/api/lcwo',
+      'POST',
+      { ...credentials, action: 'refresh', password: 'fixture-empty' },
+      owner.cookie,
+    );
+    expect(empty.status).toBe(200);
+    expect((await retained(owner.cookie)).data?.runs).toEqual(first.data?.runs);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, owner.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.lcwo).toMatchObject({
+      connected: false,
+      identity: first.data!.identity,
+      runs: first.data!.runs,
+    });
+    const persisted =
+      JSON.stringify(db.sqlite.prepare('SELECT link_json FROM lcwo_links').all()) +
+      JSON.stringify(db.sqlite.prepare('SELECT run_json FROM lcwo_results').all()) +
+      JSON.stringify(exported);
+    for (const secret of [
+      'password',
+      'fixture-normal',
+      'fixture-empty',
+      'PHPSESSID',
+      'fixture-session',
+    ])
+      expect(persisted).not.toContain(secret);
+    expect(fetcher).toHaveBeenCalledTimes(15);
+    const actualBytes =
+      Number(
+        db.sqlite.prepare('SELECT sum(length(CAST(link_json AS BLOB))) AS n FROM lcwo_links').get()!
+          .n,
+      ) +
+      Number(
+        db.sqlite
+          .prepare('SELECT sum(length(CAST(run_json AS BLOB))) AS n FROM lcwo_results')
+          .get()!.n,
+      );
+    expect(
+      db.sqlite
+        .prepare('SELECT storage_bytes,history_revision FROM users WHERE id=?')
+        .get(owner.user.id),
+    ).toMatchObject({ storage_bytes: actualBytes, history_revision: 7 });
+  });
+  it('bad sign-in, partial/malformed/oversized exports and conflicting identities/facts leave last-success and results unchanged', async () => {
+    const owner = await signIn('lcwo-failures@example.test');
+    upstream();
+    expect((await request('/api/lcwo', 'POST', credentials, owner.cookie)).status).toBe(200);
+    const before = await retained(owner.cookie);
+    for (const password of [
+      'fixture-bad',
+      'fixture-partial',
+      'fixture-malformed',
+      'fixture-oversized',
+      'fixture-conflict',
+    ]) {
+      const response = await request(
+        '/api/lcwo',
+        'POST',
+        { ...credentials, action: 'refresh', password },
+        owner.cookie,
+      );
+      expect(response.status).toBe(password === 'fixture-conflict' ? 400 : 502);
+      expect(JSON.stringify(await response.json())).not.toContain(password);
+      expect(await retained(owner.cookie)).toEqual(before);
+    }
+    expect(
+      (await request('/api/lcwo', 'POST', { ...credentials, username: 'Student8' }, owner.cookie))
+        .status,
+    ).toBe(400);
+    expect(await retained(owner.cookie)).toEqual(before);
+  });
+  it('keeps other accounts isolated and disconnects without deleting retained source history', async () => {
+    const owner = await signIn('lcwo-private@example.test');
+    const other = await signIn('lcwo-other@example.test');
+    const fetcher = upstream();
+    await request('/api/lcwo', 'POST', credentials, owner.cookie);
+    expect((await retained(other.cookie)).data).toBeNull();
+    for (const action of ['link', 'refresh', 'disconnect', 'estimate'])
+      expect(
+        (
+          await request('/api/lcwo', 'POST', { ...credentials, action }, other.cookie, {
+            'X-CWA-Account': owner.user.id,
+          })
+        ).status,
+      ).toBe(409);
+    const before = (await retained(owner.cookie)).data!;
+    expect(
+      (await request('/api/lcwo', 'POST', { action: 'estimate', seconds: 60 }, owner.cookie))
+        .status,
+    ).toBe(200);
+    expect(
+      (await request('/api/lcwo', 'POST', { action: 'disconnect' }, owner.cookie)).status,
+    ).toBe(200);
+    const calls = fetcher.mock.calls.length;
+    expect(
+      (await request('/api/lcwo', 'POST', { ...credentials, action: 'refresh' }, owner.cookie))
+        .status,
+    ).toBe(409);
+    expect(fetcher).toHaveBeenCalledTimes(calls);
+    expect((await retained(owner.cookie)).data).toMatchObject({
+      connected: false,
+      estimateSeconds: 60,
+      runs: before.runs,
+    });
+    expect((await request('/api/lcwo', 'POST', credentials, owner.cookie)).status).toBe(200);
+    expect((await retained(owner.cookie)).data?.connected).toBe(true);
+  });
+  it('round-trips portable facts/preferences privately without activating login and clears them on reset', async () => {
+    const owner = await signIn('lcwo-backup@example.test');
+    const other = await signIn('lcwo-restore@example.test');
+    upstream();
+    await request('/api/lcwo', 'POST', credentials, owner.cookie);
+    await request('/api/lcwo', 'POST', { action: 'estimate', seconds: 60 }, owner.cookie);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, owner.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect((await retained(other.cookie)).data).toEqual(exported.lcwo);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect((await retained(other.cookie)).data?.runs).toHaveLength(4);
+    const conflicting = {
+      ...exported,
+      lcwo: { ...exported.lcwo, identity: { username: 'Student8', sourceUserId: '8' }, runs: [] },
+      sessions: [entry('would-be-partial')],
+    };
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: conflicting }, other.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      db.sqlite.prepare('SELECT id FROM practice_entries WHERE user_id=?').all(other.user.id),
+    ).toEqual([]);
+    expect(
+      (await request('/api/reset', 'POST', { confirmation: 'RESET' }, other.cookie)).status,
+    ).toBe(200);
+    expect((await retained(other.cookie)).data).toBeNull();
+    expect((await retained(owner.cookie)).data?.runs).toHaveLength(4);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect((await retained(other.cookie)).data?.connected).toBe(false);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: backup([]) }, other.cookie))
+        .status,
+    ).toBe(200);
+    expect((await retained(other.cookie)).data).toBeNull();
+  });
+  it('rolls back the whole refresh at quota failure and fences a refresh completing after disconnect', async () => {
+    const owner = await signIn('lcwo-race@example.test');
+    const fetcher = upstream();
+    await request('/api/lcwo', 'POST', credentials, owner.cookie);
+    const original = await retained(owner.cookie);
+    const priorBytes = db.sqlite
+      .prepare('SELECT storage_bytes FROM users WHERE id=?')
+      .get(owner.user.id)!.storage_bytes as number;
+    db.sqlite.prepare('UPDATE users SET storage_bytes=6291456 WHERE id=?').run(owner.user.id);
+    expect(
+      (await request('/api/lcwo', 'POST', { action: 'estimate', seconds: 300 }, owner.cookie))
+        .status,
+    ).toBe(400);
+    expect(await retained(owner.cookie)).toEqual(original);
+    db.sqlite.prepare('UPDATE users SET storage_bytes=? WHERE id=?').run(priorBytes, owner.user.id);
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const reached = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    fetcher.mockImplementation(async (input, init) => {
+      if (new URL(String(input)).searchParams.get('type') === 'koch') {
+        entered();
+        await gate;
+      }
+      return lcwoFixtureResponse(input, init);
+    });
+    const refresh = request(
+      '/api/lcwo',
+      'POST',
+      { ...credentials, action: 'refresh' },
+      owner.cookie,
+    );
+    await reached;
+    expect(
+      (await request('/api/lcwo', 'POST', { action: 'disconnect' }, owner.cookie)).status,
+    ).toBe(200);
+    release();
+    expect((await refresh).status).toBe(409);
+    expect((await retained(owner.cookie)).data).toEqual({ ...original.data, connected: false });
+  });
+  it('fences a refresh finishing after reset and cascades source history on account deletion', async () => {
+    const owner = await signIn('lcwo-reset-race@example.test');
+    const fetcher = upstream();
+    await request('/api/lcwo', 'POST', credentials, owner.cookie);
+    let release!: () => void, entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const reached = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    fetcher.mockImplementation(async (input, init) => {
+      if (new URL(String(input)).searchParams.get('type') === 'koch') {
+        entered();
+        await gate;
+      }
+      return lcwoFixtureResponse(input, init);
+    });
+    const refresh = request(
+      '/api/lcwo',
+      'POST',
+      { ...credentials, action: 'refresh' },
+      owner.cookie,
+    );
+    await reached;
+    expect(
+      (await request('/api/reset', 'POST', { confirmation: 'RESET' }, owner.cookie)).status,
+    ).toBe(200);
+    release();
+    const late = await refresh;
+    expect(late.status).toBe(409);
+    expect((await late.json()) as object).toMatchObject({ code: 'dataset_retired' });
+    expect((await retained(owner.cookie)).data).toBeNull();
+    fetcher.mockImplementation(async (input, init) => lcwoFixtureResponse(input, init));
+    expect((await request('/api/lcwo', 'POST', credentials, owner.cookie)).status).toBe(200);
+    db.sqlite.prepare('DELETE FROM users WHERE id=?').run(owner.user.id);
+    expect(db.sqlite.prepare('SELECT user_id FROM lcwo_links').all()).toEqual([]);
+    expect(db.sqlite.prepare('SELECT user_id FROM lcwo_results').all()).toEqual([]);
+  });
+  it('a real transport timeout preserves SQL state and returns a fixed secret-free error', async () => {
+    const owner = await signIn('lcwo-timeout@example.test');
+    const fetcher = upstream();
+    await request('/api/lcwo', 'POST', credentials, owner.cookie);
+    const before = await retained(owner.cookie);
+    let entered!: () => void;
+    const reached = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    fetcher.mockImplementation(async () => {
+      entered();
+      return new Promise<Response>(() => {});
+    });
+    vi.useFakeTimers();
+    try {
+      const refresh = request(
+        '/api/lcwo',
+        'POST',
+        { ...credentials, action: 'refresh' },
+        owner.cookie,
+      );
+      await reached;
+      await vi.advanceTimersByTimeAsync(10_001);
+      const failed = await refresh;
+      expect(failed.status).toBe(502);
+      expect(await failed.json()).toEqual({
+        code: 'lcwo_timeout',
+        error: 'LCWO took too long to respond. Retained results are unchanged; try again later.',
+      });
+      expect(await retained(owner.cookie)).toEqual(before);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

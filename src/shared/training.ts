@@ -1,3 +1,4 @@
+import { validateLcwoBackup, type LcwoBackup } from './lcwo.ts';
 import {
   validateManualSessionDetails,
   type ExternalPractice,
@@ -97,6 +98,8 @@ export interface TrainingExport {
   exportedAt: string;
   profile?: Profile;
   sessions: PracticeSession[];
+  /** Retained source facts and preferences; an imported link is always inactive. */
+  lcwo?: LcwoBackup;
   plan?: PlannedTask[];
   /** Retain privately and include in future exports; never publish this data. */
   legacy?: {
@@ -407,6 +410,8 @@ export function validatePracticeSession(
 ): PracticeSession {
   const input = record(value, 'Practice session');
   const id = text(input.id, 'Session ID', 200);
+  if (id.startsWith('lcwo-estimate:'))
+    throw new Error('Computed LCWO estimates are read-only totals, not saved practice entries.');
   if (!/^[a-zA-Z0-9:_-][a-zA-Z0-9:._-]*$/.test(id))
     throw new Error('Session ID contains unsupported characters.');
   if (!isCalendarDate(input.date)) throw new Error('Choose a valid practice date.');
@@ -685,6 +690,7 @@ export function validateTrainingExport(value: unknown): TrainingExport {
       throw new Error('Unsupported practice evidence export version.');
     result.evidenceVersion = 1;
   }
+  if (input.lcwo !== undefined) result.lcwo = validateLcwoBackup(input.lcwo);
   if (input.profile !== undefined) result.profile = validateProfile(input.profile);
   if (input.plan !== undefined) result.plan = validatePlan(input.plan);
   if (input.legacy !== undefined) {

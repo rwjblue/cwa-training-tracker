@@ -1,3 +1,5 @@
+import { lcwoRunDetails, type LcwoBackup } from './lcwo.ts';
+import { lcwoContributions, lcwoContributionDetails, estimatedLcwoSessions } from './lcwo-practice.ts';
 import { practiceAssessmentDetails } from './practice-assessment.ts';
 import {
   addDays,
@@ -638,11 +640,16 @@ export function weeklyReport(
   profile: Profile,
   fromDate: string,
   toDate: string,
+  lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null,
 ): string {
   if (!validDate(fromDate) || !validDate(toDate) || fromDate > toDate)
     throw new Error('Choose valid report dates.');
+  const sourceRows = lcwoContributions(lcwo, entries, profile.timezone).filter(
+    (row) => row.date >= fromDate && row.date <= toDate,
+  );
+  const estimates = estimatedLcwoSessions(sourceRows);
   const seenEntries = new Set<string>();
-  const all = entries
+  const all = [...entries, ...estimates]
     .filter((entry) => {
       if (seenEntries.has(entry.id)) return false;
       seenEntries.add(entry.id);
@@ -696,6 +703,17 @@ export function weeklyReport(
         lines.push(`  ${detail}`);
     }
     lines.push('');
+  }
+  if (sourceRows.length) {
+    lines.push('Authenticated LCWO source evidence (external, read-only)');
+    lines.push(
+      `${Number((sourceRows.reduce((sum, row) => sum + row.additionalSeconds, 0) / 60).toFixed(2))} additional estimated group minutes included above; assumption ${lcwo!.estimateSeconds} seconds per completed group. No measured duration is inferred.`,
+    );
+    for (const row of sourceRows) {
+      lines.push(`${row.date} — ${row.run.id}`);
+      for (const fact of lcwoRunDetails(row.run)) lines.push(`  ${fact}`);
+      lines.push(`  ${lcwoContributionDetails(row, lcwo!.estimateSeconds)}`);
+    }
   }
   if (!all.length) lines.push('No practice entries in this date range.');
   return lines.join('\n');
