@@ -1724,3 +1724,135 @@ Omitted embedded details are disclosed while owned source IDs/private backup
 facts remain available. Browser widths/touch are emulated; physical-device,
 live LCWO, external-form submission and production private-write verification
 are not claimed. Exact handoff/confirmation #39 and learned words #40 follow.
+
+
+## Issue #39 implementation — preserved handoff and explicit confirmation
+
+Current #39 body/comments and dependencies #2/#36/#37 were rechecked. Closed #2
+retains the delivered scoped durable account outbox, receipt/CAS/FIFO projection
+and meaningful failure recovery; the current fast outbox/Worker gates and affected
+browser journeys verify those boundaries rather than skipping on issue state.
+#36/#37 remain open only for unpublished source under the no-push instruction.
+Current original report panel/Worker references are byte-identical to pinned
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`; the original remains read-only.
+
+Prepare reviewed handoff validates required answers with field-level errors and
+focuses the first invalid field. Its independent immutable ID freezes definition,
+class/date/window, exact literal answers/edited blanks, configured external
+mapping and private evidence/provenance before any native open/copy/print action
+is exposed. Existing account outbox storage is verified before releasing that
+capture. A queued capture stays usable while waiting to upload; refused essential
+storage exposes no new external action and retains the editable draft with retry.
+HTTPS responder GET links replace stale mapped query values, including blanks;
+all fields require external IDs before opening. Missing/long mappings retain
+captured copy/print/JSON alternatives. Local/IP/submission endpoints and credential
+URLs are rejected. No fixed advisor/form/entry IDs are defaults and no external
+submission or instructor message is automated. The printable text-node iframe
+contains only the captured report; OS printer behavior is not claimed.
+
+Each handoff reserves one submitted ID. Explicit acceptance checkbox/operation
+creates the exact preserved copy with confirmation timestamp, never the current
+working draft. The checkbox belongs to the selected handoff. Draft edits/session
+switches/reload do not change frozen copies. Waiting/failed/account-saved statuses
+and exact retry bodies reuse existing account ownership/generation boundaries.
+Confirmations use already validated captured provenance rather than rebuilding
+later source facts. Immutable history shows class/date/confirmation/source IDs,
+answers and evidence; handoff and submitted JSON downloads preserve exact contents.
+An explicit correction creates a new linked working draft and later separate
+handoff/submission. Original imported submissions remain historical references,
+with the existing explicit separate-draft reopen action retained.
+
+Typed account operations and strict bounded portable report fields reuse the
+200-copy/96,000-byte per-document/private account quota and existing immutable
+SQL rows. Migration `0012_report_handoffs.sql` reserves submission identities and
+requires owned handoff/correction parents inside the write transaction. Shared
+relationships require exact captured values, safe reserved IDs and acyclic owned
+correction links. Validated private merge/replace imports insert parents first,
+even for reversed input; broken/forged/foreign relationships reject atomically.
+Exact acknowledgement retries create one stable immutable record. No Worker
+binding/config changed; type generation is not required.
+
+Root check, all 1,432 tests in 76 files and build pass. Five new domain cases,
+one distinct handoff/confirmation FIFO-outbox case and three actual-SQL Worker
+cases cover exact values/mappings, required/unsafe/long inputs, explicit confirm,
+foreign/missing/forged references, reserved IDs, linked corrections, reverse
+merge/replace portability, later real assessment edits, future timestamps and
+receipt rollback. Six affected real-Wrangler/D1 browser journeys pass in 32.1
+seconds, including original submitted-reference reopen, two-tab/storage recovery
+and the two new handoff flows. New desktop keyboard/mobile touch checks exercise
+synthetic actual popup URL, clipboard content, separate print document, validation
+focus, required fields, cancellation, draft/session changes, offline confirmation,
+reload/exact retry, history/linked corrections and actual JSON/private backup
+file selection. Six new settled Axe/overflow scans are clear; pixels inspected.
+The initial future browser clock and wrong synthetic source ID/long-URL boundary
+fixtures were corrected; failed logs remain and no validator/timeout was relaxed.
+
+The complete serial browser gate, focused implementation commit/main update,
+fresh independent post-commit review and production delivery remain required.
+No source push/PR, original-site mutation, production private write, live external
+form/LCWO interaction or physical-device verification is claimed. Learned-word
+recognition/suppression remains #40; no new vocabulary exposure inference occurs.
+
+
+The first complete #39 browser attempt was intentionally interrupted (exit 130)
+after 17 completed passes; its remaining journeys are not claimed as passed.
+During review preparation, root identified an original-archive correction edge:
+account-copy deduplication compared exact answers/provenance but omitted the
+new revision link. A targeted real-Wrangler/D1 browser regression first failed
+with four records instead of five and visible “already saved” feedback after
+an unchanged-answer native correction. Deduplication now includes `revisionOf`.
+The same mobile regression passes (8.9 seconds complete launcher exit 0), retains
+the older draft/submitted entities exactly, and saves a distinct linked draft.
+The earlier targeted attempt used a future clock and was rejected before this
+boundary; its corrected-clock red assertion/trace/pixels are retained. No field
+validator or timeout was relaxed. Fresh check/all-tests/build and the full
+104-journey regression follow before implementation commit and independent review.
+
+
+A second complete attempt was intentionally interrupted (exit 130) after 16
+completed passes to cover device recovery validation. A cheap regression first
+proved that an account snapshot accepted a native confirmation without its
+handoff. Snapshot validation now reuses exact parent/relationship checks before
+cached/device restore; valid reverse-ordered snapshots remain supported. Six
+domain cases plus device/outbox recovery (85 focused tests) pass, and all six
+affected browser journeys pass again in 32.1 seconds. Both interrupted full
+attempts remain non-passes.
+
+Another actual-SQL regression exposed an offline capture boundary: after a
+reviewed handoff is durably saved locally, a later mutable assessment edit must
+not prevent upload of the exact already-handed-off copy and its confirmation.
+New handoffs therefore store bounded, validated historical private captures with
+owned source/archive references and atomic reference/CAS/history guards; like
+portable frozen history, they do not assert that mutable source facts still
+match today. Ordinary new account draft saves retain #38 current-source checks.
+Confirmation always equals its immutable owned handoff. This is private source
+attribution rather than server certification of past observations. The SQL red
+400 response now becomes 200 with exact retained facts, while foreign references
+and stale new draft saves still reject. A separate actual mobile UI journey
+passes (9.8 seconds complete launcher exit 0): handoff 503, actual assessment
+change, reload/draft refresh to the new rating, old captured rating/answers
+unchanged, offline explicit confirmation, FIFO exact-body retry and one owned
+handoff/submitted pair. Two additional settled Axe/overflow scans are clear.
+Six domain, one distinct outbox and four new SQL cases now own these boundaries.
+Fresh full pre-commit and complete 105 serial browser gates follow.
+
+### Issue #39 final implementation validation
+
+The final complete browser launcher exited 0: 105 serial journeys passed in
+19.0 minutes against isolated real Wrangler/D1. This includes three new
+handoff/confirmation journeys, the original-source correction regression and
+existing account/private backup, native audio, Runner and navigation workflows.
+Desktop keyboard and mobile touch captures were inspected; eight new settled
+Axe/overflow checks are clear. These are emulated synthetic workflows, not
+physical-device, live LCWO or real external-form acceptance evidence.
+
+Final pre-commit passed check, all 1,434 tests across 76 files and production
+build. Six new domain tests, one durable-outbox case and four actual-SQL Worker
+cases protect exact captured identity/answers, owner relationships, immutable
+confirmation, imports, rollback and offline historical-source upload. The two
+earlier interrupted complete runs (exit 130) remain non-passing attempts.
+No Worker bindings/configuration changed. The existing bundle-size advisory
+remains. Original HEAD, pinned references, five protected dirty files, approved
+scope ledger, primary checkout HEAD and push-signing policy are unchanged.
+Implementation commit and local main advancement follow; independent review and
+production deployment are still pending. No push or issue closure is authorized.

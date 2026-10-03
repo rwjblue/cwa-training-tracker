@@ -460,7 +460,7 @@ test('reopening original-derived submitted history saves a separate draft copy w
   await context.setExtraHTTPHeaders({ 'CF-Connecting-IP': '192.0.2.241' });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await signIn(page);
-  await page.clock.setFixedTime(new Date('2026-10-03T12:00:00Z'));
+  await page.clock.setFixedTime(new Date('2026-10-03T00:00:00Z'));
   const legacy = {
     source: 'rwjblue.com',
     data: {
@@ -566,4 +566,40 @@ test('reopening original-derived submitted history saves a separate draft copy w
   expect(draft.answers).toEqual(submitted.answers);
   expect(draft.source).toEqual(submitted.source);
   await expectResponsive(page, 'advisor-submitted-reopened-draft');
+  // A native confirmation derived from this archive must support a linked
+  // correction even when the correction's literal answers are unchanged.
+  await page.getByRole('button', { name: 'Prepare reviewed handoff', exact: true }).tap();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Reviewed handoff retained in your account.' }),
+  ).toBeVisible();
+  await page
+    .getByRole('checkbox', {
+      name: 'The external form confirmed acceptance of this exact captured copy.',
+    })
+    .tap();
+  await page.getByRole('button', { name: 'Record confirmed submission', exact: true }).tap();
+  await page.getByText('Confirmed submission history (1)', { exact: true }).tap();
+  await page.getByText(/Session 1 · 2026-10-03 · confirmed .*account-saved/).tap();
+  await page.getByRole('button', { name: 'Correct as a new linked draft', exact: true }).tap();
+  await expect(page.getByLabel('Questions — Notes (optional)', { exact: true })).toHaveValue(
+    submitted.answers.notes,
+  );
+  const corrected = (await deviceDrafts(page)).drafts[0];
+  expect(corrected.revisionOf).toBeTruthy();
+  await page.getByRole('button', { name: 'Save account copy', exact: true }).tap();
+  await expect
+    .poll(
+      async () =>
+        (await (await context.request.get('/api/account-state')).json()).state.reports.length,
+    )
+    .toBe(5);
+  const final = (await (await context.request.get('/api/account-state')).json()).state.reports;
+  const linked = final.find(
+    (copy: { status: string; revisionOf: string }) =>
+      copy.status === 'draft' && copy.revisionOf === corrected.revisionOf,
+  );
+  expect(linked.answers).toEqual(submitted.answers);
+  expect(linked.id).not.toBe(draft.id);
+  expect(linked.source).toEqual(submitted.source);
+  expect(final.find((copy: { id: string }) => copy.id === draft.id)).toEqual(draft);
 });

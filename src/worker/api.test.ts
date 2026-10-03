@@ -1,3 +1,4 @@
+import { captureReportHandoff, confirmReportHandoff } from '../shared/report-handoff';
 import {
   evidenceDefinition,
   evidenceProfile,
@@ -8269,6 +8270,217 @@ describe('private native advisor report copies', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+  it('preserves owned handoffs and explicit exact confirmations with stable retry receipts and linked corrections', async () => {
+    const a = await signIn('report-handoff-a@example.test');
+    const b = await signIn('report-handoff-b@example.test');
+    const handoff = captureReportHandoff(report(), report().createdAt);
+    expect((await op(a, { type: 'report-handoff', report: handoff })).response.status).toBe(200);
+    const submitted = confirmReportHandoff(handoff, true, '2026-09-28T13:00:00Z');
+    const before = await getAccountSnapshot(env, a.user.id);
+    const future = {
+      ...handoff,
+      id: 'future-handoff',
+      handoff: { submissionId: 'future-submission' },
+      createdAt: '2099-01-01T00:00:00Z',
+      updatedAt: '2099-01-01T00:00:00Z',
+    };
+    expect((await op(a, { type: 'report-handoff', report: future })).response.status).toBe(400);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    for (const invalid of [
+      { ...submitted, answers: { ...submitted.answers, name: 'edited after open' } },
+      { ...submitted, id: 'unreserved-confirmation' },
+      { ...submitted, submittedAt: '2026-09-28T13:00:01Z' },
+    ]) {
+      expect(
+        (await op(a, { type: 'report-confirm', report: invalid, confirmed: true })).response.status,
+      ).toBe(400);
+      expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    }
+    expect(
+      (await op(b, { type: 'report-confirm', report: submitted, confirmed: true })).response.status,
+    ).toBe(400);
+    const confirmed = await op(a, { type: 'report-confirm', report: submitted, confirmed: true });
+    expect(confirmed.response.status).toBe(200);
+    const after = await getAccountSnapshot(env, a.user.id);
+    expect(
+      (await request('/api/account-operations', 'POST', confirmed.body, a.cookie)).status,
+    ).toBe(200);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(after);
+    expect((await op(a, { type: 'report-delete', id: handoff.id })).response.status).toBe(400);
+    expect((await op(a, { type: 'report-delete', id: submitted.id })).response.status).toBe(400);
+    const correction = {
+      ...report(),
+      id: 'correction-draft',
+      revisionOf: submitted.id,
+      answers: { ...report().answers, name: 'Correction' },
+    };
+    const next = captureReportHandoff(correction, '2026-09-28T14:00:00Z');
+    expect((await op(b, { type: 'report-handoff', report: next })).response.status).toBe(400);
+    expect((await op(a, { type: 'report-handoff', report: next })).response.status).toBe(200);
+    const final = confirmReportHandoff(next, true, '2026-09-28T15:00:00Z');
+    expect(
+      (await op(a, { type: 'report-confirm', report: final, confirmed: true })).response.status,
+    ).toBe(200);
+    expect(
+      (await getAccountSnapshot(env, a.user.id)).reports?.find((row) => row.id === submitted.id),
+    ).toEqual(submitted);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([]);
+  });
+  it('roundtrips reversed native handoff/submission corrections transactionally and rejects broken/forged relationships', async () => {
+    const a = await signIn('report-handoff-import-a@example.test');
+    const b = await signIn('report-handoff-import-b@example.test');
+    const handoff = captureReportHandoff(report(), report().createdAt);
+    const submitted = confirmReportHandoff(handoff, true, '2026-09-28T13:00:00Z');
+    const next = captureReportHandoff(
+      { ...report(), revisionOf: submitted.id },
+      '2026-09-28T14:00:00Z',
+    );
+    const corrected = confirmReportHandoff(next, true, '2026-09-28T15:00:00Z');
+    const reports = [corrected, next, submitted, handoff];
+    const incoming = { ...backup([]), reports };
+    for (const invalid of [
+      [submitted],
+      [handoff, { ...submitted, answers: { ...submitted.answers, name: 'Forged' } }],
+      [next],
+    ]) {
+      const before = await getAccountSnapshot(env, a.user.id);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            { mode: 'merge', data: { ...incoming, reports: invalid } },
+            a.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    }
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: incoming }, a.cookie)).status,
+    ).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.reports).toHaveLength(4);
+    for (const row of reports)
+      expect(exported.reports?.find((candidate) => candidate.id === row.id)).toEqual(row);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status,
+    ).toBe(200);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status,
+    ).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toHaveLength(4);
+    const replacing = {
+      mode: 'replace' as const,
+      data: { ...exported, reports: [...exported.reports!].reverse() },
+    };
+    const lifecycle = await lifecycleIdentity(b.user.id, 'replace', replacing);
+    expect(
+      (await request('/api/import', 'POST', { ...replacing, lifecycle }, b.cookie)).status,
+    ).toBe(200);
+    for (const row of reports)
+      expect(
+        (await getAccountSnapshot(env, b.user.id)).reports?.find(
+          (candidate) => candidate.id === row.id,
+        ),
+      ).toEqual(row);
+    const insert = db.sqlite.prepare(
+      'INSERT INTO advisor_reports(user_id,id,report_json) VALUES(?,?,?)',
+    );
+    expect(() =>
+      insert.run(
+        a.user.id,
+        'missing-parent',
+        JSON.stringify({
+          ...submitted,
+          id: 'missing-parent',
+          confirmation: { handoffId: 'absent' },
+        }),
+      ),
+    ).toThrow('report_handoff_missing');
+  });
+  it('uploads an offline preserved handoff and its exact confirmation after a referenced assessment changes', async () => {
+    const a = await signIn('report-handoff-offline-source@example.test');
+    const b = await signIn('report-handoff-offline-foreign@example.test');
+    const draft = await arrangeEvidence(a);
+    const handoff = captureReportHandoff(draft);
+    const submitted = confirmReportHandoff(handoff, true);
+    const first = evidenceSessions().find((entry) => entry.id === 'audio-evidence')!;
+    const edited = {
+      ...first,
+      metadata: {
+        ...first.metadata,
+        assessment: { version: 1, source: 'self-reported', performanceRating: 'poor' },
+      },
+    };
+    expect((await request('/api/entries/audio-evidence', 'PUT', edited, a.cookie)).status).toBe(
+      200,
+    );
+    // A local reviewed copy may already have been handed off while its account
+    // queue was offline. Its exact provenance is a historical capture, not a
+    // claim about the mutable source's current assessment.
+    expect((await op(b, { type: 'report-handoff', report: handoff })).response.status).toBe(400);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([]);
+    const uploaded = await op(a, { type: 'report-handoff', report: handoff });
+    expect(uploaded.response.status, await uploaded.response.clone().text()).toBe(200);
+    expect(
+      (await op(a, { type: 'report-confirm', report: submitted, confirmed: true })).response.status,
+    ).toBe(200);
+    expect(
+      (await getAccountSnapshot(env, a.user.id)).reports?.find((row) => row.id === submitted.id),
+    ).toEqual(submitted);
+    expect((await request('/api/account-operations', 'POST', uploaded.body, a.cookie)).status).toBe(
+      200,
+    );
+    // Ordinary new account draft copies still require current captured-source validation.
+    expect(
+      (await op(a, { type: 'report-save', report: { ...draft, id: 'stale-offline-draft' } }))
+        .response.status,
+    ).toBe(400);
+  });
+  it('confirms a captured source after later edits without recomputing frozen evidence and rolls back an acknowledgement failure', async () => {
+    const a = await signIn('report-handoff-frozen@example.test');
+    const draft = await arrangeEvidence(a);
+    const handoff = captureReportHandoff(draft);
+    expect((await op(a, { type: 'report-handoff', report: handoff })).response.status).toBe(200);
+    const first = evidenceSessions().find((entry) => entry.id === 'audio-evidence')!;
+    const corrected = {
+      ...first,
+      metadata: {
+        ...first.metadata,
+        assessment: { version: 1, source: 'self-reported', performanceRating: 'poor' },
+      },
+    };
+    expect((await request('/api/entries/audio-evidence', 'PUT', corrected, a.cookie)).status).toBe(
+      200,
+    );
+    // A real mutable assessment changes the captured source; confirmation must still
+    // retain the already validated handoff instead of rebuilding today's suggestions.
+    expect(
+      (await op(a, { type: 'report-save', report: { ...draft, id: 'stale-after-handoff' } }))
+        .response.status,
+    ).toBe(400);
+    const submitted = confirmReportHandoff(handoff, true);
+    const before = await getAccountSnapshot(env, a.user.id);
+    db.sqlite.exec(
+      "CREATE TRIGGER synthetic_report_receipt_failure BEFORE INSERT ON account_operation_receipts BEGIN SELECT RAISE(ABORT,'synthetic receipt failure'); END;",
+    );
+    const failed = await op(a, { type: 'report-confirm', report: submitted, confirmed: true });
+    expect(failed.response.status).toBe(500);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+    ).toBe(0);
+    db.sqlite.exec('DROP TRIGGER synthetic_report_receipt_failure');
+    expect((await request('/api/account-operations', 'POST', failed.body, a.cookie)).status).toBe(
+      200,
+    );
+    expect(
+      (await getAccountSnapshot(env, a.user.id)).reports?.find((row) => row.id === submitted.id),
+    ).toEqual(submitted);
   });
   it('saves immutable owned snapshots, returns exact receipts and rejects stale writes or another owner', async () => {
     const a = await signIn('native-reports-a@example.test');

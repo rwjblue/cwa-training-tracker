@@ -1,3 +1,4 @@
+import { validateReportRelationships } from '../shared/report-handoff';
 import { hash } from './security';
 import { originalDeviceDrafts, sameReportValue } from '../shared/report-document';
 import { validateReportDocument, type ReportDocument } from '../shared/report-document';
@@ -176,5 +177,11 @@ export function mergeReportCopies(
       400,
       'Keep up to 200 saved report copies. Export before removing older data.',
     );
-  return [...merged.values()];
+  const result = [...merged.values()];
+  try {
+    validateReportRelationships(result);
+  } catch (error) {
+    throw new HttpError(400, (error as Error).message);
+  }
+  return result;
 }

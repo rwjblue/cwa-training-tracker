@@ -69,8 +69,12 @@ const taskValueLabel = (key: string, value: unknown) => {
 };
 function title(change: AccountChange, state?: AccountSnapshot): string {
   if (change.type === 'report-delete') return 'Remove saved advisor draft copy';
-  if (change.type === 'report-save')
-    return `Save advisor report for session ${change.report.window.session}`;
+  if (
+    change.type === 'report-save' ||
+    change.type === 'report-handoff' ||
+    change.type === 'report-confirm'
+  )
+    return `${change.type === 'report-handoff' ? 'Preserve advisor handoff' : change.type === 'report-confirm' ? 'Record advisor confirmation' : 'Save advisor report'} for session ${change.report.window.session}`;
   if (change.type === 'settings') return 'Practice preferences';
   if (change.type === 'task-create') return `Add ${change.task.title}`;
   if (change.type === 'task-status')
@@ -88,7 +92,11 @@ function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
     return [
       `Remove draft copy ${change.id}; newer online snapshots remain separate. Keep a private backup before removing a saved copy.`,
     ];
-  if (change.type === 'report-save')
+  if (
+    change.type === 'report-save' ||
+    change.type === 'report-handoff' ||
+    change.type === 'report-confirm'
+  )
     return [
       `Your frozen report copy: ${change.report.definition.title}; session ${change.report.window.session}; ${change.report.window.reportDate}. ${Object.entries(
         change.report.answers,

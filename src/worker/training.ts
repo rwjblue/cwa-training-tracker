@@ -1,3 +1,4 @@
+import { orderReportCopies } from '../shared/report-handoff';
 import { requireReportEvidence, reportInsertStatement, mergeReportCopies } from './reports';
 import {
   clearLcwoStatements,
@@ -696,7 +697,7 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   }
   flush();
   statements.push(...planStatementsForImport(env, auth.user.id, data.plan, false));
-  for (const report of data.reports ?? [])
+  for (const report of orderReportCopies(data.reports ?? []))
     statements.push(reportInsertStatement(env, auth.user.id, report));
   if (data.legacy) {
     const archive = JSON.stringify(data.legacy);

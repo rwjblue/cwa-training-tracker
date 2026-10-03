@@ -89,3 +89,47 @@
   margin: 0.5rem 0;
   line-height: 1.5;
 }
+
+.advisor-handoff {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.advisor-handoff dl {
+  margin: 0.75rem 0;
+}
+.advisor-handoff dd {
+  margin: 0.25rem 0 0.75rem;
+  white-space: pre-wrap;
+}
+.advisor-handoff label {
+  display: block;
+}
+.advisor-handoff select {
+  width: 100%;
+  min-width: 0;
+}
+.advisor-handoff .checkbox-label {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.advisor-handoff .checkbox-label input {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.advisor-handoff > p,
+.advisor-handoff details > p {
+  margin: 0.75rem 0;
+}
+.advisor-handoff > details,
+.advisor-handoff details > details {
+  margin: 0.75rem 0;
+}
+.advisor-handoff > label {
+  margin-top: 0.75rem;
+}

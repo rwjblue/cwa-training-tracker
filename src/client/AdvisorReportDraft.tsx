@@ -1,3 +1,4 @@
+import AdvisorReportHandoff from './AdvisorReportHandoff';
 import AdvisorReportAnswers from './AdvisorReportAnswers';
 import AdvisorReportEvidence from './AdvisorReportEvidence';
 import type { LcwoData } from '../shared/lcwo';
@@ -213,6 +214,7 @@ export default function AdvisorReportDraft({
         report.editedKeys,
         report.evidence,
         report.provenance,
+        report.revisionOf,
       ];
       const retained = reports.find(
         (report) =>
@@ -473,7 +475,7 @@ export default function AdvisorReportDraft({
       </section>
       <p>
         Edits and intentional blanks are protected. Refresh changes only untouched suggestions and
-        updates their source references. No external form has been submitted.
+        updates their source references. External submission happens in the responder form.
       </p>
       <button
         className="button outline"
@@ -543,7 +545,9 @@ export default function AdvisorReportDraft({
             if (validateAdvisorReportAnswers(draft.definition, draft.answers).length) return;
             try {
               await navigator.clipboard.writeText(reportDocumentText(draft));
-              setMessage('Preview copied.');
+              setMessage(
+                'Working preview copied. Prepare a reviewed handoff to preserve an exact copy for submission confirmation.',
+              );
             } catch {
               setMessage('Select the preview text below and use your device’s copy command.');
             }
@@ -554,19 +558,61 @@ export default function AdvisorReportDraft({
       </div>
       {checked && !errors.length && !dateError && (
         <p role="status">
-          Preview answers satisfy your configured field rules. Nothing has been submitted.
+          Preview answers satisfy your configured field rules. Checking answers does not submit a
+          form.
         </p>
       )}
       <pre className="plan-report-text" tabIndex={0} aria-label="Advisor preview text">
         {reportDocumentText(draft)}
       </pre>
+      <AdvisorReportHandoff
+        draft={draft}
+        reports={reports}
+        scope={scope}
+        revision={revision}
+        onChange={onChange}
+        onCheck={() => setChecked(true)}
+        entries={entries}
+        lcwo={lcwo}
+        blocked={Boolean(dateError)}
+        onCorrection={(report) => {
+          const copy = { ...copyReportDocument(report), revisionOf: report.id };
+          persist({
+            ...current.current.value,
+            selectedSession: copy.window.session,
+            drafts: [
+              ...current.current.value.drafts.filter(
+                (draft) => draft.window.session !== copy.window.session,
+              ),
+              copy,
+            ],
+          });
+          setMessage(
+            'New correction draft opened. The confirmed submission and handoff remain unchanged.',
+          );
+        }}
+      />
       <details>
-        <summary>Saved report copies ({reports.length})</summary>
+        <summary>
+          Saved report copies (
+          {
+            reports.filter(
+              (report) =>
+                report.status === 'draft' ||
+                (report.status === 'submitted' && !report.confirmation),
+            ).length
+          }
+          )
+        </summary>
         <p>
           These snapshots are read only. Reopening creates a new working identity and replaces only
           the selected session’s device draft.
         </p>
         {reports
+          .filter(
+            (report) =>
+              report.status === 'draft' || (report.status === 'submitted' && !report.confirmation),
+          )
           .slice()
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
           .map((report) => (

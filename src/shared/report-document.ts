@@ -19,7 +19,12 @@ export interface ReportReference {
 export interface ReportDocument {
   version: 1;
   id: string;
-  status: 'draft' | 'submitted';
+  status: 'draft' | 'handoff' | 'submitted';
+  /** Native handoffs reserve one immutable confirmation identity. */
+  handoff?: { submissionId: string };
+  confirmation?: { handoffId: string };
+  /** A correction is a new linked record, never an edit of submitted history. */
+  revisionOf?: string;
   definition: AdvisorReportDefinition;
   window: AdvisorReportWindow;
   answers: Record<string, string>;
@@ -77,10 +82,13 @@ export function validateReportDocument(
       'updatedAt',
       'source',
       'submittedAt',
+      'handoff',
+      'confirmation',
+      'revisionOf',
     ],
     'report document',
   );
-  if (row.version !== 1 || !['draft', 'submitted'].includes(String(row.status)))
+  if (row.version !== 1 || !['draft', 'handoff', 'submitted'].includes(String(row.status)))
     throw new Error('Unsupported report version or status.');
   const definition = validateAdvisorReportDefinition(row.definition);
   const w = object(
@@ -200,14 +208,40 @@ export function validateReportDocument(
     if ((source.kind === 'original-device') !== (source.archiveId !== undefined))
       throw new Error('Original draft provenance requires its archive identity.');
   }
-  if (result.status === 'submitted') result.submittedAt = timestamp(row.submittedAt);
-  else if (row.submittedAt !== undefined)
+  if (row.revisionOf !== undefined) {
+    result.revisionOf = id(row.revisionOf);
+    if (result.revisionOf === result.id) throw new Error('A report cannot revise itself.');
+  }
+  if (result.status === 'handoff') {
+    const handoff = object(row.handoff, ['submissionId'], 'report handoff');
+    result.handoff = { submissionId: id(handoff.submissionId) };
+    if (result.handoff.submissionId === result.id)
+      throw new Error('Use distinct handoff and submission identities.');
+  } else if (row.handoff !== undefined)
+    throw new Error('Only a captured handoff reserves a submission identity.');
+  if (row.confirmation !== undefined) {
+    if (result.status !== 'submitted')
+      throw new Error('Only submitted history has a confirmation.');
+    const confirmation = object(row.confirmation, ['handoffId'], 'report confirmation');
+    result.confirmation = { handoffId: id(confirmation.handoffId) };
+    if (result.confirmation.handoffId === result.id)
+      throw new Error('Use distinct handoff and submission identities.');
+  }
+  if (result.status === 'submitted') {
+    result.submittedAt = timestamp(row.submittedAt);
+    if (
+      result.confirmation &&
+      (Date.parse(result.submittedAt) < Date.parse(result.createdAt) ||
+        Date.parse(result.updatedAt) !== Date.parse(result.submittedAt))
+    )
+      throw new Error('Submission confirmation must match its update and follow creation.');
+  } else if (row.submittedAt !== undefined)
     throw new Error('A draft cannot have a submission timestamp.');
   if (options.fieldRules) {
     const errors = validateAdvisorReportAnswers(
       definition,
       result.answers,
-      result.status === 'submitted',
+      result.status !== 'draft',
     );
     if (errors.length)
       throw new Error(errors.map((error) => `${error.key}: ${error.message}`).join(' '));
@@ -319,7 +353,12 @@ export function createReportDocument(
 }
 export function copyReportDocument(document: ReportDocument): ReportDocument {
   const now = new Date().toISOString();
-  const { submittedAt: _submittedAt, ...draft } = structuredClone(document);
+  const {
+    submittedAt: _submittedAt,
+    handoff: _handoff,
+    confirmation: _confirmation,
+    ...draft
+  } = structuredClone(document);
   return {
     ...draft,
     id: crypto.randomUUID(),

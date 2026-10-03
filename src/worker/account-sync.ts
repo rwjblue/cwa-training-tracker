@@ -311,9 +311,26 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
         change.id,
       ),
     );
-  else if (change.type === 'report-save') {
+  else if (
+    change.type === 'report-save' ||
+    change.type === 'report-handoff' ||
+    change.type === 'report-confirm'
+  ) {
+    if (
+      (change.type === 'report-handoff' || change.type === 'report-confirm') &&
+      Date.parse(change.report.updatedAt) > Date.now() + 300_000
+    )
+      throw new HttpError(
+        400,
+        'Report capture or confirmation cannot be in the future. Check your device clock.',
+      );
     await requireReportEvidence(env, auth.user.id, [change.report]);
-    await requireCurrentReportProvenance(env, auth.user.id, change.report);
+    // A reviewed handoff may already have left this device while its durable
+    // account queue was offline. Like imported frozen history, it attributes
+    // captured private facts; it does not claim the mutable sources still match.
+    // Ownership/schema/atomic reference guards still apply to every entity.
+    if (change.type === 'report-save')
+      await requireCurrentReportProvenance(env, auth.user.id, change.report);
     statements.push(reportInsertStatement(env, auth.user.id, change.report));
   } else if (change.type === 'settings')
     statements.push(settingsStatement(env, auth.user.id, next.settings));
@@ -359,7 +376,10 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
       statements,
       { id: operation.id, payloadHash },
       retiredTaskIds(state, next.plan),
-      change.type === 'report-save' && change.report.provenance ? state.historyRevision : undefined,
+      (change.type === 'report-save' || change.type === 'report-handoff') &&
+        change.report.provenance
+        ? state.historyRevision
+        : undefined,
     );
     return json({ state: applied.state, operationId: operation.id });
   } catch (error) {

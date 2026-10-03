@@ -1,3 +1,4 @@
+import { assertReportConfirmation, validateReportRelationships } from './report-handoff';
 import {
   sameReportValue,
   validateReportDocument,
@@ -31,6 +32,8 @@ export type AccountChange =
   | { type: 'task-status'; ids: string[]; done?: boolean; dismissedFromToday?: boolean }
   | { type: 'task-delete'; id: string }
   | { type: 'report-save'; report: ReportDocument }
+  | { type: 'report-handoff'; report: ReportDocument }
+  | { type: 'report-confirm'; report: ReportDocument; confirmed: true }
   | { type: 'report-delete'; id: string };
 
 export interface AccountOperation {
@@ -239,9 +242,23 @@ export function validateAccountChange(value: unknown): AccountChange {
     case 'report-delete':
       keys(input, ['type', 'id']);
       return { type: 'report-delete', id: id(input.id) };
+    case 'report-handoff':
+    case 'report-confirm':
     case 'report-save': {
-      keys(input, ['type', 'report']);
+      keys(
+        input,
+        input.type === 'report-confirm' ? ['type', 'report', 'confirmed'] : ['type', 'report'],
+      );
       const report = validateReportDocument(input.report, { fieldRules: true });
+      if (input.type === 'report-handoff') {
+        if (report.status !== 'handoff') throw new Error('Prepare a captured handoff.');
+        return { type: 'report-handoff', report };
+      }
+      if (input.type === 'report-confirm') {
+        if (input.confirmed !== true || report.status !== 'submitted' || !report.confirmation)
+          throw new Error('Submitted copies require an explicit confirmed handoff.');
+        return { type: 'report-confirm', report, confirmed: true };
+      }
       if (report.status !== 'draft')
         throw new Error('Submitted copies require an explicit confirmed handoff.');
       return { type: 'report-save', report };
@@ -299,6 +316,8 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
     )
   )
     throw new Error('The account snapshot is missing profile fields.');
+  const reports = input.reports === undefined ? undefined : validateReportDocuments(input.reports);
+  if (reports) validateReportRelationships(reports);
   return {
     accountId: id(input.accountId),
     revision: revision(input.revision),
@@ -308,7 +327,7 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
       : { historyRevision: revision(input.historyRevision) }),
     settings: validateProfile(settings),
     plan: effectivePlan(input.plan),
-    ...(input.reports === undefined ? {} : { reports: validateReportDocuments(input.reports) }),
+    ...(reports === undefined ? {} : { reports }),
   };
 }
 
@@ -317,18 +336,31 @@ export function applyAccountChange(state: AccountSnapshot, change: AccountChange
   if (change.type === 'report-delete') {
     const report = state.reports?.find((report) => report.id === change.id);
     if (!report) throw new Error('This saved report was not found.');
-    if (report.status === 'submitted')
+    if (report.status !== 'draft')
       throw new Error('Confirmed submitted history cannot be deleted as a draft.');
     return { ...state, reports: state.reports?.filter((report) => report.id !== change.id) };
   }
-  if (change.type === 'report-save') {
+  if (
+    change.type === 'report-save' ||
+    change.type === 'report-handoff' ||
+    change.type === 'report-confirm'
+  ) {
     const reports = state.reports ?? [];
+    if (change.type === 'report-confirm')
+      assertReportConfirmation(
+        change.report,
+        reports.find((report) => report.id === change.report.confirmation?.handoffId),
+      );
     const existing = reports.find((report) => report.id === change.report.id);
     if (existing && !sameReportValue(existing, change.report))
       throw new Error('Saved report copies are immutable. Reopen as a new draft.');
     if (!existing && reports.length >= MAX_ACCOUNT_REPORTS)
-      throw new Error('Export and remove older saved reports before adding more copies.');
-    return { ...state, reports: existing ? reports : [...reports, change.report] };
+      throw new Error(
+        'Keep up to 200 report copies, including handoffs and confirmations. Export a backup, remove older draft copies, or use reviewed account reset before adding more.',
+      );
+    const next = existing ? reports : [...reports, change.report];
+    validateReportRelationships(next);
+    return { ...state, reports: next };
   }
   if (change.type === 'settings') {
     const settings = validateProfile({ ...state.settings, ...change.changes });

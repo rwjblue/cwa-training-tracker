@@ -193,6 +193,19 @@ export function validateAdvisorReportDefinition(value: unknown): AdvisorReportDe
     }
     if (url.protocol !== 'https:' || url.username || url.password || url.href.length > 4000)
       throw new Error('Form destinations must use HTTPS without username/password credentials.');
+    const host = url.hostname.toLowerCase();
+    if (
+      !host.includes('.') ||
+      host.endsWith('.localhost') ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      /^[0-9.]+$/.test(host) ||
+      host.includes(':') ||
+      /\/(?:formResponse|submit|submission|send)(?:\/|$)/i.test(url.pathname)
+    )
+      throw new Error(
+        'Use a public HTTPS responder form page, not a local address or submission endpoint.',
+      );
     definition.formUrl = url.href;
   }
   if (new TextEncoder().encode(JSON.stringify(definition)).length > MAX_REPORT_DEFINITION_BYTES)

@@ -1,3 +1,6 @@
+import { createReportDocument } from '../shared/report-document';
+import { starterAdvisorReportDefinition } from '../shared/report-definition';
+import { captureReportHandoff, confirmReportHandoff } from '../shared/report-handoff';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { applyAccountChange, type AccountSnapshot } from '../shared/account-sync';
 import { DEFAULT_PROFILE } from '../shared/training';
@@ -685,4 +688,42 @@ it('still exposes a conflict when the device cannot persist its larger error sta
     status: 'conflict',
     error: 'A newer revision was saved.',
   });
+});
+
+it('durably orders offline handoff and confirmation with exact retries, reserved identity and account isolation', async () => {
+  const draft = createReportDocument(
+    starterAdvisorReportDefinition(),
+    DEFAULT_PROFILE,
+    [],
+    1,
+    '2026-10-03',
+    [],
+  );
+  const handoff = captureReportHandoff(draft);
+  const submitted = confirmReportHandoff(handoff, true);
+  queueAccountChange(state(), { type: 'report-handoff', report: handoff });
+  queueAccountChange(state(), { type: 'report-confirm', report: submitted, confirmed: true });
+  draft.answers.session = '9';
+  expect(projectAccountState(state()).reports?.map((report) => report.id)).toEqual([
+    handoff.id,
+    submitted.id,
+  ]);
+  expect(projectAccountState(state()).reports?.[1].answers.session).toBe('1');
+  expect(loadAccountOperations('foreign')).toEqual([]);
+  fetchMock.mockRejectedValueOnce(new Error('Disconnected'));
+  await flushAccountOperations(scope);
+  const original = loadAccountOperations(scope);
+  expect(original).toHaveLength(2);
+  expect(original[0].status).toBe('failed');
+  let online = state();
+  fetchMock.mockImplementation(async (_url, options) => {
+    const operation = JSON.parse(options.body);
+    online = { ...applyAccountChange(online, operation.change), revision: online.revision + 1 };
+    return Response.json({ state: online, operationId: operation.id });
+  });
+  retryAccountOperations(scope);
+  await flushAccountOperations(scope);
+  expect(fetchMock.mock.calls[1][1].body).toBe(fetchMock.mock.calls[0][1].body);
+  expect(loadAccountOperations(scope)).toEqual([]);
+  expect(online.reports).toEqual([handoff, submitted]);
 });

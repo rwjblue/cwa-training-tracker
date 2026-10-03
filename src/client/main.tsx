@@ -403,6 +403,8 @@ function App() {
   const pendingTaskIds = account.operations.flatMap(({ operation }) =>
     operation.change.type === 'settings' ||
     operation.change.type === 'report-save' ||
+    operation.change.type === 'report-handoff' ||
+    operation.change.type === 'report-confirm' ||
     operation.change.type === 'report-delete'
       ? []
       : operation.change.type === 'task-status'
