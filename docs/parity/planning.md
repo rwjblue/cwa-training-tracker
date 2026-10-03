@@ -2146,3 +2146,36 @@ remain recorded as non-passes. The existing bundle-size warning remains visible.
 Original references, five pre-existing dirty paths, protected approved scope and
 push-signing configuration remain unchanged. A focused implementation commit
 and fresh independent review follow; deployment is not yet claimed.
+
+
+## Issue #38 — independent acceptance and production delivery
+
+Implementation `7d319f425a0824b038e4b80d6c53c004ee822fd1` passed fresh
+post-commit independent review with no substantive findings. Three own
+real-Wrangler/D1 journeys exercised desktop keyboard frozen exact-body retry
+with later practice arriving, changed referenced-source rejection/recovery,
+immutable backups, mobile touch whole latest LCWO unknowns, separate Copy/group
+facts, mapping cancellation, bounded source detail disclosure and initial/refresh
+96,000-byte failure recovery preserving the prior draft. Four settled Axe and
+layout checks were clear. Seventeen domain and three actual-SQL Worker cases
+passed independently. The reviewer verified all 541 tracked and 173 dist hashes,
+original HEAD/pin/reference bytes and five pre-existing dirty hashes unchanged,
+then terminated its runtime and explicitly released the lease. Earlier review
+fixture/control/detail assertions remain documented as failed attempts; no
+failed combined attempt is called a complete passing gate.
+
+`mise run deploy` passed check, all 1,423 tests in 75 files, build and dry run,
+applied `0011_report_provenance_guard.sql`, and deployed production version
+`3df00515-e994-4594-a986-fb3d4abddad8`. Read-only verification found root and
+health 200, private entries/account state/lifecycle backup/LCWO 401 anonymously,
+and exact hashes for all four built JavaScript/CSS assets and the public Runner
+integration module. Root's complete 102 serial browser journeys passed in 18.8
+minutes; its two intentionally interrupted attempts remain non-passing evidence.
+
+Local main records accepted delivery. No push or PR was attempted; source is
+unpublished and #38 stays open pending publication. Evidence is private source
+attribution, not exhaustive server certification or cryptographic attestation.
+Omitted embedded details are disclosed while owned source IDs/private backup
+facts remain available. Browser widths/touch are emulated; physical-device,
+live LCWO, external-form submission and production private-write verification
+are not claimed. Exact handoff/confirmation #39 and learned words #40 follow.
