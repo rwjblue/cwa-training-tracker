@@ -6602,6 +6602,98 @@ describe('start-attributed finished Runner results', () => {
 });
 
 describe('private advisor report definition persistence', () => {
+  it('rejects impossible one-sided whole-number definitions through all writes atomically and accepts adjacent safe edges', async () => {
+    const auth = await signIn('report-definition-integer-edge@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, auth.cookie)).status).toBe(
+      200,
+    );
+    const saved = await getAccountSnapshot(env, auth.user.id);
+    const whole = {
+      key: 'wholeCount',
+      label: 'Whole count',
+      section: 'Practice',
+      type: 'number' as const,
+      required: true,
+      source: 'manual' as const,
+      integer: true,
+    };
+    for (const [index, limits] of [
+      { minExclusive: Number.MAX_SAFE_INTEGER },
+      { maxExclusive: Number.MIN_SAFE_INTEGER },
+    ].entries()) {
+      const bad = {
+        ...reportDefinition,
+        fields: [...reportDefinition.fields, { ...whole, ...limits }],
+      };
+      for (const response of [
+        await request(
+          '/api/settings',
+          'PUT',
+          { settings: { ...profile, displayName: 'Must not save', reportDefinition: bad } },
+          auth.cookie,
+        ),
+        await request(
+          '/api/account-operations',
+          'POST',
+          {
+            version: 1,
+            id: `impossible-integer-${index}`,
+            accountId: auth.user.id,
+            baseRevision: saved.revision,
+            generation: saved.generation,
+            createdAt: new Date().toISOString(),
+            change: {
+              type: 'settings',
+              changes: { displayName: 'Must not save', reportDefinition: bad },
+            },
+          },
+          auth.cookie,
+        ),
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'merge',
+            data: {
+              format: 'cwa-training-tracker',
+              version: 1,
+              exportedAt: new Date().toISOString(),
+              sessions: [],
+              profile: { ...profile, displayName: 'Must not save', reportDefinition: bad },
+            },
+          },
+          auth.cookie,
+        ),
+      ]) {
+        expect(response.status).toBe(400);
+        expect(await response.json()).toMatchObject({
+          error: expect.stringContaining('at least one whole number'),
+        });
+      }
+      expect(await getAccountSnapshot(env, auth.user.id)).toEqual(saved);
+    }
+    for (const limits of [
+      { minExclusive: Number.MAX_SAFE_INTEGER - 1 },
+      { maxExclusive: Number.MIN_SAFE_INTEGER + 1 },
+    ]) {
+      const valid = {
+        ...reportDefinition,
+        fields: [...reportDefinition.fields, { ...whole, ...limits }],
+      };
+      expect(
+        (
+          await request(
+            '/api/settings',
+            'PUT',
+            { settings: { ...profile, reportDefinition: valid } },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(200);
+      expect((await read(auth.cookie)).reportDefinition).toEqual(valid);
+    }
+  });
+
   it('accepts valid configuration beyond the old settings request cap and rejects encoded overflow without mutation', async () => {
     const auth = await signIn('report-definition-size@example.test');
     const large = {

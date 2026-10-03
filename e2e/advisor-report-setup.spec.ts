@@ -238,4 +238,42 @@ test('private report definition, exact field rules, preparation window and retai
     .reportDefinition.fields[4];
   expect(changed).toMatchObject({ key: 'sendingRating', type: 'textarea', externalId: 'entry.42' });
   expect(changed.options).toBeUndefined();
+  // A whole-number definition must have a safe answer even with one-sided limits.
+  await page.getByRole('button', { name: 'Configure advisor fields', exact: true }).tap();
+  await keyboard(page.getByText('6. Verified points', { exact: true }));
+  const wholeField = page.getByRole('group', { name: 'Field 6', exact: true });
+  await wholeField.getByLabel('Minimum (inclusive)', { exact: true }).fill('');
+  await wholeField.getByLabel('Maximum (inclusive)', { exact: true }).fill('');
+  await wholeField.getByRole('checkbox', { name: 'Answer required', exact: true }).check();
+  await wholeField
+    .getByLabel('Greater than (exclusive)', { exact: true })
+    .fill(String(Number.MAX_SAFE_INTEGER));
+  const beforeImpossible = (await (await context.request.get('/api/account-state')).json()).state;
+  await page.getByRole('button', { name: 'Save report definition', exact: true }).tap();
+  await expect(page.getByRole('alert')).toContainText(
+    'Field 6: Numeric limits must allow at least one whole number.',
+  );
+  await expect(wholeField.getByLabel('Greater than (exclusive)', { exact: true })).toHaveValue(
+    String(Number.MAX_SAFE_INTEGER),
+  );
+  expect((await (await context.request.get('/api/account-state')).json()).state).toEqual(
+    beforeImpossible,
+  );
+  await settled(page);
+  await expectResponsive(page, 'advisor-report-invalid-integer');
+  await page.screenshot({ path: '.tmp/advisor-report-integer-rejection-mobile.png' });
+  await wholeField
+    .getByLabel('Greater than (exclusive)', { exact: true })
+    .fill(String(Number.MAX_SAFE_INTEGER - 1));
+  await page.getByRole('button', { name: 'Save report definition', exact: true }).tap();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Report definition saved.' }),
+  ).toBeVisible();
+  await page
+    .getByLabel('Practice — Verified points (required)', { exact: true })
+    .fill(String(Number.MAX_SAFE_INTEGER));
+  await page.getByRole('button', { name: 'Check preview answers', exact: true }).tap();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'satisfy your configured field rules' }),
+  ).toBeVisible();
 });

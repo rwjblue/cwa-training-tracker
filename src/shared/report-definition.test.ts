@@ -95,6 +95,27 @@ describe('private report field schema and literal answer rules', () => {
   ])('rejects an invalid complete definition atomically (%j)', (changes) => {
     expect(() => validateAdvisorReportDefinition({ ...definition, ...changes })).toThrow();
   });
+  it.each([{ minExclusive: Number.MAX_SAFE_INTEGER }, { maxExclusive: Number.MIN_SAFE_INTEGER }])(
+    'rejects one-sided whole-number limits with no safe answer: %j',
+    (limits) => {
+      expect(() =>
+        validateAdvisorReportDefinition({
+          ...definition,
+          fields: [{ ...numeric, min: undefined, max: undefined, required: true, ...limits }],
+        }),
+      ).toThrow('at least one whole number');
+    },
+  );
+  it.each([
+    [{ minExclusive: Number.MAX_SAFE_INTEGER - 1 }, String(Number.MAX_SAFE_INTEGER)],
+    [{ maxExclusive: Number.MIN_SAFE_INTEGER + 1 }, String(Number.MIN_SAFE_INTEGER)],
+  ] as const)('accepts the adjacent feasible safe-integer edge: %j', (limits, answer) => {
+    const edge = validateAdvisorReportDefinition({
+      ...definition,
+      fields: [{ ...numeric, min: undefined, max: undefined, required: true, ...limits }],
+    });
+    expect(validateAdvisorReportAnswers(edge, { points: answer })).toEqual([]);
+  });
   it('bounds encoded bytes, not only field count or JavaScript string length', () => {
     expect(() =>
       validateAdvisorReportDefinition({

@@ -1813,3 +1813,22 @@ are unchanged, so no new binding types are required. Fresh issue/source checks
 remain unchanged; the original five dirty paths and protected scope-ledger hash
 are intact. Focused implementation commit and independent review follow;
 deployment and source publication are not yet claimed. No push is attempted.
+
+
+The independent post-commit reviewer requested one correction (R36-1):
+required whole-number fields could accept a one-sided exclusive limit outside
+the supported safe-integer answer domain. The focused correction checks the
+intersection with that domain, rejects both impossible mirrored extremes, and
+keeps adjacent feasible values. New domain and real SQL regressions first fail
+against the reviewed implementation; invalid direct settings, semantic account
+operations and merge imports now reject atomically without changing the account.
+The actual editor retains the invalid value and explains the error, then saves
+the corrected adjacent value and accepts its valid answer.
+
+Correction validation passes check, all 1,374 tests in 72 files, build, 255
+focused tests and the affected serial real-runtime browser journey in 15.6s.
+Two additional settled Axe/overflow checks are clear; mobile pixels were
+inspected. The earlier complete 97-browser gate precedes this validator-only
+correction; it is not claimed as a rerun. The same independent reviewer must
+recheck the committed correction before acceptance and deployment. No push,
+source publication or physical-device verification is claimed.

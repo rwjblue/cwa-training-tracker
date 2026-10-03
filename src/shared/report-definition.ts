@@ -144,9 +144,15 @@ export function validateAdvisorReportDefinition(value: unknown): AdvisorReportDe
           (low === high && (result.minExclusive === low || result.maxExclusive === high))
         )
           throw new Error('Numeric limits must allow at least one answer.');
-        if (result.integer && Number.isFinite(low) && Number.isFinite(high)) {
-          const first = result.minExclusive === low ? Math.floor(low) + 1 : Math.ceil(low);
-          const last = result.maxExclusive === high ? Math.ceil(high) - 1 : Math.floor(high);
+        if (result.integer) {
+          const first = Math.max(
+            Number.MIN_SAFE_INTEGER,
+            result.minExclusive === low ? Math.floor(low) + 1 : Math.ceil(low),
+          );
+          const last = Math.min(
+            Number.MAX_SAFE_INTEGER,
+            result.maxExclusive === high ? Math.ceil(high) - 1 : Math.floor(high),
+          );
           if (first > last) throw new Error('Numeric limits must allow at least one whole number.');
         }
         if (field.externalId !== undefined) {
