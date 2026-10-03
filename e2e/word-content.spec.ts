@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { WORD_LISTS } from '../src/client/word-content';
 import { expectResponsive, signIn } from './helpers';
@@ -58,7 +59,7 @@ test('editable source survives tool return, reopen/reload and device backup with
   await expect(editor(page)).toHaveValue(source);
   await pausedAtZero(page);
   await expectResponsive(page, 'word-source-retained');
-  await page.screenshot({ path: '.tmp/parity-queue/issue-29-editor-1440.png', fullPage: true });
+
   await navigate(page, 'This device');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download device backup', exact: true }).press('Enter');
@@ -144,7 +145,7 @@ test('editable source survives tool return, reopen/reload and device backup with
   await openWords(page);
   await expect(editor(page)).toHaveValue(source);
   await pausedAtZero(page);
-  await page.screenshot({ path: '.tmp/parity-queue/issue-29-editor-390.png', fullPage: true });
+
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   await page.getByText('View word list', { exact: true }).click();

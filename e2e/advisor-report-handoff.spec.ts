@@ -1,5 +1,6 @@
 import { evidenceSessions } from './report-evidence-fixture';
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
@@ -96,7 +97,7 @@ test('reviewed prefill and offline confirmation keep the exact capture through e
     reportDocumentText(captured),
   );
   await expectResponsive(page, 'advisor-handoff-reviewed');
-  await page.screenshot({ path: '.tmp/advisor-handoff-desktop.png' });
+
   const confirm = page.getByRole('button', { name: 'Record confirmed submission', exact: true });
   await expect(confirm).toBeDisabled();
   const popupPromise = page.waitForEvent('popup');
@@ -162,7 +163,7 @@ test('reviewed prefill and offline confirmation keep the exact capture through e
   await page
     .getByRole('button', { name: 'Download submitted JSON', exact: true })
     .scrollIntoViewIfNeeded();
-  await page.screenshot({ path: '.tmp/advisor-confirmation-mobile.png' });
+
   await page.keyboard.press('Escape');
   await page.reload();
   await open(page);

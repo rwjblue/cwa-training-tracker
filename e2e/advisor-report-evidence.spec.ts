@@ -1,4 +1,5 @@
-import { expect, test, type Page, type Locator } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import {
@@ -92,7 +93,7 @@ test('actual report mappings expose frozen source facts and protect edited answe
   await expect(runnerEvidence).toContainText('without scaling points');
   await expect(inspector).not.toContainText('Private synthetic notes');
   await expectResponsive(page, 'advisor-source-evidence-desktop');
-  await page.screenshot({ path: '.tmp/advisor-source-evidence-desktop.png' });
+
   // Exercise learner configuration, not just an API-arranged mapped field.
   await keyboard(page.getByRole('button', { name: 'Configure advisor fields', exact: true }));
   await keyboard(page.getByText('5. Runner points', { exact: true }));
@@ -170,11 +171,9 @@ test('actual report mappings expose frozen source facts and protect edited answe
     .tap();
   await expect(mobileEvidence).toContainText('no older result or course default');
   await expect(mobileEvidence).toContainText('intentional blank');
-  const latestGroup = mobileEvidence
-    .locator('details')
-    .filter({
-      has: page.getByText('Evidence for Practice — Letters group length', { exact: true }),
-    });
+  const latestGroup = mobileEvidence.locator('details').filter({
+    has: page.getByText('Evidence for Practice — Letters group length', { exact: true }),
+  });
   await latestGroup.getByText('View saved result groups:7:3', { exact: true }).tap();
   await expect(latestGroup).toContainText('2026-10-02');
   await expect(latestGroup).toContainText('Estimated 60 seconds');
@@ -183,7 +182,7 @@ test('actual report mappings expose frozen source facts and protect edited answe
     .getByRole('dialog')
     .evaluate((dialog) => ({ scroll: dialog.scrollWidth, width: dialog.clientWidth }));
   expect(geometry.scroll).toBeLessThanOrEqual(geometry.width + 1);
-  await page.screenshot({ path: '.tmp/advisor-source-evidence-mobile.png' });
+
   await page.getByRole('button', { name: 'Refresh from saved practice', exact: true }).tap();
   await expect(points).toHaveValue('77');
   await expect(length).toHaveValue('');

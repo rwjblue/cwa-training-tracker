@@ -1,3 +1,4 @@
+import { e2eOrigin } from './environment';
 import { expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
@@ -13,7 +14,7 @@ async function accountHeaders(context: FixtureContext) {
   return {
     request,
     headers: {
-      Origin: 'http://localhost:8791',
+      Origin: e2eOrigin,
       'X-CWA-Account': state.accountId as string,
       'If-Match': `"${state.revision}"`,
       'X-CWA-Generation': String(state.generation),

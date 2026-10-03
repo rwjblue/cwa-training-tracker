@@ -1,3 +1,4 @@
+import { e2eOrigin } from './environment';
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
@@ -308,7 +309,7 @@ test('failed account selection cannot reopen the previous account offline', asyn
   expect(
     (
       await context.request.post('/api/auth/logout', {
-        headers: { Origin: 'http://localhost:8791' },
+        headers: { Origin: e2eOrigin },
         data: {},
       })
     ).ok(),

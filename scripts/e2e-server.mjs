@@ -10,6 +10,7 @@ import {
 import { randomBytes } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { parse } from 'jsonc-parser';
+import { e2eOrigin, e2ePort } from '../e2e/environment.ts';
 
 // Use a separate config and state directory so tests cannot read or mutate
 // the developer's local database, credentials, or any remote resources.
@@ -36,7 +37,7 @@ configuration.d1_databases = [
 ];
 configuration.send_email = [{ name: 'EMAIL' }];
 configuration.vars = {
-  APP_ORIGIN: 'http://localhost:8791',
+  APP_ORIGIN: e2eOrigin,
   EMAIL_FROM: 'signin@cwa.n1rwj.com',
   ENVIRONMENT: 'development',
 };
@@ -59,7 +60,17 @@ const migration = spawnSync(
 if (migration.status !== 0) process.exit(migration.status ?? 1);
 const child = spawn(
   wrangler,
-  ['dev', '--local', '--ip', '127.0.0.1', '--port', '8791', '--persist-to', state, ...common],
+  [
+    'dev',
+    '--local',
+    '--ip',
+    '127.0.0.1',
+    '--port',
+    String(e2ePort),
+    '--persist-to',
+    state,
+    ...common,
+  ],
   { stdio: ['ignore', 'pipe', 'pipe'] },
 );
 for (const stream of [child.stdout, child.stderr])

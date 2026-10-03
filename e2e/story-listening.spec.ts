@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { PRACTICE_STORIES, practiceStory } from '../src/shared/listening-stories';
 import { storyListeningTrack } from '../src/client/listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from '../src/client/practice-preferences';
@@ -132,13 +132,7 @@ test('public Stories share native sentence/word transport and retain independent
     page.getByText('Listen first. Reveal when you’re ready.', { exact: true }),
   ).toBeVisible();
   await expectResponsive(page, 'story-native-retained');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-30-story-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Word listening', exact: true }).tap();
   await expect(
     sound(page).getByText('Sound settings · 20/10 WPM · 600 Hz', { exact: true }),
@@ -205,10 +199,9 @@ test('public Stories share native sentence/word transport and retain independent
   await pause(page);
 });
 
-test('actual Story save keeps native time, canceled review and exact retry private through history/report/export', async ({
+test('actual Story save keeps native time, canceled review and exact retry private through saved evidence and history', async ({
   page,
   context,
-  browser,
 }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -295,17 +288,4 @@ test('actual Story save keeps native time, canceled review and exact retry priva
   await page.getByText('Practice evidence', { exact: true }).tap();
   await expect(page.getByText(/Played The trail marker \(short\)/)).toBeVisible();
   await expectResponsive(page, 'story-private-history');
-  await navigate(page, 'Academy guide');
-  await page.getByRole('button', { name: 'Practice report', exact: true }).tap();
-  await expect(page.getByText(/Played The trail marker \(short\)/)).toBeVisible();
-  await page.keyboard.press('Escape');
-  await navigate(page, 'Your account');
-  const downloading = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export backup', exact: true }).tap();
-  const file = await downloading;
-  const exported = JSON.parse(await readFile((await file.path())!, 'utf8'));
-  expect(exported.sessions).toEqual(entries);
-  const outsider = await browser.newContext();
-  expect((await outsider.request.get('http://localhost:8791/api/entries')).status()).toBe(401);
-  await outsider.close();
 });

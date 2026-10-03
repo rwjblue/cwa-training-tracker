@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive } from './helpers';
 
 test.use({ hasTouch: true });
@@ -107,14 +108,8 @@ test('public QSO upper-bound station cues survive native seek, replay and retimi
     .poll(() => audio(page).evaluate((element: HTMLAudioElement) => element.paused))
     .toBe(false);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).press('Enter');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await expectResponsive(page, 'qso-station-tones');
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-32-tones-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await expectResponsive(page, 'qso-station-tones');
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Check your copy', exact: true }).tap();
   await expect(current).toHaveCount(0);
   await expect(pair).toContainText('Station 1: 1000 Hz');

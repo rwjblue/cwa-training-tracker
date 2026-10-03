@@ -102,7 +102,9 @@ rtk proxy mise run test-browser
 
 The browser launcher builds fresh assets, applies migrations to a temporary local
 D1 database, creates a temporary secret, and removes its state when it exits.
-The suite uses two workers against that temporary server.
+The browser suite uses two workers against that temporary server. The fast
+suite uses at most four workers (or fewer on a smaller machine), to avoid
+starting a large worker pool alongside other development tasks.
 Each test gets a new browser context and a unique account. By default,
 `e2e/fixtures.ts` also supplies a separate network identity; import `test` from
 that fixture. Email lookup correlates the
@@ -112,8 +114,18 @@ never share mutable accounts or browser storage between cases.
 
 Do not launch a second suite from the same checkout concurrently: runs still
 share port 8791, build output, the email log, and Playwright output directories.
+For separate checkouts, choose another port with
+`CWA_E2E_PORT=8792 rtk proxy mise run test-browser`. The server origin, API
+requests and calendar expectations follow that port; each checkout keeps its
+own build, database, email log and test artifacts.
 Use `--workers=1` to diagnose timing-sensitive failures. Keep the default bounded
 at two workers so real audio and engine clocks have enough resources.
+
+CI runs complete browser coverage in two independent shards with two workers
+per shard. The required `verify` check waits for both shards and the fast checks;
+a failed or skipped shard cannot pass verification. Each shard preserves its
+own timing and failure artifacts. This shortens feedback by using two runner
+machines and repeating their setup, without skipping any browser coverage.
 
 Every complete browser run prints its slowest cases and writes
 `.tmp/browser-timings.json`, including retry attempts. CI preserves this timing
@@ -155,9 +167,19 @@ behavior; do not replace assertions with a count or coverage-percentage target.
 round completion; `copy-practice.test.ts` owns all adaptive trial transitions.
 `runner-recovery.spec.ts` owns finished-run history, reports and device backup;
 `runner-next.spec.ts` owns save-next and exact retry, without another backup
-cycle. `course-replay.spec.ts` covers shared playback cancellation, source
-replacement and the replay preference. `media-session.test.ts`, `recall.spec.ts`
-and `practice-continuity.spec.ts` own Media Session actions, recall and inspection.
+cycle. `course-replay.spec.ts` owns native opt-in, incomplete-pass rejection,
+a canceled automatic continuation, failure/retry, saved passes and cold reopen.
+`recording-playback.test.ts` owns delayed resolutions/rejections, source
+replacement, superseding Play and ownership loss; `course-replay.test.ts` owns
+replay eligibility and the minimum-pass boundary. `media-session.test.ts`,
+`recall.spec.ts` and `practice-continuity.spec.ts` own Media Session actions,
+recall and inspection.
+`story-listening.spec.ts` and `precise-listening.spec.ts` establish native facts
+through save/retry and readable history. Shared report rendering and portable
+backups stay in the report/account journeys and their fast evidence tests; do
+not append another report/export cycle to each listening mode.
+When a geometry regression needs several widths, assert geometry at those
+widths and run `expectResponsive` once for that screen, outside the width loop.
 
 Worker validation tests should retain representative rejection through each
 distinct write/import path and assert no partial mutation. Exhaustive malformed

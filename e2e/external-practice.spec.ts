@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive, accountRequest, signIn } from './helpers';
 
 test.use({
@@ -73,12 +74,10 @@ test('all external LCWO families create, inspect and edit without generic score 
     await page.getByLabel(/^Notes/).fill(`Synthetic external ${kind}`);
     await settled(page);
     if (kind === 'words') await page.setViewportSize({ width: 390, height: 844 });
-    await expectResponsive(page, `external-${kind}-form`);
-    if (['letters', 'words'].includes(kind))
-      await page.screenshot({
-        path: `.tmp/parity-queue/issue-34-${kind}-form.png`,
-        fullPage: true,
-      });
+    // These share three form shapes; exhaustive family values remain asserted.
+    if (['letters', 'words', 'callsign'].includes(kind))
+      await expectResponsive(page, `external-${kind}-form`);
+
     await page.getByRole('button', { name: 'Save practice', exact: true }).tap();
     await expect(dialog(page)).toHaveCount(0);
     const saved = (await (await context.request.get('/api/export')).json()).sessions.find(
@@ -185,10 +184,7 @@ test('manual Runner resolves DST, preserves captured timezone and actual runtime
   const zoneBox = await page.getByLabel(/^Practice timezone/).boundingBox();
   expect(zoneBox!.width).toBeGreaterThan(280);
   await expectResponsive(page, 'manual-runner-fold');
-  await page.screenshot({
-    path: '.tmp/parity-queue/issue-34-manual-runner-390.png',
-    fullPage: true,
-  });
+
   const bodies: unknown[] = [];
   await page.route('**/api/entries', async (route) => {
     if (route.request().method() !== 'POST') return route.continue();

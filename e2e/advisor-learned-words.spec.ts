@@ -1,4 +1,5 @@
-import { expect, test, type Page, type Locator } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
@@ -113,7 +114,7 @@ test('saved explicit learned words stay eligible through handoff and retire only
   await expect(inspector()).not.toContainText('ordinary private prose');
   await expect(inspector()).not.toContainText('NAME');
   await expectResponsive(page, 'learned-word-candidates');
-  await page.screenshot({ path: '.tmp/learned-words-desktop.png' });
+
   await keyboard(page.getByRole('button', { name: 'Save account copy', exact: true }));
   await expect(
     page.getByRole('status').filter({ hasText: 'Report copy saved in your account.' }),
@@ -188,7 +189,7 @@ test('saved explicit learned words stay eligible through handoff and retire only
   await expect(inspector()).toContainText('Rig · submission');
   await expectResponsive(page, 'learned-word-confirmed-history');
   await inspector().scrollIntoViewIfNeeded();
-  await page.screenshot({ path: '.tmp/learned-words-mobile.png' });
+
   await page.keyboard.press('Escape');
   offline = false;
   const retry = page.getByRole('button', { name: 'Retry account sync', exact: true });

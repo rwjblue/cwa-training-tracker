@@ -1,3 +1,4 @@
+import { RecordingPlayback } from './recording-playback';
 import MaterialReader from './MaterialReader';
 import './materials.css';
 import type { CurrentPracticeTime } from '../shared/practice-time';
@@ -239,15 +240,7 @@ export default function PracticeStudio({
   const isCopy = activity?.type === 'copy' || (!assigned && publicCopy);
   const isRunner = activity?.type === 'morse-runner' || (!assigned && publicRunner);
   const recording = useRef<HTMLAudioElement>(null);
-  const recordingPlayRequest = useRef(0);
-  const recordingPlayIntent = useRef(false);
-  const pendingRecordingPlay = useRef<
-    | {
-        request: number;
-        automatic: boolean;
-      }
-    | undefined
-  >(undefined);
+  const recordingPlayback = useRef(new RecordingPlayback());
   const [recordingPending, setRecordingPending] = useState(false);
   const [courseReplay, setCourseReplay] = useState(loadCourseReplay);
   const courseReplayChoice = useRef(courseReplay);
@@ -307,9 +300,7 @@ export default function PracticeStudio({
   currentTimer.current = timer;
   const attachRecording = useCallback((element: HTMLAudioElement | null) => {
     if (recording.current && recording.current !== element) {
-      recordingPlayRequest.current++;
-      recordingPlayIntent.current = false;
-      pendingRecordingPlay.current = undefined;
+      recordingPlayback.current.detach();
       setRecordingPending(false);
       currentTimer.current.discardRecording(recording.current, false);
       recording.current.pause();
@@ -520,8 +511,7 @@ export default function PracticeStudio({
     setScratchpad(loadStudioNotes(notesScope, notesContext));
   }, [notesScope, notesContext]);
   const stopPlayback = () => {
-    recordingPlayRequest.current++;
-    recordingPlayIntent.current = false;
+    recordingPlayback.current.cancel();
     setRecordingPending(false);
     player.current.pause();
     recording.current?.pause();
@@ -827,47 +817,23 @@ export default function PracticeStudio({
     setFreeTrack(null);
     setFreeWord(-1);
   }, [text, mode, groupLength, wordLength, characterWpm, effectiveWpm, tone, volume, tool]);
-  const playRecording = async (audio: HTMLAudioElement, automatic = false) => {
-    if (audio !== recording.current || !canPractice()) return;
-    const request = ++recordingPlayRequest.current;
-    recordingPlayIntent.current = true;
-    pendingRecordingPlay.current = { request, automatic };
-    setRecordingPending(true);
-    timer.stopRecall();
-    setError('');
-    try {
-      timer.finalizeMedia(audio);
-      // Native Play at ended rewinds to the beginning and retains native 1x.
-      await audio.play();
-      if (
-        request !== recordingPlayRequest.current ||
-        audio !== recording.current ||
-        !canPractice()
-      ) {
-        // A newer deliberate request on this same element owns its playback.
-        if (audio !== recording.current || !canPractice() || !recordingPlayIntent.current)
-          audio.pause();
-        return;
-      }
-    } catch (err) {
-      // Pausing for recall or inspection can reject an earlier pending Play.
-      // That obsolete request must not stop the newly selected practice mode.
-      if (request !== recordingPlayRequest.current || audio !== recording.current || !canPractice())
-        return;
-      recordingPlayIntent.current = false;
-      audio.pause();
-      setError(
-        `${automatic ? 'Automatic replay could not start. ' : ''}${(err as Error).message} Choose Play another pass, recall, or Finish practice.`,
-      );
-      setPlaying(false);
-      timer.pauseMedia();
-    } finally {
-      if (pendingRecordingPlay.current?.request === request) {
-        pendingRecordingPlay.current = undefined;
-        setRecordingPending(false);
-      }
-    }
-  };
+  const playRecording = (audio: HTMLAudioElement, automatic = false) =>
+    recordingPlayback.current.play(audio, automatic, {
+      owns: () => audio === recording.current && canPractice(),
+      pending: setRecordingPending,
+      start: () => {
+        timer.stopRecall();
+        setError('');
+      },
+      beforePlay: () => timer.finalizeMedia(audio),
+      failed: (error) => {
+        setError(
+          `${automatic ? 'Automatic replay could not start. ' : ''}${(error as Error).message} Choose Play another pass, recall, or Finish practice.`,
+        );
+        setPlaying(false);
+        timer.pauseMedia();
+      },
+    });
   const seekRecording = (position?: number, play = true): number | undefined => {
     const audio = recording.current;
     if (!audio || !canPractice() || audio.seeking || audio.error) return;
@@ -913,12 +879,12 @@ export default function PracticeStudio({
     courseReplayChoice.current = enabled;
     setCourseReplay(enabled);
     setCourseReplayRemembered(saveCourseReplay(enabled));
-    if (!enabled && pendingRecordingPlay.current?.automatic) stopPlayback();
+    if (!enabled && recordingPlayback.current.pending?.automatic) stopPlayback();
   };
   const endRecording = (audio: HTMLAudioElement) => {
     if (audio !== recording.current || !canPractice() || !audio.ended) return;
     setPlaying(false);
-    recordingPlayIntent.current = false;
+    recordingPlayback.current.intended = false;
     // Capture has finalized the existing clock before this target callback.
     const measured = timer.snapshot();
     const outcome = measured.recordingOutcome;
@@ -1026,9 +992,7 @@ export default function PracticeStudio({
     if (
       event.target === recording.current &&
       (event.type === 'play' || event.type === 'playing') &&
-      pendingRecordingPlay.current &&
-      pendingRecordingPlay.current.request !== recordingPlayRequest.current &&
-      !recordingPlayIntent.current
+      !recordingPlayback.current.allowsNativePlay
     ) {
       recording.current?.pause();
       return;
@@ -1459,12 +1423,9 @@ export default function PracticeStudio({
                               event.currentTarget === recording.current &&
                               canPractice() &&
                               !event.currentTarget.paused &&
-                              (!pendingRecordingPlay.current ||
-                                pendingRecordingPlay.current.request ===
-                                  recordingPlayRequest.current ||
-                                recordingPlayIntent.current)
+                              recordingPlayback.current.allowsNativePlay
                             ) {
-                              recordingPlayIntent.current = true;
+                              recordingPlayback.current.intended = true;
                               setPlaying(true);
                             } else event.currentTarget.pause();
                           }}
@@ -1474,13 +1435,8 @@ export default function PracticeStudio({
                               canPractice() &&
                               !event.currentTarget.paused
                             ) {
-                              if (
-                                pendingRecordingPlay.current?.request ===
-                                recordingPlayRequest.current
-                              ) {
-                                pendingRecordingPlay.current = undefined;
+                              if (recordingPlayback.current.clearCurrentPending())
                                 setRecordingPending(false);
-                              }
                               setError('');
                               claimRecordingSession(event.currentTarget);
                             }
@@ -1502,8 +1458,7 @@ export default function PracticeStudio({
                             )
                               return;
                             if (!event.currentTarget.ended) {
-                              recordingPlayRequest.current++;
-                              recordingPlayIntent.current = false;
+                              recordingPlayback.current.cancel();
                               setRecordingPending(false);
                             }
                             setPlaying(false);

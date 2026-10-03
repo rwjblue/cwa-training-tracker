@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { expectResponsive, scopedRequest, signIn } from './helpers';
 
@@ -37,14 +38,7 @@ test('private monitoring and worked CWT observations retain exact judgments thro
   await page.getByRole('textbox', { name: /^Notes/ }).fill('Separate private note');
   await expect(count(page)).toHaveValue('');
   await expectResponsive(page, 'assessment-monitoring');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.getByRole('textbox', { name: /^Callsigns heard/ }).scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-33-monitoring-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Save practice', exact: true }).tap();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const exported = () => context.request.get('/api/export').then((response) => response.json());

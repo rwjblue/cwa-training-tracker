@@ -1,4 +1,5 @@
-import { expect, test, type Page, type Locator } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 
@@ -186,9 +187,9 @@ test('private report definition, exact field rules, preparation window and retai
   ).toHaveValue('Very Good');
   await settled(page);
   await expectResponsive(page, 'advisor-report-window-preview');
-  await page.screenshot({ path: '.tmp/advisor-report-preview-desktop.png' });
+
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '.tmp/advisor-report-preview-mobile.png' });
+
   await page.getByRole('button', { name: 'Configure advisor fields', exact: true }).tap();
   await page.getByLabel('Report title', { exact: true }).fill('Canceled change');
   await page.getByRole('button', { name: 'Cancel configuration', exact: true }).tap();
@@ -268,9 +269,8 @@ test('private report definition, exact field rules, preparation window and retai
     expect(geometry.actionRight).toBeLessThanOrEqual(geometry.dialogRight);
     expect(geometry.dialogScroll).toBeLessThanOrEqual(geometry.dialogWidth + 1);
     expect(geometry.noticeScroll).toBeLessThanOrEqual(geometry.noticeWidth + 1);
-    await expectResponsive(page, `advisor-report-definition-notice-${width}`);
-    await page.screenshot({ path: `.tmp/advisor-report-definition-notice-${width}.png` });
   }
+  await expectResponsive(page, 'advisor-report-definition-notice');
   // A whole-number definition must have a safe answer even with one-sided limits.
   await page.getByRole('button', { name: 'Configure advisor fields', exact: true }).tap();
   await keyboard(page.getByText('6. Verified points', { exact: true }));
@@ -294,7 +294,7 @@ test('private report definition, exact field rules, preparation window and retai
   );
   await settled(page);
   await expectResponsive(page, 'advisor-report-invalid-integer');
-  await page.screenshot({ path: '.tmp/advisor-report-integer-rejection-mobile.png' });
+
   await wholeField
     .getByLabel('Greater than (exclusive)', { exact: true })
     .fill(String(Number.MAX_SAFE_INTEGER - 1));

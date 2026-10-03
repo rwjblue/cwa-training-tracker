@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, timezoneId: 'America/New_York' });
@@ -103,9 +104,9 @@ test('keyboard linking, exact source inspection, overlap-safe report and actual 
     }),
   ).toBeVisible();
   await expectResponsive(page, 'lcwo-source-history');
-  await page.screenshot({ path: '.tmp/parity-queue/issue-35-history-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '.tmp/parity-queue/issue-35-history-mobile.png', fullPage: true });
+
   await navigate(page, 'Academy guide');
   await keyboardButton(page, 'Practice report');
   await page.getByLabel('From', { exact: true }).fill('2026-09-29');

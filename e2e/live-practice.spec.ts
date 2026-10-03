@@ -1,3 +1,4 @@
+import { e2eOrigin } from './environment';
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import ICAL from 'ical.js';
@@ -64,7 +65,7 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   await expect(page.getByText('No event in progress. Next: SST.', { exact: true })).toBeVisible();
   await activate(page.getByRole('button', { name: 'Copy calendar URL', exact: true }));
   const url = page.getByRole('textbox', { name: 'Public calendar URL', exact: true });
-  const feed = 'http://localhost:8791/api/live-practice/calendar.ics';
+  const feed = `${e2eOrigin}/api/live-practice/calendar.ics`;
   await expect(url).toHaveValue(feed);
   await expect(url).toBeFocused();
   await expect(
@@ -82,7 +83,7 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   const body = await readFile((await download.path())!, 'utf8');
   const calendar = new ICAL.Component(ICAL.parse(body));
   expect(calendar.getAllSubcomponents('vevent')).toHaveLength(9);
-  expect(body).toContain('http://localhost:8791/#events');
+  expect(body).toContain(`${e2eOrigin}/#events`);
   const fetched = await context.request.get(feed);
   expect(fetched.ok()).toBe(true);
   expect(await fetched.text()).toBe(body);

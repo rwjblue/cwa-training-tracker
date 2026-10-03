@@ -101,6 +101,10 @@ test('Today pins preserve original work through dismissal, retry, backup, timezo
   ).toBeFocused();
   await activate(row(task.title).getByRole('button', { name: 'Remove from today', exact: true }));
   await expect(pinned).toHaveCount(0);
+  // The row disappears optimistically; the completed save then restores focus.
+  await expect(
+    today.getByRole('heading', { name: 'What should I do today?', exact: true }),
+  ).toBeFocused();
   await activate(today.locator('summary').filter({ hasText: 'Earlier unfinished work' }));
   await activate(today.getByRole('button', { name: 'Dismiss earlier work', exact: true }));
   await expect(today).toContainText('1 earlier exercise is hidden');

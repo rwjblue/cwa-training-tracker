@@ -1,4 +1,5 @@
-import { expect, test, type Page, type Locator } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
 test.use({ hasTouch: true, timezoneId: 'UTC' });

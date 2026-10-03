@@ -1,5 +1,5 @@
-import { writeFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive, signIn } from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
@@ -73,13 +73,7 @@ test('native repeated rounds use fresh source order and count only actual bounda
   const shuffled = await list(page);
   expect([...shuffled].sort()).toEqual([...ordered].sort());
   await expectResponsive(page, 'repeat-round-paused');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-28-round-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).tap();
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).tap();
   expect((await state(page)).source).toBe(second.source);
@@ -119,23 +113,27 @@ test('native repeated rounds use fresh source order and count only actual bounda
   const actualTails = finished.reduce((sum, seconds) => sum + seconds, 0);
   const observed = await readNativeMovement(page);
   const observedMovement = observed.seconds;
-  await writeFile(
-    '.tmp/parity-queue/issue-28-native-boundary-evidence.json',
-    JSON.stringify(
-      { finished, observed, observedMovement, heard: evidence.wordListeningSeconds },
-      null,
-      2,
-    ),
-  );
   // Native resume can settle ahead before its playing event. That unobserved
   // pause/resume gap is excluded; compare actual playing intervals, not file length.
-  expect(observedMovement).toBeGreaterThan(1);
-  expect(observedMovement).toBeLessThanOrEqual(actualTails);
-  expect(Math.abs(evidence.wordListeningSeconds - observedMovement)).toBeLessThan(0.02);
-  expect(evidence.wordListeningSeconds).toBeCloseTo(evidence.measurement.seconds, 6);
-  expect(evidence.generatedListening.summaries.map((s: { shuffle: boolean }) => s.shuffle)).toEqual(
-    [false, true],
-  );
+  try {
+    expect(observedMovement).toBeGreaterThan(1);
+    expect(observedMovement).toBeLessThanOrEqual(actualTails);
+    expect(Math.abs(evidence.wordListeningSeconds - observedMovement)).toBeLessThan(0.02);
+    expect(evidence.wordListeningSeconds).toBeCloseTo(evidence.measurement.seconds, 6);
+    expect(
+      evidence.generatedListening.summaries.map((s: { shuffle: boolean }) => s.shuffle),
+    ).toEqual([false, true]);
+  } catch (error) {
+    await test.info().attach('native-boundary-evidence', {
+      body: JSON.stringify(
+        { finished, observed, observedMovement, heard: evidence.wordListeningSeconds },
+        null,
+        2,
+      ),
+      contentType: 'application/json',
+    });
+    throw error;
+  }
 });
 
 test('next-round failure retries visibly and cancels late native continuation on pause and source change', async ({
@@ -165,13 +163,7 @@ test('next-round failure retries visibly and cancels late native continuation on
     page.getByRole('alert').filter({ hasText: 'Earned listening time is retained.' }),
   ).toBeVisible();
   await expectResponsive(page, 'repeat-error');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-28-retry-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   const holdAcknowledgement = async () =>
     media(page).evaluate((a: HTMLAudioElement) => {
       const play = a.play;

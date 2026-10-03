@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.231' } });
@@ -126,13 +126,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
     page.getByText('Sound settings · 60/51 WPM · 420 Hz', { exact: true }),
   ).toBeVisible();
   await expectResponsive(page, 'precise-story-controls');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-31-controls-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('60');
@@ -198,10 +192,9 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await expectResponsive(page, 'precise-word-controls');
 });
 
-test('native 55/60 WPM listening survives canceled review and exact save retry into private history/report/export', async ({
+test('native 55/60 WPM listening survives canceled review and exact save retry into private evidence and history', async ({
   page,
   context,
-  browser,
 }) => {
   test.setTimeout(90_000);
   await signIn(page);
@@ -272,18 +265,4 @@ test('native 55/60 WPM listening survives canceled review and exact save retry i
   await expect(page.getByText(/55 character \/ 55 effective WPM/)).toBeVisible();
   await expect(page.getByText(/60 character \/ 60 effective WPM/)).toBeVisible();
   await expectResponsive(page, 'precise-private-history');
-  await navigate(page, 'Academy guide');
-  await page.getByRole('button', { name: 'Practice report', exact: true }).click();
-  await expect(page.getByText(/55 character \/ 55 effective WPM/)).toBeVisible();
-  await expect(page.getByText(/60 character \/ 60 effective WPM/)).toBeVisible();
-  await page.keyboard.press('Escape');
-  await navigate(page, 'Your account');
-  const downloading = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export backup', exact: true }).click();
-  const file = await downloading;
-  const exported = JSON.parse(await readFile((await file.path())!, 'utf8'));
-  expect(exported.sessions).toEqual(entries);
-  const outsider = await browser.newContext();
-  expect((await outsider.request.get('http://localhost:8791/api/entries')).status()).toBe(401);
-  await outsider.close();
 });

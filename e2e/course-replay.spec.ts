@@ -116,21 +116,6 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
   await reset();
   await toggle(replay);
   await expect(replay).toBeChecked();
-  await start();
-  await expect(count).toHaveText('1', { timeout: 15_000 });
-  await expect
-    .poll(() => audio.evaluate((el: HTMLAudioElement) => !el.paused && el.currentTime < 2))
-    .toBe(true);
-  expect(await audio.evaluate((el: HTMLAudioElement) => el.playbackRate)).toBe(1);
-  expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('playing');
-  await expect(count).toHaveText('2', { timeout: 15_000 });
-  await expect.poll(paused).toBe(true);
-  await expect(page.getByText('The minimum is met.', { exact: false })).toBeVisible();
-  // Deliberate extra playback stops again, even with the checkbox on.
-  await activate(page.getByRole('button', { name: 'Play another pass', exact: true }));
-  await expect(count).toHaveText('3', { timeout: 15_000 });
-  await expect.poll(paused).toBe(true);
-  await reset();
   await audio.evaluate((el: HTMLAudioElement) => {
     el.currentTime = el.duration - 0.1;
   });
@@ -168,9 +153,9 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
       return native.call(this);
     };
   });
-  // Pause, recall, Media Session and inspection share stopPlayback. Exercise
-  // one cancellation there, plus source replacement and disabling replay.
-  for (const action of ['pause', 'source', 'preference']) {
+  // The playback controller covers stale requests and source replacement.
+  // Keep the course checkbox's pending automatic continuation wiring native.
+  {
     await reset();
     await page.evaluate(() => Reflect.set(window, 'nextReplay', 'hold'));
     await start();
@@ -178,20 +163,10 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     await expect(page.getByRole('status').filter({ hasText: 'Starting listening…' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
     const old = await audio.elementHandle();
-    if (action === 'pause')
-      await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
-    if (action === 'source')
-      await page
-        .getByRole('combobox', { name: 'Recording speed', exact: true })
-        .selectOption(task.exercise.url.replace(/WD101_10/i, 'WD101_13'));
-    if (action === 'preference') await toggle(replay);
+    await toggle(replay);
     await page.evaluate(() => Reflect.get(window, 'releaseReplay')());
     await expect.poll(() => old!.evaluate((el: HTMLAudioElement) => el.paused)).toBe(true);
-    if (action === 'source')
-      await page
-        .getByRole('combobox', { name: 'Recording speed', exact: true })
-        .selectOption(task.exercise.url);
-    if (action === 'preference') await toggle(replay);
+    await toggle(replay);
     await expect(count).toHaveText('1');
     await expect.poll(paused).toBe(true);
   }
@@ -262,7 +237,14 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
   await expect.poll(paused).toBe(true);
   await expect(count).toHaveText('0');
   await start();
-  await expect(count).toHaveText('2', { timeout: 25_000 });
+  await expect(count).toHaveText('1', { timeout: 15_000 });
+  await expect
+    .poll(() => audio.evaluate((el: HTMLAudioElement) => !el.paused && el.currentTime < 2))
+    .toBe(true);
+  expect(await audio.evaluate((el: HTMLAudioElement) => el.playbackRate)).toBe(1);
+  expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('playing');
+  await expect(count).toHaveText('2', { timeout: 15_000 });
+  await expect(page.getByText('The minimum is met.', { exact: false })).toBeVisible();
   await expect.poll(paused).toBe(true);
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const review = page.getByRole('dialog');

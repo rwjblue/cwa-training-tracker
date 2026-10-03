@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { accountRequest, expectResponsive, signIn } from './helpers';
@@ -114,7 +115,7 @@ test('device report sessions survive reload and exact offline account copies pre
     ).id,
   ).toBe(original.id);
   await expectResponsive(page, 'advisor-durable-draft');
-  await page.screenshot({ path: '.tmp/advisor-durable-draft-desktop.png' });
+
   let unavailable = true;
   const bodies: unknown[] = [];
   await page.route('**/api/account-operations', async (route) => {
@@ -203,7 +204,7 @@ test('device report sessions survive reload and exact offline account copies pre
     (await (await context.request.get('/api/account-state')).json()).state.reports,
   ).toHaveLength(1);
   await expectResponsive(page, 'advisor-reopened-draft');
-  await page.screenshot({ path: '.tmp/advisor-reopened-draft-mobile.png' });
+
   await page.keyboard.press('Escape');
   await navigate(page, 'Your account');
   const downloading = page.waitForEvent('download');
@@ -378,7 +379,6 @@ test('explicit original device draft copying validates mapping and session while
     (await (await context.request.get('/api/account-state')).json()).state.reports,
   ).toHaveLength(1);
   await expectResponsive(page, 'advisor-original-copy-errors');
-  await page.screenshot({ path: '.tmp/advisor-original-copy-mobile.png' });
 });
 
 test('device storage refusal and a newer tab retain both drafts with explicit download and reopen recovery', async ({
@@ -450,7 +450,6 @@ test('device storage refusal and a newer tab retain both drafts with explicit do
   await other.close();
   await page.setViewportSize({ width: 390, height: 844 });
   await expectResponsive(page, 'advisor-device-conflict-resolved');
-  await page.screenshot({ path: '.tmp/advisor-device-recovery-mobile.png' });
 });
 
 test('reopening original-derived submitted history saves a separate draft copy without changing confirmed history', async ({
