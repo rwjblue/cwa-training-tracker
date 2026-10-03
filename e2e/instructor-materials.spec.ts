@@ -78,7 +78,16 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await page.getByRole('slider', { name: /Reader text size/ }).press('ArrowRight');
   const text = page.getByRole('region', { name: 'Material text', exact: true });
   await text.focus();
+  await text.evaluate((element) => {
+    Reflect.set(element, 'testScrollEnded', false);
+    element.addEventListener('scrollend', () => Reflect.set(element, 'testScrollEnded', true), {
+      once: true,
+    });
+  });
   await text.press('PageDown');
+  await expect
+    .poll(() => text.evaluate((element) => Reflect.get(element, 'testScrollEnded')))
+    .toBe(true);
   await expect.poll(() => text.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   const scroll = await text.evaluate((element) => element.scrollTop);
   await page.keyboard.press('Escape');

@@ -2651,3 +2651,24 @@ pending.
 Browser emulation remains the evidence boundary; no physical hardware/device,
 external service, production private writes or elapsed crash recovery is claimed.
 Source publication remains disabled under the user's no-push instruction.
+
+
+## Issue #41 independent application gate — accepted
+
+Independent recheck ACCEPTS application correction `55b7bc88`; initial P2 F1
+is resolved and no substantive application finding remains. All five independent
+scenarios pass in 35.2 seconds, plus a focused actual-practice reader check in
+14.3 seconds. Long native/imported library, reader, editor and practice screens
+fit at 1440/390 with settled Axe, keyboard/touch access and inspected screenshots.
+Owned imported/class/restore/privacy and material-before-result retry remain
+correct. The reviewer verified all 562 tracked/173 built hashes and protected
+original files, primary HEAD and approved scope before releasing the harness.
+
+The independent harness initially sampled PageDown mid-animation (324 px), while
+its actual settled/stored position was 468 px. Waiting for real scrollend fixed
+the harness without application changes or relaxed assertions. The authored
+scroll-restoration regression now also waits for that event before comparing the
+reopened position. All three affected material journeys pass in 35.8 seconds.
+Doc-inclusive gates, commit and exact application/build-equivalence recheck follow.
+Production deployment,
+completion journal and issue comment remain pending; no source push or closure.
