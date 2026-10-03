@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectResponsive, signIn } from './helpers';
 import { morseTimeline } from '../src/client/audio';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.226' } });
@@ -29,7 +29,9 @@ test('native word speed edits preserve heard timing, paused position and continu
   await studio(page, 'Word listening');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E PARIS E');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   await page.getByRole('button', { name: 'Reveal text', exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
@@ -184,8 +186,11 @@ test('native QSO retiming retains exact occurrence and rejects canceled asynchro
   await expect(
     page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }),
   ).toBeVisible();
+  await openDisclosure(page, 'Browse other views');
   await expectResponsive(page, 'live-qso-paused');
+  await openDisclosure(page, 'Browse other views');
   await page.setViewportSize({ width: 390, height: 844 });
+  await openDisclosure(page, 'Browse other views');
   await page.getByRole('button', { name: 'Inspect Today', exact: true }).tap();
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await retained.getByRole('button', { name: 'Return to practice', exact: true }).tap();
@@ -203,6 +208,7 @@ test('a last-word speed edit applies on the next native loop and explicit ended 
   await studio(page, 'Word listening');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
@@ -216,6 +222,7 @@ test('a last-word speed edit applies on the next native loop and explicit ended 
     .toBeLessThan(duration - 0.2);
   expect((await state(page)).paused).toBe(false);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).click();
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
@@ -241,7 +248,9 @@ test('explicit keyboard and native rewinds retain a mixed word prefix near the l
   await studio(page, 'Word listening');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).check();
   await page.getByText('View word list', { exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();

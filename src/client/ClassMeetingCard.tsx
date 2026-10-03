@@ -73,18 +73,10 @@ export default function ClassMeetingCard({
                 : 'No upcoming class meetings'}
       </h3>
       {meeting ? (
-        <p>
-          {meetingTimeLabel(meeting.startsAt, meeting.endsAt, profile.timezone)}
-          <br />
-          Displayed in {profile.timezone}. Meeting timezone: {meeting.timezone}.
-          {meeting.exception ? ' Individual class exception.' : ''}
-        </p>
+        <p>{meetingTimeLabel(meeting.startsAt, meeting.endsAt, profile.timezone)}</p>
       ) : dateOnly ? (
         <p>{dateOnly.date} · Class times are not set.</p>
       ) : null}
-      <p>
-        Class time is kept separate from independent practice goals and required exercise progress.
-      </p>
       <div className="class-schedule-actions">
         {profile.classSchedule.joinUrl && (meeting || dateOnly) && (
           <a
@@ -112,6 +104,19 @@ export default function ClassMeetingCard({
           </button>
         )}
       </div>
+      <details className="class-meeting-details">
+        <summary>Class details</summary>
+        {meeting && (
+          <p>
+            Displayed in {profile.timezone}. Meeting timezone: {meeting.timezone}.
+            {meeting.exception ? ' Individual class exception.' : ''}
+          </p>
+        )}
+        <p>
+          Class time is kept separate from independent practice goals and required exercise
+          progress.
+        </p>
+      </details>
       {status.finished && status.next && (
         <p className="field-hint">
           Next: session {status.next.session} ·{' '}

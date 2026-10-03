@@ -1,6 +1,7 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import {
+  openDisclosure,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -98,6 +99,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(1.2);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await expect(page).toHaveURL(/#overview$/);
   const position = await element!.evaluate((item: HTMLAudioElement) => item.currentTime);
@@ -117,6 +119,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
     .getByText(/^\d+\.\d{2} seconds listened/)
     .textContent();
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   // Stored notes matter here: the mounted textarea can mask a deleted value.
   await expect.poll(readNotes).toBe(notes);
@@ -158,6 +161,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
     reviewedSource!,
   );
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await expectResponsive(page, `retained-today-${viewport.width}`);
 
@@ -177,6 +181,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);
   await expect(scratchpad).toHaveValue(notes);
   // Editing an unrelated timer result cannot acknowledge/reset this owner.
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
 
   await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
@@ -226,6 +231,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await activate(row.getByRole('button', { name: 'Listen & practice', exact: true }));
   await expect(scratchpad).toHaveValue('');
   await scratchpad.fill('Private owner notes.');
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await activate(page.getByRole('button', { name: 'Open your account', exact: true }));
   await activate(page.getByRole('button', { name: 'Sign out', exact: true }));
@@ -307,6 +313,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await expect(external).toHaveURL(task.exercise.url);
   await external.close();
   await page.clock.fastForward(12_000);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await expect(retained).toContainText(task.title);
@@ -317,6 +324,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await expect(scratchpad).toHaveValue(notes);
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:12');
+  await openDisclosure(page, 'External results and exact timing');
   await page.getByRole('combobox', { name: 'External result', exact: true }).selectOption('words');
   await expect(
     page.getByRole('textbox', { name: 'Actual local completion', exact: true }),
@@ -324,6 +332,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await page.getByLabel(/^Actual trainer speed/).fill('25');
   await page.getByLabel(/^LCWO score/).fill('0');
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await page.clock.resume();
   await expectAccessible(page, `retained-manual-${viewport.width}`);
@@ -341,6 +350,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   if (await historyMenu.isVisible()) await activate(historyMenu);
   await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
   await activate(page.getByRole('button', { name: 'Edit Sending on 2026-10-06', exact: true }));
+  await openDisclosure(page, 'External results and exact timing');
   await page.getByRole('combobox', { name: 'External result', exact: true }).selectOption('words');
   await page.getByLabel(/^Actual trainer speed/).fill('25');
   await page.getByLabel(/^LCWO score/).fill('0');

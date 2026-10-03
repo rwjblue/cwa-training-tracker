@@ -32,6 +32,7 @@
   gap: 6px;
   align-items: center;
   flex-shrink: 0;
+  min-height: 44px;
   padding: 3px 0;
   color: #415e3f;
   font-size: 13px;
@@ -159,7 +160,7 @@
 .today-plan-task-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 5px 14px;
   margin-top: 8px;
   align-items: center;
 }
@@ -170,7 +171,8 @@
   align-items: center;
   color: #3d623d;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
+  min-height: 44px;
   padding: 2px 0;
   line-height: 1.5;
 }
@@ -193,10 +195,10 @@
 }
 .today-plan-task-actions > .today-plan-review {
   min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid #b5c5a8;
-  border-radius: 5px;
-  background: #f7f8f3;
+  padding: 8px 0;
+}
+.today-plan-task-actions > .today-plan-log {
+  font-weight: 600;
 }
 .today-plan-dismiss-actions {
   display: flex;
@@ -241,6 +243,8 @@
 .today-plan-instructions summary {
   cursor: pointer;
   width: fit-content;
+  min-height: 44px;
+  padding-block: 12px;
 }
 .today-plan-instructions p {
   margin-top: 9px;
@@ -266,6 +270,7 @@
   color: #4e6345;
   font-weight: 600;
   line-height: 1.5;
+  min-height: 44px;
 }
 .today-plan-disclosure > summary::-webkit-details-marker {
   display: none;
@@ -373,6 +378,51 @@
   font-size: 12px;
   line-height: 1.65;
 }
+.today-plan-help > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+}
+.today-plan-help p {
+  margin-top: 8px;
+}
+.today-plan > .class-meeting-card,
+.today-plan > .material-library {
+  margin: 0 25px 16px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: #f8faf3;
+}
+.today-plan > .material-library h3 {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.today-plan > .material-library p {
+  margin-block: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.today-plan > .material-library .button {
+  min-height: 44px;
+  margin-top: 8px;
+}
+.today-plan .class-meeting-card .button {
+  min-height: 44px;
+}
+.today-plan .runner-assignment-progress {
+  padding: 10px 0;
+  margin: 6px 0;
+  border: 0;
+  background: transparent;
+}
+.today-plan .runner-assignment-progress h3 {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.today-plan .runner-assignment-totals {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
 .today-plan-message {
   padding: 5px 25px 25px;
   font-size: 14px;
@@ -402,8 +452,8 @@
 }
 @media (max-width: 640px) {
   .today-plan-heading {
-    padding: 21px 18px 17px;
-    gap: 10px;
+    padding: 18px 18px 12px;
+    gap: 0;
     flex-direction: column;
   }
   .today-plan-heading h2 {
@@ -442,7 +492,7 @@
     font-size: 13px;
   }
   .today-plan-task-actions {
-    gap: 17px;
+    gap: 0 15px;
   }
   .today-plan-task-actions > a,
   .today-plan-task-actions > button {
@@ -493,6 +543,14 @@
   .today-plan-studio {
     font-size: 13px;
   }
+  .today-plan > .class-meeting-card,
+  .today-plan > .material-library {
+    margin-inline: 18px;
+    padding: 12px;
+  }
+  .today-plan .runner-assignment-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .today-plan-footnote,
   .today-plan-upcoming {
     padding-left: 18px;
@@ -509,7 +567,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 7px 16px;
-  margin: 0 28px 16px;
+  margin: 0 0 8px;
   color: #596650;
   font-size: 12px;
   line-height: 1.6;
@@ -526,10 +584,4 @@
   color: #875531;
   font-size: 12px;
   line-height: 1.5;
-}
-@media (max-width: 640px) {
-  .today-plan-curriculum {
-    margin-left: 18px;
-    margin-right: 18px;
-  }
 }

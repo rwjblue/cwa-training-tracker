@@ -818,21 +818,17 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
           ? 'Graded rounds save automatically to your private history.'
           : 'Graded rounds save automatically on this device.'}
       </p>
-      <p className="copy-help" role="status">
-        {draft ? 'This round is ' : 'Your next round is '}
-        {roundTask ? (
-          <>
+      {roundTask && (
+        <p className="copy-help" role="status">
+          {draft ? 'This round is ' : 'Your next round is '}
             <strong>{roundPurpose === 'review' ? 'extra review' : 'assigned practice'}</strong>
             {' for '}
             {roundTask.title}.{' '}
             {roundPurpose === 'review'
               ? 'Saved time counts toward daily practice without adding required assignment credit.'
               : 'Saved time contributes to assignment progress. Completing the exercise remains your choice.'}
-          </>
-        ) : (
-          'open practice. Saved time counts toward daily practice.'
-        )}
-      </p>
+        </p>
+      )}
       {blocked && (
         <div className="notice" role="alert">
           Copy practice is open in another tab.{' '}
@@ -894,39 +890,48 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
               ))}
             </div>
           )}
-          {alternatives && alternatives.length > 0 && (
-            <label className="field copy-assignment-option">
-              Assignment option
-              <select
-                value={assignmentOption}
-                disabled={active || blocked}
-                onChange={(e) => {
-                  setRecipe(assignmentRecipes[Number(e.target.value)]);
-                }}
-              >
-                {assignmentRecipes.map((option, index) => (
-                  <option key={index} value={String(index)}>
-                    {COPY_LABELS[option.mode]} ·{' '}
-                    {option.mode === 'words' ? option.wordCollection : option.groupKind} ·{' '}
-                    {option.characterWpm}/{option.effectiveWpm} WPM
-                  </option>
-                ))}
-                {assignmentOption === 'custom' && <option value="custom">Adjusted settings</option>}
-              </select>
-            </label>
-          )}
-          <CopySettings recipe={currentRecipe} disabled={active || blocked} onChange={setRecipe} />
-          {selectingCharacters && (
-            <label className="checkbox-label copy-character-confirmation">
-              <input
-                type="checkbox"
-                checked={confirmedCharacters}
-                disabled={active || blocked}
-                onChange={(e) => setConfirmedCharacters(e.target.checked)}
-              />{' '}
-              I have selected the characters I want to strengthen for this assignment.
-            </label>
-          )}
+          <details className="copy-round-settings" open={!active && needsCharacters}>
+            <summary>{active ? 'View round settings' : 'Round settings'}</summary>
+            {alternatives && alternatives.length > 0 && (
+              <label className="field copy-assignment-option">
+                Assignment option
+                <select
+                  value={assignmentOption}
+                  disabled={active || blocked}
+                  onChange={(e) => {
+                    setRecipe(assignmentRecipes[Number(e.target.value)]);
+                  }}
+                >
+                  {assignmentRecipes.map((option, index) => (
+                    <option key={index} value={String(index)}>
+                      {COPY_LABELS[option.mode]} ·{' '}
+                      {option.mode === 'words' ? option.wordCollection : option.groupKind} ·{' '}
+                      {option.characterWpm}/{option.effectiveWpm} WPM
+                    </option>
+                  ))}
+                  {assignmentOption === 'custom' && (
+                    <option value="custom">Adjusted settings</option>
+                  )}
+                </select>
+              </label>
+            )}
+            <CopySettings
+              recipe={currentRecipe}
+              disabled={active || blocked}
+              onChange={setRecipe}
+            />
+            {selectingCharacters && (
+              <label className="checkbox-label copy-character-confirmation">
+                <input
+                  type="checkbox"
+                  checked={confirmedCharacters}
+                  disabled={active || blocked}
+                  onChange={(e) => setConfirmedCharacters(e.target.checked)}
+                />{' '}
+                I have selected the characters I want to strengthen for this assignment.
+              </label>
+            )}
+          </details>
           <div className="copy-entry-panel">
             <div className="copy-round-status">
               <strong>

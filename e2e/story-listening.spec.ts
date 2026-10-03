@@ -3,7 +3,7 @@ import { test } from './fixtures';
 import { PRACTICE_STORIES, practiceStory } from '../src/shared/listening-stories';
 import { storyListeningTrack } from '../src/client/listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from '../src/client/practice-preferences';
-import { expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.230' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -156,8 +156,10 @@ test('public Stories share native sentence/word transport and retain independent
   await sound(page)
     .getByText(/^Sound settings ·/)
     .click();
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Log practice manually', exact: true }).tap();
   const manual = page.getByRole('dialog');
+  await openDisclosure(manual, 'Speed, rating and on-air observations');
   await expect(manual.getByLabel('Character WPM', { exact: true })).toHaveValue('21');
   await expect(manual.getByLabel('Effective WPM', { exact: true })).toHaveValue('11');
   await manual.getByRole('button', { name: 'Cancel', exact: true }).tap();

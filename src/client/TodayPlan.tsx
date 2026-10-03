@@ -190,40 +190,24 @@ export default function TodayPlan({
           Your full plan <ArrowRight size={14} />
         </button>
       </header>
+      <ClassMeetingCard now={liveNow} accountId={accountId} profile={profile} onLog={onLog} />
       {preparation}
       {nextAction}
-      <ClassMeetingCard now={liveNow} accountId={accountId} profile={profile} onLog={onLog} />
-      {!loading && curriculum && (
-        <p className="today-plan-curriculum">
-          {curriculum.title.replace('CW Academy ', '')} · syllabus v{curriculum.version}
-          <a href={syllabusUrl ?? curriculum.sourceUrl} target="_blank" rel="noreferrer">
-            {syllabusUrl ? `Session ${plan.nextMeeting!.lesson} syllabus` : 'Official syllabus'}{' '}
-            <ExternalLink size={12} />
-          </a>
-        </p>
-      )}
       {!loading && !profile.classSchedule && plan.nextMeeting && (
-        <>
-          <div className="today-plan-next-class">
-            <CalendarDays size={15} />
-            <span>
-              {plan.nextMeeting.date === today
-                ? 'Class today'
-                : `Next class ${dayLabel(plan.nextMeeting.date)}`}{' '}
-              <strong>Session {plan.nextMeeting.lesson}</strong>
+        <div className="today-plan-next-class">
+          <CalendarDays size={15} />
+          <span>
+            {plan.nextMeeting.date === today
+              ? 'Class today'
+              : `Next class ${dayLabel(plan.nextMeeting.date)}`}{' '}
+            <strong>Session {plan.nextMeeting.lesson}</strong>
+          </span>
+          {plan.currentCount > 0 && (
+            <span className="today-plan-count">
+              {plan.completedCount}/{plan.currentCount} done
             </span>
-            {plan.currentCount > 0 && (
-              <span className="today-plan-count">
-                {plan.completedCount}/{plan.currentCount} done
-              </span>
-            )}
-          </div>
-          <p className="today-plan-session-hint">
-            Record practice under the session shown on the exercise you practiced. Preparation
-            belongs to that upcoming session; reviewing earlier work stays with its earlier session.
-            For general practice, you can leave the session blank.
-          </p>
-        </>
+          )}
+        </div>
       )}
       {pinNotice && (
         <p className="today-plan-dismissed" role="status">
@@ -328,10 +312,7 @@ export default function TodayPlan({
                 Prepare for session {plan.nextMeeting?.lesson}
                 <span>{plan.preparation.length}</span>
               </h3>
-              <p className="today-plan-group-hint">
-                These exercises prepare you for session {plan.nextMeeting?.lesson}. Practice
-                recorded here is linked to that session.
-              </p>
+              <p className="today-plan-group-hint">Practice for your upcoming class.</p>
               {renderTasks(plan.preparation)}
             </div>
           )}
@@ -341,8 +322,7 @@ export default function TodayPlan({
                 Added to today <span>{plan.pinned.length}</span>
               </h3>
               <p className="today-plan-group-hint">
-                These pins last for {today} in {profile.timezone}. Original assignment dates,
-                completion and dismissal stay unchanged. Changing timezone keeps the pin date fixed.
+                Chosen for today · original assignment dates stay the same.
               </p>
               {renderTasks(plan.pinned)}
             </div>
@@ -353,8 +333,7 @@ export default function TodayPlan({
                 Upcoming live practice <span>{plan.liveUpcoming.length}</span>
               </h3>
               <p className="today-plan-group-hint">
-                Plan an eligible event before class. These future exercises do not add to today’s
-                required goal.
+                Choose a window before class. These exercises are for a future day.
               </p>
               {renderTasks(plan.liveUpcoming)}
             </div>
@@ -420,9 +399,38 @@ export default function TodayPlan({
       )}
       {!loading && !error && (
         <footer className="today-plan-footnote">
-          {tasks.length
-            ? 'Open an exercise to practice and mark it complete when you are ready. Completion and recorded practice time stay separate.'
-            : 'Choose your level and class dates once. Your daily plan stays private; you can add your own exercises at any time.'}
+          {curriculum && (
+            <p className="today-plan-curriculum">
+              <a href={syllabusUrl ?? curriculum.sourceUrl} target="_blank" rel="noreferrer">
+                {syllabusUrl ? `Session ${plan.nextMeeting!.lesson} syllabus` : 'Official syllabus'}{' '}
+                <ExternalLink size={12} />
+              </a>
+              <span>
+                {curriculum.title.replace('CW Academy ', '')} · syllabus v{curriculum.version}
+              </span>
+            </p>
+          )}
+          <details className="today-plan-help">
+            <summary>How this plan works</summary>
+            <p>
+              {tasks.length
+                ? 'Open an exercise to practice and mark it complete when you are ready. Completion and recorded practice time stay separate.'
+                : 'Choose your level and class dates once. Your daily plan stays private; you can add your own exercises at any time.'}
+            </p>
+            {plan.nextMeeting && (
+              <p>
+                Record practice under the session shown on the exercise you practiced. Preparation
+                belongs to that upcoming session; reviewing earlier work stays with its earlier
+                session. For general practice, you can leave the session blank.
+              </p>
+            )}
+            {plan.pinned.length > 0 && (
+              <p>
+                Pins last for {today} in {profile.timezone}. Completion and dismissal stay
+                unchanged. Changing timezone keeps the pin date fixed.
+              </p>
+            )}
+          </details>
         </footer>
       )}
     </section>
@@ -482,6 +490,36 @@ function TodayTask({
             {item.todayMinutes > 0 ? ` · ${minuteLabel(item.todayMinutes)} today` : ''}
           </p>
         )}
+        <div className="today-plan-task-actions">
+          {onPractice && !task.done && (
+            <button className="today-plan-practice" onClick={() => onPractice('assigned')}>
+              <Play size={12} />{' '}
+              {task.exercise?.type === 'audio'
+                ? 'Listen & practice'
+                : task.exercise?.type === 'live-event'
+                  ? 'Prepare live practice'
+                  : 'Practice'}
+            </button>
+          )}
+          <button className="today-plan-log" onClick={onLog}>
+            <Plus size={12} />
+            Log practice
+          </button>
+          {onPractice && (
+            <button
+              className={task.done ? 'today-plan-practice' : 'today-plan-review'}
+              onClick={() => onPractice('review')}
+            >
+              <Play size={12} /> Extra review
+            </button>
+          )}
+          {task.link && (
+            <a href={task.link} target="_blank" rel="noreferrer">
+              Open exercise <ExternalLink size={12} />
+            </a>
+          )}
+          <TaskTodayPin task={task} dueDate={dueDate} today={today} busy={pinBusy} onPin={onPin} />
+        </div>
         {task.exercise?.type === 'audio' && (
           <ListeningPassProgress
             savedPasses={item.completedPasses}
@@ -503,36 +541,6 @@ function TodayTask({
             Recording unavailable · see official instructions
           </p>
         )}
-        <div className="today-plan-task-actions">
-          <TaskTodayPin task={task} dueDate={dueDate} today={today} busy={pinBusy} onPin={onPin} />
-          {onPractice && !task.done && (
-            <button className="today-plan-practice" onClick={() => onPractice('assigned')}>
-              <Play size={12} />{' '}
-              {task.exercise?.type === 'audio'
-                ? 'Listen & practice'
-                : task.exercise?.type === 'live-event'
-                  ? 'Prepare live practice'
-                  : 'Practice'}
-            </button>
-          )}
-          {onPractice && (
-            <button
-              className={task.done ? 'today-plan-practice' : 'today-plan-review'}
-              onClick={() => onPractice('review')}
-            >
-              <Play size={12} /> Extra review
-            </button>
-          )}
-          {task.link && (
-            <a href={task.link} target="_blank" rel="noreferrer">
-              Open exercise <ExternalLink size={12} />
-            </a>
-          )}
-          <button onClick={onLog}>
-            <Plus size={12} />
-            Log practice
-          </button>
-        </div>
       </div>
     </li>
   );

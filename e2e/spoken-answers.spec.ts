@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive } from './helpers';
+import { openDisclosure, expectResponsive } from './helpers';
 
 {
   const viewport = { width: 390, height: 844 };
@@ -31,6 +31,7 @@ import { expectResponsive } from './helpers';
     const play = page.getByRole('button', { name: 'Play Morse', exact: true });
     const stop = page.getByRole('button', { name: 'Stop playback', exact: true });
     const media = page.getByLabel('Practice audio', { exact: true });
+    await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
     await expect(
       page.getByRole('checkbox', { name: 'Three repeats + spoken answer' }),
     ).toBeEnabled();
@@ -94,6 +95,7 @@ import { expectResponsive } from './helpers';
       document.dispatchEvent(new Event('visibilitychange'));
     });
     await stop.click();
+    await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
     await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
     await play.click();
     await expect(media).toHaveJSProperty('loop', false);
@@ -107,6 +109,7 @@ import { expectResponsive } from './helpers';
     await page.getByRole('textbox', { name: /^Your word list/ }).fill('UNRECORDED');
     await expect(page.getByRole('alert')).toContainText('No prerecorded answer for UNRECORDED');
     await expect(media).not.toHaveAttribute('src');
+    await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
     await page.getByRole('checkbox', { name: 'Three repeats + spoken answer' }).uncheck();
     await play.click();
     await expect(media).toHaveJSProperty('paused', false);

@@ -1,7 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { expectAccessible, expectResponsive, scopedRequest, signIn } from './helpers';
+import {
+  expectAccessible,
+  expectResponsive,
+  openDisclosure,
+  scopedRequest,
+  signIn,
+} from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -159,6 +165,7 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
   await exactTone.press('Enter');
   await expect(tone).toHaveValue('700');
   await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
+  await openDisclosure(page, 'Round settings');
   await page.getByRole('combobox', { name: 'Target duration', exact: true }).selectOption('10');
   await page.getByRole('button', { name: 'Start code groups', exact: true }).click();
   await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill('ES');

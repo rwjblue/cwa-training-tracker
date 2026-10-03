@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { expectResponsive, scopedRequest, signIn } from './helpers';
+import { openDisclosure, expectResponsive, scopedRequest, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.191' } });
 const rating = (page: Page) => page.getByRole('combobox', { name: /^Performance rating/ });
@@ -21,14 +21,19 @@ test('private monitoring and worked CWT observations retain exact judgments thro
   await page.setViewportSize({ width: 1440, height: 1000 });
   await signIn(page);
   await page.getByRole('button', { name: 'Log practice', exact: true }).press('Enter');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toHaveValue('');
   await page.getByRole('combobox', { name: 'Activity', exact: true }).selectOption('on-air');
   await page.getByLabel(/^Time practiced/).fill('5:00');
   await page.getByLabel('Practice date', { exact: true }).fill('2026-10-02');
   await event(page).selectOption('cwt');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await rating(page).focus();
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toBeFocused();
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await rating(page).press('v');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toHaveValue('very-good');
   await page.getByRole('textbox', { name: /^Callsigns heard/ }).fill('W1SYN\nK2SYN');
   await page.getByRole('textbox', { name: /^Names and exchanges heard/ }).fill('SAM 001');
@@ -60,13 +65,16 @@ test('private monitoring and worked CWT observations retain exact judgments thro
     page.getByText('Actual on-air QSO count: unknown (not recorded)', { exact: true }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Edit On air on 2026-10-02', exact: true }).tap();
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toHaveValue('very-good');
   await expect(count(page)).toHaveValue('');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await rating(page).selectOption('poor');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await exported()).sessions[0].metadata.assessment.performanceRating).toBe('very-good');
   await page.getByRole('button', { name: 'Edit On air on 2026-10-02', exact: true }).tap();
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await rating(page).selectOption('fair');
   await count(page).fill('0');
   await page.getByRole('textbox', { name: /^Callsigns worked/ }).fill('K2SYN');
@@ -82,6 +90,7 @@ test('private monitoring and worked CWT observations retain exact judgments thro
   );
   await page.getByRole('button', { name: 'Save changes', exact: true }).tap();
   await expect(page.getByRole('alert')).toContainText('Synthetic observation save failed. Retry.');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toHaveValue('fair');
   await expect(count(page)).toHaveValue('0');
   await expectResponsive(page, 'assessment-edit-retry');
@@ -169,6 +178,7 @@ test('private monitoring and worked CWT observations retain exact judgments thro
   await expect(event(page)).toHaveCount(0);
   await expect(count(page)).toHaveCount(0);
   await expect(page.getByRole('dialog')).toContainText('historical');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await rating(page).selectOption('fair');
   await page
     .getByRole('dialog')
@@ -213,11 +223,13 @@ test('guest finished generated listening supports explicit ratings without on-ai
     )
     .toBeGreaterThan(1.25);
   await page.getByRole('button', { name: 'Review & save', exact: true }).press('Enter');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toHaveValue('');
   await page.getByRole('combobox', { name: 'Activity', exact: true }).selectOption('on-air');
   await expect(event(page)).toHaveCount(0);
   await expect(count(page)).toHaveCount(0);
   await page.getByRole('combobox', { name: 'Activity', exact: true }).selectOption('listening');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await rating(page).selectOption('good');
   await expectResponsive(page, 'assessment-guest-generated');
   await page.getByRole('button', { name: 'Save practice', exact: true }).press('Enter');

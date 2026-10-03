@@ -47,21 +47,6 @@ export default function LiveAssignmentWindow({
       {window && (
         <p>
           {formatCwEventWindow(window, profile.timezone)} · {profile.timezone}
-          <br />
-          {formatCwEventWindow(window, 'UTC')} · UTC
-        </p>
-      )}
-      {deadline && (
-        <p className="field-hint">
-          Windows must start before {format(deadline.at, profile.timezone)} · {profile.timezone} (
-          {format(deadline.at, 'UTC')} · UTC).
-          {deadline.source === 'class-date-start'
-            ? ' Class time is not set: using the start of the class date conservatively. Set the actual class time in Course settings.'
-            : deadline.source === 'practice-date-end'
-              ? task.exercise.deadline === 'practice-date'
-                ? ' Selected practice-date deadline: using the end of that day.'
-                : ' No applicable dated class: using the end of the practice date.'
-              : ` Associated class start, resolved in ${deadline.timezone}. A window may end after this deadline.`}
         </p>
       )}
       {(status.state === 'unavailable' || status.state === 'needs-deadline') && (
@@ -70,12 +55,29 @@ export default function LiveAssignmentWindow({
           and completion remain available.
         </p>
       )}
-      <a href={definition.rulesUrl} target="_blank" rel="noopener noreferrer">
-        {event} official rules
-      </a>
-      <p className="field-hint">
-        An event window does not verify participation or complete this exercise.
-      </p>
+      <details>
+        <summary>Deadline &amp; event details</summary>
+        {window && <p>{formatCwEventWindow(window, 'UTC')} · UTC</p>}
+        {deadline && (
+          <p className="field-hint">
+            Windows must start before {format(deadline.at, profile.timezone)} · {profile.timezone} (
+            {format(deadline.at, 'UTC')} · UTC).
+            {deadline.source === 'class-date-start'
+              ? ' Class time is not set: using the start of the class date conservatively. Set the actual class time in Course settings.'
+              : deadline.source === 'practice-date-end'
+                ? task.exercise.deadline === 'practice-date'
+                  ? ' Selected practice-date deadline: using the end of that day.'
+                  : ' No applicable dated class: using the end of the practice date.'
+                : ` Associated class start, resolved in ${deadline.timezone}. A window may end after this deadline.`}
+          </p>
+        )}
+        <a href={definition.rulesUrl} target="_blank" rel="noopener noreferrer">
+          {event} official rules
+        </a>
+        <p className="field-hint">
+          An event window does not verify participation or complete this exercise.
+        </p>
+      </details>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 import {
   createCopyAttempt,
   copyToneHz,
@@ -38,6 +38,7 @@ async function openCopy(page: Page) {
 }
 
 async function configureShortGroups(page: Page) {
+  await openDisclosure(page, 'Round settings');
   await page.getByRole('combobox', { name: 'Character set', exact: true }).selectOption('custom');
   await page.getByRole('button', { name: 'Clear selection', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Character E', exact: true }).check();
@@ -107,6 +108,10 @@ async function startWithoutMovingCopyField(
   firstCopy: string,
   countdownSeconds = 2,
 ) {
+  const settings = page.getByText('Round settings', { exact: true });
+  if (await settings.evaluate((summary) => (summary.parentElement as HTMLDetailsElement).open))
+    await settings.click();
+  await expect(settings.locator('..')).not.toHaveAttribute('open', '');
   const answer = page.getByRole('textbox', { name: 'Your copy', exact: true });
   await expect(answer).toBeVisible();
   await expect(answer).toHaveAttribute('readonly', '');
@@ -130,6 +135,9 @@ async function startWithoutMovingCopyField(
   expect(started.readOnly).toBe(false);
   expect(Math.abs(started.y - beforeY)).toBeLessThanOrEqual(1);
   expect(started.audioPosition).toBeLessThan(countdownSeconds);
+  await expect(
+    page.getByText('View round settings', { exact: true }).locator('..'),
+  ).not.toHaveAttribute('open', '');
   await page.keyboard.type(firstCopy);
   await expect(answer).toHaveValue(firstCopy);
   await expect
@@ -316,6 +324,7 @@ test('word copy uses a compact input, replays with a period, and shows each tria
 }) => {
   await openCopy(page);
   await page.getByRole('button', { name: 'Word copy', exact: true }).click();
+  await openDisclosure(page, 'Round settings');
   await page.getByRole('spinbutton', { name: /^Minimum character speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: /^Starting effective speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: 'Maximum word length', exact: false }).fill('1');
@@ -428,6 +437,7 @@ test('a recovered word round finishes through native audio and retries an uncert
   await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill(retainedNotes);
   await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
   await page.getByRole('button', { name: 'Word copy', exact: true }).click();
+  await openDisclosure(page, 'Round settings');
   await page.getByRole('spinbutton', { name: /^Minimum character speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: /^Starting effective speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: 'Maximum word length', exact: false }).fill('1');
@@ -794,10 +804,14 @@ test.describe('copy review inspection and recovery', () => {
       .getByRole('listitem')
       .filter({ has: page.getByRole('heading', { name: title, exact: true }) });
     await assigned.getByRole('button', { name: 'Extra review', exact: true }).click();
+    await openDisclosure(page, 'Round settings');
     const option = page.getByRole('combobox', { name: 'Assignment option', exact: true });
     await option.selectOption('1');
     await expect(option.locator('option:checked')).toContainText('Word copy');
     await page.getByRole('button', { name: 'Start word copy', exact: true }).click();
+    await expect(
+      page.getByText('View round settings', { exact: true }).locator('..'),
+    ).not.toHaveAttribute('open', '');
     await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill('A');
     const audio = page.getByLabel('Copy practice audio', { exact: true });
     const originalAudio = (await audio.elementHandle())!;
@@ -817,6 +831,7 @@ test.describe('copy review inspection and recovery', () => {
     expect(original.draft.purpose).toBe('review');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await openDisclosure(page, 'Browse other views');
       const inspect = page.getByRole('button', { name: 'Inspect Today', exact: true });
       if (width === 390) await inspect.tap();
       else {
@@ -872,6 +887,7 @@ test.describe('copy review inspection and recovery', () => {
       expect(returned.draft.attempt.audioSeconds).toBe(paused.draft.attempt.audioSeconds);
       expect(returned.draft.attempt.answerSeconds).toBe(paused.draft.attempt.answerSeconds);
       expect(returned.draft.attempt.reviewSeconds).toBe(paused.draft.attempt.reviewSeconds);
+      await openDisclosure(page, 'View round settings');
       await expect(option).toHaveValue('1');
     }
     await originalAudio.dispose();
@@ -880,6 +896,7 @@ test.describe('copy review inspection and recovery', () => {
     await expect(option).toHaveValue('1');
     await page.reload();
     await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+    await openDisclosure(page, 'View round settings');
     const copy = page.getByRole('region', { name: 'Copy practice', exact: true });
     await expect(
       copy.getByRole('status').filter({ hasText: 'This round is extra review for' }),
@@ -890,6 +907,7 @@ test.describe('copy review inspection and recovery', () => {
     );
     await page.getByRole('button', { name: 'Today', exact: true }).click();
     await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
+    await openDisclosure(page, 'View round settings');
     await expect(option).toBeDisabled();
     await expect(option).toHaveValue('1');
     await expect(option.locator('option:checked')).toContainText('Word copy');
@@ -916,6 +934,7 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.setViewportSize({ width: 390, height: 844 });
   await openCopy(page);
   await page.getByRole('button', { name: 'Callsign copy', exact: true }).click();
+  await openDisclosure(page, 'Round settings');
   await page.getByRole('spinbutton', { name: /^Minimum character speed/ }).fill('50');
   await page.getByRole('spinbutton', { name: /^Starting effective speed/ }).fill('50');
   await page.getByRole('combobox', { name: 'Callsigns', exact: false }).selectOption('simple');
@@ -969,6 +988,7 @@ test('callsign controls protect replay and blind feedback, and plain text grades
 
   await page.getByRole('button', { name: 'Adjust settings', exact: true }).click();
   await page.getByRole('button', { name: 'Plain text', exact: true }).click();
+  await openDisclosure(page, 'Round settings');
   await page.getByRole('spinbutton', { name: /^Character speed/ }).fill('100');
   await page.getByRole('spinbutton', { name: /^Effective speed/ }).fill('100');
   await page.getByText('Sound and options', { exact: true }).click();

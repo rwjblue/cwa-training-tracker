@@ -1,7 +1,7 @@
 import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { accountRequest, expectResponsive, openDisclosure, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -53,6 +53,7 @@ async function plan(context: BrowserContext) {
 async function minute(page: Page, mobile: boolean) {
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(new Date(now + 1000));
+  await openDisclosure(page, 'Session options and logging');
   await activate(page, page.getByRole('button', { name: 'Start timer', exact: true }), mobile);
   await page.clock.fastForward(60_000);
   await activate(page, page.getByRole('button', { name: 'Pause timer', exact: true }), mobile);
@@ -143,7 +144,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Review notes remain with this minute.');
   const review = page.getByRole('dialog', {
-    name: 'A little progress, worth recording.',
+    name: 'Save practice',
     exact: true,
   });
   await activate(
@@ -344,6 +345,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await expect(
     page.getByRole('heading', { name: 'Your extra review.', exact: true }),
   ).toBeVisible();
+  await openDisclosure(page, 'Session options and logging');
   await activate(
     page,
     page.getByRole('button', { name: 'Log practice manually', exact: true }),

@@ -37,7 +37,6 @@ export default function NextPracticeAction({
   const preparation = plan.preparation[0];
   return (
     <section className="card next-practice" aria-labelledby={titleId}>
-      <span className="eyebrow">ONE STEP AT A TIME</span>
       <h2 id={titleId}>Your next practice</h2>
       {resultPending ? (
         <p>
@@ -48,9 +47,9 @@ export default function NextPracticeAction({
         <>
           <h3>Continue your current exercise</h3>
           <p>
-            Your assignment is open below. Resume when ready, then save your work. Complete the
-            exercise explicitly when it is finished; saving partial practice does not complete it or
-            advance future work.
+            Your assignment is open. Resume when ready, then save your work. Complete the exercise
+            explicitly when it is finished; saving partial practice does not complete it or advance
+            future work.
           </p>
         </>
       ) : plan.activeClass ? (
@@ -72,12 +71,6 @@ export default function NextPracticeAction({
                 : `Earlier work · ${next.dueDate}`}
             {next.task.lesson ? ` · Session ${next.task.lesson}` : ''}
             {next.status === 'started' ? ' · Started' : ''}
-          </p>
-          <p>
-            {finishing
-              ? 'This deliberately finishes your current block using its save policy, then prepares this assignment.'
-              : 'Opens the assignment’s own material. Start playback or the timer when ready.'}{' '}
-            Saving practice and completing homework remain separate.
           </p>
           <button className="button dark" disabled={busy} onClick={onStart}>
             {finishing ? 'Finish & start next block' : 'Start next block'}
@@ -140,17 +133,25 @@ export default function NextPracticeAction({
       {!resultPending && plan.reviews.length > 0 && (
         <section className="familiar-review" aria-label="Optional familiar review">
           <h3>Optional familiar review</h3>
-          <p>
-            Required work is complete or unavailable now. Choose familiar material when useful.
-            These suggestions rotate with saved practice. Review adds daily practice time and
-            preserves its source; it never completes or credits the required assignment.
-          </p>
+          <p>Choose familiar material while required work is complete or unavailable.</p>
+          <details className="next-practice-guidance">
+            <summary>About extra review</summary>
+            <p>
+              These suggestions rotate with saved practice. Review adds daily practice time and
+              preserves its source; it never completes or credits the required assignment.
+            </p>
+          </details>
           <ul>
             {plan.reviews.map(({ task, reason }) => (
               <li key={task.id}>
                 <h4>{task.title}</h4>
                 <p>{reason}</p>
-                <p>{task.notes}</p>
+                {task.notes && (
+                  <details className="next-practice-guidance">
+                    <summary>Exercise instructions</summary>
+                    <p>{task.notes}</p>
+                  </details>
+                )}
                 <button
                   className="button outline"
                   disabled={busy}
@@ -168,6 +169,20 @@ export default function NextPracticeAction({
           Inspect your plan
         </button>
       </div>
+      {next &&
+        !resultPending &&
+        !plan.activeClass &&
+        (next.task.id !== currentTaskId || currentPurpose === 'review') && (
+          <details className="next-practice-guidance">
+            <summary>Practice guidance</summary>
+            <p>
+              {finishing
+                ? 'This deliberately finishes your current block using its save policy, then prepares this assignment.'
+                : 'Opens the assignment’s own material. Start playback or the timer when ready.'}{' '}
+              Saving practice and completing homework remain separate.
+            </p>
+          </details>
+        )}
     </section>
   );
 }

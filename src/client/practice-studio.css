@@ -616,3 +616,286 @@
   background: #fffefa;
   color: #3f5837;
 }
+
+/* The active exercise comes first; notes stay with the material being heard. */
+.studio-page-heading {
+  margin-bottom: 18px;
+}
+.studio-page-heading .eyebrow,
+.studio-page-heading > div > p {
+  display: none;
+}
+.studio-page-heading h1 {
+  font-size: clamp(28px, 3vw, 38px);
+}
+.practice-layout:not(.is-sending) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.practice-aside:not(.is-sending) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.practice-aside:not(.is-sending) .timer-card {
+  text-align: left;
+}
+.timer-card > summary,
+.studio-disclosure > summary,
+.scratchpad-save-details > summary {
+  min-height: 44px;
+  padding-block: 10px;
+  color: #42593a;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.timer-card[open] > summary {
+  margin-bottom: 18px;
+}
+.practice-aside:not(.is-sending) .practice-tip {
+  margin: 0;
+}
+.listening-practice-workspace,
+.recording-practice-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.85fr);
+  gap: 24px;
+  align-items: start;
+}
+.listening-practice-workspace > *,
+.recording-practice-workspace > * {
+  min-width: 0;
+}
+.listening-playback-workspace .playback-toolbar {
+  margin-top: 0;
+}
+.listening-transcript-workspace .trainer-current {
+  min-height: 90px;
+  padding: 14px 0;
+}
+.listening-transcript-workspace .trainer-transmission {
+  padding: 12px 16px;
+}
+.listening-playback-workspace .native-morse-player {
+  margin-block: 12px;
+}
+.listening-transcript-workspace .trainer-round-actions {
+  margin-bottom: 0;
+}
+.listening-transcript-workspace .trainer-round-actions .field-hint {
+  display: none;
+}
+.listening-notes-workspace > .playback-toolbar {
+  margin-top: 0;
+}
+.listening-practice-workspace .studio-scratchpad,
+.recording-practice-workspace .studio-scratchpad {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.studio-scratchpad .field {
+  margin-bottom: 8px;
+}
+.studio-scratchpad .field-hint {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.scratchpad-save-details > summary {
+  min-height: 0;
+  padding-block: 5px;
+  font-size: 12px;
+}
+.studio-disclosure {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #dde4d6;
+}
+.studio-disclosure[open] > summary {
+  margin-bottom: 12px;
+}
+.word-source-editor.studio-disclosure {
+  padding: 8px 0 0;
+  background: transparent;
+}
+.word-practice-options .word-options {
+  margin-block: 8px;
+}
+.listening-trainer > .studio-sound-settings {
+  margin: 16px 0 0;
+  padding: 8px 0 0;
+  border-bottom: 0;
+}
+.studio-tool-picker {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #d8e0d0;
+}
+.studio-tool-picker h2 {
+  margin-bottom: 12px;
+  font-family: Georgia, serif;
+  font-size: 20px;
+  color: #36523a;
+}
+.studio-time-summary {
+  margin-top: 24px;
+}
+.daily-word-listening .daily-word-progress {
+  margin-block: 8px;
+  font-weight: 600;
+}
+.daily-word-listening .daily-word-totals {
+  margin-block: 14px;
+}
+.daily-word-listening > p[role='status'] {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.daily-word-listening > details {
+  margin-top: 12px;
+}
+@media (max-width: 760px) {
+  .listening-practice-workspace,
+  .recording-practice-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .listening-notes-workspace > .playback-toolbar {
+    margin-bottom: 12px;
+  }
+  .studio-card > .section-heading {
+    margin-bottom: 16px;
+  }
+  .studio-card > .section-heading p {
+    display: none;
+  }
+  .studio-quick-actions {
+    margin-bottom: 16px;
+  }
+  .studio-tool-tabs button {
+    min-height: 44px;
+  }
+}
+
+.studio-quick-actions {
+  position: sticky;
+  top: 16px;
+  z-index: 3;
+  box-shadow: 0 3px 12px #20382212;
+}
+@media (max-width: 760px) {
+  .studio-quick-actions {
+    top: 78px;
+  }
+}
+
+.listening-practice-workspace {
+  row-gap: 0;
+}
+.listening-notes-workspace {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.listening-transcript-workspace {
+  grid-column: 1;
+  grid-row: 2;
+}
+@media (max-width: 760px) {
+  .listening-practice-workspace {
+    row-gap: 18px;
+  }
+  .listening-notes-workspace,
+  .listening-transcript-workspace {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .studio-card .practice-generator-controls {
+    margin-bottom: 16px;
+  }
+}
+
+.studio-task-context.is-recording {
+  gap: 8px 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.studio-task-context.is-recording > div {
+  gap: 3px;
+}
+.studio-task-context.is-recording strong {
+  font-size: 18px;
+}
+.studio-task-context.is-recording .eyebrow {
+  font-size: 10px;
+}
+.studio-task-actions {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.assigned-recording > .studio-task-actions {
+  margin-top: 4px;
+}
+.studio-task-actions .studio-task-completion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.studio-task-actions .studio-completion-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.studio-task-context .studio-task-actions .studio-task-completion {
+  padding-top: 0;
+  border-top: 0;
+}
+.recording-workspace-heading {
+  margin-bottom: 10px;
+}
+.recording-workspace-heading p {
+  display: none;
+}
+.recording-exercise-details .studio-task-notes {
+  margin-block: 12px;
+}
+.recording-exercise-details p {
+  margin-block: 10px;
+}
+@media (max-width: 760px) {
+  .studio-task-context.is-recording {
+    padding: 10px 12px;
+  }
+  .studio-task-context.is-recording > div {
+    flex-basis: 100%;
+  }
+  .studio-task-context.is-recording .text-button {
+    min-height: 36px;
+  }
+  .recording-workspace-heading h2 {
+    font-size: 17px;
+  }
+  .assigned-recording {
+    gap: 12px;
+  }
+}
+
+.studio-heading-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.studio-page-heading.is-recording .studio-heading-status {
+  justify-content: flex-end;
+}
+@media (max-width: 760px) {
+  .studio-page-heading.is-recording .studio-heading-status {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+}

@@ -1,7 +1,7 @@
 import { dateInTimezone } from '../src/shared/training';
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import type { PlannedTask } from '../src/shared/plan';
 
@@ -56,7 +56,9 @@ test(`private difficult marks and deliberate replay preserve actual listening at
     );
   };
   await open();
+  await openDisclosure(page, 'Recording options · marks and replay');
   const audio = page.getByLabel('Assigned recording', { exact: true });
+  await openDisclosure(page, 'Recording options · marks and replay');
   const review = page.getByRole('region', { name: 'Recording review', exact: true });
   const label = review.getByRole('textbox', {
     name: 'Difficult mark label (optional)',
@@ -141,11 +143,13 @@ test(`private difficult marks and deliberate replay preserve actual listening at
   await activate(mark);
   await expect(review.getByRole('alert')).toContainText('could not be saved');
 
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await expect(
     review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
   ).toHaveCount(0);
   await expect(label).toHaveValue('');
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(10));
   await expect(label).toHaveValue('Synthetic canceled mark');
   await expect(
@@ -164,8 +168,10 @@ test(`private difficult marks and deliberate replay preserve actual listening at
     review.getByRole('button', { name: 'Retry saving difficult marks', exact: true }),
   ).toBeVisible();
 
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await label.fill('Synthetic other-file draft');
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(10));
   await expect(label).toHaveValue('Synthetic retried mark');
   await navigate('Practice log');
@@ -196,6 +202,7 @@ test(`private difficult marks and deliberate replay preserve actual listening at
     )
     .toBe(4);
   await page.unroute('**/api/account-operations');
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await expect(audio).toHaveAttribute('src', url(18));
   await expect(mark).toBeEnabled();
@@ -204,10 +211,13 @@ test(`private difficult marks and deliberate replay preserve actual listening at
   await label.fill('Synthetic selected unplayed file');
   await activate(mark);
   await expect(review).toContainText('Difficult marks saved to your account.');
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(10));
+  await openDisclosure(page, 'Recording options · marks and replay');
   await expect(review.getByRole('listitem')).toHaveCount(4);
   await navigate('Practice log');
   await navigate('Practice studio');
+  await openDisclosure(page, 'Recording options · marks and replay');
   await expect(review.getByRole('listitem')).toHaveCount(4);
   expect(await label.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(
     44,
@@ -240,6 +250,7 @@ test(`private difficult marks and deliberate replay preserve actual listening at
   expect(recordings[0].seconds).toBeLessThan(12);
   expect(recordings[0].passes.durations[0].completedPasses).toBe(0);
   await open();
+  await openDisclosure(page, 'Recording options · marks and replay');
   await activate(
     review.getByRole('button', {
       name: 'Remove difficult mark at 0:03 — Synthetic paused mark',

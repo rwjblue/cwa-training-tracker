@@ -496,18 +496,35 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
             engine time · {saved ? 'saved' : hasTime ? 'not yet saved' : 'ready to practice'}
           </span>
         </div>
-        <button
-          className="button outline"
-          onClick={stop}
-          disabled={run.status !== 'running' || stopping}
-        >
-          <Square size={14} /> {stopping ? 'Stopping…' : 'Stop run'}
-        </button>
-        <button className="button dark" onClick={review} disabled={!ended || !hasTime || saved}>
-          {saved ? <CheckCheck size={16} /> : <ArrowRight size={16} />}
-          {saved ? 'Run saved' : 'Review & save run'}
-        </button>
+        {run.status !== 'loading' && run.status !== 'ready' && (
+          <>
+            <button
+              className="button outline"
+              onClick={stop}
+              disabled={run.status !== 'running' || stopping}
+            >
+              <Square size={14} /> {stopping ? 'Stopping…' : 'Stop run'}
+            </button>
+            <button className="button dark" onClick={review} disabled={!ended || !hasTime || saved}>
+              {saved ? <CheckCheck size={16} /> : <ArrowRight size={16} />}
+              {saved ? 'Run saved' : 'Review & save run'}
+            </button>
+          </>
+        )}
       </div>
+      {run.status !== 'error' && (
+        <iframe
+          key={run.runId}
+          ref={frame}
+          src={RUNNER_FRAME_URL}
+          title="Web Morse Runner practice simulator"
+          className="runner-frame"
+          style={{ height: frameHeight }}
+          allow="autoplay"
+          sandbox="allow-scripts allow-same-origin allow-downloads"
+          onLoad={configure}
+        />
+      )}
       {progress && (
         <RunnerAssignmentProgress progress={progress} extraReview={purpose === 'review'} />
       )}
@@ -523,19 +540,6 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
           engine-confirmed seconds; a finished run does not mark your entire assignment complete.
         </p>
       </details>
-      {run.status !== 'error' && (
-        <iframe
-          key={run.runId}
-          ref={frame}
-          src={RUNNER_FRAME_URL}
-          title="Web Morse Runner practice simulator"
-          className="runner-frame"
-          style={{ height: frameHeight }}
-          allow="autoplay"
-          sandbox="allow-scripts allow-same-origin allow-downloads"
-          onLoad={configure}
-        />
-      )}
       {ended && (
         <div className="runner-results">
           <h3>

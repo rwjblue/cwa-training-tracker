@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.108' } });
 
@@ -120,6 +120,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(page.locator('.timer-readout')).toHaveText(hiddenElapsed!);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   await activate(
@@ -169,9 +170,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const dialog = page.getByRole('dialog');
   await expect(dialog).toHaveCSS('opacity', '1');
-  await expect(
-    dialog.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
-  ).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect.poll(() => dialog.evaluate((item) => item.scrollTop)).toBe(0);
 
   await page.keyboard.press('Shift+Tab');
@@ -183,6 +182,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
   await expect(dialog).toHaveCount(0);
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   await expect(dialog.getByText(/^Measured \d+\.\d{2} seconds/)).toHaveText(measured!);
+  await openDisclosure(dialog, 'Adjust measured time');
   await dialog.getByRole('checkbox', { name: 'Correct measured time', exact: true }).check();
   await dialog.getByLabel(/^Corrected total time/).fill('0:30');
   await dialog
@@ -240,9 +240,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
   await activate(
     page.getByRole('button', { name: `Edit Listening on ${saved.date}`, exact: true }),
   );
-  await expect(
-    dialog.getByRole('heading', { name: 'A closer look at your practice.', exact: true }),
-  ).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Edit practice', exact: true })).toBeFocused();
   await expect.poll(() => dialog.evaluate((item) => item.scrollTop)).toBe(0);
   await dialog.getByLabel(/^Corrected recall time/).fill('0:18');
   await page.route(

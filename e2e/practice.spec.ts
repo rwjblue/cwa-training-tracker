@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { expectAccessible, signIn } from './helpers';
+import { openDisclosure, expectAccessible, signIn } from './helpers';
 
 test('practice preferences persist and generated material follows exact selected lengths', async ({
   page,
@@ -77,6 +77,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
 }) => {
   await signIn(page);
   await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('heading', { name: 'Time your practice.' })).toBeVisible();
   await page.addStyleTag({
     content: '*,*::before,*::after{animation:none!important;transition:none!important}',
@@ -84,6 +85,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   const time = new Date('2026-09-29T12:00:00Z');
   await page.clock.install({ time });
   await page.clock.pauseAt(new Date(time.getTime() + 1000));
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
   await page.clock.fastForward(83_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
@@ -95,7 +97,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   ).toBeEnabled();
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
   await page.getByRole('button', { name: 'Review & save 01:23', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('1:23');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page).toHaveURL(/#practice$/);
@@ -109,8 +111,9 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Copied the final call.');
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Log practice manually', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('2:05');
   const submitted: unknown[] = [];
   page.on('request', (request) => {
@@ -176,6 +179,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
   await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await openDisclosure(page, 'Session options and logging');
   await expect(
     page.getByRole('button', { name: 'Review & save session', exact: true }),
   ).toBeDisabled();
@@ -203,11 +207,14 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(timed.metadata.elapsedSeconds).toBe(125);
   expect(timed.metadata.scratchpad).toBe('Copied the final call.');
   expect(timed.source).toBe('morse');
+  await openDisclosure(page, 'Session options and logging');
   await expect(
     page.getByRole('button', { name: 'Review & save session', exact: true }),
   ).toBeDisabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeEnabled();
 
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Log practice manually', exact: true }).click();
   await page.getByLabel(/^Time practiced/).fill('7');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
@@ -219,7 +226,8 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.clock.resume();
   await page.getByRole('button', { name: 'Practice log', exact: true }).click();
   await page.getByRole('button', { name: `Edit Head copy on ${timed.date}`, exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Edit practice', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Save changes', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#logbook$/);
@@ -235,6 +243,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Unsaved copy notes',
   );
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Reset session', exact: true }).click();
   await page.getByRole('button', { name: 'Discard & reset', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
@@ -250,6 +259,7 @@ test('word and QSO trainers expose the complete material and remember listening 
   await page.getByText('View word list', { exact: true }).click();
   const vocabulary = page.locator('.trainer-catalog p');
   expect((await vocabulary.innerText()).trim().split(/\s+/)).toHaveLength(70);
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
   await page.getByRole('button', { name: 'Reveal text', exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
@@ -259,13 +269,16 @@ test('word and QSO trainers expose the complete material and remember listening 
   await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toBeVisible();
   await list.selectOption('common-30');
   expect((await vocabulary.innerText()).trim().split(/\s+/)).toHaveLength(30);
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .fill('2');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .press('Enter');
   await page.reload();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await expect(list).toHaveValue('common-30');
   await expect(
     page.getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true }),

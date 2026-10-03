@@ -33,6 +33,20 @@
   font-size: 13px;
   line-height: 1.8;
 }
+.curriculum-scheduling {
+  margin-top: 12px;
+  color: #526353;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.curriculum-scheduling summary {
+  min-height: 44px;
+  padding-block: 12px;
+  cursor: pointer;
+}
+.curriculum-scheduling p {
+  margin-block: 10px;
+}
 @media (max-width: 600px) {
   .curriculum-overview {
     padding: 20px;

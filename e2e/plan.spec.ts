@@ -26,7 +26,8 @@ test('private homework supports completion, reporting, and deletion without losi
   ).toBeVisible();
   await page.getByRole('button', { name: 'Log practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Save practice', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);

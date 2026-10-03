@@ -103,7 +103,7 @@ import {
   validatePracticeSession,
   getPracticePurpose,
 } from '../shared/training';
-import { evidenceTime, sessionEvidence, type PracticeEvidence } from '../shared/practice-evidence';
+import { evidenceTime, sessionEvidence, practiceSessionEvidenceDetails, type PracticeEvidence } from '../shared/practice-evidence';
 import { EvidenceSummary, PracticeEvidenceDetails } from './PracticeEvidenceDetails';
 import { api, ApiError, getEntries, setApiAccount, type Passkey, type User } from './api';
 import {
@@ -1577,7 +1577,10 @@ function App() {
                   hidden={page !== 'practice'}
                   inert={page !== 'practice' || navigationBusy}
                 >
-                  <div className="practice-view-actions" aria-label="Inspect other views">
+                  <details className="practice-browse">
+                    <summary>Browse other views</summary>
+                    <p className="field-hint">Your current practice stays here, paused while you look around.</p>
+                    <div className="practice-view-actions" aria-label="Inspect other views">
                     <button
                       className="button outline small"
                       disabled={navigationBusy || booting}
@@ -1610,8 +1613,8 @@ function App() {
                         </button>
                       </>
                     )}
-                  </div>
-                  {nextPracticeAction}
+                    </div>
+                  </details>
                   <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                     <PracticeStudio
                       profile={profile}
@@ -1711,6 +1714,7 @@ function App() {
                       }}
                     />
                   </React.Suspense>
+                  {nextPracticeAction}
                 </section>
               )}
               {page === 'practice' && !practiceLaunch && (
@@ -2111,182 +2115,191 @@ function Overview({
           </button>
         </section>
       </div>
-      <section className="stats-grid" aria-label="Practice summary">
-        <Stat
-          icon={Clock3}
-          label="PRACTICE IN 7 DAYS"
-          value={String(Math.round(weekMinutes * 10) / 10)}
-          unit="min"
-          sub={`${weeklyEntries.length} sessions in the last 7 days`}
-        />
-        <Stat
-          icon={Flame}
-          label="CURRENT STREAK"
-          value={String(streak)}
-          unit={streak === 1 ? 'day' : 'days'}
-          sub={streak ? 'Keep the frequency alive' : 'Every new habit starts with one'}
-          orange
-        />
-        <Stat
-          icon={CalendarDays}
-          label="DAYS YOU SHOWED UP"
-          value={String(activeDays)}
-          unit="/ 7"
-          sub="Small steps. Real progress."
-        />
-        <Stat
-          icon={Signal}
-          label="BEST EFFECTIVE SPEED"
-          value={latestSpeed === null ? '—' : String(latestSpeed)}
-          unit="wpm"
-          sub="From this week’s practice"
-        />
-      </section>
-      <div className="overview-bottom-grid">
-        <section className="card weekly-card">
+      <details className="overview-progress">
+        <summary>Recent progress and history</summary>
+        <section className="stats-grid" aria-label="Practice summary">
+          <Stat
+            icon={Clock3}
+            label="PRACTICE IN 7 DAYS"
+            value={String(Math.round(weekMinutes * 10) / 10)}
+            unit="min"
+            sub={`${weeklyEntries.length} sessions in the last 7 days`}
+          />
+          <Stat
+            icon={Flame}
+            label="CURRENT STREAK"
+            value={String(streak)}
+            unit={streak === 1 ? 'day' : 'days'}
+            sub={streak ? 'Keep the frequency alive' : 'Every new habit starts with one'}
+            orange
+          />
+          <Stat
+            icon={CalendarDays}
+            label="DAYS YOU SHOWED UP"
+            value={String(activeDays)}
+            unit="/ 7"
+            sub="Small steps. Real progress."
+          />
+          <Stat
+            icon={Signal}
+            label="BEST EFFECTIVE SPEED"
+            value={latestSpeed === null ? '—' : String(latestSpeed)}
+            unit="wpm"
+            sub="From this week’s practice"
+          />
+        </section>
+        <div className="overview-bottom-grid">
+          <section className="card weekly-card">
+            <div className="section-heading">
+              <div>
+                <h2>The shape of your practice</h2>
+                <p>A little consistency goes a long way.</p>
+              </div>
+              <span className="chip">
+                <CalendarDays size={13} /> Last 7 days
+              </span>
+            </div>
+            {entries.some((entry) => entry.id.startsWith('lcwo-estimate:')) && (
+              <p className="lcwo-estimate-note">
+                Practice totals include explicitly estimated LCWO group time. Inspect source results
+                in Practice log for the per-result assumption and overlap checks.
+              </p>
+            )}
+            <div className="chart-legend">
+              <span>
+                <i className="legend-dot green-dot" /> Practice time
+              </span>
+              <span>
+                <i className="legend-dash" /> Personal target · {dailyGoal} min
+              </span>
+            </div>
+            <div className="practice-chart">
+              <div className="chart-y-axis">
+                <span>{chartMax}m</span>
+                <span>{Math.round(chartMax / 2)}m</span>
+                <span>0</span>
+              </div>
+              <div className="chart-plot">
+                <div className="chart-gridline line-top" />
+                <div className="chart-gridline line-middle" />
+                <div className="chart-gridline line-bottom" />
+                <div
+                  className="chart-goal"
+                  style={{ bottom: `${(dailyGoal / chartMax) * 100}%` }}
+                />
+                {days.map((day) => {
+                  const minutes = practiceEntries
+                    .filter((e) => e.date === day)
+                    .reduce((n, e) => n + e.minutes, 0);
+                  return (
+                    <div
+                      className={`chart-column ${day === today ? 'today-column' : ''}`}
+                      key={day}
+                    >
+                      <div className="bar-area">
+                        <div
+                          className={`chart-bar ${day === today ? 'today-bar' : ''}`}
+                          style={{
+                            height: `${Math.max(minutes ? 3 : 0, (minutes / chartMax) * 100)}%`,
+                          }}
+                          title={`${prettyDate(day)}: ${minutes} minutes`}
+                        >
+                          <span>{Math.round(minutes * 10) / 10}m</span>
+                        </div>
+                      </div>
+                      <span className="chart-day">
+                        {day === today
+                          ? 'Today'
+                          : new Date(`${day}T12:00:00`).toLocaleDateString(undefined, {
+                              weekday: 'short',
+                            })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="chart-bottom">
+              <span>
+                <TrendingUp size={15} />{' '}
+                {activeDays >= 5
+                  ? 'You’re building a habit worth keeping.'
+                  : 'A few minutes today is a step forward.'}
+              </span>
+              {demo && <span className="sample-label">SAMPLE DATA</span>}
+            </div>
+          </section>
+          <section className="card course-preview">
+            <div className="section-heading">
+              <h2>Your academy path</h2>
+              <BookOpen size={18} />
+            </div>
+            <span className="level-tag">{level.label.toUpperCase()}</span>
+            <h3>One sound at a time.</h3>
+            <p>{level.description}</p>
+            <div className="course-mini-path">
+              <span className="path-stop" />
+              <span />
+              <span className="path-stop" />
+              <span />
+              <span className="path-stop" />
+              <span />
+              <span className="path-stop" />
+            </div>
+            <div className="course-preview-caption">
+              <span>Build the foundation</span>
+              <span>Find your fluency</span>
+            </div>
+            <a
+              className="resource-link"
+              href="https://cwops.org/cw-academy/cw-academy-student-resources/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>
+                Official student resources<small>Curriculum, tools & assignments</small>
+              </span>
+              <ExternalLink size={16} />
+            </a>
+            <button className="text-button" onClick={() => navigate('course')}>
+              Explore the academy guide <ArrowRight size={14} />
+            </button>
+          </section>
+        </div>
+        <section className="card recent-card">
           <div className="section-heading">
             <div>
-              <h2>The shape of your practice</h2>
-              <p>A little consistency goes a long way.</p>
+              <h2>Recent practice</h2>
+              <p>Every session is a small step forward.</p>
             </div>
-            <span className="chip">
-              <CalendarDays size={13} /> Last 7 days
-            </span>
+            <button className="text-button" onClick={() => navigate('logbook')}>
+              View practice log <ArrowRight size={15} />
+            </button>
           </div>
-          {entries.some((entry) => entry.id.startsWith('lcwo-estimate:')) && (
-            <p className="lcwo-estimate-note">
-              Practice totals include explicitly estimated LCWO group time. Inspect source results
-              in Practice log for the per-result assumption and overlap checks.
-            </p>
+          {entries.length ? (
+            <div className="recent-list">
+              {entries
+                .slice()
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .slice(0, 3)
+                .map((entry) => (
+                  <SessionRow key={entry.id} entry={entry} />
+                ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={BookOpen}
+              title="Your story starts with one session."
+              description="Log a few minutes of listening, sending, or time on the air."
+              action={
+                <button className="button outline" onClick={() => openLog()}>
+                  <Plus size={15} /> Log your first practice
+                </button>
+              }
+            />
           )}
-          <div className="chart-legend">
-            <span>
-              <i className="legend-dot green-dot" /> Practice time
-            </span>
-            <span>
-              <i className="legend-dash" /> Personal target · {dailyGoal} min
-            </span>
-          </div>
-          <div className="practice-chart">
-            <div className="chart-y-axis">
-              <span>{chartMax}m</span>
-              <span>{Math.round(chartMax / 2)}m</span>
-              <span>0</span>
-            </div>
-            <div className="chart-plot">
-              <div className="chart-gridline line-top" />
-              <div className="chart-gridline line-middle" />
-              <div className="chart-gridline line-bottom" />
-              <div className="chart-goal" style={{ bottom: `${(dailyGoal / chartMax) * 100}%` }} />
-              {days.map((day) => {
-                const minutes = practiceEntries
-                  .filter((e) => e.date === day)
-                  .reduce((n, e) => n + e.minutes, 0);
-                return (
-                  <div className={`chart-column ${day === today ? 'today-column' : ''}`} key={day}>
-                    <div className="bar-area">
-                      <div
-                        className={`chart-bar ${day === today ? 'today-bar' : ''}`}
-                        style={{
-                          height: `${Math.max(minutes ? 3 : 0, (minutes / chartMax) * 100)}%`,
-                        }}
-                        title={`${prettyDate(day)}: ${minutes} minutes`}
-                      >
-                        <span>{Math.round(minutes * 10) / 10}m</span>
-                      </div>
-                    </div>
-                    <span className="chart-day">
-                      {day === today
-                        ? 'Today'
-                        : new Date(`${day}T12:00:00`).toLocaleDateString(undefined, {
-                            weekday: 'short',
-                          })}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="chart-bottom">
-            <span>
-              <TrendingUp size={15} />{' '}
-              {activeDays >= 5
-                ? 'You’re building a habit worth keeping.'
-                : 'A few minutes today is a step forward.'}
-            </span>
-            {demo && <span className="sample-label">SAMPLE DATA</span>}
-          </div>
         </section>
-        <section className="card course-preview">
-          <div className="section-heading">
-            <h2>Your academy path</h2>
-            <BookOpen size={18} />
-          </div>
-          <span className="level-tag">{level.label.toUpperCase()}</span>
-          <h3>One sound at a time.</h3>
-          <p>{level.description}</p>
-          <div className="course-mini-path">
-            <span className="path-stop" />
-            <span />
-            <span className="path-stop" />
-            <span />
-            <span className="path-stop" />
-            <span />
-            <span className="path-stop" />
-          </div>
-          <div className="course-preview-caption">
-            <span>Build the foundation</span>
-            <span>Find your fluency</span>
-          </div>
-          <a
-            className="resource-link"
-            href="https://cwops.org/cw-academy/cw-academy-student-resources/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <span>
-              Official student resources<small>Curriculum, tools & assignments</small>
-            </span>
-            <ExternalLink size={16} />
-          </a>
-          <button className="text-button" onClick={() => navigate('course')}>
-            Explore the academy guide <ArrowRight size={14} />
-          </button>
-        </section>
-      </div>
-      <section className="card recent-card">
-        <div className="section-heading">
-          <div>
-            <h2>Recent practice</h2>
-            <p>Every session is a small step forward.</p>
-          </div>
-          <button className="text-button" onClick={() => navigate('logbook')}>
-            View practice log <ArrowRight size={15} />
-          </button>
-        </div>
-        {entries.length ? (
-          <div className="recent-list">
-            {entries
-              .slice()
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 3)
-              .map((entry) => (
-                <SessionRow key={entry.id} entry={entry} />
-              ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={BookOpen}
-            title="Your story starts with one session."
-            description="Log a few minutes of listening, sending, or time on the air."
-            action={
-              <button className="button outline" onClick={() => openLog()}>
-                <Plus size={15} /> Log your first practice
-              </button>
-            }
-          />
-        )}
-      </section>
+      </details>
     </>
   );
 }
@@ -3238,7 +3251,12 @@ function SessionModal({
       kind: form.kind,
       minutes,
       notes: form.notes,
-      metadata: { ...metadataFromForm(form), ...(initial.metadata?.instructorMaterial && form.context !== 'class' ? { materialCompleted: form.materialCompleted } : {}) },
+      metadata: {
+        ...metadataFromForm(form),
+        ...(initial.metadata?.instructorMaterial && form.context !== 'class'
+          ? { materialCompleted: form.materialCompleted }
+          : {}),
+      },
       context: form.context,
       source: initial.source ?? 'manual',
     };
@@ -3339,20 +3357,15 @@ function SessionModal({
   };
   return (
     <Modal
-      title={isExisting ? 'A closer look at your practice.' : 'A little progress, worth recording.'}
+      title={isExisting ? 'Edit practice' : 'Save practice'}
       onClose={close}
       wide
-      initialFocus={
-        evidence?.type === 'runner' ||
-        (evidence?.type === 'timed' && (evidence.generatedListening || evidence.recordings.length))
-          ? 'heading'
-          : saveButton
-      }
+      initialFocus="heading"
     >
       <p className="modal-intro">
         {copyAttempt || evidence
-          ? 'Your measured time and results stay with this attempt. Add notes and choose where to record it.'
-          : 'Capture what you practiced and how it felt. The details are up to you.'}
+          ? 'Your time and results are recorded. Add notes, then save.'
+          : 'Record your practice. Add any details you want to keep.'}
       </p>
       {getPracticePurpose(initial) === 'review' && (
         <p className="session-purpose">
@@ -3363,24 +3376,23 @@ function SessionModal({
           It does not add to the assignment’s required practice.
         </p>
       )}
-      {copyAttempt && <CopyResult attempt={copyAttempt} />}
-      {evidence && !initial.metadata?.externalResult && <EvidenceSummary evidence={evidence} />}
-      {evidence && initial.metadata?.externalResult && (
-        <PracticeEvidenceDetails entry={initial} expanded />
-      )}
-      {attributedRunner && (
-        <p className="field-hint">
-          Practice date follows the accepted run start in its captured timezone. Result creation is
-          the acknowledged end; review and upload do not change that date.
-        </p>
-      )}
       {draftError && (
         <p className="alert error" role="alert">
           {draftError}
         </p>
       )}
-      {!evidence && <PracticeEvidenceDetails entry={initial} expanded />}
-      <form onSubmit={save} aria-busy={busy}>
+      <form
+        className="practice-review-form"
+        onSubmit={save}
+        aria-busy={busy}
+        onInvalidCapture={(event) => {
+          let parent = (event.target as HTMLElement).parentElement;
+          while (parent) {
+            if (parent instanceof HTMLDetailsElement) parent.open = true;
+            parent = parent.parentElement;
+          }
+        }}
+      >
         <fieldset
           className="session-form-fields"
           disabled={busy || (!isExisting && Boolean(frozenEntry.current))}
@@ -3441,71 +3453,203 @@ function SessionModal({
               </select>
             </label>
           </div>
-          <p id={sessionHelpId} className="field-hint">
+          <span id={sessionHelpId} className="sr-only">
             Choose the session whose exercises you practiced: the upcoming session for preparation,
             or the earlier session for review. Logging from an exercise selects its session for you.
             Leave this blank for general practice.
-          </p>
-          {!(canCaptureExternal && manualDraft.externalKind) && (
-            <div className="form-grid three">
+          </span>
+          <label className="field">
+            Notes <span className="label-hint">optional</span>
+            <textarea
+              value={form.notes}
+              onChange={(e) => update('notes', e.target.value)}
+              maxLength={10000}
+              rows={3}
+              placeholder="What clicked? What would you like to try next time?"
+            />
+          </label>
+          {(form.scratchpad || typeof initial.metadata?.scratchpad === 'string') && (
+            <label className="field">
+              Scratchpad
+              <textarea
+                value={form.scratchpad}
+                onChange={(event) => update('scratchpad', event.target.value)}
+                maxLength={10000}
+                rows={5}
+              />
+            </label>
+          )}
+          {initial.metadata?.instructorMaterial && form.context !== 'class' && (
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={form.materialCompleted}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, materialCompleted: event.target.checked }))
+                }
+              />{' '}
+              I completed this material’s preparation
+            </label>
+          )}
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              disabled={!!initial.metadata?.instructorMaterial}
+              checked={form.context === 'class'}
+              onChange={(e) => update('context', e.target.checked ? 'class' : 'practice')}
+            />{' '}
+            This was a class meeting <span>(kept separate from practice goals)</span>
+          </label>
+          <details
+            className="review-details"
+            open={Boolean(initial.metadata?.assessment || initial.qsoCount !== undefined)}
+          >
+            <summary>Speed, rating and on-air observations</summary>
+            {!(canCaptureExternal && manualDraft.externalKind) && (
+              <div className="form-grid three">
+                <label className="field">
+                  Character WPM
+                  <input
+                    type="number"
+                    min="1"
+                    max="150"
+                    step="0.1"
+                    placeholder={speedPlaceholder}
+                    value={form.characterWpm}
+                    readOnly={measuredSpeeds}
+                    onChange={(e) => update('characterWpm', e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  Effective WPM
+                  <input
+                    type="number"
+                    min="1"
+                    max={form.characterWpm || 150}
+                    step="0.1"
+                    placeholder={speedPlaceholder}
+                    value={form.effectiveWpm}
+                    readOnly={measuredSpeeds}
+                    onChange={(e) => update('effectiveWpm', e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  Accuracy <span className="label-hint">%</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
+                    value={form.accuracy}
+                    readOnly={Boolean(copyAttempt || evidence?.type === 'runner')}
+                    onChange={(e) => update('accuracy', e.target.value)}
+                  />
+                </label>
+              </div>
+            )}
+            <label className="field">
+              Performance rating <span className="label-hint">optional</span>
+              <select
+                value={form.performanceRating}
+                onChange={(e) => update('performanceRating', e.target.value)}
+              >
+                <option value="">Not rated</option>
+                {Object.entries(PERFORMANCE_RATINGS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <span className="field-hint">
+                Your judgment of this practice. Separate from accuracy and historical difficulty.
+              </span>
+            </label>
+            {(canObserveOnAir || form.cwtEvent) && (
               <label className="field">
-                Character WPM
-                <input
-                  type="number"
-                  min="1"
-                  max="150"
-                  step="0.1"
-                  placeholder={speedPlaceholder}
-                  value={form.characterWpm}
-                  readOnly={measuredSpeeds}
-                  onChange={(e) => update('characterWpm', e.target.value)}
-                />
+                Event observations <span className="label-hint">optional</span>
+                <select value={form.cwtEvent} onChange={(e) => update('cwtEvent', e.target.value)}>
+                  <option value="">No event observations</option>
+                  <option value="cwt">CWops Tests (CWT)</option>
+                </select>
               </label>
+            )}
+            {form.cwtEvent && (
+              <>
+                <p className="field-hint">
+                  Record what you heard or worked during CWT. Leave unknown details blank; hearing a
+                  station does not imply working it. Report comments are separate from private
+                  notes.
+                </p>
+                {!canObserveOnAir && (
+                  <p className="alert error" role="alert">
+                    CWT observations require on-air practice. Choose On air or remove the event
+                    observations.
+                  </p>
+                )}
+                <div className="form-grid">
+                  {Object.entries(CWT_OBSERVATION_FIELDS).map(([key, label]) => (
+                    <label className="field" key={key}>
+                      {label} <span className="label-hint">optional</span>
+                      <textarea
+                        value={form[key as keyof CwtObservations]}
+                        onChange={(e) => update(key as keyof CwtObservations, e.target.value)}
+                        maxLength={4000}
+                        rows={2}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+            {canObserveOnAir && (
               <label className="field">
-                Effective WPM
-                <input
-                  type="number"
-                  min="1"
-                  max={form.characterWpm || 150}
-                  step="0.1"
-                  placeholder={speedPlaceholder}
-                  value={form.effectiveWpm}
-                  readOnly={measuredSpeeds}
-                  onChange={(e) => update('effectiveWpm', e.target.value)}
-                />
-              </label>
-              <label className="field">
-                Accuracy <span className="label-hint">%</span>
+                QSO count <span className="label-hint">optional</span>
                 <input
                   type="number"
                   min="0"
-                  max="100"
-                  step="0.1"
-                  placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
-                  value={form.accuracy}
-                  readOnly={Boolean(copyAttempt || evidence?.type === 'runner')}
-                  onChange={(e) => update('accuracy', e.target.value)}
+                  max="100000"
+                  step="1"
+                  value={form.qsoCount}
+                  onChange={(e) => update('qsoCount', e.target.value)}
                 />
+                <span className="field-hint">
+                  Actual on-air contacts only. Blank means unknown; 0 explicitly records no
+                  contacts.
+                </span>
               </label>
-            </div>
-          )}
+            )}
+            {!canObserveOnAir && form.qsoCount !== '' && (
+              <p className="field-hint">
+                Retained {form.kind === 'simulator' ? 'simulated' : 'historical'} count:{' '}
+                {form.qsoCount}. This is not actual on-air contact credit.
+              </p>
+            )}
+          </details>
           {canCaptureExternal && (
-            <ManualPracticeFields
-              draft={manualDraft}
-              captureTiming={canCaptureManual}
-              seconds={manualMinutes === null ? undefined : manualMinutes * 60}
-              onChange={(draft) => {
-                setManualDraft(draft);
-                setError('');
-                if (draft.externalKind === 'morse-runner')
-                  setForm((value) => ({ ...value, kind: 'simulator' }));
-                else if (draft.externalKind && form.kind === 'on-air')
-                  setForm((value) => ({ ...value, kind: 'head-copy' }));
-              }}
-            />
+            <details
+              className="review-details"
+              open={Boolean(initial.metadata?.externalResult || initial.metadata?.manualTiming)}
+            >
+              <summary>External results and exact timing</summary>
+              <ManualPracticeFields
+                draft={manualDraft}
+                captureTiming={canCaptureManual}
+                seconds={manualMinutes === null ? undefined : manualMinutes * 60}
+                onChange={(draft) => {
+                  setManualDraft(draft);
+                  setError('');
+                  if (draft.externalKind === 'morse-runner')
+                    setForm((value) => ({ ...value, kind: 'simulator' }));
+                  else if (draft.externalKind && form.kind === 'on-air')
+                    setForm((value) => ({ ...value, kind: 'head-copy' }));
+                }}
+              />
+            </details>
           )}
           {evidence?.type === 'timed' && (
-            <>
+            <details className="review-details" open={Boolean(evidence.correction)}>
+              <summary>Adjust measured time</summary>
               <p id="recall-correction-help" className="field-hint">
                 Recall time is included in total practice time. Correct either value if an
                 interruption left time uncounted; measured listening stays recorded separately.
@@ -3554,115 +3698,8 @@ function SessionModal({
                   </label>
                 </div>
               )}
-            </>
+            </details>
           )}
-          <label className="field">
-            Performance rating <span className="label-hint">optional</span>
-            <select
-              value={form.performanceRating}
-              onChange={(e) => update('performanceRating', e.target.value)}
-            >
-              <option value="">Not rated</option>
-              {Object.entries(PERFORMANCE_RATINGS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <span className="field-hint">
-              Your judgment of this practice. Separate from accuracy and historical difficulty.
-            </span>
-          </label>
-          {(canObserveOnAir || form.cwtEvent) && (
-            <label className="field">
-              Event observations <span className="label-hint">optional</span>
-              <select value={form.cwtEvent} onChange={(e) => update('cwtEvent', e.target.value)}>
-                <option value="">No event observations</option>
-                <option value="cwt">CWops Tests (CWT)</option>
-              </select>
-            </label>
-          )}
-          {form.cwtEvent && (
-            <>
-              <p className="field-hint">
-                Record what you heard or worked during CWT. Leave unknown details blank; hearing a
-                station does not imply working it. Report comments are separate from private notes.
-              </p>
-              {!canObserveOnAir && (
-                <p className="alert error" role="alert">
-                  CWT observations require on-air practice. Choose On air or remove the event
-                  observations.
-                </p>
-              )}
-              <div className="form-grid">
-                {Object.entries(CWT_OBSERVATION_FIELDS).map(([key, label]) => (
-                  <label className="field" key={key}>
-                    {label} <span className="label-hint">optional</span>
-                    <textarea
-                      value={form[key as keyof CwtObservations]}
-                      onChange={(e) => update(key as keyof CwtObservations, e.target.value)}
-                      maxLength={4000}
-                      rows={2}
-                    />
-                  </label>
-                ))}
-              </div>
-            </>
-          )}
-          {canObserveOnAir && (
-            <label className="field">
-              QSO count <span className="label-hint">optional</span>
-              <input
-                type="number"
-                min="0"
-                max="100000"
-                step="1"
-                value={form.qsoCount}
-                onChange={(e) => update('qsoCount', e.target.value)}
-              />
-              <span className="field-hint">
-                Actual on-air contacts only. Blank means unknown; 0 explicitly records no contacts.
-              </span>
-            </label>
-          )}
-          {!canObserveOnAir && form.qsoCount !== '' && (
-            <p className="field-hint">
-              Retained {form.kind === 'simulator' ? 'simulated' : 'historical'} count:{' '}
-              {form.qsoCount}. This is not actual on-air contact credit.
-            </p>
-          )}
-          <label className="field">
-            Notes <span className="label-hint">optional</span>
-            <textarea
-              value={form.notes}
-              onChange={(e) => update('notes', e.target.value)}
-              maxLength={10000}
-              rows={3}
-              placeholder="What clicked? What would you like to try next time?"
-            />
-          </label>
-          {(form.scratchpad || typeof initial.metadata?.scratchpad === 'string') && (
-            <label className="field">
-              Scratchpad
-              <textarea
-                value={form.scratchpad}
-                onChange={(event) => update('scratchpad', event.target.value)}
-                maxLength={10000}
-                rows={5}
-              />
-            </label>
-          )}
-          {initial.metadata?.instructorMaterial && form.context !== 'class' && <label className="checkbox-label"><input type="checkbox"
-            checked={form.materialCompleted} onChange={(event) => setForm((previous) => ({ ...previous, materialCompleted: event.target.checked }))} /> I completed this material’s preparation</label>}
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              disabled={!!initial.metadata?.instructorMaterial}
-              checked={form.context === 'class'}
-              onChange={(e) => update('context', e.target.checked ? 'class' : 'practice')}
-            />{' '}
-            This was a class meeting <span>(kept separate from practice goals)</span>
-          </label>
         </fieldset>
         {error && (
           <div className="alert error" role="alert">
@@ -3672,13 +3709,41 @@ function SessionModal({
             )}
           </div>
         )}
+        {(copyAttempt ||
+          evidence ||
+          practiceSessionEvidenceDetails(initial.metadata, initial.evidenceMode, initial.minutes)
+            .length > 0) && (
+          <details className="review-details">
+            <summary>Measured results and practice evidence</summary>
+            {copyAttempt && <CopyResult attempt={copyAttempt} />}
+            {evidence && !initial.metadata?.externalResult && (
+              <EvidenceSummary evidence={evidence} />
+            )}
+            {evidence && initial.metadata?.externalResult && (
+              <PracticeEvidenceDetails entry={initial} expanded />
+            )}
+            {attributedRunner && (
+              <p className="field-hint">
+                Practice date follows the accepted run start in its captured timezone. Result
+                creation is the acknowledged end; review and upload do not change that date.
+              </p>
+            )}
+            {!evidence && <PracticeEvidenceDetails entry={initial} expanded />}
+          </details>
+        )}
         {canStartNextRun && (
           <p className="field-hint">
             Save this result before opening a fresh, paused run with the same settings and practice
             context. Pending uploads stay in your logbook.
           </p>
         )}
-        <div className={canStartNextRun ? 'modal-actions runner-review-actions' : 'modal-actions'}>
+        <div
+          className={
+            canStartNextRun
+              ? 'modal-actions review-actions runner-review-actions'
+              : 'modal-actions review-actions'
+          }
+        >
           <button className="button outline" type="button" onClick={close} disabled={busy}>
             Cancel
           </button>

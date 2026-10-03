@@ -285,7 +285,8 @@ export default function PracticeStudio({
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
   const activeListeningPreferences = listeningPreferences(preferences);
-  const isSending = Boolean(launch?.material) || activity?.type === 'sending' || (!assigned && tool === 'sending');
+  const isSending =
+    Boolean(launch?.material) || activity?.type === 'sending' || (!assigned && tool === 'sending');
   const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
   const [text, setText] = useState(() => {
     const initial = loadPracticePreferences();
@@ -1025,10 +1026,173 @@ export default function PracticeStudio({
       </button>
     </div>
   );
-  const SessionPanel = isSending ? 'details' : 'section';
+  const scratchpadWorkspace = (
+    <div className="studio-scratchpad">
+      <label className="field" htmlFor="practice-scratchpad">
+        Scratchpad
+        <textarea
+          id="practice-scratchpad"
+          rows={5}
+          maxLength={10000}
+          value={scratchpad}
+          onChange={(event) => changeScratchpad(event.target.value)}
+          placeholder={
+            guidance?.scratchpadPrompt ??
+            (isSending
+              ? 'Note difficult characters, spacing, or patterns to revisit…'
+              : 'Jot down what you hear, difficult words, or details to revisit…')
+          }
+          aria-describedby={guidance ? 'scratchpad-prompt scratchpad-help' : 'scratchpad-help'}
+        />
+      </label>
+      {guidance && (
+        <p id="scratchpad-prompt" className="field-hint">
+          {guidance.scratchpadPrompt}
+        </p>
+      )}
+      <p id="scratchpad-help" className="field-hint">
+        {notesRemembered
+          ? 'Included with saved practice. Unsaved notes stay on this device for this tool.'
+          : 'Included with saved practice. Your browser cannot store notes; unsaved notes last until you reload.'}
+      </p>
+      <button
+        className="button outline"
+        disabled={timer.seconds !== 0 || running || !scratchpad.trim()}
+        onClick={saveNotes}
+        aria-describedby="notes-save-help"
+      >
+        Save notes
+      </button>
+      <details className="scratchpad-save-details">
+        <summary>About saving notes</summary>
+        <p id="notes-save-help" className="field-hint">
+          Save nonempty notes at zero time{' '}
+          {accountId ? 'to your private history' : 'on this device'}. This adds no practice time or
+          passes and does not complete an exercise. Use Finish practice or Review &amp; save for
+          measured practice.
+        </p>
+      </details>
+    </div>
+  );
+  const generatedPlaybackControls = (
+    <div className="playback-toolbar">
+      <button className="button dark play-button" onClick={play}>
+        {playing ? (
+          <Square size={16} fill="currentColor" />
+        ) : (
+          <Play size={16} fill="currentColor" />
+        )}
+        {playing ? 'Stop playback' : 'Play Morse'}
+      </button>
+      <span className="playback-note">
+        {activeListeningPreferences.characterWpm} / {activeListeningPreferences.effectiveWpm} WPM
+        <span> · </span>
+        {activeListeningPreferences.tone} Hz
+      </span>
+    </div>
+  );
+  const taskAttribution = launch?.task && (
+    <p className="field-hint">
+      {launch.task.targetMinutes !== undefined && `${launch.task.targetMinutes} min suggested · `}
+      {isCopy
+        ? 'New rounds use this exercise and purpose. A recovered round keeps its original context, shown below.'
+        : extraReview
+          ? 'Saved practice counts toward your daily total and stays linked to this exercise. It does not add to the assignment’s required practice.'
+          : 'Practice as long as you need. Saved time stays linked to this exercise and contributes to assignment progress.'}
+    </p>
+  );
+  const taskActions = launch?.task && (
+    <div className="studio-task-actions">
+      {onTaskCompletion && (
+        <div className="studio-task-completion">
+          {launch.task.done ? (
+            <>
+              <span className="studio-completion-status" role="status">
+                <CheckCheck size={17} /> Exercise completed
+              </span>
+              <button
+                className="text-button"
+                disabled={savingCompletion || savingNavigation || saveFailed}
+                onClick={() => changeCompletion(false)}
+              >
+                {savingCompletion ? 'Reopening…' : 'Reopen exercise'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="button dark"
+                disabled={savingCompletion || savingNavigation || saveFailed}
+                onClick={() => changeCompletion(true)}
+              >
+                <CheckCheck size={17} />
+                {savingCompletion ? 'Completing…' : 'Complete exercise'}
+              </button>
+              {activity?.type !== 'audio' && (
+                <p>
+                  Mark it complete when you’re ready, even if you don’t need another replay. Only
+                  actual practice time is logged.
+                </p>
+              )}
+            </>
+          )}
+          {completionError && (
+            <p className="alert error" role="alert">
+              {completionError}
+            </p>
+          )}
+        </div>
+      )}
+      {onBack && (
+        <button className="text-button" onClick={onBack}>
+          Back to Today <ArrowRight size={14} />
+        </button>
+      )}
+    </div>
+  );
+  const recordingExerciseDetails = launch?.task && (
+    <details className="studio-disclosure recording-exercise-details">
+      <summary>Exercise details</summary>
+      {taskAttribution}
+      {launch.task.notes && (
+        <details className="studio-task-notes">
+          <summary>Exercise instructions</summary>
+          <p>{launch.task.notes}</p>
+        </details>
+      )}
+      {guidance && (
+        <div className="recording-guidance" role="note" aria-label="Listening approach">
+          <p>
+            <strong>{guidance.title}.</strong> {guidance.approach}
+          </p>
+          <p className="field-hint">
+            Follow the original instructions and your advisor’s requirements.
+          </p>
+        </div>
+      )}
+
+      <p className="field-hint">
+        Mark the exercise complete when you’re ready, even if you don’t need another replay. Saving
+        your practice and completing the exercise stay separate; only actual practice time is
+        logged.
+      </p>
+    </details>
+  );
+  const finishPracticeControl = onFinish && (
+    <button
+      className="button outline"
+      disabled={savingNavigation || savingCompletion}
+      onClick={onFinish}
+    >
+      Finish practice <ArrowRight size={14} />
+    </button>
+  );
+  const SessionPanel = 'details';
   return (
     <>
-      <div className="page-heading">
+      <div
+        className={`page-heading studio-page-heading ${activity?.type === 'audio' ? 'is-recording' : ''}`}
+      >
         <div>
           <div className="eyebrow">
             <span className="small-line" /> TUNE IN. TAKE YOUR TIME.
@@ -1048,42 +1212,32 @@ export default function PracticeStudio({
               : 'Copy practice, sending scales, word listening, QSO conversations, Stories, and simulator practice. No account required to practice.'}
           </p>
         </div>
-        <span className="chip">
-          <span className="status-dot" /> {launch?.material ? (launch.materialContext === 'class' ? 'Private material · class time' : 'Private material · practice') : assigned ? 'From your plan' : 'No sign-in needed'}
-        </span>
-      </div>
-      {onFinish && (
-        <div className="trainer-round-actions">
-          <button
-            className="button outline"
-            disabled={savingNavigation || savingCompletion}
-            onClick={onFinish}
-          >
-            Finish practice <ArrowRight size={14} />
-          </button>
-          <p className="field-hint">
-            Visiting another view pauses this block and keeps it here. Return when you’re ready;
-            playback stays paused.
-          </p>
+        <div className="studio-heading-status">
+          <span className="chip">
+            <span className="status-dot" />{' '}
+            {launch?.material
+              ? launch.materialContext === 'class'
+                ? 'Private material · class time'
+                : 'Private material · practice'
+              : assigned
+                ? 'From your plan'
+                : 'No sign-in needed'}
+          </span>
+          {activity?.type === 'audio' && finishPracticeControl}
         </div>
+      </div>
+      {activity?.type !== 'audio' && finishPracticeControl && (
+        <div className="trainer-round-actions">{finishPracticeControl}</div>
       )}
       {launch?.task && (
-        <div className="studio-task-context">
+        <div className={`studio-task-context ${activity?.type === 'audio' ? 'is-recording' : ''}`}>
           <div>
             <span className="eyebrow">
               {isCopy ? 'REQUESTED EXERCISE · ' : ''}
               {extraReview ? 'EXTRA REVIEW' : 'ASSIGNED PRACTICE'}
             </span>
             <strong>{launch.task.title}</strong>
-            <span>
-              {launch.task.targetMinutes !== undefined &&
-                `${launch.task.targetMinutes} min suggested · `}
-              {isCopy
-                ? 'New rounds use this exercise and purpose. A recovered round keeps its original context, shown below.'
-                : extraReview
-                  ? 'Saved practice counts toward your daily total and stays linked to this exercise. It does not add to the assignment’s required practice.'
-                  : 'Practice as long as you need. Saved time stays linked to this exercise and contributes to assignment progress.'}
-            </span>
+            {activity?.type !== 'audio' && taskAttribution}
           </div>
           {launch.task.link && (
             <a
@@ -1096,7 +1250,7 @@ export default function PracticeStudio({
               <ArrowRight size={14} />
             </a>
           )}
-          {launch.task.notes && (
+          {activity?.type !== 'audio' && launch.task.notes && (
             <details className="studio-task-notes">
               <summary>Exercise instructions</summary>
               <p>{launch.task.notes}</p>
@@ -1121,88 +1275,9 @@ export default function PracticeStudio({
                 . Each saved round keeps its own result.
               </p>
             )}
-          {onTaskCompletion && (
-            <div className="studio-task-completion">
-              {launch.task.done ? (
-                <>
-                  <span className="studio-completion-status" role="status">
-                    <CheckCheck size={17} /> Exercise completed
-                  </span>
-                  <button
-                    className="text-button"
-                    disabled={savingCompletion || savingNavigation || saveFailed}
-                    onClick={() => changeCompletion(false)}
-                  >
-                    {savingCompletion ? 'Reopening…' : 'Reopen exercise'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className="button dark"
-                    disabled={savingCompletion || savingNavigation || saveFailed}
-                    onClick={() => changeCompletion(true)}
-                  >
-                    <CheckCheck size={17} />
-                    {savingCompletion ? 'Completing…' : 'Complete exercise'}
-                  </button>
-                  <p>
-                    Mark it complete when you’re ready, even if you don’t need another replay. Only
-                    actual practice time is logged.
-                  </p>
-                </>
-              )}
-              {completionError && (
-                <p className="alert error" role="alert">
-                  {completionError}
-                </p>
-              )}
-            </div>
-          )}
-          {onBack && (
-            <button className="text-button" onClick={onBack}>
-              Back to Today <ArrowRight size={14} />
-            </button>
-          )}
+          {activity?.type !== 'audio' && taskActions}
         </div>
       )}
-      {!assigned && onToolChange && (
-        <div className="studio-tool-tabs" role="group" aria-label="Studio tools">
-          <button
-            className={publicCopy ? 'selected' : ''}
-            aria-pressed={publicCopy}
-            onClick={() => chooseTool('copy')}
-          >
-            Copy practice
-          </button>
-          {(
-            [
-              ['words', 'Word listening'],
-              ['qso', 'QSO practice'],
-              ['stories', 'Stories'],
-              ['free', 'Free practice'],
-              ['sending', 'Sending practice'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              className={!publicRunner && !publicCopy && tool === value ? 'selected' : ''}
-              aria-pressed={!publicRunner && !publicCopy && tool === value}
-              onClick={() => chooseTool(value)}
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            className={publicRunner ? 'selected' : ''}
-            aria-pressed={publicRunner}
-            onClick={() => chooseTool('runner')}
-          >
-            Morse Runner
-          </button>
-        </div>
-      )}
-      <div className="studio-time-summary">{practiceSummary}</div>
       {isCopy ? (
         <CopyTrainer
           ref={copyTrainer}
@@ -1355,7 +1430,9 @@ export default function PracticeStudio({
                 onRateChangeCapture={onMedia}
                 onErrorCapture={onMedia}
               >
-                <div className="section-heading">
+                <div
+                  className={`section-heading ${activity?.type === 'audio' ? 'recording-workspace-heading' : ''}`}
+                >
                   <div>
                     <h2>
                       {isSending
@@ -1387,146 +1464,143 @@ export default function PracticeStudio({
                         ? `${activity.minimumPasses}${activity.maximumPasses && activity.maximumPasses !== activity.minimumPasses ? `–${activity.maximumPasses}` : ''} listening passes assigned.`
                         : 'Listen at the recording’s original speed.'}
                     </p>
-                    {guidance && (
-                      <div
-                        className="recording-guidance"
-                        role="note"
-                        aria-label="Listening approach"
-                      >
-                        <p>
-                          <strong>{guidance.title}.</strong> {guidance.approach}
-                        </p>
-                        <p className="field-hint">
-                          Follow the original instructions and your advisor’s requirements.
-                        </p>
-                      </div>
-                    )}
                     {recordingUrl ? (
                       <>
-                        <audio
-                          key={`${launch?.id}:${recordingUrl}`}
-                          ref={attachRecording}
-                          controls
-                          preload="metadata"
-                          src={recordingUrl}
-                          aria-label="Assigned recording"
-                          data-recording="true"
-                          data-speed={recordingWpm}
-                          controlsList="noplaybackrate"
-                          onRateChange={(event) => {
-                            if (event.currentTarget.playbackRate !== 1)
-                              event.currentTarget.playbackRate = 1;
-                            recordingSession.current.updatePosition();
-                          }}
-                          onPlay={(event) => {
-                            if (
-                              event.currentTarget === recording.current &&
-                              canPractice() &&
-                              !event.currentTarget.paused &&
-                              recordingPlayback.current.allowsNativePlay
-                            ) {
-                              recordingPlayback.current.intended = true;
-                              setPlaying(true);
-                            } else event.currentTarget.pause();
-                          }}
-                          onPlaying={(event) => {
-                            if (
-                              event.currentTarget === recording.current &&
-                              canPractice() &&
-                              !event.currentTarget.paused
-                            ) {
-                              if (recordingPlayback.current.clearCurrentPending())
-                                setRecordingPending(false);
-                              setError('');
-                              claimRecordingSession(event.currentTarget);
+                        <div className="recording-practice-workspace">
+                          <div>
+                            <audio
+                              key={`${launch?.id}:${recordingUrl}`}
+                              ref={attachRecording}
+                              controls
+                              preload="metadata"
+                              src={recordingUrl}
+                              aria-label="Assigned recording"
+                              data-recording="true"
+                              data-speed={recordingWpm}
+                              controlsList="noplaybackrate"
+                              onRateChange={(event) => {
+                                if (event.currentTarget.playbackRate !== 1)
+                                  event.currentTarget.playbackRate = 1;
+                                recordingSession.current.updatePosition();
+                              }}
+                              onPlay={(event) => {
+                                if (
+                                  event.currentTarget === recording.current &&
+                                  canPractice() &&
+                                  !event.currentTarget.paused &&
+                                  recordingPlayback.current.allowsNativePlay
+                                ) {
+                                  recordingPlayback.current.intended = true;
+                                  setPlaying(true);
+                                } else event.currentTarget.pause();
+                              }}
+                              onPlaying={(event) => {
+                                if (
+                                  event.currentTarget === recording.current &&
+                                  canPractice() &&
+                                  !event.currentTarget.paused
+                                ) {
+                                  if (recordingPlayback.current.clearCurrentPending())
+                                    setRecordingPending(false);
+                                  setError('');
+                                  claimRecordingSession(event.currentTarget);
+                                }
+                              }}
+                              onTimeUpdate={() => recordingSession.current.updatePosition()}
+                              onLoadedMetadata={(event) => {
+                                timer.observeRecording(event.currentTarget);
+                                recordingSession.current.updatePosition();
+                              }}
+                              onDurationChange={(event) => {
+                                timer.observeRecording(event.currentTarget);
+                                recordingSession.current.updatePosition();
+                              }}
+                              onSeeked={() => recordingSession.current.updatePosition()}
+                              onPause={(event) => {
+                                if (
+                                  event.currentTarget !== recording.current ||
+                                  !event.currentTarget.paused
+                                )
+                                  return;
+                                if (!event.currentTarget.ended) {
+                                  recordingPlayback.current.cancel();
+                                  setRecordingPending(false);
+                                }
+                                setPlaying(false);
+                                recordingSession.current.setPlaybackState('paused');
+                              }}
+                              onEnded={(event) => {
+                                endRecording(event.currentTarget);
+                              }}
+                              onError={(event) => {
+                                if (event.currentTarget !== recording.current) return;
+                                setError(
+                                  'The recording could not load. Open the official exercise to check its availability.',
+                                );
+                                stopPlayback();
+                                event.currentTarget.pause();
+                                setPlaying(false);
+                                recordingSession.current.release();
+                              }}
+                            />
+                            {recallControls}
+                          </div>
+                          {scratchpadWorkspace}
+                        </div>
+                        {taskActions}
+                        {recordingExerciseDetails}
+                        <details className="studio-disclosure recording-options">
+                          <summary>Recording options · marks and replay</summary>
+                          <RecordingReviewControls
+                            key={`review:${launch?.id}:${recordingUrl}`}
+                            audioRef={recording}
+                            draft={recordingReviewDrafts[recordingReviewKey] ?? { label: '' }}
+                            onDraftChange={changeRecordingReviewDraft}
+                            markSet={currentRecordingMarks}
+                            availableMarks={Math.max(
+                              0,
+                              MAX_TASK_RECORDING_MARKS -
+                                taskRecordingMarks.reduce((sum, set) => sum + set.marks.length, 0),
+                            )}
+                            onSeek={seekRecording}
+                            onSave={
+                              recordingMarksTask &&
+                              officialRecordingIdentity(recordingUrl) !== undefined &&
+                              onRecordingMarksChange
+                                ? changeRecordingMarks
+                                : undefined
                             }
-                          }}
-                          onTimeUpdate={() => recordingSession.current.updatePosition()}
-                          onLoadedMetadata={(event) => {
-                            timer.observeRecording(event.currentTarget);
-                            recordingSession.current.updatePosition();
-                          }}
-                          onDurationChange={(event) => {
-                            timer.observeRecording(event.currentTarget);
-                            recordingSession.current.updatePosition();
-                          }}
-                          onSeeked={() => recordingSession.current.updatePosition()}
-                          onPause={(event) => {
-                            if (
-                              event.currentTarget !== recording.current ||
-                              !event.currentTarget.paused
-                            )
-                              return;
-                            if (!event.currentTarget.ended) {
-                              recordingPlayback.current.cancel();
-                              setRecordingPending(false);
-                            }
-                            setPlaying(false);
-                            recordingSession.current.setPlaybackState('paused');
-                          }}
-                          onEnded={(event) => {
-                            endRecording(event.currentTarget);
-                          }}
-                          onError={(event) => {
-                            if (event.currentTarget !== recording.current) return;
-                            setError(
-                              'The recording could not load. Open the official exercise to check its availability.',
-                            );
-                            stopPlayback();
-                            event.currentTarget.pause();
-                            setPlaying(false);
-                            recordingSession.current.release();
-                          }}
-                        />
-                        <RecordingReviewControls
-                          key={`review:${launch?.id}:${recordingUrl}`}
-                          audioRef={recording}
-                          draft={recordingReviewDrafts[recordingReviewKey] ?? { label: '' }}
-                          onDraftChange={changeRecordingReviewDraft}
-                          markSet={currentRecordingMarks}
-                          availableMarks={Math.max(
-                            0,
-                            MAX_TASK_RECORDING_MARKS -
-                              taskRecordingMarks.reduce((sum, set) => sum + set.marks.length, 0),
-                          )}
-                          onSeek={seekRecording}
-                          onSave={
-                            recordingMarksTask &&
-                            officialRecordingIdentity(recordingUrl) !== undefined &&
-                            onRecordingMarksChange
-                              ? changeRecordingMarks
-                              : undefined
-                          }
-                        />
-                        <label className="checkbox-label course-replay-choice">
-                          <input
-                            type="checkbox"
-                            checked={courseReplay}
-                            onChange={(event) => changeCourseReplay(event.target.checked)}
                           />
-                          <span>Automatically replay required course passes</span>
-                        </label>
-                        <p className="field-hint">
-                          Off by default. Full passes repeat only until the assigned minimum is met.
-                          Extra review pauses between passes. Generated Repeat list is separate.
-                        </p>
-                        {!courseReplayRemembered && (
-                          <p role="status">
-                            This choice applies now, but could not be remembered on this device.
-                            Enable browser storage or free space, then{' '}
-                            <button
-                              className="text-button"
-                              onClick={() => changeCourseReplay(courseReplay)}
-                            >
-                              Retry remembering replay choice
-                            </button>
-                            .
+                          <label className="checkbox-label course-replay-choice">
+                            <input
+                              type="checkbox"
+                              checked={courseReplay}
+                              onChange={(event) => changeCourseReplay(event.target.checked)}
+                            />
+                            <span>Automatically replay required course passes</span>
+                          </label>
+                          <p className="field-hint">
+                            Off by default. Full passes repeat only until the assigned minimum is
+                            met. Extra review pauses between passes. Generated Repeat list is
+                            separate.
                           </p>
-                        )}
-                        {recordingPending && (
-                          <p role="status">Starting listening… Use Pause practice to cancel.</p>
-                        )}
-                        {recallControls}
+                          {!courseReplayRemembered && (
+                            <p role="status">
+                              This choice applies now, but could not be remembered on this device.
+                              Enable browser storage or free space, then{' '}
+                              <button
+                                className="text-button"
+                                onClick={() => changeCourseReplay(courseReplay)}
+                              >
+                                Retry remembering replay choice
+                              </button>
+                              .
+                            </p>
+                          )}
+                          {recordingPending && (
+                            <p role="status">Starting listening… Use Pause practice to cancel.</p>
+                          )}
+                        </details>
                         <ListeningPassProgress
                           savedPasses={savedPassProgress?.completedPasses ?? 0}
                           importedPasses={savedPassProgress?.importedCompletedPasses ?? 0}
@@ -1573,84 +1647,87 @@ export default function PracticeStudio({
                             passes remain; save this block before measuring more passes.
                           </p>
                         )}
-                        {activity.url && (
-                          <RecordingSpeedSelect
-                            assignedUrl={activity.url}
-                            assignedWpm={activity.characterWpm}
-                            selectedUrl={recordingUrl}
-                            onChange={(variant) => {
-                              if (!canPractice()) return;
-                              if (variant.url !== recordingUrl) {
-                                timer.discardRecording(recording.current ?? undefined);
-                                pauseTimer();
-                                setSelectedRecording(variant);
-                                setError('');
-                              }
-                              if (recordingChoiceContext?.assignedWpm !== undefined)
-                                rememberTaskRecording({
-                                  ...recordingChoiceContext,
-                                  assignedWpm: recordingChoiceContext.assignedWpm,
-                                  version: 1,
-                                  selectedUrl: variant.url,
-                                });
-                            }}
-                            taskChoiceControls={
-                              recordingChoiceContext && (
-                                <div className="recording-task-choice">
-                                  <p>
-                                    {taskRecordingPreference.choice
-                                      ? `Remembered for this task: ${recordingSpeeds(taskRecordingPreference.choice.selectedUrl)?.effectiveWpm} WPM.`
-                                      : 'This task uses the recording default on its next visit.'}{' '}
-                                    Task choices are private to{' '}
-                                    {accountId ? 'this account' : 'Guest'} on this device.
-                                  </p>
-                                  <div className="playback-toolbar">
-                                    {currentTaskRecordingChoice() &&
-                                      taskRecordingPreference.pending === undefined &&
-                                      taskRecordingPreference.choice?.selectedUrl !==
-                                        recordingUrl && (
-                                        <button
-                                          className="button outline"
-                                          onClick={() => {
-                                            const choice = currentTaskRecordingChoice();
-                                            if (choice) rememberTaskRecording(choice);
-                                          }}
-                                        >
-                                          Remember current recording for this task
-                                        </button>
-                                      )}
-                                    <button
-                                      className="button outline"
-                                      disabled={
-                                        !taskRecordingPreference.choice &&
-                                        taskRecordingPreference.pending === undefined
-                                      }
-                                      onClick={() => rememberTaskRecording(null)}
-                                    >
-                                      Use recording default next time
-                                    </button>
+                        <details className="studio-disclosure recording-speed-options">
+                          <summary>Choose a recording speed</summary>
+                          {activity.url && (
+                            <RecordingSpeedSelect
+                              assignedUrl={activity.url}
+                              assignedWpm={activity.characterWpm}
+                              selectedUrl={recordingUrl}
+                              onChange={(variant) => {
+                                if (!canPractice()) return;
+                                if (variant.url !== recordingUrl) {
+                                  timer.discardRecording(recording.current ?? undefined);
+                                  pauseTimer();
+                                  setSelectedRecording(variant);
+                                  setError('');
+                                }
+                                if (recordingChoiceContext?.assignedWpm !== undefined)
+                                  rememberTaskRecording({
+                                    ...recordingChoiceContext,
+                                    assignedWpm: recordingChoiceContext.assignedWpm,
+                                    version: 1,
+                                    selectedUrl: variant.url,
+                                  });
+                              }}
+                              taskChoiceControls={
+                                recordingChoiceContext && (
+                                  <div className="recording-task-choice">
+                                    <p>
+                                      {taskRecordingPreference.choice
+                                        ? `Remembered for this task: ${recordingSpeeds(taskRecordingPreference.choice.selectedUrl)?.effectiveWpm} WPM.`
+                                        : 'This task uses the recording default on its next visit.'}{' '}
+                                      Task choices are private to{' '}
+                                      {accountId ? 'this account' : 'Guest'} on this device.
+                                    </p>
+                                    <div className="playback-toolbar">
+                                      {currentTaskRecordingChoice() &&
+                                        taskRecordingPreference.pending === undefined &&
+                                        taskRecordingPreference.choice?.selectedUrl !==
+                                          recordingUrl && (
+                                          <button
+                                            className="button outline"
+                                            onClick={() => {
+                                              const choice = currentTaskRecordingChoice();
+                                              if (choice) rememberTaskRecording(choice);
+                                            }}
+                                          >
+                                            Remember current recording for this task
+                                          </button>
+                                        )}
+                                      <button
+                                        className="button outline"
+                                        disabled={
+                                          !taskRecordingPreference.choice &&
+                                          taskRecordingPreference.pending === undefined
+                                        }
+                                        onClick={() => rememberTaskRecording(null)}
+                                      >
+                                        Use recording default next time
+                                      </button>
+                                    </div>
+                                    {taskRecordingPreference.notice && (
+                                      <p role="status">{taskRecordingPreference.notice}</p>
+                                    )}
+                                    {taskRecordingPreference.pending !== undefined && (
+                                      <button
+                                        className="text-button"
+                                        onClick={() => {
+                                          const pending = taskRecordingPreference.pending;
+                                          if (pending !== undefined) rememberTaskRecording(pending);
+                                        }}
+                                      >
+                                        {taskRecordingPreference.pending === null
+                                          ? 'Retry clearing task choice'
+                                          : 'Retry remembering task choice'}
+                                      </button>
+                                    )}
                                   </div>
-                                  {taskRecordingPreference.notice && (
-                                    <p role="status">{taskRecordingPreference.notice}</p>
-                                  )}
-                                  {taskRecordingPreference.pending !== undefined && (
-                                    <button
-                                      className="text-button"
-                                      onClick={() => {
-                                        const pending = taskRecordingPreference.pending;
-                                        if (pending !== undefined) rememberTaskRecording(pending);
-                                      }}
-                                    >
-                                      {taskRecordingPreference.pending === null
-                                        ? 'Retry clearing task choice'
-                                        : 'Retry remembering task choice'}
-                                    </button>
-                                  )}
-                                </div>
-                              )
-                            }
-                          />
-                        )}
+                                )
+                              }
+                            />
+                          )}
+                        </details>
                         <p className="field-hint">
                           The recording plays directly from CWops. You can pause, seek, and use your
                           device’s audio controls.
@@ -1662,6 +1739,9 @@ export default function PracticeStudio({
                           {activity.unresolved ?? 'This recording is not currently available.'}
                         </p>
                         {recallControls}
+                        {scratchpadWorkspace}
+                        {taskActions}
+                        {recordingExerciseDetails}
                       </>
                     )}
                     {recordingUrl && (
@@ -1676,7 +1756,11 @@ export default function PracticeStudio({
                     )}
                   </div>
                 ) : launch?.material && accountId ? (
-                  <MaterialReader key={launch.material.id} material={launch.material} scope={accountId} />
+                  <MaterialReader
+                    key={launch.material.id}
+                    material={launch.material}
+                    scope={accountId}
+                  />
                 ) : isSending ? (
                   <SendingScales
                     key={launch?.id ?? 'public-sending'}
@@ -1703,6 +1787,13 @@ export default function PracticeStudio({
                     onWordSourceChange={editWordSource}
                     onClearSavedWords={clearSavedWords}
                     onChange={changePreferences}
+                    playbackControls={generatedPlaybackControls}
+                    practiceWorkspace={
+                      <div className="listening-notes-workspace">
+                        {isWordListening && recallControls}
+                        {scratchpadWorkspace}
+                      </div>
+                    }
                     soundSettings={
                       <ListeningSoundSettings
                         preferences={activeListeningPreferences}
@@ -1881,7 +1972,7 @@ export default function PracticeStudio({
                     )}
                   </>
                 )}
-                {!assigned && !isSending && (
+                {!assigned && !isSending && tool === 'free' && (
                   <div className="playback-toolbar">
                     <button
                       className="button dark play-button"
@@ -1895,7 +1986,7 @@ export default function PracticeStudio({
                       )}
                       {playing ? 'Stop playback' : 'Play Morse'}
                     </button>
-                    {tool === 'free' && (
+                    {!assigned && !isSending && tool === 'free' && (
                       <button
                         className="button outline"
                         onClick={() => generate()}
@@ -1911,66 +2002,33 @@ export default function PracticeStudio({
                     </span>
                   </div>
                 )}
-                {isWordListening && recallControls}
-                <p
-                  className="studio-playback-help"
-                  id={activity?.type === 'audio' || isWordListening ? 'recall-policy' : undefined}
-                >
-                  {isWordListening
-                    ? 'Start recall pauses word audio for focused notes. Resume listening stops recall before playback. Recall is included in total practice time, but not the optional listening goal; it pauses when this page is hidden or its timer is delayed.'
-                    : isSending
-                      ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
-                      : assigned
-                        ? activity?.type === 'audio'
-                          ? 'Press Play to count listening time. Start recall pauses the recording for focused notes; Resume listening stops recall before playback. Recall pauses if this page is hidden or the timer is delayed.'
-                          : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
-                        : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
-                </p>
-                <div className="studio-scratchpad">
-                  <label className="field" htmlFor="practice-scratchpad">
-                    Scratchpad
-                    <textarea
-                      id="practice-scratchpad"
-                      rows={5}
-                      maxLength={10000}
-                      value={scratchpad}
-                      onChange={(event) => changeScratchpad(event.target.value)}
-                      placeholder={
-                        guidance?.scratchpadPrompt ??
-                        (isSending
-                          ? 'Note difficult characters, spacing, or patterns to revisit…'
-                          : 'Jot down what you hear, difficult words, or details to revisit…')
-                      }
-                      aria-describedby={
-                        guidance ? 'scratchpad-prompt scratchpad-help' : 'scratchpad-help'
-                      }
-                    />
-                  </label>
-                  {guidance && (
-                    <p id="scratchpad-prompt" className="field-hint">
-                      {guidance.scratchpadPrompt}
-                    </p>
-                  )}
-                  <p id="scratchpad-help" className="field-hint">
-                    {notesRemembered
-                      ? 'Included with saved practice. Unsaved notes stay on this device for this tool.'
-                      : 'Included with saved practice. Your browser cannot store notes; unsaved notes last until you reload.'}
+                <details className="studio-disclosure studio-practice-help">
+                  <summary>Practice and timing help</summary>
+                  <p className="field-hint">
+                    Visiting another view pauses this block and keeps it here. Return when you’re
+                    ready; playback stays paused.
                   </p>
-                  <button
-                    className="button outline"
-                    disabled={timer.seconds !== 0 || running || !scratchpad.trim()}
-                    onClick={saveNotes}
-                    aria-describedby="notes-save-help"
+
+                  <p
+                    className="studio-playback-help"
+                    id={activity?.type === 'audio' || isWordListening ? 'recall-policy' : undefined}
                   >
-                    Save notes
-                  </button>
-                  <p id="notes-save-help" className="field-hint">
-                    Save nonempty notes at zero time{' '}
-                    {accountId ? 'to your private history' : 'on this device'}. This adds no
-                    practice time or passes and does not complete an exercise. Use Finish practice
-                    or Review &amp; save for measured practice.
+                    {isWordListening
+                      ? 'Start recall pauses word audio for focused notes. Resume listening stops recall before playback. Recall is included in total practice time, but not the optional listening goal; it pauses when this page is hidden or its timer is delayed.'
+                      : isSending
+                        ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
+                        : assigned
+                          ? activity?.type === 'audio'
+                            ? 'Press Play to count listening time. Start recall pauses the recording for focused notes; Resume listening stops recall before playback. Recall pauses if this page is hidden or the timer is delayed.'
+                            : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
+                          : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
                   </p>
-                </div>
+                </details>
+                {(assigned && activity?.type !== 'audio') ||
+                isSending ||
+                (!assigned && tool === 'free')
+                  ? scratchpadWorkspace
+                  : null}
                 {isSending && (
                   <p className="sending-save-help">
                     Inspect other views without saving. Finish practice or switch tools to save at
@@ -1992,7 +2050,7 @@ export default function PracticeStudio({
               </section>
               <div className={`practice-aside ${isSending ? 'is-sending' : ''}`}>
                 <SessionPanel className={`card timer-card ${isSending ? 'is-sending' : ''}`}>
-                  {isSending && <summary>Session options and logging</summary>}
+                  <summary>Session options and logging</summary>
                   {!isSending && (
                     <>
                       <div className="card-top">
@@ -2198,7 +2256,8 @@ export default function PracticeStudio({
                   </div>
                 </SessionPanel>
                 {!isSending && (
-                  <section className="practice-tip">
+                  <details className="practice-tip studio-disclosure">
+                    <summary>Listening tip</summary>
                     <span className="eyebrow">A NOTE FROM THE SHACK</span>
                     <h3>Listen for the music.</h3>
                     <p>
@@ -2208,7 +2267,7 @@ export default function PracticeStudio({
                     <div className="morse-word" aria-label="73 in Morse code">
                       − − · · · &nbsp; · · · − −
                     </div>
-                  </section>
+                  </details>
                 )}
               </div>
             </div>
@@ -2221,6 +2280,46 @@ export default function PracticeStudio({
           </fieldset>
         </>
       )}
+      {!assigned && onToolChange && (
+        <div className="studio-tool-picker">
+          <h2>Choose another practice tool</h2>
+          <div className="studio-tool-tabs" role="group" aria-label="Studio tools">
+            <button
+              className={publicCopy ? 'selected' : ''}
+              aria-pressed={publicCopy}
+              onClick={() => chooseTool('copy')}
+            >
+              Copy practice
+            </button>
+            {(
+              [
+                ['words', 'Word listening'],
+                ['qso', 'QSO practice'],
+                ['stories', 'Stories'],
+                ['free', 'Free practice'],
+                ['sending', 'Sending practice'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                className={!publicRunner && !publicCopy && tool === value ? 'selected' : ''}
+                aria-pressed={!publicRunner && !publicCopy && tool === value}
+                onClick={() => chooseTool(value)}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              className={publicRunner ? 'selected' : ''}
+              aria-pressed={publicRunner}
+              onClick={() => chooseTool('runner')}
+            >
+              Morse Runner
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="studio-time-summary">{practiceSummary}</div>
     </>
   );
 }

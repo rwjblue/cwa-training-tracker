@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { addDays, dateInTimezone } from '../src/shared/training';
-import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 
 test('Today brings personal assignments forward and keeps logging separate from completion', async ({
   page,
@@ -69,6 +69,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   });
   await page.clock.install({ time: now });
   await page.clock.pauseAt(new Date(now.getTime() + 1000));
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
   await page.clock.fastForward(420_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
@@ -172,6 +173,7 @@ test('course dates populate Today with playable assignments and preserve linked 
       /WD101[-_]10/i.test(task.exercise.url ?? ''),
   );
   expect(assigned).toBeTruthy();
+  await openDisclosure(panel, 'How this plan works');
   await expect(
     panel.getByText(/Record practice under the session shown on the exercise/),
   ).toBeVisible();
@@ -215,8 +217,31 @@ test('course dates populate Today with playable assignments and preserve linked 
   const row = panel.getByRole('listitem').filter({
     has: page.getByRole('heading', { name: assigned.title, exact: true }),
   });
+  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await page.getByRole('button', { name: 'Free practice', exact: true }).click();
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   const audio = page.getByLabel('Assigned recording', { exact: true });
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'New set', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toHaveCount(0);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    const audioBox = (await audio.boundingBox())!;
+    const notesBox = (await page
+      .getByRole('textbox', { name: 'Scratchpad', exact: true })
+      .boundingBox())!;
+    expect(
+      audioBox.y + audioBox.height,
+      `Assigned playback should fit the first screen at ${width}px`,
+    ).toBeLessThan(width === 390 ? 844 : 1000);
+    expect(
+      Math.abs(notesBox.y - audioBox.y),
+      `Assigned notes should stay beside audio at ${width}px`,
+    ).toBeLessThan(350);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -260,10 +285,12 @@ test('course dates populate Today with playable assignments and preserve linked 
   );
   let listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(page.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
   await expect(page.getByLabel('Effective WPM', { exact: true })).toHaveValue('10');
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue(/^\d+:\d{2}$/);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await openDisclosure(page, 'Choose a recording speed');
   const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
   const fasterUrl = await speed.getByRole('option', { name: /^13 WPM/ }).getAttribute('value');
   expect(fasterUrl).toBeTruthy();
@@ -278,6 +305,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Copied ALICE in OH. Revisit the final sentence.',
   );
+  await openDisclosure(page, 'Recording options · marks and replay');
   await page
     .getByRole('combobox', { name: 'Recording speed default', exact: true })
     .selectOption('next');
@@ -302,9 +330,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.clock.runFor(2_000);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(
-    dialog.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
-  ).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(dialog.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
   await expect(dialog.getByLabel('Effective WPM', { exact: true })).toHaveValue('');
 
@@ -473,6 +499,7 @@ test('an exercise without a time target can be completed and reopened without lo
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expect(panel.getByRole('checkbox')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Practice', exact: true }).click();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeVisible();
   await expect(page.getByText('15:00', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/15 min target/)).toHaveCount(0);
@@ -711,6 +738,7 @@ test('completion retries a failed measured sending save without discarding time 
   const now = new Date();
   await page.clock.install({ time: now });
   await page.clock.pauseAt(new Date(now.getTime() + 1000));
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
   await page.clock.fastForward(4_000);
   await page.evaluate(() => {

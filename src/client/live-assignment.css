@@ -22,3 +22,11 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.live-assignment-window summary {
+  min-height: 44px;
+  padding-block: 12px;
+  cursor: pointer;
+}
+.live-assignment-window details[open] > summary {
+  margin-bottom: 4px;
+}

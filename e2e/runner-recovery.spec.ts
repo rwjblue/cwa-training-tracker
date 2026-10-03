@@ -2,7 +2,13 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import type { PracticeSession } from '../src/shared/training';
-import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  accountRequest,
+  expectAccessible,
+  expectResponsive,
+  signIn,
+} from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -270,21 +276,22 @@ async function retainedResults(page: Page, scope: string) {
     const review = page.getByRole('button', { name: 'Review finished Runner result', exact: true });
     await activate(page, review, mobile);
     const dialog = page.getByRole('dialog');
-    await expect(
-      dialog.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
-    ).toBeFocused();
+    await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
     await expect(dialog.getByLabel('Practice date', { exact: true })).toHaveValue('2026-09-30');
     await expect(dialog.getByLabel('Practice date', { exact: true })).toHaveAttribute(
       'readonly',
       '',
     );
+    await openDisclosure(page, 'Speed, rating and on-air observations');
     await dialog.getByRole('combobox', { name: /^Performance rating/ }).selectOption('fair');
     const notes = 'Synthetic delayed Runner review, keep after cancellation.';
     await dialog.getByLabel(/^Notes/).fill(notes);
     await activate(page, dialog.getByRole('button', { name: 'Cancel', exact: true }), mobile);
     await activate(page, review, mobile);
+    await openDisclosure(page, 'Speed, rating and on-air observations');
     await expect(dialog.getByRole('combobox', { name: /^Performance rating/ })).toHaveValue('fair');
     await expect(dialog.getByLabel(/^Notes/)).toHaveValue(notes);
+    await openDisclosure(dialog, 'Measured results and practice evidence');
     await expect(dialog).toContainText('20 WPM starting speed');
     await expect(dialog).toContainText('24 WPM');
     await expect(dialog).toContainText('America/New_York');

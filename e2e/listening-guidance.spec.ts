@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { accountRequest, expectResponsive, openDisclosure, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import type { PlannedTask } from '../src/shared/plan';
 
@@ -67,6 +67,7 @@ test(`assigned guidance preserves official instructions and optional scratchpad 
         .filter({ hasText: `Session ${task.lesson} · Day ${task.curriculum!.day} ·` })
         .getByRole('button', { name: 'Listen & practice', exact: true }),
     );
+    await openDisclosure(page, 'Exercise details');
     const guidance = page.getByRole('note', { name: 'Listening approach', exact: true });
     await expect(guidance).toContainText(title);
     await expect(guidance).toContainText(/meaning.*fragment/);

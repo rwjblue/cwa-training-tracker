@@ -1,6 +1,6 @@
 import { expect, type Locator, type BrowserContext } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import { DEFAULT_PROFILE, addDays } from '../src/shared/training';
 import { defaultCopyRecipe } from '../src/shared/copy-practice';
@@ -90,6 +90,7 @@ test('next assignment preserves native work through inspection and exact retry b
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   const position = await owner!.evaluate((element: HTMLAudioElement) => element.currentTime);
   expect(await owner!.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
@@ -291,6 +292,7 @@ test('blocked resources, live preparation, class phase and all-complete states s
   await expect(
     page.getByRole('region', { name: 'CWT assignment opportunity', exact: true }),
   ).toContainText('Next eligible CWT window');
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await expect(next).toHaveCount(0);
@@ -377,6 +379,7 @@ test('next activation rechecks a class boundary after finishing without replacin
       .filter({ has: page.getByRole('heading', { name: earlier.title, exact: true }) })
       .getByRole('button', { name: 'Practice', exact: true }),
   );
+  await openDisclosure(page, 'Session options and logging');
   await activate(page.getByRole('button', { name: 'Start timer', exact: true }));
   await page.clock.runFor(1500);
   await activate(page.getByRole('button', { name: 'Pause timer', exact: true }));

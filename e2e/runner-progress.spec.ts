@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 import { createRunnerRun, RUNNER_REVISION } from '../src/shared/runner';
 import type { PlannedTask } from '../src/shared/plan';
 import type { PracticeSession } from '../src/shared/training';
@@ -164,6 +164,7 @@ async function expectTotal(region: Locator, label: string, value: string) {
     await expectTotal(progress, 'Saved time', '10:00');
     await frame.getByRole('button', { name: /Run$/ }).click();
     await expect.poll(() => frame.locator('#clock').textContent()).toMatch(/00:00:0[2-9]/);
+    await openDisclosure(page, 'Browse other views');
     await activate(page, page.getByRole('button', { name: 'Inspect Today', exact: true }), mobile);
     await expect(page.getByRole('heading', { name: 'What should I do today?' })).toBeVisible();
     const retained = await page.evaluate(() =>

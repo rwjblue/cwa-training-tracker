@@ -89,7 +89,7 @@ export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void
         <div>
           <span className="eyebrow">PUBLIC ON-AIR SCHEDULE</span>
           <h1 id="live-practice-title">Live practice</h1>
-          <p>SST, MST and CWT organizer windows. No account needed.</p>
+          <p>Find the next SST, MST or CWT window.</p>
         </div>
         {onReturn && (
           <button className="button outline small" onClick={onReturn}>
@@ -109,7 +109,7 @@ export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void
           </select>
         </label>
         <p>
-          Times shown in <strong>{timezone}</strong>. Organizer recurrence stays in UTC.
+          Times shown in <strong>{timezone}</strong>.
         </p>
         {preferenceFailed && (
           <p role="status">
@@ -147,12 +147,17 @@ export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void
           </p>
         </article>
       </div>
+      <section className="card live-upcoming" aria-labelledby="live-upcoming-title">
+        <h2 id="live-upcoming-title">Upcoming windows</h2>
+        <ol>
+          {agenda.upcoming.slice(1).map((event) => (
+            <li key={event.id}>{occurrence(event)}</li>
+          ))}
+        </ol>
+      </section>
       <section className="card live-calendar" aria-labelledby="live-calendar-title">
         <h2 id="live-calendar-title">Subscribe to the public calendar</h2>
-        <p>
-          Only these organizer windows and public links. Add a subscription to receive schedule
-          updates; an imported file is a snapshot.
-        </p>
+        <p>Add SST, MST and CWT windows to your calendar.</p>
         <div className="live-calendar-actions">
           <a className="button dark" href={feed.replace(/^https?:/, 'webcal:')}>
             Subscribe to calendar
@@ -174,18 +179,17 @@ export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void
           />
         </label>
         <p role="status">{copyStatus}</p>
-        <p>
-          Calendar apps choose their own refresh interval. This feed requests six-hour refreshes;
-          published changes may appear later.
-        </p>
-      </section>
-      <section className="card live-upcoming" aria-labelledby="live-upcoming-title">
-        <h2 id="live-upcoming-title">Upcoming windows</h2>
-        <ol>
-          {agenda.upcoming.slice(1).map((event) => (
-            <li key={event.id}>{occurrence(event)}</li>
-          ))}
-        </ol>
+        <details>
+          <summary>About calendar updates</summary>
+          <p>
+            Only these organizer windows and public links are included. Organizer recurrence stays
+            in UTC. Add a subscription to receive schedule updates; an imported file is a snapshot.
+          </p>
+          <p>
+            Calendar apps choose their own refresh interval. This feed requests six-hour refreshes;
+            published changes may appear later.
+          </p>
+        </details>
       </section>
       <p className="live-agenda-note">
         Schedule verified {CW_EVENT_SCHEDULE.verifiedOn} against the linked organizers. Viewing this

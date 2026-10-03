@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 test('daily time moves once through inspection, queued save, retry and local midnight', async ({
@@ -97,6 +97,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
   await activate(row.getByRole('button', { name: 'Practice', exact: true }));
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
   await page.clock.runFor(2000);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await assertTime('5:00', '0:02', '5:02');
   await page.clock.runFor(1000);
@@ -149,6 +150,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
   await activate(row.getByRole('button', { name: 'Practice', exact: true }));
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
   await page.clock.runFor(6000);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await expect(summary).toContainText('2026-10-02');
   await expect(summary).toContainText('Required goal: 0 min');

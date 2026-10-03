@@ -1,12 +1,14 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.231' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
 const exact = (page: Page, label: string, unit = 'WPM') =>
   page.getByRole('spinbutton', { name: `${label} exact (${unit})`, exact: true });
 async function setExact(page: Page, label: string, value: number, unit = 'WPM') {
+  if (label === 'Extra word pause')
+    await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await exact(page, label, unit).fill(String(value));
   await exact(page, label, unit).press('Enter');
 }
@@ -57,6 +59,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await expect(exact(page, 'Character speed')).toHaveValue('5');
   await expect(exact(page, 'Effective speed')).toHaveValue('3');
   await expect(exact(page, 'Sidetone', 'Hz')).toHaveValue('617');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await expect(exact(page, 'Extra word pause', 'seconds')).toHaveValue('0.3');
   await setExact(page, 'Character speed', 51);
   await expect(
@@ -67,7 +70,9 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await expect(exact(page, 'Effective speed')).toHaveValue('55');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS PARIS PARIS');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   await start(page);
   const slider = page.getByRole('slider', { name: 'Character speed', exact: true });
@@ -140,6 +145,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('55');
   await expect(exact(page, 'Effective speed')).toHaveValue('55');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await expect(exact(page, 'Extra word pause', 'seconds')).toHaveValue('0.3');
   await expect(
     page.getByRole('combobox', { name: 'Character speed preset', exact: true }),
@@ -207,18 +213,20 @@ test('native 55/60 WPM listening survives canceled review and exact save retry i
   await setExact(page, 'Extra word pause', 0.3, 'seconds');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS PARIS PARIS');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   await start(page);
   await pause(page);
   await setExact(page, 'Character speed', 60);
   await setExact(page, 'Effective speed', 60);
-  const before = await media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime);
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).click();
+  // Speed changes finish the current word and its pause at the original timing.
+  // Hear the retimed later words before reviewing evidence for both speeds.
   await expect
-    .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime))
-    .toBeGreaterThan(before + 0.65);
-  await pause(page);
+    .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.ended))
+    .toBe(true);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('55 character / 55 effective WPM');

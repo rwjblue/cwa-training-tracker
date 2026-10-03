@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectResponsive, signIn } from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.227' } });
@@ -24,7 +24,9 @@ test('word selection, stepping and rewind retain state and save only actual hear
   await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E PARIS E');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   const settings = page.locator('details').filter({ has: page.getByText(/^Sound settings ·/) });
   await settings.getByText(/^Sound settings ·/).click();

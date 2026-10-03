@@ -59,16 +59,19 @@ export default function CourseCurriculum({ level }: { level: CourseLevel }) {
         </div>
       </dl>
       <p>{guidance.summary}</p>
-      {guidance.scheduling && <p>{guidance.scheduling}</p>}
-      <p>
-        To use this curriculum in your private plan, choose {details.label} in Course settings and
-        save your first class date and meeting days. Each class’s preparation is scheduled two days
-        before, one day before and on the class date. Changing levels preserves saved progress for
-        when you return.
-      </p>
       <a className="text-button" href={course.resourcesUrl} target="_blank" rel="noreferrer">
         Official practice resources <ExternalLink size={14} />
       </a>
+      <details className="curriculum-scheduling">
+        <summary>How assignments fit your schedule</summary>
+        {guidance.scheduling && <p>{guidance.scheduling}</p>}
+        <p>
+          To use this curriculum in your private plan, choose {details.label} in Course settings and
+          save your first class date and meeting days. Each class’s preparation is scheduled two
+          days before, one day before and on the class date. Changing levels preserves saved
+          progress for when you return.
+        </p>
+      </details>
     </section>
   );
 }

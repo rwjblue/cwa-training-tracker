@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
 
 test.use({ hasTouch: true, timezoneId: 'America/New_York' });
@@ -80,6 +80,7 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await expect(opportunity).toContainText('Next eligible CWT window');
   await activate(page.getByRole('button', { name: 'Prepare live practice', exact: true }));
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeDisabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeDisabled();
   await expect(opportunity).toContainText('Next eligible CWT window');
   await page.clock.setFixedTime(new Date('2026-10-07T13:00:00Z'));
@@ -113,6 +114,7 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await expect(opportunity).toContainText('No CWT window remains before the deadline.');
   await expect(opportunity).toContainText('ask your advisor');
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeDisabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Resume timer', exact: true })).toBeDisabled();
   await expectResponsive(page, 'live-task-unavailable-retained');
   // Exact end also remains unavailable; paused calendar advancement adds no time.
@@ -121,6 +123,7 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await expect(opportunity).toContainText('No CWT window remains before the deadline.');
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Time practiced/ })).toHaveValue(workedTime);
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await page.getByRole('combobox', { name: /^Performance rating/ }).selectOption('good');
   await page.getByRole('combobox', { name: /^Event observations/ }).selectOption('cwt');
   await page.getByRole('textbox', { name: /^Callsigns heard/ }).fill('W1SYN');
@@ -254,8 +257,10 @@ test('retained manual work follows event edits and every timer checks current el
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) });
   await activate(row.getByRole('button', { name: 'Practice', exact: true }));
+  await openDisclosure(page, 'Session options and logging');
   await activate(page.getByRole('button', { name: 'Start timer', exact: true }));
   await page.clock.runFor(2200);
+  await openDisclosure(page, 'Session options and logging');
   await activate(page.getByRole('button', { name: 'Pause timer', exact: true }));
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const workedTime = await page.getByRole('textbox', { name: /^Time practiced/ }).inputValue();
@@ -275,6 +280,7 @@ test('retained manual work follows event edits and every timer checks current el
     page.getByRole('region', { name: 'CWT assignment opportunity', exact: true }),
   ).toContainText('CWT active now');
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeEnabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Resume timer', exact: true })).toBeEnabled();
   await expectResponsive(page, 'live-binding-added-active');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -284,6 +290,7 @@ test('retained manual work follows event edits and every timer checks current el
     page.getByRole('region', { name: 'SST assignment opportunity', exact: true }),
   ).toContainText('No SST window remains');
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeDisabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Resume timer', exact: true })).toBeDisabled();
   await editEvent('');
   await expect(page.getByRole('region', { name: /assignment opportunity/ })).toHaveCount(0);
@@ -291,6 +298,7 @@ test('retained manual work follows event edits and every timer checks current el
     page.getByText('Start practice is available during an eligible window', { exact: false }),
   ).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeEnabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Resume timer', exact: true })).toBeEnabled();
   await expectResponsive(page, 'live-binding-cleared-manual');
   await page.clock.setFixedTime(new Date('2026-10-07T12:59:59Z'));
@@ -299,9 +307,11 @@ test('retained manual work follows event edits and every timer checks current el
     page.getByRole('region', { name: 'CWT assignment opportunity', exact: true }),
   ).toContainText('Next eligible CWT window');
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeDisabled();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Resume timer', exact: true })).toBeDisabled();
   await page.clock.setFixedTime(new Date('2026-10-07T13:00:00Z'));
   await page.clock.runFor(1000);
+  await openDisclosure(page, 'Session options and logging');
   const alternate = page.getByRole('button', { name: 'Resume timer', exact: true });
   await expect(alternate).toBeEnabled();
   // Expire wall time without refreshing the old enabled display first. The

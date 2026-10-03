@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, accountRequest, signIn } from './helpers';
+import { openDisclosure, expectResponsive, accountRequest, signIn } from './helpers';
 
 test.use({
   hasTouch: true,
@@ -43,10 +43,14 @@ test('all external LCWO families create, inspect and edit without generic score 
   for (const kind of ['letters', 'figures', 'custom', 'words', 'callsign']) {
     await navigate(page, 'Today');
     await page.getByRole('button', { name: 'Log practice', exact: true }).press('Enter');
+    await openDisclosure(page, 'External results and exact timing');
     await external(page).focus();
+    await openDisclosure(page, 'External results and exact timing');
     await expect(external(page)).toBeFocused();
     if (kind === 'letters') {
+      await openDisclosure(page, 'External results and exact timing');
       await external(page).press('l');
+      await openDisclosure(page, 'External results and exact timing');
       await expect(external(page)).toHaveValue('letters');
     } else await external(page).selectOption(kind);
     await page.getByLabel(/^Time practiced/).fill('2:00');
@@ -110,6 +114,7 @@ test('all external LCWO families create, inspect and edit without generic score 
       .locator('..')
       .getByRole('button', { name: 'Edit Listening on 2026-09-28', exact: true })
       .tap();
+    await openDisclosure(page, 'External results and exact timing');
     await expect(external(page)).toHaveValue(kind);
     if (['letters', 'figures', 'custom'].includes(kind))
       await page.getByLabel(/^Group length/).fill('6');
@@ -154,12 +159,21 @@ test('manual Runner resolves DST, preserves captured timezone and actual runtime
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page);
   await page.getByRole('button', { name: 'Log practice', exact: true }).tap();
+  await openDisclosure(page, 'External results and exact timing');
   await external(page).selectOption('morse-runner');
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'simulator',
   );
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toBeDisabled();
   await page.getByLabel(/^Time practiced/).fill('15:30');
+  const externalOptions = page.getByText('External results and exact timing', { exact: true });
+  await externalOptions.click();
+  await expect(externalOptions.locator('..')).not.toHaveAttribute('open', '');
+  await page.getByRole('button', { name: 'Save practice', exact: true }).tap();
+  await expect(externalOptions.locator('..')).toHaveAttribute('open', '');
+  await expect(
+    page.getByRole('combobox', { name: 'External Runner mode', exact: true }),
+  ).toBeFocused();
   await page
     .getByRole('combobox', { name: 'External Runner mode', exact: true })
     .selectOption('WPX');
@@ -181,8 +195,12 @@ test('manual Runner resolves DST, preserves captured timezone and actual runtime
     .selectOption('1');
   await expect(dialog(page)).toContainText('Actual start: 2025-11-02T06:14:30.000Z');
   await settled(page);
-  const zoneBox = await page.getByLabel(/^Practice timezone/).boundingBox();
-  expect(zoneBox!.width).toBeGreaterThan(280);
+  const zone = page.getByLabel(/^Practice timezone/);
+  const zoneBox = (await zone.boundingBox())!;
+  const timingBox = (await zone.locator('..').locator('..').boundingBox())!;
+  expect(Math.abs(zoneBox.width - timingBox.width)).toBeLessThanOrEqual(1);
+  expect(zoneBox.x).toBeGreaterThanOrEqual(0);
+  expect(zoneBox.x + zoneBox.width).toBeLessThanOrEqual(page.viewportSize()!.width);
   await expectResponsive(page, 'manual-runner-fold');
 
   const bodies: unknown[] = [];

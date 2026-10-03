@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, scopedRequest, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, scopedRequest, signIn } from './helpers';
 import { dateInTimezone } from '../src/shared/training';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.225' } });
@@ -101,9 +101,11 @@ test('optional daily words count actual replay separately from recall and retire
   await activate(daily.getByRole('button', { name: 'Practice words', exact: true }));
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E E');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .fill('0');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .press('Enter');
@@ -129,6 +131,7 @@ test('optional daily words count actual replay separately from recall and retire
   await activate(page.getByRole('button', { name: 'Pause recall', exact: true }));
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const review = page.getByRole('dialog');
+  await openDisclosure(review, 'Measured results and practice evidence');
   const rawListening = await review.getByText(/^Measured word listening:/).innerText();
   await activate(review.getByRole('button', { name: 'Cancel', exact: true }));
   const listened = await daily.getByLabel('Word listening only').innerText();
@@ -144,6 +147,7 @@ test('optional daily words count actual replay separately from recall and retire
   await expect(
     page.getByRole('region', { name: 'Today’s practice time', exact: true }),
   ).toContainText('Recall included: 0:02');
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await expect(daily.getByLabel('Word listening only')).toHaveText(listened, {
     useInnerText: true,

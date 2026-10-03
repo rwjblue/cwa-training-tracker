@@ -1,6 +1,12 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  accountRequest,
+  expectAccessible,
+  expectResponsive,
+  signIn,
+} from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import type { PracticeSession } from '../src/shared/training';
 
@@ -56,6 +62,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   expect(guest[0].metadata.evidence).not.toHaveProperty('generatedListening');
   await expectResponsive(page, `zero-notes-guest-${width}`);
 
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Overview', exact: true }));
   await activate(
     page
@@ -108,9 +115,11 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   await activate(row.getByRole('button', { name: 'Extra review', exact: true }));
   const notes = '  Synthetic private review note\nwith exact spacing.  ';
   await scratchpad.fill(notes);
+  await openDisclosure(page, 'About saving notes');
   await expect(
     page.getByText('Save nonempty notes at zero time to your private history.', { exact: false }),
   ).toBeVisible();
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await activate(
     page
@@ -148,6 +157,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   await expect(scratchpad).toHaveValue(notes);
   const retryNotes = page.getByRole('button', { name: 'Retry saving session', exact: true });
   await expect(retryNotes).toBeFocused();
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await activate(
     page

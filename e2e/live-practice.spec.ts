@@ -3,7 +3,7 @@ import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import ICAL from 'ical.js';
 import { readFile } from 'node:fs/promises';
-import { expectResponsive } from './helpers';
+import { openDisclosure, expectResponsive } from './helpers';
 
 test.use({ hasTouch: true, timezoneId: 'Asia/Tokyo' });
 test('guest live agenda boundaries, retained time mode, calendar import and clipboard fallback', async ({
@@ -129,6 +129,7 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   await activate(page.getByRole('button', { name: 'Sending practice', exact: false }));
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
   await page.clock.runFor(2000);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect live practice', exact: true }));
   await expect(page.getByRole('heading', { name: 'Live practice', exact: true })).toBeVisible();
   await activate(page.getByRole('button', { name: 'Return to current practice', exact: true }));

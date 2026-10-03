@@ -1,20 +1,22 @@
 .next-practice {
   min-width: 0;
-  padding: 20px 24px;
+  padding: 16px 20px;
   margin-block: 1rem;
   overflow-wrap: anywhere;
 }
 .next-practice h3 {
-  margin-block: 0.8rem 0.4rem;
+  margin-block: 0.5rem 0.25rem;
+  font-size: 16px;
 }
 .next-practice p {
   line-height: 1.6;
+  font-size: 13px;
 }
 .next-practice-actions {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  margin: 0.25rem 0 0.25rem 0.75rem;
 }
 .next-practice button,
 .next-practice a.button {
@@ -22,13 +24,30 @@
 }
 @media (max-width: 600px) {
   .next-practice .button {
-    width: 100%;
     white-space: normal;
   }
 }
 
 .next-practice h2 {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #526353;
+}
+.next-practice-guidance {
+  color: #526353;
+  font-size: 13px;
+  margin-block: 2px;
+}
+.next-practice-guidance > summary {
+  min-height: 44px;
+  padding-block: 8px;
+  cursor: pointer;
+}
+.next-practice-guidance p {
+  margin-bottom: 8px;
+}
+.next-practice > .button {
+  margin-top: 4px;
 }
 .today-plan > .next-practice {
   margin-inline: 24px;
@@ -38,7 +57,14 @@
     margin-inline: 18px;
   }
   .next-practice {
-    padding: 18px;
+    padding: 14px;
+  }
+  .next-practice-actions {
+    margin-left: 0;
+    margin-right: 10px;
+  }
+  .next-practice > .button {
+    margin-right: 12px;
   }
 }
 

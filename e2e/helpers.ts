@@ -1,10 +1,23 @@
 import { e2eOrigin } from './environment';
-import { expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
+import {
+  expect,
+  type APIRequestContext,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 
 type FixtureContext = APIRequestContext | BrowserContext;
 type WriteMethod = 'POST' | 'PUT' | 'DELETE';
+
+/** Open optional controls through their visible disclosure, preserving an already-open panel. */
+export async function openDisclosure(scope: Page | Locator, name: string) {
+  const summary = scope.getByText(name, { exact: true });
+  if (!(await summary.evaluate((element) => (element.parentElement as HTMLDetailsElement).open)))
+    await summary.click();
+}
 
 async function accountHeaders(context: FixtureContext) {
   const request = 'request' in context ? context.request : context;

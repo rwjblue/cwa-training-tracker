@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 
 test.use({
@@ -10,6 +10,21 @@ test.use({
 });
 
 const width = 390;
+
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  const diagnostics = await page
+    .evaluate(() => ({
+      events: Reflect.get(window, 'cwaReplayNativeEvents') ?? [],
+      passProgress: document.querySelector('[aria-label="Listening passes"]')?.textContent,
+      timer: document.querySelector('.studio-quick-actions strong')?.textContent,
+    }))
+    .catch(() => ({ events: [] }));
+  await testInfo.attach('native-recording-events', {
+    body: JSON.stringify(diagnostics, null, 2),
+    contentType: 'application/json',
+  });
+});
 
 test(`course replay uses observed passes and cancels obsolete native Play at ${width}px`, async ({
   page,
@@ -22,6 +37,7 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     await control.tap();
   };
   const toggle = async (control: Locator) => {
+    await openDisclosure(page, 'Recording options · marks and replay');
     await control.tap();
   };
   const navigate = async (name: string) => {
@@ -29,6 +45,53 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     if (await menu.isVisible()) await activate(menu);
     await activate(page.getByRole('button', { name, exact: true }));
   };
+  await page.addInitScript(() => {
+    const events: object[] = [];
+    Reflect.set(window, 'cwaReplayNativeEvents', events);
+    for (const type of [
+      'loadstart',
+      'loadedmetadata',
+      'loadeddata',
+      'canplay',
+      'canplaythrough',
+      'play',
+      'playing',
+      'waiting',
+      'stalled',
+      'seeking',
+      'seeked',
+      'pause',
+      'timeupdate',
+      'ended',
+      'emptied',
+      'error',
+      'durationchange',
+      'ratechange',
+      'suspend',
+    ])
+      document.addEventListener(
+        type,
+        (event) => {
+          const audio = event.target;
+          if (!(audio instanceof HTMLAudioElement) || audio.dataset.recording !== 'true') return;
+          if (events.length === 600) events.shift();
+          events.push({
+            event: event.type,
+            timestamp: performance.now(),
+            source: audio.currentSrc || audio.src,
+            currentTime: audio.currentTime,
+            duration: audio.duration,
+            paused: audio.paused,
+            seeking: audio.seeking,
+            ended: audio.ended,
+            readyState: audio.readyState,
+            playbackRate: audio.playbackRate,
+            hidden: document.hidden,
+          });
+        },
+        true,
+      );
+  });
   await signIn(page);
   await page.addInitScript((fixed) => {
     const native = Date;
@@ -75,6 +138,7 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
       .getByRole('button', { name: 'Listen & practice', exact: true }),
   );
   const audio = page.getByLabel('Assigned recording', { exact: true });
+  await openDisclosure(page, 'Recording options · marks and replay');
   const replay = page.getByRole('checkbox', {
     name: 'Automatically replay required course passes',
   });
@@ -84,9 +148,31 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     .filter({ has: page.getByText('This block', { exact: true }) })
     .locator('dd');
   const paused = () => audio.evaluate((el: HTMLAudioElement) => el.paused);
-  const start = () =>
-    activate(page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }));
+  const recordingReady = () =>
+    expect
+      .poll(() =>
+        audio.evaluate(
+          (el: HTMLAudioElement, expectedUrl: string) =>
+            el.currentSrc === expectedUrl &&
+            !el.error &&
+            el.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA &&
+            el.duration === 10 &&
+            el.buffered.length === 1 &&
+            el.buffered.start(0) === 0 &&
+            el.buffered.end(0) >= el.duration,
+          task.exercise.url,
+        ),
+      )
+      .toBe(true);
+  const start = async () => {
+    // Reset/source replacement can finish before the synthetic clip is decoded.
+    // Establish native readiness; pass credit still requires actual full playback.
+    await recordingReady();
+    await activate(page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }));
+  };
   const reset = async () => {
+    await recordingReady();
+    await openDisclosure(page, 'Session options and logging');
     await activate(page.getByRole('button', { name: 'Reset session', exact: true }));
     const discard = page.getByRole('button', { name: 'Discard & reset', exact: true });
     if (await discard.isVisible()) await activate(discard);
@@ -233,6 +319,7 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
       .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) })
       .getByRole('button', { name: 'Listen & practice', exact: true }),
   );
+  await openDisclosure(page, 'Recording options · marks and replay');
   await expect(replay).toBeChecked();
   await expect.poll(paused).toBe(true);
   await expect(count).toHaveText('0');

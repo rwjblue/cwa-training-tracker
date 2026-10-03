@@ -72,6 +72,14 @@
 .live-agenda-note {
   font-size: 0.9rem;
 }
+.live-calendar summary {
+  min-height: 44px;
+  padding-block: 12px;
+  cursor: pointer;
+}
+.live-calendar details p {
+  margin-block: 8px;
+}
 @media (max-width: 600px) {
   .live-agenda-controls,
   .live-event-card,

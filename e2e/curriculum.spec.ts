@@ -2,7 +2,7 @@ import { expect, type APIRequestContext, type Locator, type Page } from '@playwr
 import { test } from './fixtures';
 import type { PlannedTask } from '../src/shared/plan';
 import type { CourseLevel, PracticeSession, TrainingExport } from '../src/shared/training';
-import { expectAccessible, signIn } from './helpers';
+import { expectAccessible, openDisclosure, signIn } from './helpers';
 
 const courses = {
   beginner: {
@@ -182,6 +182,10 @@ test('all course plans launch their tools and retain progress across levels and 
   });
   await expect(startCopy).toBeEnabled();
   await expect(confirmation).toHaveCount(0);
+  await openDisclosure(
+    page.getByRole('region', { name: 'Copy practice', exact: true }),
+    'Round settings',
+  );
   const options = page.getByRole('combobox', { name: 'Assignment option', exact: true });
   const customOption = await options
     .getByRole('option', { name: /· custom ·/ })
@@ -215,6 +219,7 @@ test('all course plans launch their tools and retain progress across levels and 
     .click();
   const audio = page.getByLabel('Assigned recording', { exact: true });
   await expect(audio).toHaveAttribute('src', advanced.exercise.url);
+  await openDisclosure(page, 'Exercise details');
   await page.locator('summary').filter({ hasText: 'Exercise instructions' }).click();
   await expect(page.getByText(/20 WPM · at least 2 full plays/)).toBeVisible();
   await audio.evaluate((element: HTMLAudioElement) => element.play());

@@ -133,7 +133,7 @@ test('guest inspection retains listening and explicit Finish saves it on this de
   // review flow; inspecting or finishing practice never prompts for an account.
   await page.getByRole('button', { name: /^Edit Head copy on / }).click();
   await signIn(page, { dialogAlreadyOpen: true });
-  await expect(page.getByRole('dialog')).toContainText('A little progress, worth recording.');
+  await expect(page.getByRole('dialog')).toContainText('Save practice');
   await page.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;

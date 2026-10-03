@@ -74,6 +74,8 @@ export default forwardRef<
     active?: boolean;
     onChange: (changes: Partial<PracticePreferences>) => void;
     soundSettings?: ReactNode;
+    playbackControls?: ReactNode;
+    practiceWorkspace?: ReactNode;
     onPlaying: (playing: boolean) => void;
     onPlayed?: (summary: GeneratedListeningSummary) => void;
     onBeforeReplace?: () => void;
@@ -91,6 +93,8 @@ export default forwardRef<
     active: visible = true,
     onChange,
     soundSettings,
+    playbackControls,
+    practiceWorkspace,
     onPlaying: onPlayingChange,
     onPlayed,
     onBeforeReplace,
@@ -717,13 +721,6 @@ export default forwardRef<
             </select>
           </label>
         )}
-        <p>
-          {isWords
-            ? 'Hear each word as a whole sound. Replay the current word or move at your own pace.'
-            : isStory
-              ? 'Supplemental public stories, written for listening practice. Hear the meaning one sentence at a time; all sentences use one narrator tone.'
-              : 'Choose a scenario, then generate as many contacts as you like. New QSO changes both stations; Play replays this contact.'}
-        </p>
       </div>
       {!isWords && !isStory && (
         <div className="qso-practice-mode" role="group" aria-label="QSO practice mode">
@@ -741,6 +738,127 @@ export default forwardRef<
             Check your copy
           </button>
         </div>
+      )}
+      <div className="listening-practice-workspace">
+        <div className="listening-playback-workspace">
+          {playbackControls}
+          {isWords && p.spokenAnswers && words.length > 0 && !track && !trackResult.error && (
+            <p role="status">Loading prerecorded answers…</p>
+          )}
+          {trackResult.error && <p role="alert">{trackResult.error}</p>}
+          {continuationError && (
+            <div role="alert">
+              <p>{continuationError} Earned listening time is retained.</p>
+              <button
+                className="button outline"
+                onClick={() => {
+                  onRetry?.();
+                  advanceWordRound();
+                }}
+              >
+                Retry next round
+              </button>
+            </div>
+          )}
+          {mediaReady && <ListeningSeekControls onBack={back} onReplay={() => void replayWord()} />}
+          <div className="native-morse-player" hidden={!mediaReady}>
+            <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
+          </div>
+        </div>
+        {practiceWorkspace}
+        <div className="listening-transcript-workspace">
+          <div className="transmission-panel trainer-transmission">
+            <div className="transmission-label">
+              <span>
+                {complete
+                  ? 'ROUND COMPLETE'
+                  : `${isWords ? 'WORD' : isStory ? 'SENTENCE' : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
+                {active ? ' · LISTENING' : ''}
+              </span>
+              {!checkingCopy && (
+                <button onClick={() => onChange({ hideTrainerText: !p.hideTrainerText })}>
+                  {p.hideTrainerText ? 'Reveal text' : 'Hide text'}
+                </button>
+              )}
+            </div>
+            {!isWords && !isStory && !hideTranscript && applied?.summary.mode === 'qso' && (
+              <p className="field-hint" aria-label="Current QSO station">
+                {applied.summary.stations[position % 2]} · {applied.summary.tonesHz[position % 2]}{' '}
+                Hz
+              </p>
+            )}
+            <div className="trainer-current" aria-live="off">
+              {hideTranscript ? (
+                <p>
+                  {checkingCopy
+                    ? 'Listen, then fill in the station details below. Answers stay hidden until you choose Show answers.'
+                    : 'Listen first. Reveal when you’re ready.'}
+                </p>
+              ) : track ? (
+                <MorseTranscript
+                  track={track}
+                  activeWord={activeWord}
+                  onSeek={seekWord}
+                  itemIndex={position}
+                />
+              ) : (
+                <p className="trainer-morse-text">{current ?? 'Press Play to begin.'}</p>
+              )}
+            </div>
+            <div className="trainer-step-controls">
+              <button className="text-button" disabled={position === 0} onClick={() => step(-1)}>
+                <ChevronLeft size={15} /> Previous
+              </button>
+              <span>{isWords ? listTitle : narrative.title}</span>
+              <button
+                className="text-button"
+                disabled={position >= total - 1 || (isWords && !words.length)}
+                onClick={() => step(1)}
+              >
+                Next <ChevronRight size={15} />
+              </button>
+            </div>
+          </div>
+          <div className="trainer-round-actions">
+            <button
+              className="text-button"
+              onClick={() => {
+                if (isWords) resetWords();
+                else if (isStory) resetTransport();
+                else {
+                  resetTransport();
+                  setQso(generateQso(p.qsoScenario, Math.random, qso.stations));
+                }
+              }}
+            >
+              <Shuffle size={14} />{' '}
+              {isWords ? 'New round' : isStory ? 'Reset story to beginning' : 'New QSO'}
+            </button>
+            <span className="field-hint">
+              {complete
+                ? 'Round complete. Play to listen again.'
+                : checkingCopy && !copyRevealed
+                  ? 'Replay as often as you need. Your copy stays here.'
+                  : 'Words and Previous/Next move your place while keeping playback playing or paused.'}
+            </span>
+          </div>
+        </div>
+      </div>
+      {!isWords && !isStory && (
+        <section
+          className="qso-copy-region"
+          aria-label="Check your QSO copy"
+          hidden={!checkingCopy}
+        >
+          <QsoCopy
+            key={qso.lines.join('\n')}
+            fields={qso.copyFields}
+            revealed={copyRevealed}
+            onReveal={(reveal) => setRevealedQso(reveal ? qso : null)}
+            onCheck={stop}
+            onReplay={() => void replayQso()}
+          />
+        </section>
       )}
       {!isWords && !isStory && (
         <p className="field-hint">
@@ -763,7 +881,15 @@ export default forwardRef<
         </p>
       )}
       {isWords && (
-        <div className="word-source-editor">
+        <details
+          className="word-source-editor studio-disclosure"
+          open={
+            p.wordList === 'custom' || !wordContent.remembered || Boolean(wordContent.error)
+              ? true
+              : undefined
+          }
+        >
+          <summary>Word list editor</summary>
           {p.wordList !== 'custom' ? (
             <button
               type="button"
@@ -823,45 +949,48 @@ export default forwardRef<
               Clear saved words
             </button>
           </div>
-        </div>
+        </details>
       )}
       {isWords && (
-        <div className="word-options">
-          <PreciseRange
-            label="Extra word pause"
-            value={p.wordGap}
-            min={0}
-            max={5}
-            step={0.1}
-            unit="seconds"
-            onChange={(wordGap) => onChange({ wordGap })}
-            hint="Additional silence between words, from 0 to 5 seconds."
-          />
-          <label>
-            <input
-              type="checkbox"
-              checked={p.shuffleWords}
-              onChange={(e) => onChange({ shuffleWords: e.target.checked })}
-            />{' '}
-            Shuffle list
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={p.repeatList}
-              onChange={(e) => onChange({ repeatList: e.target.checked })}
-            />{' '}
-            Repeat list
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={p.spokenAnswers}
-              onChange={(e) => onChange({ spokenAnswers: e.target.checked })}
-            />{' '}
-            Three repeats + spoken answer
-          </label>
-        </div>
+        <details className="studio-disclosure word-practice-options">
+          <summary>Word options · pause, repeat and spoken answers</summary>
+          <div className="word-options">
+            <PreciseRange
+              label="Extra word pause"
+              value={p.wordGap}
+              min={0}
+              max={5}
+              step={0.1}
+              unit="seconds"
+              onChange={(wordGap) => onChange({ wordGap })}
+              hint="Additional silence between words, from 0 to 5 seconds."
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={p.shuffleWords}
+                onChange={(e) => onChange({ shuffleWords: e.target.checked })}
+              />{' '}
+              Shuffle list
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={p.repeatList}
+                onChange={(e) => onChange({ repeatList: e.target.checked })}
+              />{' '}
+              Repeat list
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={p.spokenAnswers}
+                onChange={(e) => onChange({ spokenAnswers: e.target.checked })}
+              />{' '}
+              Three repeats + spoken answer
+            </label>
+          </div>
+        </details>
       )}
       {isWords && p.spokenAnswers && (
         <p className="field-hint">
@@ -870,138 +999,37 @@ export default forwardRef<
           can use words from either built-in list.
         </p>
       )}
-      {isWords && p.spokenAnswers && words.length > 0 && !track && !trackResult.error && (
-        <p role="status">Loading prerecorded answers…</p>
-      )}
-      {trackResult.error && <p role="alert">{trackResult.error}</p>}
-      {continuationError && (
-        <div role="alert">
-          <p>{continuationError} Earned listening time is retained.</p>
-          <button
-            className="button outline"
-            onClick={() => {
-              onRetry?.();
-              advanceWordRound();
-            }}
-          >
-            Retry next round
-          </button>
-        </div>
-      )}
       {soundSettings}
-      <p className="field-hint">
-        {isWords && !spokenAnswers
-          ? 'Change speed while listening: the current word and pause finish at their original timing; later words use the new speed.'
-          : !isWords
-            ? 'Change speed to restart the same word occurrence. Playing stays playing; paused stays paused.'
-            : 'Speed changes in spoken-answer mode start a fresh recording.'}{' '}
-        {isStory
-          ? 'Story or narrator tone changes prepare a fresh paused recording.'
-          : 'List, pitch, spacing and spoken-answer changes start a fresh round.'}
-        {isWords &&
-          !spokenAnswers &&
-          ' Shuffle applies to the next round; Repeat lets this round finish before continuing or stopping.'}
-      </p>
-      {deviceVolume && (
-        <p className="field-hint">
-          This browser uses device volume controls during native playback. The app volume is applied
-          when preparing the next recording.
+      <details className="studio-disclosure">
+        <summary>How playback and changes work</summary>
+        <p>
+          {isWords
+            ? 'Hear each word as a whole sound. Replay the current word or move at your own pace.'
+            : isStory
+              ? 'Supplemental public stories, written for listening practice. Hear the meaning one sentence at a time; all sentences use one narrator tone.'
+              : 'Choose a scenario, then generate as many contacts as you like. New QSO changes both stations; Play replays this contact.'}
         </p>
-      )}
-      <div className="transmission-panel trainer-transmission">
-        <div className="transmission-label">
-          <span>
-            {complete
-              ? 'ROUND COMPLETE'
-              : `${isWords ? 'WORD' : isStory ? 'SENTENCE' : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
-            {active ? ' · LISTENING' : ''}
-          </span>
-          {!checkingCopy && (
-            <button onClick={() => onChange({ hideTrainerText: !p.hideTrainerText })}>
-              {p.hideTrainerText ? 'Reveal text' : 'Hide text'}
-            </button>
-          )}
-        </div>
-        {!isWords && !isStory && !hideTranscript && applied?.summary.mode === 'qso' && (
-          <p className="field-hint" aria-label="Current QSO station">
-            {applied.summary.stations[position % 2]} · {applied.summary.tonesHz[position % 2]} Hz
+
+        <p className="field-hint">
+          {isWords && !spokenAnswers
+            ? 'Change speed while listening: the current word and pause finish at their original timing; later words use the new speed.'
+            : !isWords
+              ? 'Change speed to restart the same word occurrence. Playing stays playing; paused stays paused.'
+              : 'Speed changes in spoken-answer mode start a fresh recording.'}{' '}
+          {isStory
+            ? 'Story or narrator tone changes prepare a fresh paused recording.'
+            : 'List, pitch, spacing and spoken-answer changes start a fresh round.'}
+          {isWords &&
+            !spokenAnswers &&
+            ' Shuffle applies to the next round; Repeat lets this round finish before continuing or stopping.'}
+        </p>
+        {deviceVolume && (
+          <p className="field-hint">
+            This browser uses device volume controls during native playback. The app volume is
+            applied when preparing the next recording.
           </p>
         )}
-        <div className="trainer-current" aria-live="off">
-          {hideTranscript ? (
-            <p>
-              {checkingCopy
-                ? 'Listen, then fill in the station details below. Answers stay hidden until you choose Show answers.'
-                : 'Listen first. Reveal when you’re ready.'}
-            </p>
-          ) : track ? (
-            <MorseTranscript
-              track={track}
-              activeWord={activeWord}
-              onSeek={seekWord}
-              itemIndex={position}
-            />
-          ) : (
-            <p className="trainer-morse-text">{current ?? 'Press Play to begin.'}</p>
-          )}
-        </div>
-        <div className="trainer-step-controls">
-          <button className="text-button" disabled={position === 0} onClick={() => step(-1)}>
-            <ChevronLeft size={15} /> Previous
-          </button>
-          <span>{isWords ? listTitle : narrative.title}</span>
-          <button
-            className="text-button"
-            disabled={position >= total - 1 || (isWords && !words.length)}
-            onClick={() => step(1)}
-          >
-            Next <ChevronRight size={15} />
-          </button>
-        </div>
-      </div>
-      <div className="trainer-round-actions">
-        <button
-          className="text-button"
-          onClick={() => {
-            if (isWords) resetWords();
-            else if (isStory) resetTransport();
-            else {
-              resetTransport();
-              setQso(generateQso(p.qsoScenario, Math.random, qso.stations));
-            }
-          }}
-        >
-          <Shuffle size={14} />{' '}
-          {isWords ? 'New round' : isStory ? 'Reset story to beginning' : 'New QSO'}
-        </button>
-        <span className="field-hint">
-          {complete
-            ? 'Round complete. Play to listen again.'
-            : checkingCopy && !copyRevealed
-              ? 'Replay as often as you need. Your copy stays here.'
-              : 'Words and Previous/Next move your place while keeping playback playing or paused.'}
-        </span>
-      </div>
-      {mediaReady && <ListeningSeekControls onBack={back} onReplay={() => void replayWord()} />}
-      <div className="native-morse-player" hidden={!mediaReady}>
-        <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
-      </div>
-      {!isWords && !isStory && (
-        <section
-          className="qso-copy-region"
-          aria-label="Check your QSO copy"
-          hidden={!checkingCopy}
-        >
-          <QsoCopy
-            key={qso.lines.join('\n')}
-            fields={qso.copyFields}
-            revealed={copyRevealed}
-            onReveal={(reveal) => setRevealedQso(reveal ? qso : null)}
-            onCheck={stop}
-            onReplay={() => void replayQso()}
-          />
-        </section>
-      )}
+      </details>
       {(!checkingCopy || copyRevealed) && (
         <details className="trainer-catalog">
           <summary>

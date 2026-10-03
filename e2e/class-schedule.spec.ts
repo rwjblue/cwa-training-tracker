@@ -116,6 +116,7 @@ test('private class times, exceptions, retry and class logging through real cont
   const link = card.getByRole('link', { name: 'Join class', exact: true });
   await expect(link).toHaveAttribute('href', joinUrl);
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await context.route('https://meeting.example.test/**', (route) =>
     route.fulfill({ contentType: 'text/html', body: '<p>Synthetic class room</p>' }),
   );
@@ -141,9 +142,12 @@ test('private class times, exceptions, retry and class logging through real cont
   await responsive('finished');
   mobile = true;
   await page.setViewportSize({ width: 390, height: 844 });
-  await activate(card.getByRole('button', { name: 'Log class time', exact: true }));
+  const logClass = card.getByRole('button', { name: 'Log class time', exact: true });
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await logClass.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await activate(logClass);
   const dialog = page.getByRole('dialog', {
-    name: 'A little progress, worth recording.',
+    name: 'Save practice',
     exact: true,
   });
   await expect(dialog.getByRole('combobox', { name: 'Academy session', exact: false })).toHaveValue(

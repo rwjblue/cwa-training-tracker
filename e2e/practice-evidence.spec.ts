@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, scopedRequest, signIn } from './helpers';
+import { openDisclosure, expectResponsive, scopedRequest, signIn } from './helpers';
 
 // These separate synthetic clients retain the production email-request limit;
 // adding a journey must not exhaust the existing suite's shared local IP quota.
@@ -31,8 +31,10 @@ test(`measured practice review retains raw facts, validates corrections and retr
   const edit = page.getByRole('button', { name: 'Edit Sending on 2026-09-30', exact: true });
   await edit.tap();
   const dialog = page.getByRole('dialog');
+  await openDisclosure(dialog, 'Measured results and practice evidence');
   await expect(dialog).toContainText('Measured 90.25 seconds, including 10.00 recall seconds');
   await expect(page.getByLabel(/^Time practiced/)).toHaveAttribute('readonly', '');
+  await openDisclosure(page, 'Adjust measured time');
   await page.getByRole('checkbox', { name: 'Correct measured time', exact: true }).check();
   await page.getByLabel(/^Corrected total time/).fill('1:00');
   await page.getByLabel(/^Corrected recall time/).fill('1:01');
@@ -47,10 +49,12 @@ test(`measured practice review retains raw facts, validates corrections and retr
     90.25 / 60,
   );
   await edit.tap();
+  await openDisclosure(page, 'Adjust measured time');
   await page.getByRole('checkbox', { name: 'Correct measured time', exact: true }).focus();
   await page.keyboard.press('Space');
   await page.getByLabel(/^Corrected total time/).fill('1:00');
   await page.getByLabel(/^Corrected recall time/).fill('0:05');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await page.getByRole('combobox', { name: /^Performance rating/ }).selectOption('good');
   await page.getByLabel('Correction reason', { exact: true }).fill('Timer was left running');
   await page.route(

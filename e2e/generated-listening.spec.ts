@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectAccessible, expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectAccessible, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.107' } });
 
@@ -77,6 +77,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await page
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Keep only the two played setups.');
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
@@ -84,7 +85,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const review = page.getByRole('dialog');
   const reviewTitle = review.getByRole('heading', {
-    name: 'A little progress, worth recording.',
+    name: 'Save practice',
     exact: true,
   });
   const firstPlayed = review.getByText(/^Played Your word list:/);
@@ -109,7 +110,7 @@ test(`generated listening saves only applied setups and retains exact content at
   };
   await expect(reviewTitle).toBeFocused();
   await expect.poll(() => review.evaluate((element) => element.scrollTop)).toBe(0);
-  await expectInsideReview(firstPlayed);
+  await expect(firstPlayed).not.toBeVisible();
 
   await page.keyboard.press('Shift+Tab');
   await expect(review.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
@@ -117,10 +118,12 @@ test(`generated listening saves only applied setups and retains exact content at
   await expect(review.getByRole('button', { name: 'Close dialog', exact: true })).toBeFocused();
   await expect.poll(() => review.evaluate((element) => element.scrollTop)).toBe(0);
   await expectInsideReview(reviewTitle);
-  await expectInsideReview(firstPlayed);
+  await expect(firstPlayed).not.toBeVisible();
+  await openDisclosure(review, 'Measured results and practice evidence');
   await expect(review).toContainText('20 character / 10 effective WPM');
   await expect(review).toContainText('25 character / 15 effective WPM');
   await expect(review).not.toContainText('30 character / 20 effective WPM');
+  await openDisclosure(review, 'Speed, rating and on-air observations');
   await expect(page.getByLabel('Character WPM', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Character WPM', { exact: true })).toHaveAttribute('readonly', '');
   await expect(page.getByLabel('Effective WPM', { exact: true })).toHaveValue('');
@@ -197,12 +200,12 @@ test(`generated listening saves only applied setups and retains exact content at
     page.getByRole('button', { name: `Edit Head copy on ${saved.date}`, exact: true }),
   );
   const editTitle = review.getByRole('heading', {
-    name: 'A closer look at your practice.',
+    name: 'Edit practice',
     exact: true,
   });
   await expect(editTitle).toBeFocused();
   await expect.poll(() => review.evaluate((element) => element.scrollTop)).toBe(0);
-  await expectInsideReview(firstPlayed);
+  await expect(firstPlayed).not.toBeVisible();
   await page.keyboard.press('Shift+Tab');
   await expect(review.getByRole('button', { name: 'Save changes', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');

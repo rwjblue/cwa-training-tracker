@@ -4446,3 +4446,20 @@ publication. Physical devices/native OS background and external private-resource
 acceptance are not claimed. #42 responsive anchor/reflow remains separately
 approved work; no elapsed-time reload/crash recovery or restricted public data
 was added. The original personal site remains read-only evidence.
+
+
+## Student flow usability review — 2026-10-03
+
+The [student flow review](student-flow-review.md) reorganizes Today/class actions,
+next practice, listening, Copy/Runner, shared navigation and save review around
+the student's immediate task. Playback and scratchpad now share a workspace;
+secondary options, accounting guidance and measured evidence use named
+accessible disclosures. Current-block inspection remains paused and retained,
+and save/retry, completion and measured listening/recall attribution retain their
+existing owners. Instructor preparation still precedes optional practice.
+
+This is a layout and interaction refinement, not a trainer parity declaration.
+Restricted material, actual media credit, private records and existing source
+fidelity boundaries remain in force. Browser geometry at desktop/mobile widths
+and representative native playback/save workflows verify the resulting layout;
+physical-device background playback is not claimed.

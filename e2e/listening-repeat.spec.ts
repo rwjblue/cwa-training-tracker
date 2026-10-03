@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectResponsive, signIn } from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.228' } });
@@ -21,15 +21,19 @@ async function words(page: Page) {
   await page.getByRole('button', { name: 'Word listening', exact: true }).click();
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E PARIS <AR>');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).check();
   const settings = page.locator('details').filter({ has: page.getByText(/^Sound settings ·/) });
   await settings.getByText(/^Sound settings ·/).click();
   await page.getByRole('slider', { name: 'Character speed', exact: true }).press('End');
   await page.getByRole('slider', { name: 'Effective speed', exact: true }).press('End');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .fill('0.5');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .press('Enter');
@@ -56,11 +60,14 @@ test('native repeated rounds use fresh source order and count only actual bounda
   const first = await state(page);
   const ordered = ['PARIS', 'E', 'PARIS', '<AR>'];
   expect(await list(page)).toEqual(ordered);
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).press('Space');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).press('Space');
   expect((await state(page)).source).toBe(first.source);
   expect((await state(page)).paused).toBe(false);
   expect(await list(page)).toEqual(ordered);
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).press('Space');
   await expect
     .poll(async () => (await state(page)).source, {
@@ -74,7 +81,9 @@ test('native repeated rounds use fresh source order and count only actual bounda
   expect([...shuffled].sort()).toEqual([...ordered].sort());
   await expectResponsive(page, 'repeat-round-paused');
   await page.setViewportSize({ width: 390, height: 844 });
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).tap();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).tap();
   expect((await state(page)).source).toBe(second.source);
   expect((await state(page)).at).toBeCloseTo(second.at, 3);
@@ -143,7 +152,9 @@ test('next-round failure retries visibly and cancels late native continuation on
   await page.setViewportSize({ width: 390, height: 844 });
   await words(page);
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E T');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).check();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
   // Start immediately, without waiting for the regenerated catalog to render.
   await page.getByRole('button', { name: 'Start practice', exact: true }).press('Enter');
@@ -205,6 +216,7 @@ test('next-round failure retries visibly and cancels late native continuation on
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('common-qso');
   await page.evaluate(() => (Reflect.get(window, 'releaseRepeatedPlay') as () => void)());
   expect((await state(page)).paused).toBe(true);
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).check();
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).tap();
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
@@ -216,10 +228,12 @@ test('next-round failure retries visibly and cancels late native continuation on
   await last.tap();
   await expect.poll(async () => (await state(page)).source).not.toBe(qsoSource);
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
+  await openDisclosure(page, 'Browse other views');
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   const repeatedCatalog = await list(page);
   expect(repeatedCatalog[0]).toBe('VVV');
   expect([...repeatedCatalog].sort()).toEqual([...catalog].sort());
+  await openDisclosure(page, 'Browse other views');
   await page.getByRole('button', { name: 'Inspect Overview', exact: true }).tap();
   await page
     .getByRole('region', { name: 'Current practice block', exact: true })

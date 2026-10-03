@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectAccessible, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectAccessible, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -128,6 +128,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await run.click();
   await expect(runner.getByRole('button', { name: /Stop$/ })).toBeEnabled();
   await expect.poll(async () => await runner.locator('#clock').textContent()).not.toBe('00:00:00');
+  await openDisclosure(page, 'Browse other views');
   await page.getByRole('button', { name: 'Inspect Today', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#overview$/);
@@ -146,6 +147,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   expect(page.frames()).toContain(frame);
   await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
   await page.setViewportSize({ width: 390, height: 844 });
+  await openDisclosure(page, 'Browse other views');
   await page.getByRole('button', { name: 'Inspect this week', exact: true }).tap();
   await retained.getByRole('button', { name: 'Inspect report', exact: true }).tap();
   const report = page.getByRole('dialog');
@@ -168,9 +170,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'simulator',
   );
-  await expect(
-    page.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
-  ).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
 
   await page.getByRole('button', { name: 'Save practice', exact: true }).focus();
   // The server commits, but the acknowledgement is lost. The durable device

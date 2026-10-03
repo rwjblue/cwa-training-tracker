@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { WORD_LISTS } from '../src/client/word-content';
-import { expectResponsive, signIn } from './helpers';
+import { openDisclosure, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.229' } });
 const editor = (page: Page) => page.getByRole('textbox', { name: /^Your word list/ });
@@ -34,7 +34,9 @@ test('editable source survives tool return, reopen/reload and device backup with
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openWords(page);
   await list(page).selectOption('common-30');
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).check();
+  await openDisclosure(page, 'Word list editor');
   await page.getByRole('button', { name: 'Edit this list', exact: true }).press('Enter');
   await expect(list(page)).toHaveValue('custom');
   await expect(editor(page)).toHaveValue(WORD_LISTS['common-30'].words.join(' '));
@@ -104,10 +106,12 @@ test('editable source survives tool return, reopen/reload and device backup with
   await page.getByRole('button', { name: 'Retry saving words', exact: true }).press('Enter');
   await expect(page.getByRole('alert')).toHaveCount(0);
   await page.evaluate(() => Reflect.set(window, 'refuseWordClear', true));
+  await openDisclosure(page, 'Word list editor');
   await page.getByRole('button', { name: 'Clear saved words', exact: true }).press('Enter');
   await expect(page.getByRole('alert')).toContainText('could not be cleared');
   await expect(editor(page)).toHaveValue('T T <BT>');
   await page.evaluate(() => Reflect.set(window, 'refuseWordClear', false));
+  await openDisclosure(page, 'Word list editor');
   await page.getByRole('button', { name: 'Clear saved words', exact: true }).press('Enter');
   await expect(list(page)).toHaveValue('common-qso');
   await list(page).selectOption('custom');
@@ -134,6 +138,7 @@ test('editable source survives tool return, reopen/reload and device backup with
   await openWords(page);
   await expect(editor(page)).toHaveValue('T T <BT>');
   await page.setViewportSize({ width: 390, height: 844 });
+  await openDisclosure(page, 'Word list editor');
   await page.getByRole('button', { name: 'Clear saved words', exact: true }).tap();
   await expect(list(page)).toHaveValue('common-qso');
   await navigate(page, 'This device');
@@ -145,8 +150,9 @@ test('editable source survives tool return, reopen/reload and device backup with
   await openWords(page);
   await expect(editor(page)).toHaveValue(source);
   await pausedAtZero(page);
-
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+  await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await page.getByRole('checkbox', { name: 'Repeat list', exact: true }).uncheck();
   await page.getByText('View word list', { exact: true }).click();
   expect(await page.getByRole('button', { name: /^Seek to word \d+:/ }).allTextContents()).toEqual([
@@ -207,6 +213,7 @@ test('guest and two accounts retain only their private device words without impl
   await list(page).selectOption('custom');
   await expect(editor(page)).toHaveValue('');
   await editor(page).fill('BRAVOBRAVO E E');
+  await openDisclosure(page, 'Word list editor');
   await page.getByRole('button', { name: 'Clear saved words', exact: true }).press('Enter');
   await expect(list(page)).toHaveValue('common-qso');
   expect(

@@ -267,3 +267,19 @@
     min-height: 44px;
   }
 }
+.copy-round-settings {
+  margin: 0 0 16px;
+}
+
+.copy-round-settings > summary {
+  min-height: 44px;
+  align-content: center;
+  color: #405d35;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copy-round-settings[open] > summary {
+  margin-bottom: 10px;
+}

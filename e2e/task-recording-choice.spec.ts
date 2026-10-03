@@ -1,7 +1,13 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import type { PlannedTask } from '../src/shared/plan';
-import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  accountRequest,
+  expectAccessible,
+  expectResponsive,
+  signIn,
+} from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 
 test.use({ hasTouch: true, actionTimeout: 10_000 });
@@ -118,6 +124,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
         .filter({ has: page.getByRole('heading', { name: selected.title, exact: true }) })
         .getByRole('button', { name: 'Listen & practice', exact: true }),
     );
+    await openDisclosure(page, 'Choose a recording speed');
   };
   const finish = () => activate(page.getByRole('button', { name: 'Finish practice', exact: true }));
   const audio = page.getByLabel('Assigned recording', { exact: true });
@@ -141,11 +148,16 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   await open(task);
   await pausedAtZero(10); // Guest's 25 WPM choice grants no account choice.
   await notes.fill('Synthetic retained task notes');
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await pausedAtZero(18);
   await expect(page.getByText('Remembered for this task: 18 WPM.', { exact: false })).toBeVisible();
+  await openDisclosure(page, 'Choose a recording speed');
+  await openDisclosure(page, 'Browse other views');
   await defaultSpeed.selectOption('next');
+  await openDisclosure(page, 'Browse other views');
   await pausedAtZero(18);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await expect(
     page.getByText('Next visit: 18 WPM remembered on this device', { exact: false }),
@@ -198,6 +210,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
       return remove.call(this, name);
     };
   });
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await pausedAtZero(18);
   await expect(
@@ -221,6 +234,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
     page.getByRole('button', { name: 'Remember current recording for this task', exact: true }),
   );
   await page.evaluate(() => Reflect.set(window, 'blockRecordingDefault', true));
+  await openDisclosure(page, 'Choose a recording speed');
   await defaultSpeed.selectOption('assigned');
   await expect(defaultSpeed).toHaveValue('assigned');
   await expect(
@@ -237,6 +251,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   expect(await page.evaluate(() => localStorage.getItem('cw-academy.recording-speed.v1'))).toBe(
     'assigned',
   );
+  await openDisclosure(page, 'Choose a recording speed');
   await defaultSpeed.selectOption('next');
   await expect(defaultSpeed).toHaveValue('next');
   await pausedAtZero(18);
@@ -250,10 +265,12 @@ test(`remembered native recording choices stay scoped and preserve played facts 
       .toBe(true);
   };
   await playPass();
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(13));
   await pausedAtZero(13);
   await expect(notes).toHaveValue('Synthetic retained task notes');
   await playPass();
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(25)); // Selected, remembered, but never heard.
   await pausedAtZero(25);
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
@@ -288,6 +305,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   expect(saved.metadata.evidence.measurement.seconds).toBeGreaterThan(6.6);
   await open(task);
   await pausedAtZero(25);
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await finish();
   await page.evaluate(
@@ -312,6 +330,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
     page.getByRole('status').filter({ hasText: 'remembered recording is invalid or unavailable' }),
   ).toBeVisible();
   expect(await stored()).toBeNull();
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(18));
   await finish();
   const signOut = async () => {
@@ -336,6 +355,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   expect(scopeB).not.toBe(scope);
   await open(taskB);
   await pausedAtZero(13);
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(20));
   await finish();
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);

@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { accountRequest, expectAccessible, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectAccessible, signIn } from './helpers';
 
 test('public practice is useful without signing in and fits a phone', async ({ page }) => {
   const failures: string[] = [];
@@ -19,8 +19,11 @@ test('public practice is useful without signing in and fits a phone', async ({ p
   await expect(page.getByRole('button', { name: 'Stop playback', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Stop playback', exact: true }).click();
   await expectAccessible(page, 'practice');
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
+  await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Pause timer', exact: true })).toBeVisible();
+  await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('heading', { name: 'The listening room' })).toBeVisible();
@@ -40,6 +43,7 @@ test('email login, private records, backup controls, and passkeys work together'
   await page.getByRole('button', { name: 'Log practice', exact: true }).click();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('');
   await page.getByLabel(/^Time practiced/).fill('15');
+  await openDisclosure(page, 'Speed, rating and on-air observations');
   await page.getByLabel('Character WPM', { exact: true }).fill('20');
   await page.getByLabel('Effective WPM', { exact: true }).fill('10');
   await page.getByLabel(/^Notes/).fill('Browser integration practice');

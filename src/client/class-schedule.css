@@ -71,11 +71,26 @@
   overflow-wrap: anywhere;
 }
 .class-meeting-card h3 {
-  margin: 0.5rem 0;
+  margin: 0.4rem 0;
+  font-size: 16px;
 }
 .class-meeting-card p {
   line-height: 1.6;
+  font-size: 13px;
 }
-.class-meeting-card .button {
+.class-meeting-card .class-schedule-actions .button {
   min-height: 44px;
+}
+.class-meeting-details {
+  margin-top: 4px;
+  color: #526353;
+  font-size: 13px;
+}
+.class-meeting-details summary {
+  min-height: 44px;
+  padding-block: 8px;
+  cursor: pointer;
+}
+.class-meeting-details p {
+  margin-block: 8px;
 }

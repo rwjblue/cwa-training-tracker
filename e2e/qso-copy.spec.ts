@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { expectAccessible } from './helpers';
+import { openDisclosure, expectAccessible } from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -68,6 +68,7 @@ test('QSO copy checks stay with the heard contact and reveal answers only on req
     const playingSource = await originalAudio.evaluate((element: HTMLAudioElement) => element.src);
     source ??= playingSource;
     expect(playingSource).toBe(source);
+    await openDisclosure(page, 'Browse other views');
     const inspect = page.getByRole('button', { name: 'Inspect Overview', exact: true });
     if (width === 390) await inspect.tap();
     else {

@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 
 test.use({
@@ -198,20 +198,25 @@ test(`actual recording passes retain source evidence and separate learner comple
     ).done,
   ).toBe(false);
 
+  await openDisclosure(page, 'Choose a recording speed');
   const speed = page.getByRole('combobox', { name: 'Recording speed', exact: true });
   const faster = await speed.getByRole('option', { name: /^13 WPM/ }).getAttribute('value');
   expect(faster).toBeTruthy();
   await page.route(faster!, serveRecording);
+  await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(faster!);
   await expect(audio).toHaveAttribute('src', faster!);
   expect(
     await audio.evaluate((item: HTMLAudioElement) => item.paused && item.currentTime === 0),
   ).toBe(true);
   await expect(count('This block')).toHaveText('2');
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
+  await openDisclosure(page, 'Browse other views');
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(0.8);
+  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   const inspectedPosition = await audio.evaluate((item: HTMLAudioElement) => item.currentTime);
@@ -251,9 +256,7 @@ test(`actual recording passes retain source evidence and separate learner comple
 
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const dialog = page.getByRole('dialog');
-  await expect(
-    dialog.getByRole('heading', { name: 'A little progress, worth recording.', exact: true }),
-  ).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(dialog).toContainText('2 completed passes');
   await expect(dialog).toContainText('1 completed pass');
   await page.keyboard.press('Shift+Tab');
