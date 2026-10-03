@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type BrowserContext } from '@playwright/test';
+import { expect, type Locator, type BrowserContext } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import { DEFAULT_PROFILE, addDays } from '../src/shared/training';
@@ -78,7 +79,7 @@ test('next assignment preserves native work through inspection and exact retry b
   await expect(next).toContainText(audioTask.title);
   await expectResponsive(page, 'next-assignment-ready');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await next.screenshot({ path: '.tmp/parity-queue/issue-22-ready-desktop.png' });
+
   await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
   const audio = page.getByLabel('Assigned recording', { exact: true });
   const owner = await audio.elementHandle();
@@ -138,7 +139,7 @@ test('next assignment preserves native work through inspection and exact retry b
   await expect(page).toHaveURL(/#overview$/);
   await expect(next).toContainText(audioTask.title);
   await expect(next).toContainText('Started');
-  await expectResponsive(page, 'next-after-retained-save');
+
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   refuse = false;
   await activate(page.getByRole('button', { name: 'Retry practice uploads', exact: true }));
@@ -178,7 +179,6 @@ test('next assignment preserves native work through inspection and exact retry b
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeEnabled();
   await expect(page.getByLabel('Assigned recording', { exact: true })).toHaveCount(0);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
-  await expectResponsive(page, 'next-prepared-manual');
 });
 
 test('blocked resources, live preparation, class phase and all-complete states stay useful without inferred work', async ({
@@ -282,10 +282,10 @@ test('blocked resources, live preparation, class phase and all-complete states s
     .toBe(true);
   await navigate('Today');
   await expect(next).toContainText('A live window is coming up');
-  await expectResponsive(page, 'next-blocked-live');
+
   await page.setViewportSize({ width: 390, height: 844 });
   mobile = true;
-  await next.screenshot({ path: '.tmp/parity-queue/issue-22-live-preparation-mobile.png' });
+
   await activate(next.getByRole('button', { name: 'Prepare live exercise', exact: true }));
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeDisabled();
   await expect(
@@ -296,22 +296,22 @@ test('blocked resources, live preparation, class phase and all-complete states s
   await expect(next).toHaveCount(0);
   await activate(retained.getByRole('button', { name: 'Finish practice', exact: true }));
   await page.clock.setFixedTime(new Date('2026-10-07T14:59:59Z'));
-  await page.clock.runFor(60_001);
+  await page.clock.fastForward(60_001);
   await expect(next).toContainText('No eligible live window remains');
   await page.clock.setFixedTime(new Date('2026-10-07T15:00:00Z'));
   await page.clock.runFor(1000);
   await expect(next).toContainText('Class is in progress');
   await expect(next.getByRole('button', { name: 'Start next block', exact: true })).toHaveCount(0);
-  await expectResponsive(page, 'next-private-class-phase');
+
   await navigate('Academy guide');
   await activate(page.getByRole('button', { name: 'This week', exact: true }));
   await activate(page.getByRole('checkbox', { name: `Mark ${live.title} complete`, exact: true }));
   await navigate('Today');
   await page.clock.setFixedTime(new Date('2026-10-07T16:00:00Z'));
-  await page.clock.runFor(60_001);
+  await page.clock.fastForward(60_001);
   await expect(next).toContainText('Your required exercises are complete');
   await expect(next.getByRole('button', { name: 'Start next block', exact: true })).toHaveCount(0);
-  await expectResponsive(page, 'next-all-complete');
+
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   const plan = (await (await context.request.get('/api/plan')).json()).plan;
   expect(plan.every((task: { done: boolean }) => task.done)).toBe(true);
@@ -419,13 +419,12 @@ test('next activation rechecks a class boundary after finishing without replacin
   expect(saved.minutes * 60).toBeLessThan(2);
   expect(body).toEqual(saved);
   await page.clock.setFixedTime(new Date('2026-10-07T14:00:00Z'));
-  await page.clock.runFor(60_001);
+  await page.clock.fastForward(60_001);
   await expect(next).toContainText(today.title);
   await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
   await expect(studio.getByText(today.title, { exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
 });
-
 
 test('saved Copy review opens the same required objective with a fresh assigned purpose', async ({
   page,
@@ -474,7 +473,9 @@ test('saved Copy review opens the same required objective with a fresh assigned 
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) });
   await key(row.getByRole('button', { name: 'Extra review', exact: true }));
-  await expect(page.getByRole('heading', { name: 'Your extra review.', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Your extra review.', exact: true }),
+  ).toBeVisible();
   const audio = page.getByLabel('Copy practice audio', { exact: true });
   const finishNative = async () => {
     await expect
@@ -506,7 +507,7 @@ test('saved Copy review opens the same required objective with a fresh assigned 
     page.getByRole('region', { name: 'Current practice studio', exact: true }),
   ).toContainText(task.title);
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([reviewed]);
-  await expectResponsive(page, 'next-copy-assigned-purpose');
+
   await page.getByRole('button', { name: 'Start code groups', exact: true }).tap();
   await finishNative();
   await expect

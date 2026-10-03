@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 
@@ -28,15 +29,6 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     if (await menu.isVisible()) await activate(menu);
     await activate(page.getByRole('button', { name, exact: true }));
   };
-  await page.addInitScript(() => {
-    const handlers = new Map<MediaSessionAction, MediaSessionActionHandler | null>();
-    Reflect.set(window, 'courseMediaHandlers', handlers);
-    const native = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
-    navigator.mediaSession.setActionHandler = (action, handler) => {
-      handlers.set(action, handler);
-      return native(action, handler);
-    };
-  });
   await signIn(page);
   await page.addInitScript((fixed) => {
     const native = Date;
@@ -73,7 +65,9 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
       item.dueDate === '2026-10-06' && /WD101[-_]10/i.test(item.exercise?.url ?? ''),
   );
   expect(task.exercise.minimumPasses).toBe(2);
-  await page.route(/^https:\/\/(?:[^/]+\.)?cwops\.org\//, syntheticRecording(3.6));
+  // Ten seconds reaches the native clock’s 100ms jitter allowance without
+  // changing whole-pass coverage checks or inventing listened time.
+  await page.route(/^https:\/\/(?:[^/]+\.)?cwops\.org\//, syntheticRecording(10));
   await activate(
     page
       .getByRole('listitem')
@@ -111,7 +105,7 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
   );
   expect(originalGenerated).not.toBeNull();
   await start();
-  await expect(count).toHaveText('1', { timeout: 10_000 });
+  await expect(count).toHaveText('1', { timeout: 15_000 });
   await expect.poll(paused).toBe(true);
   await expect(page.getByRole('group', { name: 'End of pass choices' })).toBeVisible();
 
@@ -123,25 +117,27 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
   await toggle(replay);
   await expect(replay).toBeChecked();
   await start();
-  await expect(count).toHaveText('1', { timeout: 10_000 });
+  await expect(count).toHaveText('1', { timeout: 15_000 });
   await expect
     .poll(() => audio.evaluate((el: HTMLAudioElement) => !el.paused && el.currentTime < 2))
     .toBe(true);
   expect(await audio.evaluate((el: HTMLAudioElement) => el.playbackRate)).toBe(1);
   expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('playing');
-  await expect(count).toHaveText('2', { timeout: 10_000 });
+  await expect(count).toHaveText('2', { timeout: 15_000 });
   await expect.poll(paused).toBe(true);
   await expect(page.getByText('The minimum is met.', { exact: false })).toBeVisible();
   // Deliberate extra playback stops again, even with the checkbox on.
   await activate(page.getByRole('button', { name: 'Play another pass', exact: true }));
-  await expect(count).toHaveText('3', { timeout: 10_000 });
+  await expect(count).toHaveText('3', { timeout: 15_000 });
   await expect.poll(paused).toBe(true);
   await reset();
   await audio.evaluate((el: HTMLAudioElement) => {
     el.currentTime = el.duration - 0.1;
   });
   await expect
-    .poll(() => audio.evaluate((el: HTMLAudioElement) => !el.seeking && el.currentTime > 3.4))
+    .poll(() =>
+      audio.evaluate((el: HTMLAudioElement) => !el.seeking && el.currentTime > el.duration - 0.2),
+    )
     .toBe(true);
   await start();
   await expect.poll(() => audio.evaluate((el: HTMLAudioElement) => el.ended)).toBe(true);
@@ -172,27 +168,18 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
       return native.call(this);
     };
   });
-  for (const action of ['pause', 'media', 'recall', 'inspect', 'source', 'preference']) {
+  // Pause, recall, Media Session and inspection share stopPlayback. Exercise
+  // one cancellation there, plus source replacement and disabling replay.
+  for (const action of ['pause', 'source', 'preference']) {
     await reset();
     await page.evaluate(() => Reflect.set(window, 'nextReplay', 'hold'));
     await start();
-    await expect(count).toHaveText('1', { timeout: 10_000 });
+    await expect(count).toHaveText('1', { timeout: 15_000 });
     await expect(page.getByRole('status').filter({ hasText: 'Starting listening…' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
     const old = await audio.elementHandle();
     if (action === 'pause')
       await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
-    if (action === 'media')
-      await page.evaluate(() => {
-        const handler = Reflect.get(window, 'courseMediaHandlers').get('pause');
-        if (typeof handler !== 'function')
-          throw new Error('Pending replay lost its Media Session Pause action');
-        handler({ action: 'pause' });
-      });
-    if (action === 'recall')
-      await activate(page.getByRole('button', { name: 'Start recall timer', exact: true }));
-    if (action === 'inspect')
-      await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
     if (action === 'source')
       await page
         .getByRole('combobox', { name: 'Recording speed', exact: true })
@@ -200,9 +187,6 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     if (action === 'preference') await toggle(replay);
     await page.evaluate(() => Reflect.get(window, 'releaseReplay')());
     await expect.poll(() => old!.evaluate((el: HTMLAudioElement) => el.paused)).toBe(true);
-    if (action === 'inspect') {
-      await activate(page.getByRole('button', { name: 'Return to practice', exact: true }));
-    }
     if (action === 'source')
       await page
         .getByRole('combobox', { name: 'Recording speed', exact: true })
@@ -210,19 +194,17 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
     if (action === 'preference') await toggle(replay);
     await expect(count).toHaveText('1');
     await expect.poll(paused).toBe(true);
-    if (action === 'recall')
-      await activate(page.getByRole('button', { name: 'Pause recall', exact: true }));
   }
   await reset();
   await page.evaluate(() => Reflect.set(window, 'nextReplay', 'reject'));
   await start();
-  await expect(count).toHaveText('1', { timeout: 10_000 });
+  await expect(count).toHaveText('1', { timeout: 15_000 });
   await expect(
     page.getByRole('alert').filter({ hasText: 'Automatic replay could not start.' }),
   ).toBeVisible();
   await expect.poll(paused).toBe(true);
   await activate(page.getByRole('button', { name: 'Play another pass', exact: true }));
-  await expect(count).toHaveText('2', { timeout: 10_000 });
+  await expect(count).toHaveText('2', { timeout: 15_000 });
   await expect.poll(paused).toBe(true);
   // Turning the choice off leaves an already audible pass playing.
   await activate(page.getByRole('button', { name: 'Play another pass', exact: true }));
@@ -280,7 +262,7 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
   await expect.poll(paused).toBe(true);
   await expect(count).toHaveText('0');
   await start();
-  await expect(count).toHaveText('2', { timeout: 12_000 });
+  await expect(count).toHaveText('2', { timeout: 25_000 });
   await expect.poll(paused).toBe(true);
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const review = page.getByRole('dialog');
@@ -300,9 +282,9 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
   const saved = (await (await context.request.get('/api/entries')).json()).entries;
   expect(saved).toHaveLength(1);
   expect(saved[0].metadata.evidence.recordings[0].passes.durations).toEqual([
-    { durationSeconds: 3.6, completedPasses: 2 },
+    { durationSeconds: 10, completedPasses: 2 },
   ]);
-  expect(saved[0].metadata.evidence.measurement.seconds).toBeGreaterThan(6.5);
+  expect(saved[0].metadata.evidence.measurement.seconds).toBeGreaterThan(19.5);
   await activate(
     page
       .getByRole('listitem')
@@ -310,6 +292,6 @@ test(`course replay uses observed passes and cancels obsolete native Play at ${w
       .getByRole('button', { name: 'Listen & practice', exact: true }),
   );
   await start();
-  await expect(count).toHaveText('1', { timeout: 10_000 });
+  await expect(count).toHaveText('1', { timeout: 15_000 });
   await expect.poll(paused).toBe(true);
 });

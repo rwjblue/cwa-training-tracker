@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectResponsive, scopedRequest, signIn } from './helpers';
 import { dateInTimezone } from '../src/shared/training';
 
@@ -95,13 +96,7 @@ test('optional daily words count actual replay separately from recall and retire
   await activate(daily.getByText('Resource and progress details', { exact: true }));
   await expect(daily).toContainText('original daily recording is private and unavailable here');
   await expectResponsive(page, 'daily-words-today');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-25-today-${width}.png`,
-      fullPage: true,
-    });
-  }
+
   await page.setViewportSize({ width: 1440, height: 1000 });
   await activate(daily.getByRole('button', { name: 'Practice words', exact: true }));
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
@@ -153,7 +148,7 @@ test('optional daily words count actual replay separately from recall and retire
   await expect(daily.getByLabel('Word listening only')).toHaveText(listened, {
     useInnerText: true,
   });
-  await expectResponsive(page, 'daily-words-retained');
+
   await activate(daily.getByRole('button', { name: 'Continue word listening', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Your word list/ })).toHaveValue('E E');
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
@@ -185,7 +180,7 @@ test('optional daily words count actual replay separately from recall and retire
   await expect(daily.getByLabel('Word listening only')).toContainText('Current listening0:00');
   await expect(daily).toContainText('Ten-minute listening goal reached');
   const queuedText = await daily.innerText();
-  await expectResponsive(page, 'daily-words-queued');
+
   fail = false;
   const uploaded = page.waitForResponse(
     (response) =>
@@ -219,11 +214,4 @@ test('optional daily words count actual replay separately from recall and retire
   await expect(page.getByText(/^Measured word listening:/)).toBeVisible();
   await expect(page.getByText(/^Played Your word list:/)).toBeVisible();
   await expectResponsive(page, 'daily-words-history');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-25-history-${width}.png`,
-      fullPage: true,
-    });
-  }
 });

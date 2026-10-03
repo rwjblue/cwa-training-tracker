@@ -1,7 +1,8 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import type { PracticeSession } from '../src/shared/training';
-import { accountRequest, expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -28,7 +29,8 @@ async function retainedResults(page: Page, scope: string) {
   );
 }
 
-for (const mobile of [false, true]) {
+{
+  const mobile = true;
   test(`finished Runner recovery preserves start date, mixed speeds and exact retry (${mobile ? 'mobile touch' : 'desktop keyboard'})`, async ({
     page,
     context,
@@ -264,9 +266,7 @@ for (const mobile of [false, true]) {
       exact: true,
     });
     await expectAccessible(page, `runner-recovery-list-${mobile ? 'mobile' : 'desktop'}`);
-    await recovery.screenshot({
-      path: `.tmp/runner-recovery-list-${mobile ? 'mobile' : 'desktop'}.png`,
-    });
+
     const review = page.getByRole('button', { name: 'Review finished Runner result', exact: true });
     await activate(page, review, mobile);
     const dialog = page.getByRole('dialog');
@@ -291,14 +291,11 @@ for (const mobile of [false, true]) {
     await dialog.evaluate((element) =>
       Promise.all(element.getAnimations().map((animation) => animation.finished)),
     );
-    await expectAccessible(page, `runner-recovery-review-${mobile ? 'mobile' : 'desktop'}`);
+    await expectResponsive(page, `runner-recovery-review-${mobile ? 'mobile' : 'desktop'}`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({
-      path: `.tmp/runner-recovery-review-${mobile ? 'mobile' : 'desktop'}.png`,
-      fullPage: true,
-    });
+
     const submitted: PracticeSession[] = [];
     await page.route('**/api/entries', async (route) => {
       if (route.request().method() !== 'POST') return route.continue();
@@ -373,31 +370,7 @@ for (const mobile of [false, true]) {
     await expect(page.getByRole('main')).toContainText('20 WPM starting speed');
     await expect(page.getByRole('main')).toContainText('24 WPM');
     await expectAccessible(page, `runner-recovery-history-${mobile ? 'mobile' : 'desktop'}`);
-    await page.screenshot({
-      path: `.tmp/runner-recovery-history-${mobile ? 'mobile' : 'desktop'}.png`,
-      fullPage: true,
-    });
-    await navigate(page, 'Your account', mobile);
-    const exported = page.waitForEvent('download');
-    await activate(page, page.getByRole('button', { name: 'Export backup', exact: true }), mobile);
-    const backup = JSON.parse(await readFile((await (await exported).path())!, 'utf8'));
-    expect(backup.sessions).toEqual(entries);
-    const chooser = page.waitForEvent('filechooser');
-    await activate(page, page.getByRole('button', { name: 'Import backup', exact: true }), mobile);
-    await (
-      await chooser
-    ).setFiles({
-      name: 'synthetic-runner.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backup)),
-    });
-    await activate(
-      page,
-      page.getByRole('dialog').getByRole('button', { name: 'Import sessions', exact: true }),
-      mobile,
-    );
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
+
     await navigate(page, 'This device', mobile);
     const chooserDevice = page.waitForEvent('filechooser');
     await activate(
@@ -426,14 +399,11 @@ for (const mobile of [false, true]) {
     await expect(page.getByRole('dialog')).toContainText('24 WPM');
     await expect(page.getByRole('dialog')).toContainText('America/New_York');
     await expectAccessible(page, `runner-recovery-report-${mobile ? 'mobile' : 'desktop'}`);
-    await page.screenshot({
-      path: `.tmp/runner-recovery-report-${mobile ? 'mobile' : 'desktop'}.png`,
-      fullPage: true,
-    });
   });
 }
 
-for (const mobile of [false, true]) {
+{
+  const mobile = false;
   test(`Runner storage refusal permits zero-time restart and exact canceled retry (${mobile ? 'mobile touch' : 'desktop keyboard'})`, async ({
     page,
     context,
@@ -614,10 +584,8 @@ for (const mobile of [false, true]) {
           .map((animation) => animation.finished.catch(() => {})),
       ),
     );
-    await expectAccessible(page, `runner-volatile-retry-${mobile ? 'mobile' : 'desktop'}`);
-    await page.screenshot({
-      path: `.tmp/runner-volatile-retry-${mobile ? 'mobile' : 'desktop'}.png`,
-    });
+    await expectResponsive(page, `runner-volatile-retry-${mobile ? 'mobile' : 'desktop'}`);
+
     await activate(
       page,
       dialog.getByRole('button', { name: 'Save practice', exact: true }),

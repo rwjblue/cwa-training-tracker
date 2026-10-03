@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 

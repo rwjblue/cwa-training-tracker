@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { expectAccessible, signIn } from './helpers';
 
 test('practice preferences persist and generated material follows exact selected lengths', async ({
@@ -68,7 +69,6 @@ test('practice preferences persist and generated material follows exact selected
     true,
   );
   await expectAccessible(page, 'studio-preferences-mobile');
-  await page.screenshot({ path: '.tmp/practice-preferences-mobile.png', fullPage: true });
 });
 
 test('timer waits for explicit save, preserves seconds and pauses, and allows manual logging', async ({
@@ -334,11 +334,10 @@ test('word and QSO trainers expose the complete material and remember listening 
   await expect(page.getByRole('button', { name: 'Stop playback', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Stop playback', exact: true }).click();
   await expectAccessible(page, 'qso-desktop');
-  await page.screenshot({ path: '.tmp/qso-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   await expectAccessible(page, 'qso-mobile');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/qso-mobile.png', fullPage: true });
 });

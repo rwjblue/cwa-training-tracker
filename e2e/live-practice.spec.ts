@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import ICAL from 'ical.js';
 import { readFile } from 'node:fs/promises';
 import { expectResponsive } from './helpers';
@@ -52,10 +53,10 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   await expect(current).toContainText('Ends in 1h 0m 0s');
   await expect(next).toContainText('Mon, Oct 5, 2026, 00:00');
   await expectResponsive(page, 'live-agenda-current');
-  await page.screenshot({ path: '.tmp/parity-queue/issue-20-agenda-1440.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   mobile = true;
-  await page.screenshot({ path: '.tmp/parity-queue/issue-20-agenda-390.png', fullPage: true });
+
   await page.clock.setFixedTime(new Date('2026-10-02T20:59:59.999Z'));
   await expect(current).toContainText('Ends in 0m 1s');
   await page.clock.setFixedTime(new Date('2026-10-02T21:00:00Z'));

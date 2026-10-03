@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
+import { expectResponsive } from './helpers';
 
-for (const viewport of [
-  { width: 1280, height: 900 },
-  { width: 390, height: 844 },
-]) {
+{
+  const viewport = { width: 390, height: 844 };
   test(`prerecorded answers use continuous native playback at ${viewport.width}px`, async ({
     page,
   }) => {
@@ -102,8 +102,8 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: `.tmp/spoken-answers-${viewport.width}.png`, fullPage: true });
 
+    await expectResponsive(page, 'spoken-answers-complete');
     await page.getByRole('textbox', { name: /^Your word list/ }).fill('UNRECORDED');
     await expect(page.getByRole('alert')).toContainText('No prerecorded answer for UNRECORDED');
     await expect(media).not.toHaveAttribute('src');

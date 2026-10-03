@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive, signIn } from './helpers';
 import { morseTimeline } from '../src/client/audio';
 
@@ -93,13 +94,7 @@ test('native word speed edits preserve heard timing, paused position and continu
     .toBe('true');
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
   await expectResponsive(page, 'live-word-retimed');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-26-words-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
   const review = page.getByRole('dialog');
   await expect(review).toContainText('20 character / 10 effective WPM');
@@ -190,10 +185,7 @@ test('native QSO retiming retains exact occurrence and rejects canceled asynchro
     page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }),
   ).toBeVisible();
   await expectResponsive(page, 'live-qso-paused');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({ path: `.tmp/parity-queue/issue-26-qso-${width}.png`, fullPage: true });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Inspect Today', exact: true }).tap();
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await retained.getByRole('button', { name: 'Return to practice', exact: true }).tap();

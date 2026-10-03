@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 import {
@@ -12,6 +13,7 @@ import {
 } from '../src/shared/copy-practice';
 import { copyAttemptSessionFields } from '../src/shared/copy-report';
 import { dateInTimezone } from '../src/shared/training';
+import type { CopyDraft } from '../src/client/copy-storage';
 
 async function openCopy(page: Page) {
   const observeAudio = () => {
@@ -149,16 +151,13 @@ test.describe('guest code-group comparison', () => {
   }) => {
     test.setTimeout(60_000);
     await openCopy(page);
-    await page.screenshot({ path: '.tmp/copy-default-setup-desktop.png', fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: '.tmp/copy-default-setup-mobile.png', fullPage: true });
     await page.setViewportSize({ width: 1280, height: 900 });
     await configureShortGroups(page);
     await expect(page.getByRole('combobox', { name: 'Tone', exact: true })).toHaveValue('random');
     await expectAccessible(page, 'copy-setup-desktop');
-    await page.screenshot({ path: '.tmp/copy-setup-desktop.png', fullPage: true });
+
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: '.tmp/copy-setup-mobile.png', fullPage: true });
+
     await startWithoutMovingCopyField(page, 'Start code groups', 'E ');
     const audio = page.getByLabel('Copy practice audio', { exact: true });
     await expect(audio).toHaveAttribute('src', /^blob:/);
@@ -244,14 +243,14 @@ test.describe('guest code-group comparison', () => {
     await expect(page.locator('.copy-scoring-details')).toContainText('The lower count, 3,');
     await page.setViewportSize({ width: 1280, height: 900 });
     await expectAccessible(page, 'copy-group-score-desktop');
-    await page.screenshot({ path: '.tmp/copy-group-score-desktop.png', fullPage: true });
+
     expect((await context.request.get('/api/entries')).status()).toBe(401);
     await page.setViewportSize({ width: 390, height: 844 });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
     await expectAccessible(page, 'copy-result-mobile');
-    await page.screenshot({ path: '.tmp/copy-result-mobile.png', fullPage: true });
+
     await page.getByText('Notes and more options', { exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Practice missed characters', exact: true }),
@@ -284,7 +283,7 @@ test.describe('guest code-group comparison', () => {
       'Group comparison: 3 edits. Whole-text comparison: 4 edits.',
     );
     await expectAccessible(page, 'copy-history-mobile');
-    await page.screenshot({ path: '.tmp/copy-history-mobile.png', fullPage: true });
+
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
     await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
     await page.getByRole('button', { name: 'Practice report', exact: true }).click();
@@ -299,7 +298,7 @@ test.describe('guest code-group comparison', () => {
     await expect(page.getByRole('dialog')).toContainText('Actual character/effective WPM: 25/25');
     await expect(page.getByRole('dialog')).toContainText('Measured time:');
     await expectAccessible(page, 'copy-report-mobile');
-    await page.screenshot({ path: '.tmp/copy-report-mobile.png' });
+
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.getByRole('button', { name: 'Open your account', exact: true }).tap();
@@ -372,13 +371,12 @@ test('word copy uses a compact input, replays with a period, and shows each tria
   await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
   expect((await answer.boundingBox())!.width).toBeLessThanOrEqual(400);
   await expectAccessible(page, 'copy-word-progress-desktop');
-  await page.screenshot({ path: '.tmp/copy-word-progress-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
   await expectAccessible(page, 'copy-word-progress-mobile');
-  await page.screenshot({ path: '.tmp/copy-word-progress-mobile.png', fullPage: true });
 
   const previousAttempt = await page.evaluate(
     () => JSON.parse(localStorage.getItem('cwa:copy:v1:guest')!).attempt,
@@ -392,9 +390,7 @@ test('word copy uses a compact input, replays with a period, and shows each tria
   await expect(restart).toBeFocused();
   await expect(restart).toBeInViewport();
   await expectAccessible(page, 'copy-restart-mobile');
-  await page.screenshot({ path: '.tmp/copy-restart-mobile.png', fullPage: true });
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.screenshot({ path: '.tmp/copy-restart-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Start next round', exact: true }).click();
   await expect(answer).toBeFocused();
@@ -420,7 +416,7 @@ test('word copy uses a compact input, replays with a period, and shows each tria
   expect(restarted.saved[0].metadata.copyAttempt.trials).toHaveLength(3);
 });
 
-test('authenticated word round completes all trials and retries an uncertain save without duplication', async ({
+test('a recovered word round finishes through native audio and retries an uncertain save once', async ({
   page,
   context,
 }) => {
@@ -448,7 +444,7 @@ test('authenticated word round completes all trials and retries an uncertain sav
       await route.abort('failed');
     } else await route.continue();
   });
-  for (let n = 1; n <= 25; n++) {
+  const finishTrial = async (n: number) => {
     await expect(page.getByText(`Word ${n} of 25`, { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Check & next', exact: true })).toBeEnabled();
     await page.getByRole('button', { name: 'Reveal answer', exact: true }).click();
@@ -456,7 +452,45 @@ test('authenticated word round completes all trials and retries an uncertain sav
     expect(['A', 'I']).toContain(target);
     await page.getByRole('textbox', { name: 'Your copy', exact: true }).fill(target);
     await page.getByRole('textbox', { name: 'Your copy', exact: true }).press('Enter');
+  };
+  await finishTrial(1);
+  await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
+  const { user } = await (await context.request.get('/api/me')).json();
+  const key = `cwa:copy:v1:${encodeURIComponent(user.id)}`;
+  const draft: CopyDraft = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    key,
+  );
+  // The fast suite checks all 25 transitions and scoring combinations. Arrange
+  // a recovered final trial here; both boundary trials still use native audio.
+  while (draft.attempt.trials.length < 24) {
+    draft.attempt = submitCopyAnswer(
+      draft.attempt,
+      draft.attempt.targets[draft.attempt.trials.length],
+    );
+    draft.attempt.revealCount++;
   }
+  draft.answer = '';
+  draft.position = 0;
+  draft.heard = false;
+  draft.replayCount = 0;
+  draft.trialAnswerStartedAt = 0;
+  delete draft.autoSkipAt;
+  await page.addInitScript(({ key, draft }) => localStorage.setItem(key, JSON.stringify(draft)), {
+    key,
+    draft,
+  });
+  await page.reload();
+  await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+  await page.getByRole('button', { name: 'Play audio', exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .getByLabel('Copy practice audio', { exact: true })
+        .evaluate((audio: HTMLAudioElement) => audio.currentTime),
+    )
+    .toBeGreaterThan(0);
+  await finishTrial(25);
   await expect(page.locator('.copy-result-stats')).toContainText('25/25');
   await expect(page.locator('.copy-result-stats')).toContainText('1250');
   await expect(
@@ -498,13 +532,12 @@ test('authenticated word round completes all trials and retries an uncertain sav
   expect(entries[0].metadata.copyAttempt.revealCount).toBe(25);
   expect(entries[0].notes).toContain('short words');
   await expectAccessible(page, 'copy-words-desktop');
-  await page.screenshot({ path: '.tmp/copy-words-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
   await expectAccessible(page, 'copy-words-mobile');
-  await page.screenshot({ path: '.tmp/copy-words-mobile.png', fullPage: true });
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole('button', { name: 'Word listening', exact: true }).click();
@@ -543,7 +576,6 @@ test('authenticated word round completes all trials and retries an uncertain sav
     .check();
   await expect(page.getByRole('button', { name: 'Start code groups', exact: true })).toBeEnabled();
   await expectAccessible(page, 'copy-assignment-desktop');
-  await page.screenshot({ path: '.tmp/copy-assignment-desktop.png', fullPage: true });
 });
 
 test('group feedback keeps adjacent columns and later matches after omissions and extra input', async ({
@@ -628,10 +660,6 @@ test('group feedback keeps adjacent columns and later matches after omissions an
     }, groups[2]);
     expect(columnGap).toBeGreaterThanOrEqual(0);
     expect(columnGap).toBeLessThanOrEqual(32);
-    await page.screenshot({
-      path: `.tmp/copy-omitted-group-${viewport.width}.png`,
-      fullPage: true,
-    });
   }
   await expectAccessible(page, 'copy-omitted-group-mobile');
   // A separate, unambiguous insertion fixture checks wrapping without changing
@@ -690,7 +718,7 @@ test('group feedback keeps adjacent columns and later matches after omissions an
       .boundingBox();
     // Extra characters should wrap across available space, not form a tall,
     // two-character column beside an otherwise empty comparison.
-    await page.screenshot({ path: `.tmp/copy-extra-input-${width}.png`, fullPage: true });
+
     expect(extraRow!.height).toBeLessThan(width === 390 ? 700 : 200);
   }
   // A historical v1 attempt keeps its original whole-text score even where
@@ -845,10 +873,6 @@ test.describe('copy review inspection and recovery', () => {
       expect(returned.draft.attempt.answerSeconds).toBe(paused.draft.attempt.answerSeconds);
       expect(returned.draft.attempt.reviewSeconds).toBe(paused.draft.attempt.reviewSeconds);
       await expect(option).toHaveValue('1');
-      await page.screenshot({
-        path: `.tmp/copy-inspection-review-purpose-${width}.png`,
-        fullPage: true,
-      });
     }
     await originalAudio.dispose();
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -876,16 +900,12 @@ test.describe('copy review inspection and recovery', () => {
     await expect(
       copy.getByRole('status').filter({ hasText: 'Your recovered round keeps' }),
     ).toContainText(`A new round will use assigned practice for ${title}`);
-    await page.screenshot({ path: '.tmp/copy-recovered-assignment-option.png', fullPage: true });
+
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     await expectAccessible(page, 'copy-recovered-review-purpose-mobile');
-    await page.screenshot({
-      path: '.tmp/copy-recovered-review-purpose-mobile.png',
-      fullPage: true,
-    });
   });
 });
 
@@ -920,7 +940,7 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   expect(checkboxLayout.textLeft).toBeGreaterThanOrEqual(checkboxLayout.boxRight);
   await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
   await expectAccessible(page, 'copy-calls-setup-mobile');
-  await page.screenshot({ path: '.tmp/copy-calls-setup-mobile.png', fullPage: true });
+
   await page.getByRole('button', { name: 'Start callsign copy', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Check & next', exact: true })).toBeEnabled();
   const firstPlay = await recordingTone(page);
@@ -946,7 +966,6 @@ test('callsign controls protect replay and blind feedback, and plain text grades
     'replayed 1×',
   );
   await expectAccessible(page, 'copy-calls-result-mobile');
-  await page.screenshot({ path: '.tmp/copy-calls-result-mobile.png', fullPage: true });
 
   await page.getByRole('button', { name: 'Adjust settings', exact: true }).click();
   await page.getByRole('button', { name: 'Plain text', exact: true }).click();
@@ -986,5 +1005,4 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   expect(exported.notes).toBe('');
   await page.setViewportSize({ width: 1280, height: 900 });
   await expectAccessible(page, 'copy-plaintext-result-desktop');
-  await page.screenshot({ path: '.tmp/copy-plaintext-result-desktop.png', fullPage: true });
 });

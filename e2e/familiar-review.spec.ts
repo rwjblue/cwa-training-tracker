@@ -1,4 +1,5 @@
-import { test, expect, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import { DEFAULT_PROFILE, addDays, type PracticeSession } from '../src/shared/training';
@@ -119,9 +120,9 @@ test('familiar review rotates native material and saves exact private evidence w
   await expect(reviews).not.toContainText('Same recording on another day');
   await expectResponsive(page, 'familiar-review-ready');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await reviews.screenshot({ path: '.tmp/parity-queue/issue-24-ready-desktop.png' });
+
   await page.setViewportSize({ width: 390, height: 844 });
-  await reviews.screenshot({ path: '.tmp/parity-queue/issue-24-ready-mobile.png' });
+
   await page.setViewportSize({ width: 1440, height: 1000 });
   await activate(reviews.getByRole('button', { name: `Review ${audioTask.title}`, exact: true }));
   await expect(
@@ -167,7 +168,7 @@ test('familiar review rotates native material and saves exact private evidence w
     page.getByRole('button', { name: 'Retry practice uploads', exact: true }),
   ).toBeVisible();
   await expect.poll(titles).toEqual([icrTask.title, runnerTask.title, audioTask.title]);
-  await expectResponsive(page, 'familiar-review-pending');
+
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
   refuse = false;
   await activate(page.getByRole('button', { name: 'Retry practice uploads', exact: true }));
@@ -194,7 +195,7 @@ test('familiar review rotates native material and saves exact private evidence w
   await expect
     .poll(async () => (await (await context.request.get('/api/entries')).json()).entries.length)
     .toBe(2);
-  await expectResponsive(page, 'familiar-review-native-copy');
+
   const next = page.getByRole('region', { name: 'Your next practice', exact: true });
   await expect(next).toContainText('Optional familiar review');
   await activate(reviews.getByRole('button', { name: `Review ${runnerTask.title}`, exact: true }));
@@ -236,14 +237,13 @@ test('familiar review rotates native material and saves exact private evidence w
     },
   });
   expect((await (await context.request.get('/api/plan')).json()).plan).toEqual(originalPlan);
-  await expectResponsive(page, 'familiar-review-saved-runner');
+
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await activate(menu);
   await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
   await expect(page.getByText('Extra review', { exact: true })).toHaveCount(3);
   await expectResponsive(page, 'familiar-review-history');
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.screenshot({ path: '.tmp/parity-queue/issue-24-history-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '.tmp/parity-queue/issue-24-history-mobile.png', fullPage: true });
 });

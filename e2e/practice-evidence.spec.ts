@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive, scopedRequest, signIn } from './helpers';
 
 // These separate synthetic clients retain the production email-request limit;

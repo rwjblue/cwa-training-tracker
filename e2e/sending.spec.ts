@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { dateInTimezone } from '../src/shared/training';
 import { accountRequest, expectAccessible, signIn } from './helpers';
 
@@ -117,7 +118,7 @@ test('sending scales stay in the studio and save assigned practice without openi
   await page.setViewportSize({ width: 1280, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'sending-desktop');
-  await page.screenshot({ path: '.tmp/sending-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const controls = page.getByRole('group', { name: 'Sending practice controls', exact: true });
@@ -148,7 +149,6 @@ test('sending scales stay in the studio and save assigned practice without openi
     ).toBe(true);
   }
   await expectAccessible(page, 'sending-mobile');
-  await page.screenshot({ path: '.tmp/sending-mobile.png', fullPage: true });
 
   await page.getByRole('button', { name: 'Review & save 01:17', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(

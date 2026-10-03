@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectResponsive, signIn } from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
 
@@ -116,7 +117,7 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await expectResponsive(page, 'live-task-unavailable-retained');
   // Exact end also remains unavailable; paused calendar advancement adds no time.
   await page.clock.setFixedTime(new Date('2026-10-07T14:00:00Z'));
-  await page.clock.runFor(60001);
+  await page.clock.fastForward(60001);
   await expect(opportunity).toContainText('No CWT window remains before the deadline.');
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Time practiced/ })).toHaveValue(workedTime);

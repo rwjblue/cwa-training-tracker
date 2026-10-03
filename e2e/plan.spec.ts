@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { expectAccessible, signIn } from './helpers';
 
 test('private homework supports completion, reporting, and deletion without losing practice', async ({
@@ -59,7 +60,6 @@ test('private homework supports completion, reporting, and deletion without losi
     true,
   );
   await expectAccessible(page, 'plan-mobile');
-  await page.screenshot({ path: '.tmp/plan-mobile.png', fullPage: true });
 
   await page.reload();
   await page.getByLabel('Show completed', { exact: true }).check();

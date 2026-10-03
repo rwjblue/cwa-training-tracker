@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { accountRequest, expectAccessible, signIn } from './helpers';
 
@@ -37,7 +38,6 @@ test('private class times, exceptions, retry and class logging through real cont
         true,
       );
       await expectAccessible(page, `class-schedule-${label}-${width}`);
-      await page.screenshot({ path: `.tmp/class-schedule-${label}-${width}.png`, fullPage: true });
     }
     await page.setViewportSize({ width: mobile ? 390 : 1440, height: mobile ? 844 : 1000 });
   };

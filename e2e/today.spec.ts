@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { addDays, dateInTimezone } from '../src/shared/training';
 import { accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
 
@@ -60,7 +61,6 @@ test('Today brings personal assignments forward and keeps logging separate from 
     panel.getByText('Send a familiar exchange with generous word spacing.', { exact: true }),
   ).toBeVisible();
   await expectAccessible(page, 'today-desktop');
-  await page.screenshot({ path: '.tmp/today-desktop.png', fullPage: true });
 
   await panel.getByRole('button', { name: 'Practice', exact: true }).click();
   await expect(page).toHaveURL(/#practice$/);
@@ -91,7 +91,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.clock.resume();
   await expect(panel.getByText('Started', { exact: true })).toBeVisible();
   await expect(panel.getByText('7 min practiced · 7 today', { exact: true })).toBeVisible();
-  await page.screenshot({ path: '.tmp/practice-saved-today-desktop.png', fullPage: true });
+
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0]).toMatchObject({
@@ -132,7 +132,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
     true,
   );
   await expectAccessible(page, 'today-mobile');
-  await page.screenshot({ path: '.tmp/today-mobile.png', fullPage: true });
+
   await page.reload();
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
 });
@@ -186,12 +186,12 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(sessionSelect).toHaveValue('');
   await expect(sessionSelect).toHaveAccessibleDescription(/Leave this blank for general practice/);
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await page.screenshot({ path: '.tmp/curriculum-today-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/curriculum-today-mobile.png', fullPage: true });
+
   await page.setViewportSize({ width: 1280, height: 900 });
 
   // Exercise browser media playback without relying on the remote recording or
@@ -218,13 +218,13 @@ test('course dates populate Today with playable assignments and preserve linked 
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   const audio = page.getByLabel('Assigned recording', { exact: true });
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);
-  await page.screenshot({ path: '.tmp/assigned-recording-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   await expectAccessible(page, 'assigned-recording-mobile');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/assigned-recording-mobile.png', fullPage: true });
+
   await page
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Copied ALICE in OH. Revisit the final sentence.');
@@ -299,7 +299,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.clock.pauseAt(new Date('2026-10-06T16:00:01Z'));
   await page.clock.fastForward(65_000);
   await page.getByRole('button', { name: 'Start recall timer', exact: true }).click();
-  await page.clock.runFor(20_000);
+  await page.clock.runFor(2_000);
   await page.getByRole('button', { name: 'Review & save', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(
@@ -307,7 +307,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   ).toBeFocused();
   await expect(dialog.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
   await expect(dialog.getByLabel('Effective WPM', { exact: true })).toHaveValue('');
-  await page.screenshot({ path: '.tmp/practice-review-mobile.png', fullPage: true });
+
   await expect(dialog.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Copied ALICE in OH. Revisit the final sentence.',
   );
@@ -321,7 +321,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/practice-saved-today-mobile.png', fullPage: true });
+
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
@@ -329,9 +329,9 @@ test('course dates populate Today with playable assignments and preserve linked 
   expect(entries).toHaveLength(1);
   expect(entries[0].metadata.plannedTaskId).toBe(assigned.id);
   expect(entries[0].metadata.scratchpad).toBe('Copied ALICE in OH. Replayed the final sentence.');
-  expect(entries[0].metadata.recallSeconds).toBe(20);
-  expect(entries[0].metadata.elapsedSeconds).toBeGreaterThanOrEqual(20 + Math.floor(listened) - 1);
-  expect(entries[0].metadata.elapsedSeconds).toBeLessThanOrEqual(20 + Math.ceil(listened));
+  expect(entries[0].metadata.recallSeconds).toBe(2);
+  expect(entries[0].metadata.elapsedSeconds).toBeGreaterThanOrEqual(2 + Math.floor(listened) - 1);
+  expect(entries[0].metadata.elapsedSeconds).toBeLessThanOrEqual(2 + Math.ceil(listened));
   expect(entries[0].minutes).toBe(entries[0].metadata.elapsedSeconds / 60);
   expect(entries[0].metadata.recordings).toHaveLength(2);
   expect(entries[0].metadata.recordings[0]).toMatchObject({
@@ -438,16 +438,15 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(sessionSelect).toHaveValue('1');
   await expect(sessionSelect).toHaveAccessibleDescription(/earlier session for review/);
   await expectAccessible(page, 'practice-session-desktop');
-  await page.screenshot({ path: '.tmp/practice-session-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(sessionSelect).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
   await expectAccessible(page, 'practice-session-mobile');
-  await page.screenshot({ path: '.tmp/practice-session-mobile.png', fullPage: true });
+
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await page.screenshot({ path: '.tmp/today-session-mobile.png', fullPage: true });
 });
 
 test('an exercise without a time target can be completed and reopened without logging practice', async ({
@@ -478,7 +477,7 @@ test('an exercise without a time target can be completed and reopened without lo
   await expect(page.getByText('15:00', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/15 min target/)).toHaveCount(0);
   await expectAccessible(page, 'exercise-no-target-desktop');
-  await page.screenshot({ path: '.tmp/exercise-no-target-desktop.png', fullPage: true });
+
   let releaseCompletion!: () => void;
   const heldCompletion = new Promise<void>((resolve) => {
     releaseCompletion = resolve;
@@ -544,7 +543,7 @@ test('an exercise without a time target can be completed and reopened without lo
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/exercise-completed-mobile.png', fullPage: true });
+
   await page.getByRole('button', { name: 'Reopen exercise', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Complete exercise', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
@@ -646,7 +645,7 @@ test('earlier work can be dismissed in bulk and restored without completion or c
     panel.getByRole('heading', { name: 'Today’s planned exchange', exact: true, level: 4 }),
   ).toBeVisible();
   await expectAccessible(page, 'earlier-dismissed-desktop');
-  await page.screenshot({ path: '.tmp/earlier-dismissed-desktop.png', fullPage: true });
+
   await page.reload();
   await expect(panel.locator('summary').filter({ hasText: 'Earlier unfinished work' })).toHaveCount(
     0,
@@ -662,7 +661,7 @@ test('earlier work can be dismissed in bulk and restored without completion or c
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/earlier-restore-mobile.png', fullPage: true });
+
   await oldRow.getByRole('button', { name: 'Restore to Today', exact: true }).click();
   await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toHaveCount(0);
   await expect(oldRow.getByRole('checkbox')).not.toBeChecked();

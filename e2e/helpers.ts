@@ -82,7 +82,7 @@ export async function expectResponsive(page: Page, label: string) {
   }
 }
 
-async function latestLocalCode(after: number): Promise<string> {
+async function latestLocalCode(after: number, email: string): Promise<string> {
   let code = '';
   await expect
     .poll(
@@ -90,9 +90,14 @@ async function latestLocalCode(after: number): Promise<string> {
         const output = (await readFile('.tmp/e2e-server.log', 'utf8'))
           .slice(after)
           .replace(/\u001b\[[0-9;]*m/g, '');
-        const paths = [...output.matchAll(/(?:Text|text):\s*(\S+\.txt)/g)];
+        // Match the recipient and text file in the same simulator message.
+        // Another worker's newer email must never supply this browser's code.
+        const paths = [
+          ...output.matchAll(/^To: ([^\r\n]+)\r?\n(?:(?!^To:)[\s\S])*?^Text:\s*(\S+\.txt)/gm),
+        ];
         for (const match of paths.reverse()) {
-          const text = await readFile(match[1], 'utf8').catch(() => '');
+          if (match[1].trim().toLowerCase() !== email.trim().toLowerCase()) continue;
+          const text = await readFile(match[2], 'utf8').catch(() => '');
           code = text.match(/sign-in code is (\d{6})/)?.[1] ?? '';
           if (code) return true;
         }
@@ -115,7 +120,7 @@ export async function signIn(
   }
   await page.getByLabel('Email address').fill(email);
   await page.getByRole('button', { name: 'Email me a sign-in code', exact: true }).click();
-  const code = await latestLocalCode(offset);
+  const code = await latestLocalCode(offset, email);
   await page.getByLabel('One-time code', { exact: true }).fill(code);
   await page
     .getByRole('button', { name: /verify|continue|sign in/i })

@@ -35,8 +35,9 @@ and spacing relationships rather than duplicating the implementation's loop.
 
 A browser test should earn its startup and maintenance cost. Keep one useful
 happy path for sign-in and saved practice, one real passkey round trip, a private
-assignment/report journey, and representative practice/account controls. Run persistence workflows once,
-using a mix of desktop keyboard and mobile touch journeys. Check the distinctive settled screens at both widths with
+assignment/report journey, and representative practice/account controls. Run
+persistence workflows once, using a mix of desktop keyboard and mobile touch
+journeys. Check the distinctive settled screens at both widths with
 `expectResponsive`; repeat the whole workflow only when viewport or input mode
 changes the behavior being protected. Keep explicit focus and reachable-control
 assertions for keyboard/touch regressions.
@@ -67,6 +68,13 @@ versus an ordinary timed block.
 Capture screenshots and traces on failure through Playwright. Routine screenshot
 files have no automatic comparison and should not be added after every click.
 Run Axe on distinct screens and meaningful dialog states, not every transition.
+A goal crossing its threshold, a successful upload, or a different status string
+does not need another scan of the same screen. Keep the behavior assertions.
+
+Native playback tests should use short material and only the observed movement
+needed to exercise the boundary. Exhaustive trial counts, progress arithmetic,
+and field combinations belong in the fast suites. Retain a real engine/media
+journey for each distinct integration; do not fake its clock to reduce runtime.
 
 Do not repeat every validation case in every layer. A regression may need both a
 logic test and one browser test when the failure crosses a boundary, such as a
@@ -83,7 +91,7 @@ rtk proxy mise run test
 rtk proxy mise exec -- npx vitest run src/shared/training.test.ts
 
 # A relevant browser journey; Playwright manages its server
-rtk proxy mise exec -- npx playwright test e2e/practice.spec.ts
+rtk proxy mise run test-browser -- e2e/practice.spec.ts
 
 # Typecheck, complete Vitest suite, and production build before committing
 rtk proxy mise run pre-commit
@@ -94,9 +102,27 @@ rtk proxy mise run test-browser
 
 The browser launcher builds fresh assets, applies migrations to a temporary local
 D1 database, creates a temporary secret, and removes its state when it exits.
-Do not run a second browser suite concurrently: the current harness deliberately
-uses one worker, port 8791, and one email log. Do not enable parallel workers until
-mail is correlated to its recipient and server state, ports, and logs are isolated.
+The suite uses two workers against that temporary server.
+Each test gets a new browser context and a unique account. By default,
+`e2e/fixtures.ts` also supplies a separate network identity; import `test` from
+that fixture. Email lookup correlates the
+recipient with its simulator file, so another worker cannot supply the code.
+Fixture IDs may repeat only within separate accounts. Keep tests independent;
+never share mutable accounts or browser storage between cases.
+
+Do not launch a second suite from the same checkout concurrently: runs still
+share port 8791, build output, the email log, and Playwright output directories.
+Use `--workers=1` to diagnose timing-sensitive failures. Keep the default bounded
+at two workers so real audio and engine clocks have enough resources.
+
+Every complete browser run prints its slowest cases and writes
+`.tmp/browser-timings.json`, including retry attempts. CI preserves this timing
+artifact on successful and failed runs. Compare wall time and the slowest cases
+when adding browser coverage; aim for a complete browser run under six minutes
+on CI. If a change pushes it over that target, first remove repeated journeys,
+repeated scans, and unnecessary real-time playback. Do not raise the CI timeout
+or hide coverage in a separate optional suite to accommodate growth.
+
 Do not reuse a development or production database for tests. Use synthetic
 training data; personal exports never belong in fixtures or captured artifacts.
 
@@ -118,12 +144,20 @@ behavior; do not replace assertions with a count or coverage-percentage target.
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | Authentication and privacy                  | Worker: code expiry, browser binding, single consumption, session revocation, origin checks and every private operation's ownership                    | Real email sign-in and passkey registration/sign-in against Wrangler                                                             |
 | Practice time and completion                | Clocks/domain: pause, buffering, seeks, rates, recall interruption, overlap, subsecond boundaries, independent goals/completion and duration precision | Native playback into a saved record; representative manual/recall transitions and completion without added time                  |
-| Generated content and scoring               | Domain/audio: corpus invariants, full alignment, versioned scores, answer keys, pitch, spacing, WAV/speech samples and strict evidence validation      | Applied content reaches playback/review; Copy focus, grading/replay and a full adaptive round; explicit QSO reveal               |
+| Generated content and scoring               | Domain/audio: corpus invariants, full alignment, versioned scores, answer keys, pitch, spacing, WAV/speech samples and strict evidence validation      | Applied content reaches playback/review; Copy focus, grading/replay and recovered round completion; explicit QSO reveal          |
 | Recording catalogs and curriculum           | Pure/catalog: all published sessions, URL groups, replacements, authored durations, learner overrides and tool recipes                                 | A course assignment launches the correct tool and official instructions; recording selection/marks/replay reach native media     |
 | Autosave and offline work                   | Client queues: durable receipts, exact bodies, timeouts, failed storage, FIFO ordering, stale acknowledgements and account/dataset fencing             | Representative automatic-save, failed-review retry, offline reopen and explicit conflict decisions                               |
 | Imports, backups and destructive operations | Client/Worker: schema compatibility, conflicts, byte/count limits, account scope, SQL/local rollback, lifecycle authority and exact retry receipts     | Actual downloads/file selection, reviewed restore/reset/clear, and retained recovery after an uncertain response                 |
 | History and reports                         | Domain/Worker: exact raw facts, declared corrections, totals, provenance, archive fidelity and export/import round trips                               | Saved practice is readable, an edit is submitted correctly, and representative evidence appears in a report                      |
 | Practice continuity                         | Client: pause/end flights, stale owners, originating-block retirement and scratchpad disposal                                                          | Inspection pauses without saving, return retains position/notes without autoplay, and unrelated edits preserve the current block |
+
+`copy-practice.spec.ts` owns native first/final trial playback and recovered
+round completion; `copy-practice.test.ts` owns all adaptive trial transitions.
+`runner-recovery.spec.ts` owns finished-run history, reports and device backup;
+`runner-next.spec.ts` owns save-next and exact retry, without another backup
+cycle. `course-replay.spec.ts` covers shared playback cancellation, source
+replacement and the replay preference. `media-session.test.ts`, `recall.spec.ts`
+and `practice-continuity.spec.ts` own Media Session actions, recall and inspection.
 
 Worker validation tests should retain representative rejection through each
 distinct write/import path and assert no partial mutation. Exhaustive malformed

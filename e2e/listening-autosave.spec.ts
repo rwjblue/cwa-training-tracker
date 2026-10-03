@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectAccessible, signIn } from './helpers';
 
 async function startListening(page: Page) {
@@ -40,7 +41,7 @@ test('listening tool changes save measured time once and recover a lost save res
   const scratchpad = 'Automatic listening save keeps these notes.';
   await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill(scratchpad);
   await expectAccessible(page, 'word-listening-autosave-desktop');
-  await page.screenshot({ path: '.tmp/word-listening-autosave-desktop.png', fullPage: true });
+
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime), {
       timeout: 35_000,
@@ -79,7 +80,6 @@ test('listening tool changes save measured time once and recover a lost save res
   await navigateToLog(page);
   await expect(page.getByText('Custom word recognition', { exact: false })).toBeVisible();
   await expectAccessible(page, 'listening-autosaved-history-desktop');
-  await page.screenshot({ path: '.tmp/listening-autosaved-history-desktop.png', fullPage: true });
 });
 
 test('guest inspection retains listening and explicit Finish saves it on this device', async ({
@@ -101,7 +101,7 @@ test('guest inspection retains listening and explicit Finish saves it on this de
   const audio = await startListening(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'word-listening-autosave-mobile');
-  await page.screenshot({ path: '.tmp/word-listening-autosave-mobile.png', fullPage: true });
+
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime), {
       timeout: 35_000,
@@ -128,7 +128,6 @@ test('guest inspection retains listening and explicit Finish saves it on this de
   expect(posts).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'listening-device-history-mobile');
-  await page.screenshot({ path: '.tmp/listening-device-history-mobile.png', fullPage: true });
 
   // Choosing a device entry to keep in the account uses the normal sign-in and
   // review flow; inspecting or finishing practice never prompts for an account.

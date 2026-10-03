@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { expectAccessible, signIn } from './helpers';
 
 test('imported results, original reports, and device drafts remain readable privately', async ({
@@ -196,11 +197,10 @@ test('imported results, original reports, and device drafts remain readable priv
   await expect(archive.getByText('Draft answer retained', { exact: true })).toBeVisible();
   await expect(archive.getByText('Not recorded', { exact: true })).toBeVisible();
   await expectAccessible(page, 'imported-history-desktop');
-  await page.screenshot({ path: '.tmp/imported-history-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'imported-history-mobile');
-  await page.screenshot({ path: '.tmp/imported-history-mobile.png', fullPage: true });
 
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
   await page.getByRole('button', { name: 'Practice log', exact: true }).click();
@@ -222,7 +222,7 @@ test('imported results, original reports, and device drafts remain readable priv
   await expect(page.getByText('18', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'imported-result-mobile');
-  await page.screenshot({ path: '.tmp/imported-result-mobile.png', fullPage: true });
+
   const backup = await (await context.request.get('/api/export')).json();
   expect(backup.legacy.data.snapshot.reports[0]).toEqual(report);
   expect(backup.legacy.data.reportDraft.answers.learnedWords).toBe('Draft answer retained');

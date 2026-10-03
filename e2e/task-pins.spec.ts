@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 import { DEFAULT_PROFILE, type TrainingExport } from '../src/shared/training';
 import type { PlannedTask } from '../src/shared/plan';
@@ -84,7 +85,7 @@ test('Today pins preserve original work through dismissal, retry, backup, timezo
   await expect(pinned).toContainText('Pinned for today');
   await expect(pinned).toContainText('2 min practiced');
   await expectResponsive(page, 'task-pin-today');
-  await today.screenshot({ path: '.tmp/parity-queue/issue-23-today-desktop.png' });
+
   await navigate('Academy guide');
   await activate(row(dismissed.title).getByRole('button', { name: 'Add to today', exact: true }));
   await expect(row(dismissed.title)).toContainText('Dismissed from Today');
@@ -125,7 +126,7 @@ test('Today pins preserve original work through dismissal, retry, backup, timezo
   expect((await plan()).find((item) => item.id === task.id)).not.toHaveProperty('pinnedForDate');
   await navigate('Today');
   await expect(pinned).toContainText('Waiting to sync');
-  await expectResponsive(page, 'task-pin-pending');
+
   await page.reload();
   await expect(pinned).toContainText(task.title);
   const frozen = posted[0];
@@ -204,7 +205,7 @@ test('Today pins preserve original work through dismissal, retry, backup, timezo
   await navigate('Today');
   await expect(pinned).toContainText(task.title);
   await expect(pinned).toContainText('Restored dated pin');
-  await today.screenshot({ path: '.tmp/parity-queue/issue-23-today-mobile.png' });
+
   await page.clock.setFixedTime(new Date('2026-10-08T04:00:00Z'));
   await page.clock.runFor(1001);
   await expect(pinned).toHaveCount(0);
@@ -212,7 +213,7 @@ test('Today pins preserve original work through dismissal, retry, backup, timezo
   await expect(
     row(task.title).getByRole('button', { name: 'Add to today', exact: true }),
   ).toBeVisible();
-  await expectResponsive(page, 'task-pin-expired');
+
   expect((await plan()).find((item) => item.id === task.id)).toEqual(saved);
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
     originalHistory,

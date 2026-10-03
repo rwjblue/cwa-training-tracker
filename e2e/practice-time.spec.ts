@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true });
@@ -100,7 +101,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
   await assertTime('5:00', '0:02', '5:02');
   await page.clock.runFor(1000);
   await assertTime('5:00', '0:02', '5:02');
-  await expectResponsive(page, 'practice-time-retained');
+
   await activate(page.getByRole('button', { name: 'Return to practice', exact: true }));
   await assertTime('5:00', '0:02', '5:02');
   await activate(page.getByRole('button', { name: /Review & save/ }));
@@ -130,7 +131,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
     page.getByRole('button', { name: 'Retry practice uploads', exact: true }),
   ).toBeVisible();
   await assertTime('5:02', '0:00', '5:02');
-  await expectResponsive(page, 'practice-time-queued');
+
   fail = false;
   const uploaded = page.waitForResponse(
     (response) =>
@@ -156,13 +157,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
   await expect(summary).toContainText('Retained block: 0:06 on 2026-10-01');
   await assertTime('0:00', '0:00', '0:00');
   await expectResponsive(page, 'practice-time-midnight');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-19-midnight-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await activate(page.getByRole('button', { name: 'Return to practice', exact: true }));
   await expect(summary).toContainText('Retained block: 0:06 on 2026-10-01');
   await activate(page.getByRole('button', { name: /Review & save/ }));

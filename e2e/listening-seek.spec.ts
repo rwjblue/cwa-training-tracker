@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectResponsive, signIn } from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
@@ -119,13 +120,7 @@ test('word selection, stepping and rewind retain state and save only actual hear
   await expect.poll(() => position(page)).toBeGreaterThan(selected + 0.1);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   expect(await media(page).getAttribute('src')).toBe(source);
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({
-      path: `.tmp/parity-queue/issue-27-words-${width}.png`,
-      fullPage: true,
-    });
-  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
   const saved = page.waitForResponse(
     (r) => new URL(r.url()).pathname === '/api/entries' && r.request().method() === 'POST',
@@ -179,8 +174,4 @@ test('public QSO and free text use exact paused occurrences and deliberate repla
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   expect(await media(page).getAttribute('src')).toBe(freeSource);
   await expectResponsive(page, 'seek-free-paused');
-  for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await page.screenshot({ path: `.tmp/parity-queue/issue-27-free-${width}.png`, fullPage: true });
-  }
 });

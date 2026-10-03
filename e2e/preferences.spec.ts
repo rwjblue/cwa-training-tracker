@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { expectAccessible, signIn } from './helpers';
 
 async function savePreferences(page: Page) {
@@ -95,7 +96,6 @@ test('account identity and timezone stay readable with default avatars and persi
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '.tmp/preferences-desktop.png', fullPage: true });
 
   await gravatar.check();
   await savePreferences(page);
@@ -142,6 +142,6 @@ test('account identity and timezone stay readable with default avatars and persi
     true,
   );
   await expectAccessible(page, 'preferences-mobile');
-  await page.screenshot({ path: '.tmp/preferences-mobile.png', fullPage: true });
+
   expect(avatarRequests).toHaveLength(requestsAfterOptOut);
 });

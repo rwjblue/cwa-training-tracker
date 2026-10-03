@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { accountRequest, expectResponsive, scopedRequest, signIn } from './helpers';

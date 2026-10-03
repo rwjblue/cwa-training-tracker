@@ -1,5 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { accountRequest, scopedRequest, expectAccessible, signIn } from './helpers';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
+import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
 import { createRunnerRun, RUNNER_REVISION } from '../src/shared/runner';
 import type { PlannedTask } from '../src/shared/plan';
 import type { PracticeSession } from '../src/shared/training';
@@ -25,7 +26,8 @@ async function expectTotal(region: Locator, label: string, value: string) {
       .locator('dd'),
   ).toHaveText(value);
 }
-for (const mobile of [false, true]) {
+{
+  const mobile = true;
   test(`cumulative Runner progress separates saved/current, retry and completion (${mobile ? 'mobile touch' : 'desktop keyboard'})`, async ({
     page,
     context,
@@ -182,11 +184,8 @@ for (const mobile of [false, true]) {
       'Remaining time',
       displayTime(Math.max(0, 606 - seconds - 600), true),
     );
-    await expectAccessible(page, `runner-progress-today-${mobile ? 'mobile' : 'desktop'}`);
-    await page.screenshot({
-      path: `.tmp/runner-progress-today-${mobile ? 'mobile' : 'desktop'}.png`,
-      fullPage: true,
-    });
+    await expectResponsive(page, `runner-progress-today-${mobile ? 'mobile' : 'desktop'}`);
+
     await activate(
       page,
       page.getByRole('button', { name: 'View/save result', exact: true }),
@@ -321,10 +320,8 @@ for (const mobile of [false, true]) {
     expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
       beforeComplete,
     );
-    await expectAccessible(page, `runner-progress-studio-${mobile ? 'mobile' : 'desktop'}`);
-    await progress.screenshot({
-      path: `.tmp/runner-progress-studio-${mobile ? 'mobile' : 'desktop'}.png`,
-    });
+    await expectResponsive(page, `runner-progress-studio-${mobile ? 'mobile' : 'desktop'}`);
+
     await activate(
       page,
       page.getByRole('button', { name: 'Review & save run', exact: true }),

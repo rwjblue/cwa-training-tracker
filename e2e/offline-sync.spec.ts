@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true });

@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import type { PlannedTask } from '../src/shared/plan';
 import type { CourseLevel, PracticeSession, TrainingExport } from '../src/shared/training';
 import { expectAccessible, signIn } from './helpers';
@@ -300,7 +301,6 @@ test('published course overviews are available without an account at desktop and
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
-      await overview.screenshot({ path: `.tmp/curriculum-${level}-${size}.png` });
     }
     await expectAccessible(page, `curriculum-overviews-${size}`);
   }

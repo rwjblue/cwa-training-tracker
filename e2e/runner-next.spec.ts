@@ -1,6 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
-import { accountRequest, expectAccessible, signIn } from './helpers';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
+import { accountRequest, expectResponsive, signIn } from './helpers';
 import type { PracticeSession } from '../src/shared/training';
 
 test.use({ hasTouch: true });
@@ -11,11 +11,6 @@ async function activate(page: Page, control: Locator, mobile: boolean) {
     await control.focus();
     await page.keyboard.press('Enter');
   }
-}
-async function navigate(page: Page, name: string, mobile: boolean) {
-  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
-  if (await menu.isVisible()) await activate(page, menu, mobile);
-  await activate(page, page.getByRole('button', { name, exact: true }), mobile);
 }
 async function terminalResult(page: Page, scope: string): Promise<PracticeSession> {
   await expect
@@ -51,11 +46,12 @@ async function refuseWrites(page: Page, refused: boolean) {
       : win.runnerNextSetItem;
   }, refused);
 }
-for (const mobile of [false, true]) {
-  test(`Runner save-next retains settings, queues before reset and separates identities (${mobile ? 'mobile touch' : 'desktop keyboard'})`, async ({
+{
+  test(`Runner save-next retains settings, queues before reset and separates identities (keyboard then mobile touch)`, async ({
     page,
     context,
   }) => {
+    let mobile = false;
     test.setTimeout(150_000);
     await context.setExtraHTTPHeaders({
       'CF-Connecting-IP': mobile ? '192.0.2.172' : '192.0.2.171',
@@ -185,10 +181,10 @@ for (const mobile of [false, true]) {
     await dialog.evaluate((element) =>
       Promise.all(element.getAnimations().map((animation) => animation.finished)),
     );
-    await expectAccessible(page, `runner-next-review-${mobile}`);
-    await page.screenshot({ path: `.tmp/runner-next-review-${mobile}.png`, fullPage: true });
+    await expectResponsive(page, `runner-next-review-${mobile}`);
+
     await nextButton.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: `.tmp/runner-next-actions-${mobile}.png` });
+
     for (const action of ['Cancel', 'Save practice', 'Save & start next run']) {
       const box = await dialog.getByRole('button', { name: action, exact: true }).boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
@@ -246,8 +242,10 @@ for (const mobile of [false, true]) {
     await expect(frame.getByLabel('Activity', { exact: true })).toHaveValue('3');
     await expect(frame.getByLabel('QRM', { exact: true })).toBeChecked();
     await expect(frame.getByLabel('QSB', { exact: true })).toBeChecked();
-    await expectAccessible(page, `runner-next-ready-${mobile}`);
-    await page.screenshot({ path: `.tmp/runner-next-ready-${mobile}.png`, fullPage: true });
+
+    // Exercise save-next with both input modes in one persistence journey.
+    mobile = true;
+    await page.setViewportSize({ width: 390, height: 844 });
 
     await runShort();
     const second = await terminalResult(page, user.id);
@@ -287,8 +285,7 @@ for (const mobile of [false, true]) {
         exact: true,
       }),
     ).toBeVisible();
-    await expectAccessible(page, `runner-next-pending-${mobile}`);
-    await page.screenshot({ path: `.tmp/runner-next-pending-${mobile}.png`, fullPage: true });
+
     await expect.poll(() => offlineFailed).toBe(true);
     expect(
       await page.evaluate(
@@ -379,43 +376,6 @@ for (const mobile of [false, true]) {
     }
     expect(entries.filter((entry) => entry.context === 'class')).toHaveLength(2);
     expect(entries.filter((entry) => entry.metadata?.practicePurpose === 'review')).toHaveLength(2);
-    await navigate(page, 'Practice log', mobile);
-    await expect(page.getByRole('heading', { name: 'Practice log', exact: true })).toBeVisible();
-    await navigate(page, 'Your account', mobile);
-    const downloading = page.waitForEvent('download');
-    await activate(page, page.getByRole('button', { name: 'Export backup', exact: true }), mobile);
-    const download = await downloading;
-    const backup = JSON.parse(await readFile((await download.path())!, 'utf8'));
-    expect(backup.sessions).toEqual(entries);
-    const choosing = page.waitForEvent('filechooser');
-    await activate(page, page.getByRole('button', { name: 'Import backup', exact: true }), mobile);
-    await (
-      await choosing
-    ).setFiles({
-      name: 'synthetic-runner-next-backup.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backup)),
-    });
-    await activate(
-      page,
-      page.getByRole('dialog').getByRole('button', { name: 'Import sessions', exact: true }),
-      mobile,
-    );
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
-    await navigate(page, 'Academy guide', mobile);
-    await activate(
-      page,
-      page.getByRole('button', { name: 'Practice report', exact: true }),
-      mobile,
-    );
-    await dialog.getByLabel('From', { exact: true }).fill(today);
-    await dialog.getByLabel('Through', { exact: true }).fill(today);
-    await expect(dialog).toContainText('First separate run; retain this canceled edit');
-    await expect(dialog).toContainText('22 WPM starting speed');
-    await expect(dialog).toContainText('24 WPM');
-    await expectAccessible(page, `runner-next-report-${mobile}`);
-    await page.screenshot({ path: `.tmp/runner-next-report-${mobile}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

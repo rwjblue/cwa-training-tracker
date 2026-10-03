@@ -1,4 +1,5 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
+import { test } from './fixtures';
 import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import type { PracticeSession } from '../src/shared/training';

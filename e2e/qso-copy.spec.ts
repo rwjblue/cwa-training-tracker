@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { expectAccessible } from './helpers';
 
 test.use({ hasTouch: true });
@@ -116,11 +117,10 @@ test('QSO copy checks stay with the heard contact and reveal answers only on req
   await originalAudio.dispose();
   await page.setViewportSize({ width: 1440, height: 900 });
   await expectAccessible(page, 'qso-copy-desktop');
-  await page.screenshot({ path: '.tmp/qso-copy-desktop.png', fullPage: true });
+
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'qso-copy-mobile');
-  await page.screenshot({ path: '.tmp/qso-copy-mobile.png', fullPage: true });
 
   await page.getByRole('button', { name: 'New QSO', exact: true }).click();
   await expect(
