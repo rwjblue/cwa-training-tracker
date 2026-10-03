@@ -1701,3 +1701,44 @@ build, followed by both affected serial LCWO runtime journeys in 15.2 seconds
 the small private encoding correction changes no frontend or wire shape. The
 reviewer will independently recheck the real quota workflow after the focused
 follow-up commit before deployment.
+
+
+## Issue #35 accepted review and production delivery — October 2, 2026
+
+Implementation `7c757ff9ee2e5cc93c34b104ff4f76e034b3f088` and focused
+correction `53a3a87705871be63e40934de151490bd012ebe2` are independently
+ACCEPTED. The sole P2 exact-quota Disconnect finding is resolved. The reviewer
+independently exercised two real local Wrangler/D1 quota journeys in 27.2
+seconds: current numeric and older boolean flags, 621 canonical practice rows
+and independently summed exact 6,291,456 bytes. Actual mobile withdrawal survives
+a deliberately lost committed acknowledgement, retains every row/source fact,
+retries safely and rejects disconnected refresh. Current bytes remain identical;
+older links shrink three bytes. Actual downloaded backups remain strict boolean
+false. Canceled unchecked consent and a second authenticated account preserve
+privacy. Four new settled Axe/overflow checks are clear; screenshots inspected.
+The reviewer also passes 241 focused tests and an independent strict decoder
+check; all 516 tracked files match the corrected commit before/after. Its first
+ignored probe loader failure is retained separately, not counted as a pass.
+The broader initial independent desktop/mobile workflow review remains applicable.
+All reviewer processes exited and port 8791 was explicitly released.
+
+Root corrected gate passes check/all 1,314 tests in 70 files/build and both
+serial affected LCWO browser journeys in 15.2 seconds. The implementation's full
+96-journey pass in 18.1 minutes precedes the small private encoding correction;
+no full rerun of that correction is claimed. Earlier failed/interrupted evidence
+and the unconfirmed native course-replay failure remain recorded above.
+Strict `mise run deploy` passes every prerequisite, dry run, migration
+`0008_lcwo.sql` and production upload without bypass or retry. Production version
+`6e9e21c9-1cda-45ac-9a58-fa5f7801fffc` is live at https://cwa.n1rwj.com.
+Fresh anonymous checks confirm root/health 200, private history/account-state/
+backup/LCWO 401 and exact hashes of all four production JS/CSS assets plus the
+public Runner module. No signed-in production data was created.
+
+Local main includes the focused commits; push signing remains enabled. No push
+is authorized or attempted. GitHub main still resolves to signed
+`7e4d66b22f950a6bc063412ffd68c5ee054f6dd9`; issue #35 remains open pending
+source publication despite accepted production delivery. Authenticated live
+LCWO service, physical devices and lock-screen behavior are not claimed. Source
+fixtures are synthetic, original trainer remains read only, and elapsed-time
+crash/reload recovery and new speech recognition remain outside approved scope.
+The independent review and production gates permit ascending issue #36 next.
