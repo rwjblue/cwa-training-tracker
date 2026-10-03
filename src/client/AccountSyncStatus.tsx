@@ -68,6 +68,7 @@ const taskValueLabel = (key: string, value: unknown) => {
   return value.map(validateRecordingMarkSet).map(recordingMarkSetDetails).join(' / ');
 };
 function title(change: AccountChange, state?: AccountSnapshot): string {
+  if (change.type === 'material-create') return `Save instructor material: ${change.material.title}`;
   if (change.type === 'report-delete') return 'Remove saved advisor draft copy';
   if (
     change.type === 'report-save' ||
@@ -88,6 +89,10 @@ function title(change: AccountChange, state?: AccountSnapshot): string {
   return `${change.type === 'task-delete' ? 'Delete' : 'Edit'} ${state?.plan.find((task) => task.id === change.id)?.title ?? 'exercise'}`;
 }
 function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
+  if (change.type === 'material-create') return [
+    `Your immutable version: ${change.material.title}; session ${change.material.session}; ${change.material.course.level} course starting ${change.material.course.firstClassDate}; ${change.material.text.length} text characters; source version ${change.material.id}${change.material.supersedesId ? ` revising ${change.material.supersedesId}` : ''}.`,
+    'Reapplying retains this exact identity and content. A different existing version with that identity cannot be overwritten; keep a device backup and create an explicit new revision.',
+  ];
   if (change.type === 'report-delete')
     return [
       `Remove draft copy ${change.id}; newer online snapshots remain separate. Keep a private backup before removing a saved copy.`,
@@ -173,7 +178,7 @@ export default function AccountSyncStatus({
               {operations.length} account {operations.length === 1 ? 'edit' : 'edits'} saved on this
               device.
             </strong>{' '}
-            Waiting to sync. Your plan and preferences include these edits.
+            Waiting to sync. Your current account view includes these edits.
           </p>
           <button
             className="button outline small"

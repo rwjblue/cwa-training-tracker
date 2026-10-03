@@ -690,6 +690,8 @@ export function weeklyReport(
         ...(entry.accuracy !== undefined ? [`${entry.accuracy}% accuracy`] : []),
       ];
       lines.push(`- ${details.join(' · ')}${entry.notes ? ` — ${entry.notes}` : ''}`);
+      const material = entry.metadata?.instructorMaterial;
+      if (material) lines.push(`  Instructor material: ${material.title}; exact version ${material.id}; session ${material.session}; ${material.course.level} course starts ${material.course.firstClassDate}${material.supersedesId ? `; revises ${material.supersedesId}` : ''}${material.origin ? `; original ID ${material.origin.id}; archive ${material.origin.archiveId}` : ''}.`);
       for (const detail of practiceAssessmentDetails(entry)) lines.push(`  ${detail}`);
       const attempt = savedCopyAttempt(entry);
       if (attempt) {

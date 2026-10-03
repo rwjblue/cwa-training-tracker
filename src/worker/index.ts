@@ -100,6 +100,8 @@ export default {
           env,
         );
       }
+      if (error instanceof Error && /material_parent_missing|material_reference_missing|material_version_immutable/.test(error.message))
+        return securityHeaders(json({ error: 'The exact owned material version or earlier revision is unavailable. Keep the pending work and save or import its original material first.' }, 400), env);
       if (error instanceof Error && error.message.includes('report_evidence_missing')) {
         return securityHeaders(
           json(
@@ -114,7 +116,7 @@ export default {
       }
       if (
         error instanceof Error &&
-        /account_storage_limit|practice_entry_limit|lcwo_result_limit|report_copy_limit/.test(
+        /account_storage_limit|practice_entry_limit|lcwo_result_limit|report_copy_limit|material_version_limit/.test(
           error.message,
         )
       ) {

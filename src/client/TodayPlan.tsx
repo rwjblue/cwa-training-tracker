@@ -41,6 +41,7 @@ import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
   nextAction?: React.ReactNode;
+  preparation?: React.ReactNode;
   liveNow?: number;
   currentRunner?: CurrentRunnerProgress;
   today?: string;
@@ -75,6 +76,7 @@ const minuteLabel = (minutes: number) => Number(minutes.toFixed(1));
 /** The parent owns private data, so course edits and journal saves stay in sync. */
 export default function TodayPlan({
   nextAction,
+  preparation,
   liveNow = Date.now(),
   accountId,
   currentRunner,
@@ -188,6 +190,7 @@ export default function TodayPlan({
           Your full plan <ArrowRight size={14} />
         </button>
       </header>
+      {preparation}
       {nextAction}
       <ClassMeetingCard now={liveNow} accountId={accountId} profile={profile} onLog={onLog} />
       {!loading && curriculum && (

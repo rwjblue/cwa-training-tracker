@@ -1,3 +1,4 @@
+import { materialReference, type InstructorMaterial } from '../shared/instructor-material';
 import { describe, expect, it, vi } from 'vitest';
 import type { PracticeSession } from '../shared/training';
 import {
@@ -818,4 +819,19 @@ it('labels actual Story exposure and retains exact source evidence after an unpl
   expect(saved.metadata).not.toHaveProperty('qsoScenario');
   value.generatedListening = undefined;
   expect(studioSession(value)?.notes).toBe('Story listening');
+});
+
+
+it('uses the exact immutable instructor material header and keeps class time separate without generating heard evidence', () => {
+  const material: InstructorMaterial = { version: 1, id: 'instructor:old', course: { level: 'beginner', firstClassDate: '2026-09-28' },
+    session: 2, title: 'Synthetic material', text: 'Private original body', usage: 'preparation', createdAt: '2026-09-28T00:00:00.000Z' };
+  const captured = { ...input(90), launch: { id: 'material-owner', material, materialContext: 'class' as const,
+    activity: { type: 'timer' as const }, tool: 'sending' as const } };
+  const result = studioSession(captured)!;
+  expect(result).toMatchObject({ kind: 'sending', lesson: 2, context: 'class', minutes: 1.5, source: 'timer',
+    metadata: { instructorMaterial: materialReference(material), elapsedSeconds: 90 } });
+  expect(result.metadata?.generatedListening).toBeUndefined();
+  expect(result.metadata?.instructorMaterial).not.toHaveProperty('text');
+  expect(result.metadata?.materialCompleted).toBeUndefined();
+  expect(studioSession({ ...captured, measured: { ...captured.measured, seconds: 0 } })).toBeUndefined();
 });

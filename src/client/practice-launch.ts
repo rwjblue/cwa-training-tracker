@@ -1,3 +1,4 @@
+import type { InstructorMaterial } from '../shared/instructor-material';
 import { nativeCopyTask, type PlannedTask } from '../shared/plan';
 import {
   getPracticePurpose,
@@ -14,6 +15,8 @@ export type PracticeActivity = NonNullable<PlannedTask['exercise']> | { type: 't
 export interface PracticeLaunch {
   id: string;
   task?: PlannedTask;
+  material?: InstructorMaterial;
+  materialContext?: PracticeSession['context'];
   purpose?: PracticePurpose;
   tool?: 'words' | 'qso' | 'stories' | 'free' | 'copy' | 'sending' | 'runner';
   activity?: PracticeActivity;

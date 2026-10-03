@@ -1,3 +1,4 @@
+import { materialReference, originalMaterialCopy, type InstructorMaterial } from '../shared/instructor-material';
 import { captureReportHandoff, confirmReportHandoff } from '../shared/report-handoff';
 import {
   evidenceDefinition,
@@ -8988,4 +8989,138 @@ describe('private native advisor report copies', () => {
     ).toThrow('report_evidence_missing');
     expect(db.sqlite.prepare('SELECT count(*) AS count FROM advisor_reports').get()?.count).toBe(0);
   });
+});
+
+
+describe('private immutable instructor materials', () => {
+  const material = (id = 'material:first'): InstructorMaterial => ({ version: 1, id,
+    course: { level: 'beginner', firstClassDate: '2026-09-28' }, session: 1,
+    title: 'Synthetic sending preparation', text: '<script>plain text only</script> ABC DEF', usage: 'preparation',
+    createdAt: '2026-09-28T12:00:00.000Z' });
+  async function create(auth: Awaited<ReturnType<typeof signIn>>, row: InstructorMaterial) {
+    const state = await getAccountSnapshot(env, auth.user.id);
+    const operation: AccountOperation = { version: 1, id: crypto.randomUUID(), accountId: auth.user.id,
+      baseRevision: state.revision, generation: state.generation, createdAt: '2026-09-28T12:00:00Z',
+      change: { type: 'material-create', material: row } };
+    return { operation, response: await request('/api/account-operations', 'POST', operation, auth.cookie) };
+  }
+  async function owner(email: string) {
+    const auth = await signIn(email);
+    expect((await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' }, auth.cookie)).status).toBe(200);
+    return auth;
+  }
+  const attempt = (row: InstructorMaterial, id: string, context: 'practice' | 'class' = 'practice') => ({
+    ...entry(id), kind: 'sending', lesson: row.session, context, source: 'timer',
+    metadata: { elapsedSeconds: 900, recallSeconds: 0, instructorMaterial: materialReference(row),
+      ...(context === 'practice' ? { materialCompleted: true } : {}) },
+  });
+  it('saves exact versions with equivalent retry, private ownership, class separation and portable reverse-ordered revision backups', async () => {
+    const a = await owner('material-a@example.test'); const b = await owner('material-b@example.test');
+    const first = material(); const saved = await create(a, first); expect(saved.response.status).toBe(200);
+    expect((await request('/api/account-operations', 'POST', saved.operation, a.cookie)).status).toBe(200);
+    expect((await getAccountSnapshot(env, a.user.id)).materials).toEqual([first]);
+    expect((await getAccountSnapshot(env, b.user.id)).materials).toEqual([]);
+    expect((await request('/api/entries', 'POST', attempt(first, 'material-attempt'), b.cookie)).status).toBe(400);
+    expect((await request('/api/entries', 'POST', attempt(first, 'material-attempt'), a.cookie)).status).toBe(201);
+    expect((await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, level: 'intermediate', firstClassDate: '2026-10-01' }, a.cookie)).status).toBe(200);
+    const revision = { ...first, id: 'material:revision', title: 'Revised preparation', text: 'XYZ', supersedesId: first.id };
+    expect((await create(a, revision)).response.status).toBe(200);
+    expect((await request('/api/entries', 'POST', attempt(revision, 'class-attempt', 'class'), a.cookie)).status).toBe(201);
+    const exported = await (await request('/api/export', 'GET', undefined, a.cookie)).json() as TrainingExport;
+    expect(exported.materials).toEqual([first, revision]);
+    expect(exported.sessions.find((session) => session.id === 'material-attempt')?.metadata?.instructorMaterial).toEqual(materialReference(first));
+    expect(exported.sessions.filter((session) => session.context !== 'class').reduce((sum, session) => sum + session.minutes, 0)).toBe(15);
+    const changed = await request('/api/entries/material-attempt', 'PUT', attempt(revision, 'material-attempt'), a.cookie);
+    expect(changed.status).toBe(400);
+    const restored = await request('/api/import', 'POST', { mode: 'merge', data: { ...exported, materials: [revision, first] } }, b.cookie);
+    expect(restored.status).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).materials).toEqual([first, revision]);
+    expect((await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status).toBe(200);
+    expect((await request('/api/reset', 'POST', { confirmation: 'RESET' }, b.cookie)).status).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).materials).toEqual([]);
+    expect((await request('/api/import', 'POST', { mode: 'replace', data: exported }, b.cookie)).status).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).materials).toEqual([first, revision]);
+    expect((await request('/api/account-state', 'GET')).status).toBe(401);
+  });
+  it('rejects missing/foreign parents, overwritten versions, forged references, invalid payloads and rolls back failed imports', async () => {
+    const a = await owner('material-validation@example.test'); const first = material();
+    expect((await create(a, first)).response.status).toBe(200);
+    const baseline = await getAccountSnapshot(env, a.user.id);
+    for (const invalid of [ { ...first, text: 'changed' }, { ...first, id: 'new', supersedesId: 'foreign' },
+      { ...first, id: 'other-session', session: 2, supersedesId: first.id }, { ...first, id: 'bad-text', text: 'null\0text' },
+      { ...first, id: 'bad-url', url: 'https://username:password@example.test' } ])
+      expect((await create(a, invalid)).response.status).toBe(400);
+    expect((await getAccountSnapshot(env, a.user.id)).revision).toBe(baseline.revision);
+    const forged = attempt(first, 'forged'); forged.metadata.instructorMaterial.title = 'Different version';
+    expect((await request('/api/entries', 'POST', forged, a.cookie)).status).toBe(400);
+    const missing = attempt({ ...first, id: 'missing' }, 'missing-attempt');
+    expect((await request('/api/import', 'POST', { mode: 'merge', data: { ...backup([missing]), materials: [first] } }, a.cookie)).status).toBe(400);
+    db.sqlite.exec("CREATE TRIGGER reject_material_result BEFORE INSERT ON practice_entries WHEN NEW.id='rollback-attempt' BEGIN SELECT RAISE(ABORT,'synthetic failure'); END");
+    const added = material('rollback-material');
+    expect((await request('/api/import', 'POST', { mode: 'merge', data: { ...backup([attempt(added, 'rollback-attempt')]), materials: [added] } }, a.cookie)).status).toBe(500);
+    expect((await getAccountSnapshot(env, a.user.id)).materials).toEqual([first]);
+    expect(db.sqlite.prepare('SELECT count(*) AS total FROM practice_entries WHERE user_id=?').get(a.user.id)?.total).toBe(0);
+  });
+  it('makes bounded copies of unmatched original revision chains without changing archive content and rejects substituted source facts', async () => {
+    const a = await owner('original-material@example.test');
+    const original = { course: { title: 'Unmatched synthetic course' }, materials: [
+      { id: 'original:first', session: 17, title: 'Original preparation', text: 'KEEP THIS', usage: 'preparation', createdAt: '2026-09-27T12:00:00Z' },
+      { id: 'original:revision', session: 17, title: 'Original revision', text: 'KEEP REVISION', usage: 'class', supersedesId: 'original:first', createdAt: '2026-09-28T12:00:00Z' },
+    ], attempts: [] };
+    expect((await request('/api/import', 'POST', { mode: 'merge', data: original }, a.cookie)).status).toBe(200);
+    expect((await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' }, a.cookie)).status).toBe(200);
+    const state = await getAccountSnapshot(env, a.user.id); expect(state.originalMaterials?.materials).toHaveLength(2);
+    const copy = originalMaterialCopy(original.materials[1], state.originalMaterials!.archiveId, material().course, 1, material().createdAt);
+    expect((await create(a, { ...copy, text: 'substituted' })).response.status).toBe(400);
+    expect((await create(a, copy)).response.status).toBe(200);
+    expect((await request('/api/entries', 'POST', attempt(copy, 'original-copy-attempt'), a.cookie)).status).toBe(201);
+    const exported = await (await request('/api/export', 'GET', undefined, a.cookie)).json() as TrainingExport;
+    expect(exported.legacy?.data).toEqual(original);
+    expect(exported.materials?.[0].origin?.supersedesId).toBe('original:first');
+    const other = await owner('material-archive-restore@example.test');
+    expect((await request('/api/import', 'POST', { mode: 'replace', data: exported }, other.cookie)).status).toBe(200);
+    expect((await getAccountSnapshot(env, other.user.id)).materials).toEqual(exported.materials);
+    expect((await request('/api/import', 'POST', { mode: 'merge', data: { ...original, materials: [] } }, a.cookie)).status).toBe(400);
+    expect((await (await request('/api/export', 'GET', undefined, a.cookie)).json() as TrainingExport).legacy?.data).toEqual(original);
+  });
+});
+
+
+it('enforces material version and account byte quotas in actual SQL without partial account-operation receipts', async () => {
+  const auth = await signIn('material-quota@example.test');
+  expect((await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' }, auth.cookie)).status).toBe(200);
+  const material: InstructorMaterial = { version: 1, id: 'quota-material', course: { level: 'beginner', firstClassDate: '2026-09-28' }, session: 1,
+    title: 'Quota material', text: 'SYNTHETIC', usage: 'reference', createdAt: '2026-09-28T00:00:00.000Z' };
+  for (let i = 0; i < 200; i++) db.sqlite.prepare('INSERT INTO instructor_materials(user_id,id,material_json) VALUES(?,?,?)')
+    .run(auth.user.id, `quota:${i}`, JSON.stringify({ ...material, id: `quota:${i}` }));
+  expect(() => db.sqlite.prepare('INSERT INTO instructor_materials(user_id,id,material_json) VALUES(?,?,?)').run(auth.user.id, material.id, JSON.stringify(material))).toThrow('material_version_limit');
+  const state = await getAccountSnapshot(env, auth.user.id);
+  const operation: AccountOperation = { version: 1, id: 'quota-operation', accountId: auth.user.id, baseRevision: state.revision,
+    generation: state.generation, createdAt: material.createdAt, change: { type: 'material-create', material } };
+  expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(400);
+  expect((await getAccountSnapshot(env, auth.user.id)).revision).toBe(state.revision);
+  db.sqlite.prepare('DELETE FROM instructor_materials WHERE user_id=?').run(auth.user.id);
+  db.sqlite.prepare('UPDATE users SET storage_bytes=lifecycle_control_bytes+6291456 WHERE id=?').run(auth.user.id);
+  expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(400);
+  expect(db.sqlite.prepare('SELECT count(*) AS total FROM instructor_materials WHERE user_id=?').get(auth.user.id)?.total).toBe(0);
+  expect((await getAccountSnapshot(env, auth.user.id)).revision).toBe(state.revision);
+});
+
+
+it('preserves a large original material inventory through the real private account snapshot and native copy without converting its archive', async () => {
+  const auth = await signIn('large-original-materials@example.test');
+  const original = { course: { title: 'Synthetic original', resources: [{ url: 'https://example.test/private' }] }, attempts: [],
+    materials: Array.from({ length: 1001 }, (_, i) => ({ id: `original-large:${i}`, session: 1, title: `Source ${i}`, text: 'PRIVATE SOURCE', usage: 'reference' })) };
+  expect((await request('/api/import', 'POST', { mode: 'merge', data: original }, auth.cookie)).status).toBe(200);
+  expect((await request('/api/settings', 'PUT', { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' }, auth.cookie)).status).toBe(200);
+  const state = await getAccountSnapshot(env, auth.user.id);
+  expect(state.originalMaterials?.materials).toHaveLength(1001);
+  expect(state.originalMaterials?.course).not.toHaveProperty('resources');
+  const material = originalMaterialCopy(state.originalMaterials!.materials[1000], state.originalMaterials!.archiveId,
+    { level: 'beginner', firstClassDate: '2026-09-28' }, 1, '2026-09-28T00:00:00.000Z');
+  const body: AccountOperation = { version: 1, id: 'large-source-copy', accountId: auth.user.id, baseRevision: state.revision,
+    generation: state.generation, createdAt: material.createdAt, change: { type: 'material-create', material } };
+  expect((await request('/api/account-operations', 'POST', body, auth.cookie)).status).toBe(200);
+  const exported = await (await request('/api/export', 'GET', undefined, auth.cookie)).json() as TrainingExport;
+  expect(exported.legacy?.data).toEqual(original); expect(exported.materials).toEqual([material]);
 });

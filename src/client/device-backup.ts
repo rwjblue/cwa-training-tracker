@@ -1,3 +1,4 @@
+import { captureMaterialReadingMemory, invalidateMaterialReadingMemory, restoreMaterialReadingMemory, materialReadingKey, readMaterialReading, validateMaterialReadingStore, type MaterialReadingStore } from './material-reading';
 import {
   reportDraftStoreKey,
   readReportDraftStore,
@@ -116,6 +117,7 @@ export interface DeviceBackup {
     runnerResults?: RunnerFinishedResult[];
     wordContent?: WordContent;
     reportDrafts?: ReportDraftStore;
+    materialReading?: MaterialReadingStore;
   };
   shared: {
     practicePreferences?: PracticePreferences;
@@ -155,6 +157,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'scratchpads', label: 'Scratchpads', shared: false },
   { id: 'recordingChoices', label: 'Task recording choices', shared: false },
   { id: 'runnerResults', label: 'Finished Runner results awaiting review', shared: false },
+  { id: 'materialReading', label: 'Material reader text size and position', shared: false },
   { id: 'reportDrafts', label: 'Working advisor report drafts', shared: false },
   { id: 'wordContent', label: 'Saved word source and list selection', shared: false },
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
@@ -472,6 +475,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     'runnerResults',
     'wordContent',
     'reportDrafts',
+    'materialReading',
   ]);
   const practice: RetainedPractice[] = list(stores.practice, 'Finished results', MAX_RESULTS).map(
     (value) => {
@@ -613,6 +617,8 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       recordingChoices.map((choice) => choice.taskId),
       'Task recording choices',
     );
+  const materialReading = stores.materialReading === undefined ? undefined : validateMaterialReadingStore(stores.materialReading);
+  if (materialReading && scopeId === 'guest') throw new Error('Guest backups cannot contain private material reading preferences.');
   const reportDrafts =
     stores.reportDrafts === undefined ? undefined : validateReportDraftStore(stores.reportDrafts);
   if (reportDrafts && scopeId === 'guest')
@@ -654,6 +660,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       ...(recordingChoices === undefined ? {} : { recordingChoices }),
       ...(runnerResults === undefined ? {} : { runnerResults }),
       reportDrafts,
+      materialReading,
       wordContent:
         stores.wordContent === undefined ? undefined : validateWordContent(stores.wordContent),
     },
@@ -875,7 +882,7 @@ export function captureDeviceBackup(
       recordingChoices,
       runnerResults: retainedRunner.results,
       wordContent,
-      ...(scope === 'guest' ? {} : { reportDrafts: readReportDraftStore(scope, storage) }),
+      ...(scope === 'guest' ? {} : { reportDrafts: readReportDraftStore(scope, storage), materialReading: readMaterialReading(scope, storage) }),
     },
     shared: {
       ...(eventTimeMode === null ? {} : { eventTimeMode: eventTimeMode as EventTimeMode }),
@@ -902,7 +909,7 @@ export function summarizeDeviceBackup(
     const value = item.shared
       ? backup.shared[item.id as keyof DeviceBackup['shared']]
       : backup.stores[item.id as keyof DeviceBackup['stores']];
-    return { ...item, count: Array.isArray(value) ? value.length : value === undefined ? 0 : 1 };
+    return { ...item, count: item.id === 'materialReading' ? Object.keys(value ?? {}).length : Array.isArray(value) ? value.length : value === undefined ? 0 : 1 };
   });
 }
 
@@ -1019,6 +1026,10 @@ export function inspectDeviceRestore(
     conflicts.push(
       `Restoring would exceed ${MAX_OPERATIONS} pending account edits. Resolve or export them first.`,
     );
+  if (checked.stores.materialReading) {
+    try { validateMaterialReadingStore({ ...checked.stores.materialReading, ...readMaterialReading(scope, storage) }); }
+    catch (error) { conflicts.push((error as Error).message); }
+  }
   const existingReports = storage.getItem(reportDraftStoreKey(scope));
   if (
     checked.stores.reportDrafts &&
@@ -1092,6 +1103,7 @@ function invalidateMemory(scope: string): void {
   invalidateReportDraftMemory(scope);
   invalidatePracticeMemory(scope);
   invalidateAccountMemory(scope);
+  invalidateMaterialReadingMemory(scope);
   invalidateScratchpadMemory(scope);
 }
 function applyChanges(
@@ -1107,6 +1119,7 @@ function applyChanges(
   // Runtime memory remains recoverable even when a damaged registered record
   // prevents a complete, valid user export. Persistent originals stay opaque.
   const rollbackMemory = {
+    materialReading: captureMaterialReadingMemory(scope),
     scratchpads: captureScratchpadMemory(scope),
     practiceStates: loadPracticeSaveStates(scope).flatMap((state) => {
       try {
@@ -1192,6 +1205,7 @@ function applyChanges(
     invalidateMemory(scope);
     if (!failed) {
       try {
+        restoreMaterialReadingMemory(scope, rollbackMemory.materialReading);
         restoreScratchpadMemory(scope, rollbackMemory.scratchpads);
         restorePracticeMemory(scope, rollbackMemory.practiceStates);
         restoreAccountMemory(scope, rollbackMemory.accountOperations);
@@ -1261,6 +1275,10 @@ export function restoreDeviceBackup(
     );
   const recovery = captureDeviceBackup(scope, checked.scope.label, storage);
   const changes = new Map<string, string | null>();
+  if (checked.stores.materialReading) {
+    const current = readMaterialReading(scope, storage);
+    changes.set(materialReadingKey(scope), JSON.stringify(validateMaterialReadingStore({ ...checked.stores.materialReading, ...current })));
+  }
   if (checked.stores.reportDrafts && storage.getItem(reportDraftStoreKey(scope)) === null)
     changes.set(reportDraftStoreKey(scope), JSON.stringify(checked.stores.reportDrafts));
   for (const result of checked.stores.runnerResults ?? []) {
@@ -1356,6 +1374,7 @@ export function restoreDeviceBackup(
 
 /** Exact registered scope matching also removes orphan status/origin/lease records. */
 function isScopedStore(name: string, scope: string): boolean {
+  if (name === materialReadingKey(scope)) return true;
   if (name === reportDraftStoreKey(scope)) return true;
   if (name === wordContentKey(scope)) return true;
   if (name.startsWith(runnerResultsPrefix(scope))) return true;
@@ -1387,6 +1406,7 @@ export interface AccountLifecycleDeviceWork {
   scope: string;
   backup: DeviceBackup;
   memory: {
+    materialReading?: MaterialReadingStore;
     scratchpads: { context: string; text: string }[];
     practiceStates: PracticeSaveState[];
     accountOperations: QueuedAccountOperation[];
@@ -1400,6 +1420,7 @@ export function captureAccountLifecycleDeviceWork(
 ): AccountLifecycleDeviceWork {
   const backup = captureDeviceBackup(scope, label);
   const memory = {
+    materialReading: captureMaterialReadingMemory(scope),
     scratchpads: captureScratchpadMemory(scope),
     practiceStates: loadPracticeSaveStates(scope),
     accountOperations: loadAccountOperations(scope),
@@ -1415,6 +1436,7 @@ export function prepareAccountLifecycleDeviceWork(
   const captured = captureAccountLifecycleDeviceWork(scope, label);
   const { backup, memory } = captured;
   const changes = new Map<string, string | null>();
+
   for (const result of backup.stores.practice) {
     if (localStorage.getItem(practiceKey(scope, 'origin', result.id)) === null)
       changes.set(practiceKey(scope, 'origin', result.id), JSON.stringify(result.origin));
@@ -1424,6 +1446,7 @@ export function prepareAccountLifecycleDeviceWork(
       changes.set(practiceKey(scope, 'pending', result.id), result.body);
     }
   }
+  if (memory.materialReading) changes.set(materialReadingKey(scope), JSON.stringify(memory.materialReading));
   for (const note of memory.scratchpads)
     changes.set(notesKey(scope, note.context), note.text || null);
   for (const state of memory.practiceStates)
@@ -1492,7 +1515,8 @@ export function recoverAccountLifecycleDeviceWork(
   if (localStorage.getItem(lease) !== null)
     throw new Error('The old copy owner could not be retired.');
   if (captured) {
-    restoreScratchpadMemory(scope, captured.memory.scratchpads);
+    restoreMaterialReadingMemory(scope, captured.memory.materialReading);
+  restoreScratchpadMemory(scope, captured.memory.scratchpads);
     restorePracticeMemory(scope, captured.memory.practiceStates);
     restoreAccountMemory(scope, captured.memory.accountOperations);
   }
@@ -1510,6 +1534,7 @@ export function rollbackAccountLifecycleDevicePreparation(
   localStorage.removeItem(lease);
   if (localStorage.getItem(lease) !== null)
     throw new Error('The old copy owner could not be retired.');
+  restoreMaterialReadingMemory(scope, captured.memory.materialReading);
   restoreScratchpadMemory(scope, captured.memory.scratchpads);
   restorePracticeMemory(scope, captured.memory.practiceStates);
   restoreAccountMemory(scope, captured.memory.accountOperations);

@@ -98,7 +98,7 @@ Priorities: **P1** = important to daily use or trustworthy records; **P2** = val
 
 | ID  | Status / priority | Feature and exact behavior                                                                                                                                                                                                                                                                                                                                   | Personal evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Current evidence / gap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | --- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P12 | Missing / P1      | Private instructor materials collection: paste text, import a bounded text file, save a URL, associate a class session, classify preparation/class/reference/not-sure, open and practice it, and preserve original plus revision history. Preparation appears in Today before optional extra work; class material is usable separately from practice credit. | [P/src/lib/cw-training/types.ts:97](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/types.ts#L97); [P/src/lib/cw-training/client.ts:392](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L392), `:603`, `:757`, `:2495`, `:2515`; [P/worker/cw-training.ts:474](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L474)                                                                                                                                                                     | Current private custom activities support notes, links, session, and date ([C/src/client/Plan.tsx](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/Plan.tsx), [C/src/shared/plan.ts:139](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L139)), but there is no materials entity, usage classification, text-file reader, revisions, or material practice context. Imported materials remain only in the raw legacy archive. This should remain private per user, not bundled course content.                                                                                                                                                                |
+| P12 | Native / review pending | Private instructor materials collection: paste text, import a bounded text file, save a URL, associate a class session, classify preparation/class/reference/not-sure, open and practice it, and preserve original plus revision history. Preparation appears in Today before optional extra work; class material is usable separately from practice credit. | [P/src/lib/cw-training/types.ts:97](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/types.ts#L97); [P/src/lib/cw-training/client.ts:392](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L392), `:603`, `:757`, `:2495`, `:2515`; [P/worker/cw-training.ts:474](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L474)                                                                                                                                                                     | Issue #41 implements private session/cohort-linked paste, safe link and UTF-8 file materials, immutable revisions and old-version inspection. Today preparation precedes optional work; the remembered reader reuses the existing practice timer with separate class context and exact version evidence. Owned original materials have explicit validated normal-reader copies retaining archive IDs and lineage, including unmatched-session association. Shared account queue ordering, D1 ownership/quotas, portable backups/reset and device preferences are covered. Implementation validation passed; independent review and deployment remain pending. No push. |
 | P13 | Present           | Manual logging plus private record editing/deletion, kind/date/minutes/session/speeds/accuracy/notes, class-time distinction, and on-air QSO count including zero. Manual logging does not require completing an assignment.                                                                                                                                 | [P/src/lib/cw-training/client.ts:2401](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L2401); [P/src/lib/cw-training/qso-count.ts:2](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/qso-count.ts#L2); [P/src/lib/cw-training/other-practice.ts:3](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/other-practice.ts#L3)                                                                                                                                                                   | [C/src/client/main.tsx:1764](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/main.tsx#L1764); [C/src/shared/training.ts:330](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L330); [C/src/worker/training.ts:49](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/worker/training.ts#L49). Editing/deleting records and searchable/filterable logbook are useful current improvements over the personal append-only attempt history.                                                                                                                                                                    |
 | P14 | Partial / P1      | Rich manual finish form: actual completion timestamp, assignment/material/other selection, pass credit and completion independently, performance rating distinct from difficulty, scratchpad, exact LCWO drill metrics, structured CWT observations, and external simulator verified points/settings.                                                        | [P/src/lib/cw-training/client.ts:1831](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L1831), `:2401`, `:2477`; [P/src/lib/cw-training/practice-results-form.ts:3](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/practice-results-form.ts#L3); [P/src/lib/cw-training/report-types.ts:2](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-types.ts#L2)                                                                                                                             | Current generic form ([C/src/client/main.tsx:1764](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/main.tsx#L1764)) lacks these structured fields and actual start/end timestamps. Generic accuracy is not a replacement for a performance assessment or LCWO error-count semantics. Current embedded Runner creates structured metadata, but manually conducted/external runs cannot enter equivalent reportable measurements.                                                                                                                                                                                                                                                                                                |
 | P15 | Missing / P1      | Persist and resume an unfinished block across reload/crash/navigation, with active elapsed time, task/resource, scratchpad and exercise state. Persist pending practice/material/report changes and report drafts before network sync.                                                                                                                       | [P/src/lib/cw-training/storage.ts:21](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21), `:52`, `:85`; [P/src/lib/cw-training/client.ts:117](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L117), `:207`                                                                                                                                                                                                                                                                                                                             | Current [C/src/client/PracticeStudio.tsx](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/PracticeStudio.tsx) keeps attempt state in React; [C/src/client/main.tsx:223](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/main.tsx#L223) keeps launch/save state in memory. [C/src/client/practice-preferences.ts:88](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/practice-preferences.ts#L88) persists tool settings only. A beforeunload/leave guard (`main.tsx:324`) helps normal navigation but cannot restore work after a crash/reload. New practice-clock work changes accounting, not persistence. |
@@ -2534,3 +2534,91 @@ is disclosed, and the complete inspector/private history remains available.
 No physical-device, native OS print, live LCWO or real external acceptance
 claim is made. The user forbids pushing: no push or PR was attempted, and issue
 #40 stays open because its local implementation is not published on GitHub.
+
+
+## Issue #41 — material workflow in progress
+
+Rechecked the current open issue, closed prerequisites #1/#2 and pinned
+original materials at `3106c9b8bf20b63be069f4019467cb565cdd17ec`. The
+original remains read-only. Native immutable private material versions,
+account operations, migration, source-archive adapters and reader wiring are
+being implemented. The public tools remain account-free. No #41 completion,
+review acceptance, commit or deployment is claimed yet; browser and complete
+validation gates remain required before the independent review.
+
+
+## Issue #41 implementation — private immutable instructor materials
+
+Rechecked current issue #41, comments and closed dependencies #1/#2. Current
+original material types, client and Worker match pinned
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`; original HEAD and five existing
+modified-file hashes remain unchanged. The approved f40/R10/P12 scope governs.
+
+The private Academy guide library authors pasted text, credential-free HTTP/S
+links and fatal-decoded UTF-8 text files. Materials retain a stable version ID,
+known level/cohort/session 1–16, title, usage, creation time and optional filename.
+Revisions create a new ID, retain originals, validate same-account/session/course
+acyclic ancestry and remain possible after current course settings change.
+Bounds are 200 native versions, 100,000 text characters, 100,000 file bytes,
+420,000 encoded bytes per material and the existing 6 MiB account quota.
+Null/binary/unpaired-Unicode text, unsafe URLs and invalid timestamps are rejected.
+
+Today shows upcoming latest preparation before optional work and removes only
+explicitly declared completion. The private reader displays exact version/source
+context, text rather than HTML, safe links, keyboard/touch size controls and
+per-material device size/scroll. Practice and Use in class reuse the existing
+studio timer, navigation/scratchpad owner and result queue. Class projection and
+saved time stay separate from independent practice; inspection/resizing creates
+no time or completion. History, ordinary reports and advisor evidence retain
+exact headers and revision IDs without copying restricted source text.
+
+Material create/revise joins the existing semantic account outbox, CAS receipts,
+FIFO parent-before-revision and material-before-attempt ordering, account/dataset/
+device fencing and save/retry feedback. Migration `0013_instructor_materials.sql`
+user-scopes immutable rows, owned parent/result guards, count/byte quotas and
+history accounting. Shared validators and real SQL protect save/PUT/import paths.
+Native backups include all versions, reverse-order revisions restore parent-first,
+merge repeats without duplicate mutation, replacement/reset use existing lifecycle
+transactions and failed imports roll back. Reader preferences join the validated
+scoped device inventory, backup/restore/clear and rollback memory; refused optional
+persistence retains in-app state with visible retry feedback. No elapsed-time
+reload/crash recovery was added.
+
+Owned original archive chunks expose materials and source identity through the
+coherent account snapshot. Explicit bounded copies preserve original content,
+IDs, archive hash and original supersedes lineage; invalid original lineage
+cannot be promoted. Unknown source sessions require a deliberate known-session
+choice and show source versus associated course context. Full source archives
+and restricted course bodies stay immutable; only identity metadata enters the
+material account adapter. Existing inventories above 1,000 rows remain readable
+under the inherited byte bound; a 1,001-material regression exercises actual SQL
+and export fidelity. Existing copies prevent silent replacement by another
+archive. Original raw records remain inspectable even when native validation
+rejects promotion.
+
+Validation: the complete serial browser suite passed **108 tests in 19.3m**.
+Two material journeys passed earlier in **23.6s**, exercising 1440/390 widths,
+keyboard/touch-capable emulation, paste/link/file/revision, actual plain text,
+size/scroll reopen, preparation order, cancellation without a save, measured
+65-second practice/30-second class, private history, unmatched original revision
+association, refused local outbox storage and successful retry. Axe checks cover
+settled distinctive author/reader/preparation/practice/class review/history/source
+association screens. Final audit corrections add large-inventory compatibility,
+original-lineage validation, historical-cohort revisions, explicit unmatched
+association and exact material kind; focused material/imported-history browser
+revalidation passed **3 tests in 29.3s**. Latest check/test/build passed **1,459 tests / 79 files**;
+final doc-inclusive gates remain required before commit. No binding/config changes
+required regenerated Env. Current Workers best-practices/D1 batch references and
+latest Workers types `5.20261003.1` were retrieved and inspected.
+
+Intermediate nonpasses are retained honestly: incomplete discriminated branches,
+file-buffer/bool typing, a missing fixture owner/window, empty preference counting,
+legacy-import course-date reset, early navigation/animation checks, label/array
+order assumptions, and one asset 404 from a concurrent build. Causes were fixed;
+no acceptance assertion, timeout, evidence validator or quota was weakened.
+Builds and browser harnesses now run sequentially. Physical devices/native OS
+background behavior and external live services are not claimed. Responsive
+anchor/reflow ergonomics remain the separately approved #42 work.
+
+Independent review, production deployment and the issue comment remain pending.
+Local source publication stays disabled; no push/PR/closure is performed.

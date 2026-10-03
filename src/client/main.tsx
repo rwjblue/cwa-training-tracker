@@ -1,3 +1,6 @@
+import type { InstructorMaterial, OriginalMaterialInventory } from '../shared/instructor-material';
+import MaterialLibrary from './MaterialLibrary';
+import MaterialPreparation from './MaterialPreparation';
 import type { ReportDocument } from '../shared/report-document';
 import { validateLcwoBackup } from '../shared/lcwo';
 import { useLcwoData, type LcwoController } from './useLcwoData';
@@ -402,6 +405,7 @@ function App() {
   const [practiceStates, setPracticeStates] = useState(() => loadPracticeSaveStates('guest'));
   const pendingTaskIds = account.operations.flatMap(({ operation }) =>
     operation.change.type === 'settings' ||
+    operation.change.type === 'material-create' ||
     operation.change.type === 'report-save' ||
     operation.change.type === 'report-handoff' ||
     operation.change.type === 'report-confirm' ||
@@ -798,8 +802,8 @@ function App() {
       showPage('overview');
     });
   const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
-    const intent = `replace:${options.task?.id ?? 'public'}:${options.tool ?? 'default'}:${options.purpose ?? 'assigned'}`;
-    await runPracticeTransition(intent, confirmLeaveStudio, () => {
+    const intent = `replace:${options.material?.id ?? options.task?.id ?? 'public'}:${options.tool ?? 'default'}:${options.purpose ?? 'assigned'}`;
+    return runPracticeTransition(intent, confirmLeaveStudio, () => {
       replaceStudio({ id: crypto.randomUUID(), ...options });
       showPage('practice');
     });
@@ -1497,6 +1501,8 @@ function App() {
                       user ? (
                         <TodayPlan
                           key={`${user.id}:${deviceToken}`}
+                          preparation={<MaterialPreparation profile={profile} today={today} materials={account.state?.materials ?? []}
+                            original={account.state?.originalMaterials} entries={visibleEntries} onOpen={() => void navigate('course')} />}
                           nextAction={!practiceLaunch ? nextPracticeAction : undefined}
                           liveNow={liveNow}
                           accountId={user.id}
@@ -1769,6 +1775,9 @@ function App() {
               )}
               {page === 'course' && (
                 <Course
+                  materials={account.state?.materials ?? []}
+                  originalMaterials={account.state?.originalMaterials}
+                  onMaterialPractice={openPractice}
                   generation={account.state?.generation ?? 0}
                   reports={account.state?.reports ?? []}
                   lcwo={lcwo.data}
@@ -2601,6 +2610,9 @@ function Logbook({
 }
 
 function Course({
+  materials,
+  originalMaterials,
+  onMaterialPractice,
   generation,
   reports,
   lcwo,
@@ -2622,6 +2634,9 @@ function Course({
   inspection,
   returnToPractice,
 }: {
+  materials: InstructorMaterial[];
+  originalMaterials?: OriginalMaterialInventory;
+  onMaterialPractice: (launch: Omit<PracticeLaunch, 'id'>) => Promise<boolean>;
   generation: number;
   reports: ReportDocument[];
   lcwo: LcwoData | null;
@@ -2665,6 +2680,8 @@ function Course({
           Visit CW Academy <ExternalLink size={15} />
         </a>
       </div>
+      {user && <MaterialLibrary key={`${user.id}:${getDeviceScopeToken(user.id)}`} scope={user.id} profile={profile}
+        materials={materials} original={originalMaterials} onChange={onPlanChange} onPractice={onMaterialPractice} />}
       {user && (
         <Plan
           generation={generation}
@@ -3123,6 +3140,7 @@ function SessionModal({
     notes: initial.notes ?? '',
     scratchpad: typeof initial.metadata?.scratchpad === 'string' ? initial.metadata.scratchpad : '',
     context: initial.context ?? 'practice',
+    materialCompleted: initial.metadata?.materialCompleted === true,
     qsoCount: initial.qsoCount === undefined ? '' : String(initial.qsoCount),
     performanceRating: initial.metadata?.assessment?.performanceRating ?? '',
     cwtEvent: initial.metadata?.assessment?.cwt !== undefined ? 'cwt' : '',
@@ -3220,7 +3238,7 @@ function SessionModal({
       kind: form.kind,
       minutes,
       notes: form.notes,
-      metadata: metadataFromForm(form),
+      metadata: { ...metadataFromForm(form), ...(initial.metadata?.instructorMaterial && form.context !== 'class' ? { materialCompleted: form.materialCompleted } : {}) },
       context: form.context,
       source: initial.source ?? 'manual',
     };
@@ -3634,9 +3652,12 @@ function SessionModal({
               />
             </label>
           )}
+          {initial.metadata?.instructorMaterial && form.context !== 'class' && <label className="checkbox-label"><input type="checkbox"
+            checked={form.materialCompleted} onChange={(event) => setForm((previous) => ({ ...previous, materialCompleted: event.target.checked }))} /> I completed this material’s preparation</label>}
           <label className="checkbox-label">
             <input
               type="checkbox"
+              disabled={!!initial.metadata?.instructorMaterial}
               checked={form.context === 'class'}
               onChange={(e) => update('context', e.target.checked ? 'class' : 'practice')}
             />{' '}

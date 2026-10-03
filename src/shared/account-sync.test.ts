@@ -1,3 +1,4 @@
+import type { InstructorMaterial } from './instructor-material';
 import { describe, expect, it } from 'vitest';
 import {
   applyAccountChange,
@@ -162,4 +163,15 @@ describe('account synchronization protocol', () => {
     expect(() => validateAccountSnapshot({ ...state(), settings: {} })).toThrow('missing');
     expect(() => validateAccountSnapshot({ ...state(), plan: [task, task] })).toThrow('duplicate');
   });
+});
+
+
+it('retains an owned material cohort when revising after course settings change, while rejecting new roots in unrelated cohorts', () => {
+  const old: InstructorMaterial = { version: 1, id: 'old-course-material', course: { level: 'beginner', firstClassDate: '2026-09-28' },
+    session: 1, title: 'Old cohort', text: 'Original', usage: 'reference', createdAt: '2026-09-28T00:00:00.000Z' };
+  const before = { ...state(), settings: { ...DEFAULT_PROFILE, level: 'advanced' as const, firstClassDate: '2026-10-03' }, materials: [old] };
+  const revision = { ...old, id: 'old-course-revision', text: 'Revision', supersedesId: old.id };
+  expect(applyAccountChange(before, { type: 'material-create', material: revision }).materials).toEqual([old, revision]);
+  expect(() => applyAccountChange(before, { type: 'material-create', material: { ...old, id: 'unrelated-root' } })).toThrow('current configured course');
+  expect(() => applyAccountChange(before, { type: 'material-create', material: { ...revision, session: 2 } })).toThrow('same account');
 });

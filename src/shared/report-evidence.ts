@@ -380,6 +380,8 @@ export function reportPracticeSnapshot(
       : `Declared practice day: ${date}; actual start not recorded. Upload time is not a practice timestamp.`,
     `Saved ${display(entry.minutes)} minutes; ${getPracticePurpose(entry) === 'review' ? 'extra review (reportable, no required-task credit)' : 'ordinary practice'}.`,
   ];
+  const material = entry.metadata?.instructorMaterial;
+  if (material) facts.push(`Instructor material: ${material.title}; exact version ${material.id}; session ${material.session}; ${material.course.level} course starts ${material.course.firstClassDate}; created ${material.createdAt}${material.supersedesId ? `; revises ${material.supersedesId}` : ''}${material.origin ? `; original ID ${material.origin.id}; archive ${material.origin.archiveId}` : ''}.`);
   if (includeLearnedWords) {
     const words = learnedWordsFromScratchpad(entry.metadata?.scratchpad);
     if (words.length)

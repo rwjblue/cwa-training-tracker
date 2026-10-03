@@ -1,3 +1,4 @@
+import { validateMaterialReference } from './instructor-material.ts';
 import { manualPracticeDetails } from './external-practice.ts';
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
 import { recordingSpeeds, recordingVariants, officialRecordingIdentity } from './recordings.ts';
@@ -595,6 +596,13 @@ export function practiceSessionEvidenceDetails(
   savedMinutes?: number,
 ): string[] {
   const manual = manualPracticeDetails(metadata);
+  if (metadata?.instructorMaterial) {
+    const material = validateMaterialReference(metadata.instructorMaterial);
+    manual.unshift(`Instructor material: ${material.title}; session ${material.session}; ${material.course.level} course starts ${material.course.firstClassDate}.`,
+      `Exact material version: ${material.id}; created ${material.createdAt}${material.supersedesId ? `; revision of ${material.supersedesId}` : ''}.`,
+      ...(material.origin ? [`Original material ID: ${material.origin.id}${material.origin.supersedesId ? `; original revision of ${material.origin.supersedesId}` : ''}; immutable archive ${material.origin.archiveId}.`] : []),
+      ...(metadata.materialCompleted ? ['Preparation completed: explicit learner declaration.'] : []));
+  }
   const evidence = sessionEvidence(metadata);
   if (evidenceMode === 'historical')
     return [

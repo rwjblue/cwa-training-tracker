@@ -1,3 +1,4 @@
+import { materialReference } from '../shared/instructor-material';
 import { practiceStory } from '../shared/listening-stories';
 import { dateInTimezone, validatePracticeSession, type PracticeSession } from '../shared/training';
 import { taskPracticeMetadata } from '../shared/practice-attribution';
@@ -89,11 +90,12 @@ export function studioSession(
     ...identity,
     date: dateInTimezone(identity.createdAt, timezone),
     kind:
-      launch?.task?.kind ??
+      (launch?.material ? 'sending' : undefined) ?? launch?.task?.kind ??
       (tool === 'sending' ? 'sending' : tool === 'words' ? 'head-copy' : 'listening'),
-    lesson: launch?.task?.lesson,
+    lesson: launch?.material?.session ?? launch?.task?.lesson,
+    ...(launch?.material ? { context: launch.materialContext ?? 'practice' } : {}),
     notes: [
-      launch?.task?.title,
+      launch?.material?.title ?? launch?.task?.title,
       recordings.length
         ? recordings
             .map(
@@ -127,6 +129,7 @@ export function studioSession(
       : {}),
     source: assigned || tool === 'sending' ? 'timer' : 'morse',
     metadata: {
+      ...(launch?.material ? { instructorMaterial: materialReference(launch.material) } : {}),
       elapsedSeconds: measured.seconds,
       ...(scratchpad ? { scratchpad } : {}),
       recallSeconds: measured.recallSeconds,

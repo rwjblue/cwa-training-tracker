@@ -1,3 +1,4 @@
+import { materialReadingKey } from './material-reading';
 import { clearWordContent, readWordContent, saveWordContent, wordContentKey } from './word-storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PROFILE, validatePracticeSession } from '../shared/training';
@@ -1587,4 +1588,24 @@ it('keeps old device inventories and exact versioned QSO setups compatible witho
       ),
     ).toThrow();
   }
+});
+
+
+it('backs up, restores and clears scoped material reading preferences while preserving current device choices', () => {
+  seed();
+  const preference = { 'material:first': { size: 35, scroll: 456 } };
+  values.set(materialReadingKey(scope), JSON.stringify(preference));
+  values.set(materialReadingKey('another-owner'), JSON.stringify({ other: { size: 48, scroll: 0 } }));
+  const backup = captureDeviceBackup(scope, 'Synthetic learner');
+  expect(backup.stores.materialReading).toEqual(preference);
+  expect(summarizeDeviceBackup(backup).find((item) => item.id === 'materialReading')?.count).toBe(1);
+  values.delete(materialReadingKey(scope));
+  restoreDeviceBackup(backup);
+  expect(JSON.parse(values.get(materialReadingKey(scope))!)).toEqual(preference);
+  values.set(materialReadingKey(scope), JSON.stringify({ 'material:first': { size: 18, scroll: 12 } }));
+  restoreDeviceBackup(backup);
+  expect(JSON.parse(values.get(materialReadingKey(scope))!)['material:first']).toEqual({ size: 18, scroll: 12 });
+  clearDeviceWork(scope);
+  expect(values.has(materialReadingKey(scope))).toBe(false);
+  expect(values.has(materialReadingKey('another-owner'))).toBe(true);
 });

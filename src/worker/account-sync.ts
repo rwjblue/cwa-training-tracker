@@ -1,3 +1,5 @@
+import { originalMaterialRecords, validateInstructorMaterials } from '../shared/instructor-material';
+import { materialInsertStatement } from './instructor-materials';
 import {
   requireReportEvidence,
   requireCurrentReportProvenance,
@@ -35,10 +37,12 @@ export function accountSnapshotStatements(env: Env, accountId: string): D1Prepar
     // batches. Return bounded individual rows: an aggregate JSON value could exceed
     // D1's 2 MB per-value limit before the ordinary 6 MiB account quota.
     env.DB.prepare(
-      `SELECT 'task' AS record_kind, task_json, NULL AS report_json, id FROM training_plan WHERE user_id = ?
-      UNION ALL SELECT 'report' AS record_kind, NULL AS task_json, report_json, id FROM advisor_reports WHERE user_id = ?
+      `SELECT 'task' AS record_kind, task_json, NULL AS report_json, NULL AS material_json, NULL AS source_json, NULL AS source_hash, id FROM training_plan WHERE user_id = ?
+      UNION ALL SELECT 'report', NULL, report_json, NULL, NULL, NULL, id FROM advisor_reports WHERE user_id = ?
+      UNION ALL SELECT 'material', NULL, NULL, material_json, NULL, NULL, id FROM instructor_materials WHERE user_id = ?
+      UNION ALL SELECT 'archive', NULL, NULL, NULL, source_json, source_hash, CAST(chunk AS TEXT) FROM import_sources WHERE user_id = ? AND source_hash=(SELECT source_hash FROM import_sources WHERE user_id=? ORDER BY created_at DESC LIMIT 1)
       ORDER BY record_kind, id`,
-    ).bind(accountId, accountId),
+    ).bind(accountId, accountId, accountId, accountId, accountId),
   ];
 }
 
@@ -52,11 +56,19 @@ export function snapshotFromResults(accountId: string, results: D1Result[]): Acc
       ? { reportDefinition: JSON.parse(row.report_definition_json) }
       : {}),
   };
+  const archiveRows = results[1].results.filter((row) => (row as { record_kind: string }).record_kind === 'archive') as { id: string; source_json: string; source_hash: string }[];
+  archiveRows.sort((a, b) => Number(a.id) - Number(b.id));
+  const originalMaterials = archiveRows.length ? {
+    archiveId: archiveRows[0].source_hash,
+    ...originalMaterialRecords(JSON.parse(archiveRows.map((row) => row.source_json).join('')).data),
+  } : undefined;
   return {
     accountId,
     revision: row.account_revision,
     generation: row.dataset_generation,
     historyRevision: row.history_revision,
+    materials: validateInstructorMaterials(results[1].results.filter((row) => (row as { record_kind: string }).record_kind === 'material').map((row) => JSON.parse((row as { material_json: string }).material_json))),
+    ...(originalMaterials ? { originalMaterials } : {}),
     reports: validateReportDocuments(
       results[1].results
         .filter((row) => (row as { record_kind: string }).record_kind === 'report')
@@ -304,7 +316,11 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
   }
   const statements: D1PreparedStatement[] = [];
   const change = operation.change;
-  if (change.type === 'report-delete')
+  if (change.type === 'material-create') {
+    if (Date.parse(change.material.createdAt) > Date.now() + 300_000)
+      throw new HttpError(400, 'Material creation cannot be in the future. Check your device clock.');
+    statements.push(materialInsertStatement(env, auth.user.id, change.material));
+  } else if (change.type === 'report-delete')
     statements.push(
       env.DB.prepare('DELETE FROM advisor_reports WHERE user_id=? AND id=?').bind(
         auth.user.id,

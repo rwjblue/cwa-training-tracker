@@ -1,3 +1,8 @@
+import {
+  validateInstructorMaterial, validateInstructorMaterials, validateOriginalMaterialInventory,
+  requireOriginalMaterialCopies, materialInCurrentCourse, sameMaterialValue,
+  type InstructorMaterial, type OriginalMaterialInventory,
+} from './instructor-material';
 import { assertReportConfirmation, validateReportRelationships } from './report-handoff';
 import {
   sameReportValue,
@@ -19,6 +24,8 @@ export interface AccountSnapshot {
   settings: Profile;
   plan: PlannedTask[];
   reports?: ReportDocument[];
+  materials?: InstructorMaterial[];
+  originalMaterials?: OriginalMaterialInventory;
 }
 
 /** null explicitly clears an optional task field; omitted fields keep their value. */
@@ -27,6 +34,7 @@ export type AccountTaskChanges = {
 };
 export type AccountChange =
   | { type: 'settings'; changes: Partial<Profile> }
+  | { type: 'material-create'; material: InstructorMaterial }
   | { type: 'task-create'; task: PlannedTask }
   | { type: 'task-edit'; id: string; changes: AccountTaskChanges }
   | { type: 'task-status'; ids: string[]; done?: boolean; dismissedFromToday?: boolean }
@@ -147,6 +155,9 @@ function revision(value: unknown): number {
 export function validateAccountChange(value: unknown): AccountChange {
   const input = record(value);
   switch (input.type) {
+    case 'material-create':
+      keys(input, ['type', 'material']);
+      return { type: 'material-create', material: validateInstructorMaterial(input.material) };
     case 'settings': {
       keys(input, ['type', 'changes']);
       const changes = record(input.changes);
@@ -305,6 +316,8 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
     'settings',
     'plan',
     'reports',
+    'materials',
+    'originalMaterials',
   ]);
   const settings = record(input.settings);
   keys(settings, profileFields);
@@ -328,11 +341,25 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
     settings: validateProfile(settings),
     plan: effectivePlan(input.plan),
     ...(reports === undefined ? {} : { reports }),
+    ...(input.materials === undefined ? {} : { materials: validateInstructorMaterials(input.materials) }),
+    ...(input.originalMaterials === undefined ? {} : { originalMaterials: validateOriginalMaterialInventory(input.originalMaterials) }),
   };
 }
 
 /** Shared semantic projection; revisions are assigned only by the Worker. */
 export function applyAccountChange(state: AccountSnapshot, change: AccountChange): AccountSnapshot {
+  if (change.type === 'material-create') {
+    const materials = state.materials ?? [];
+    const existing = materials.find((material) => material.id === change.material.id);
+    if (existing && !sameMaterialValue(existing, change.material))
+      throw new Error('Material versions are immutable. Create an explicit revision with a new ID.');
+    if (!existing && !change.material.supersedesId && !materialInCurrentCourse(change.material, state.settings))
+      throw new Error('Choose a session in your current configured course.');
+    const next = validateInstructorMaterials(existing ? materials : [...materials, change.material]);
+    requireOriginalMaterialCopies(next, state.originalMaterials);
+    return { ...state, materials: next };
+  }
+
   if (change.type === 'report-delete') {
     const report = state.reports?.find((report) => report.id === change.id);
     if (!report) throw new Error('This saved report was not found.');

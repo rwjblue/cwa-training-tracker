@@ -1,3 +1,5 @@
+import { materialInsertStatement, mergeInstructorMaterials, requireOwnedOriginalMaterials } from './instructor-materials';
+import { orderInstructorMaterials, originalMaterialRecords, requireMaterialReference } from '../shared/instructor-material';
 import { orderReportCopies } from '../shared/report-handoff';
 import { requireReportEvidence, reportInsertStatement, mergeReportCopies } from './reports';
 import {
@@ -242,6 +244,10 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
       return json({ entry: previous, duplicate: true, accountId: auth.user.id, generation });
     throw new HttpError(409, 'A different practice entry already uses this session ID.');
   }
+  validated(() => requireMaterialReference(entry, state.materials ?? []), undefined);
+  if (previous && (!equivalentEntry(previous.metadata?.instructorMaterial, entry.metadata?.instructorMaterial) ||
+      (previous.metadata?.instructorMaterial && previous.context !== entry.context)))
+    throw new HttpError(400, 'The material version and practice/class context actually used cannot be changed.');
   validated(() => validateAssessedContactCount(entry, previous), undefined);
   if (!id && typeof entry.metadata?.plannedTaskId === 'string')
     return saveNewLinkedEntry(
@@ -456,6 +462,7 @@ async function readAccountBackup(env: Env, accountId: string): Promise<AccountLi
     version: 1,
     evidenceVersion: 1,
     reports: state.reports ?? [],
+    materials: state.materials ?? [],
     ...(lcwo ? { lcwo: { ...lcwo, connected: false as const } } : {}),
     exportedAt: new Date().toISOString(),
     profile: state.settings,
@@ -542,6 +549,14 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     input.data,
   );
   const uniqueEntries = new Map(data.sessions.map((entry) => [entry.id, entry]));
+  const resultingMaterials = mergeInstructorMaterials(input.mode === 'replace' ? [] : (state.materials ?? []), data.materials ?? []);
+  const materialInventory = data.legacy
+    ? { archiveId: await hash(JSON.stringify(data.legacy)), ...originalMaterialRecords(data.legacy.data) }
+    : input.mode === 'replace' ? undefined : state.originalMaterials;
+  requireOwnedOriginalMaterials(resultingMaterials, materialInventory);
+  for (const entry of data.sessions)
+    validated(() => requireMaterialReference(entry, resultingMaterials), undefined);
+
   const resultingReports = mergeReportCopies(
     input.mode === 'replace' ? [] : (state.reports ?? []),
     data.reports ?? [],
@@ -649,6 +664,7 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     );
     statements.push(
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
+      env.DB.prepare('DELETE FROM instructor_materials WHERE user_id = ?').bind(auth.user.id),
     );
     statements.push(
       env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
@@ -670,6 +686,9 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     }
     statements.push(settingsStatement(env, auth.user.id, settings));
   }
+  const incomingMaterialIds = new Set((data.materials ?? []).map((material) => material.id));
+  for (const material of orderInstructorMaterials(resultingMaterials))
+    if (incomingMaterialIds.has(material.id)) statements.push(materialInsertStatement(env, auth.user.id, material));
   const entryStatementIndexes: number[] = [];
   // Chunk bound JSON rather than issuing a database round trip for every row.
   let chunk: PracticeSession[] = [];
@@ -777,6 +796,7 @@ export async function resetData(request: Request, env: Env): Promise<Response> {
     await applyLifecycle(env, state, lifecycle.identity, [
       env.DB.prepare('DELETE FROM advisor_reports WHERE user_id = ?').bind(auth.user.id),
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
+      env.DB.prepare('DELETE FROM instructor_materials WHERE user_id = ?').bind(auth.user.id),
       env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
       deletePlanStatement(env, auth.user.id),
       ...clearLcwoStatements(env, auth.user.id),

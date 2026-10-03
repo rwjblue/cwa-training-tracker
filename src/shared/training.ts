@@ -1,3 +1,6 @@
+import { validateMaterialReference, validateInstructorMaterials, type InstructorMaterial, type MaterialReference } from './instructor-material.ts';
+import { isCalendarDate } from './calendar-date.ts';
+export { isCalendarDate } from './calendar-date.ts';
 import { validateReportDocuments, type ReportDocument } from './report-document.ts';
 import {
   validateAdvisorReportDefinition,
@@ -72,6 +75,8 @@ export interface PracticeSession {
     assessment?: PracticeAssessment;
     externalResult?: ExternalPractice;
     manualTiming?: ManualTiming;
+    instructorMaterial?: MaterialReference;
+    materialCompleted?: boolean;
   };
 }
 
@@ -106,6 +111,7 @@ export interface TrainingExport {
   profile?: Profile;
   sessions: PracticeSession[];
   reports?: ReportDocument[];
+  materials?: InstructorMaterial[];
   /** Retained source facts and preferences; an imported link is always inactive. */
   lcwo?: LcwoBackup;
   plan?: PlannedTask[];
@@ -325,11 +331,6 @@ function number(value: unknown, label: string, min: number, max: number, integer
   return value;
 }
 
-export function isCalendarDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T12:00:00Z`);
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
 
 export function dateInTimezone(value: string | Date = new Date(), timezone = 'UTC'): string {
   const date = value instanceof Date ? value : new Date(value);
@@ -500,6 +501,16 @@ export function validatePracticeSession(
       )
         throw new Error('Practice purpose contradicts the original legacy review flag.');
     }
+    if (metadata.instructorMaterial !== undefined) {
+      const reference = validateMaterialReference(metadata.instructorMaterial);
+      if (session.lesson !== reference.session || metadata.plannedTaskId !== undefined)
+        throw new Error('Material practice must retain its own session and cannot credit a curriculum task.');
+      metadata = { ...metadata, instructorMaterial: reference };
+      session.metadata = metadata;
+    }
+    if (metadata.materialCompleted !== undefined &&
+      (typeof metadata.materialCompleted !== 'boolean' || metadata.instructorMaterial === undefined || session.context === 'class'))
+      throw new Error('Preparation completion requires an explicit private material practice result.');
     // Imported archives remain historical source records. They are not upgraded
     // to native measurements, whose recording/recall accounting differs.
     let evidence = sessionEvidence(metadata);
@@ -704,6 +715,7 @@ export function validateTrainingExport(value: unknown): TrainingExport {
     result.evidenceVersion = 1;
   }
   if (input.reports !== undefined) result.reports = validateReportDocuments(input.reports);
+  if (input.materials !== undefined) result.materials = validateInstructorMaterials(input.materials);
   if (input.lcwo !== undefined) result.lcwo = validateLcwoBackup(input.lcwo);
   if (input.profile !== undefined) result.profile = validateProfile(input.profile);
   if (input.plan !== undefined) result.plan = validatePlan(input.plan);

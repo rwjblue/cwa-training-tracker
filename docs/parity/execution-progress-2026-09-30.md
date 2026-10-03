@@ -2087,3 +2087,91 @@ is disclosed, and the complete inspector/private history remains available.
 No physical-device, native OS print, live LCWO or real external acceptance
 claim is made. The user forbids pushing: no push or PR was attempted, and issue
 #40 stays open because its local implementation is not published on GitHub.
+
+
+## Issue #41 — material workflow in progress
+
+Rechecked the current open issue, closed prerequisites #1/#2 and pinned
+original materials at `3106c9b8bf20b63be069f4019467cb565cdd17ec`. The
+original remains read-only. Native immutable private material versions,
+account operations, migration, source-archive adapters and reader wiring are
+being implemented. The public tools remain account-free. No #41 completion,
+review acceptance, commit or deployment is claimed yet; browser and complete
+validation gates remain required before the independent review.
+
+
+## Issue #41 implementation — private immutable instructor materials
+
+Rechecked current issue #41, comments and closed dependencies #1/#2. Current
+original material types, client and Worker match pinned
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`; original HEAD and five existing
+modified-file hashes remain unchanged. The approved f40/R10/P12 scope governs.
+
+The private Academy guide library authors pasted text, credential-free HTTP/S
+links and fatal-decoded UTF-8 text files. Materials retain a stable version ID,
+known level/cohort/session 1–16, title, usage, creation time and optional filename.
+Revisions create a new ID, retain originals, validate same-account/session/course
+acyclic ancestry and remain possible after current course settings change.
+Bounds are 200 native versions, 100,000 text characters, 100,000 file bytes,
+420,000 encoded bytes per material and the existing 6 MiB account quota.
+Null/binary/unpaired-Unicode text, unsafe URLs and invalid timestamps are rejected.
+
+Today shows upcoming latest preparation before optional work and removes only
+explicitly declared completion. The private reader displays exact version/source
+context, text rather than HTML, safe links, keyboard/touch size controls and
+per-material device size/scroll. Practice and Use in class reuse the existing
+studio timer, navigation/scratchpad owner and result queue. Class projection and
+saved time stay separate from independent practice; inspection/resizing creates
+no time or completion. History, ordinary reports and advisor evidence retain
+exact headers and revision IDs without copying restricted source text.
+
+Material create/revise joins the existing semantic account outbox, CAS receipts,
+FIFO parent-before-revision and material-before-attempt ordering, account/dataset/
+device fencing and save/retry feedback. Migration `0013_instructor_materials.sql`
+user-scopes immutable rows, owned parent/result guards, count/byte quotas and
+history accounting. Shared validators and real SQL protect save/PUT/import paths.
+Native backups include all versions, reverse-order revisions restore parent-first,
+merge repeats without duplicate mutation, replacement/reset use existing lifecycle
+transactions and failed imports roll back. Reader preferences join the validated
+scoped device inventory, backup/restore/clear and rollback memory; refused optional
+persistence retains in-app state with visible retry feedback. No elapsed-time
+reload/crash recovery was added.
+
+Owned original archive chunks expose materials and source identity through the
+coherent account snapshot. Explicit bounded copies preserve original content,
+IDs, archive hash and original supersedes lineage; invalid original lineage
+cannot be promoted. Unknown source sessions require a deliberate known-session
+choice and show source versus associated course context. Full source archives
+and restricted course bodies stay immutable; only identity metadata enters the
+material account adapter. Existing inventories above 1,000 rows remain readable
+under the inherited byte bound; a 1,001-material regression exercises actual SQL
+and export fidelity. Existing copies prevent silent replacement by another
+archive. Original raw records remain inspectable even when native validation
+rejects promotion.
+
+Validation: the complete serial browser suite passed **108 tests in 19.3m**.
+Two material journeys passed earlier in **23.6s**, exercising 1440/390 widths,
+keyboard/touch-capable emulation, paste/link/file/revision, actual plain text,
+size/scroll reopen, preparation order, cancellation without a save, measured
+65-second practice/30-second class, private history, unmatched original revision
+association, refused local outbox storage and successful retry. Axe checks cover
+settled distinctive author/reader/preparation/practice/class review/history/source
+association screens. Final audit corrections add large-inventory compatibility,
+original-lineage validation, historical-cohort revisions, explicit unmatched
+association and exact material kind; focused material/imported-history browser
+revalidation passed **3 tests in 29.3s**. Latest check/test/build passed **1,459 tests / 79 files**;
+final doc-inclusive gates remain required before commit. No binding/config changes
+required regenerated Env. Current Workers best-practices/D1 batch references and
+latest Workers types `5.20261003.1` were retrieved and inspected.
+
+Intermediate nonpasses are retained honestly: incomplete discriminated branches,
+file-buffer/bool typing, a missing fixture owner/window, empty preference counting,
+legacy-import course-date reset, early navigation/animation checks, label/array
+order assumptions, and one asset 404 from a concurrent build. Causes were fixed;
+no acceptance assertion, timeout, evidence validator or quota was weakened.
+Builds and browser harnesses now run sequentially. Physical devices/native OS
+background behavior and external live services are not claimed. Responsive
+anchor/reflow ergonomics remain the separately approved #42 work.
+
+Independent review, production deployment and the issue comment remain pending.
+Local source publication stays disabled; no push/PR/closure is performed.

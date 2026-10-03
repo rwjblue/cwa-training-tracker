@@ -1,3 +1,5 @@
+import MaterialReader from './MaterialReader';
+import './materials.css';
 import type { CurrentPracticeTime } from '../shared/practice-time';
 import LiveAssignmentWindow from './LiveAssignmentWindow';
 import { availableForImmediatePractice } from '../shared/live-assignment';
@@ -290,7 +292,7 @@ export default function PracticeStudio({
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
   const activeListeningPreferences = listeningPreferences(preferences);
-  const isSending = activity?.type === 'sending' || (!assigned && tool === 'sending');
+  const isSending = Boolean(launch?.material) || activity?.type === 'sending' || (!assigned && tool === 'sending');
   const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
   const [text, setText] = useState(() => {
     const initial = loadPracticePreferences();
@@ -329,6 +331,7 @@ export default function PracticeStudio({
     !isCopy && !isRunner && currentDevice() && sessionIdentity.current
       ? {
           id: sessionIdentity.current.id,
+          classTime: launch?.materialContext === 'class',
           date: dateInTimezone(sessionIdentity.current.createdAt, sessionIdentity.current.timezone),
           seconds: timer.seconds,
           recallSeconds: timer.recallSeconds,
@@ -1082,7 +1085,7 @@ export default function PracticeStudio({
           </p>
         </div>
         <span className="chip">
-          <span className="status-dot" /> {assigned ? 'From your plan' : 'No sign-in needed'}
+          <span className="status-dot" /> {launch?.material ? (launch.materialContext === 'class' ? 'Private material · class time' : 'Private material · practice') : assigned ? 'From your plan' : 'No sign-in needed'}
         </span>
       </div>
       {onFinish && (
@@ -1717,6 +1720,8 @@ export default function PracticeStudio({
                       </a>
                     )}
                   </div>
+                ) : launch?.material && accountId ? (
+                  <MaterialReader key={launch.material.id} material={launch.material} scope={accountId} />
                 ) : isSending ? (
                   <SendingScales
                     key={launch?.id ?? 'public-sending'}

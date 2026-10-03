@@ -1,3 +1,4 @@
+import { materialReference, type InstructorMaterial } from '../shared/instructor-material';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { validatePracticeSession } from '../shared/training';
 import {
@@ -602,4 +603,20 @@ it('permits a separate Runner only after a durable receipt and leaves its identi
   expect(next).toEqual(snapshot);
   expect(loadLocalPractice(scope)).toEqual([]);
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+
+it('retains an exact material attempt until the queued material version has been acknowledged', async () => {
+  const scope = 'material-order-account';
+  const material: InstructorMaterial = { version: 1, id: 'pending-material', course: { level: 'beginner', firstClassDate: '2026-09-28' },
+    session: 1, title: 'Pending material', text: 'PRIVATE TEXT', usage: 'preparation', createdAt: '2026-09-28T00:00:00.000Z' };
+  const state = { accountId: scope, revision: 0, generation: 0, settings: { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' }, plan: [] };
+  rememberAccount({ id: scope, email: 'synthetic@example.test' }, state);
+  queueAccountChange(state, { type: 'material-create', material });
+  const attempt = validatePracticeSession({ ...entry('pending-material-attempt'), lesson: 1,
+    metadata: { instructorMaterial: materialReference(material) } });
+  expect((await autoSavePractice(scope, attempt)).destination).toBe('device');
+  await flushPracticeSaves(scope, vi.fn());
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(loadLocalPractice(scope)).toEqual([attempt]);
 });

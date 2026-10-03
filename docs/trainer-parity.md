@@ -142,7 +142,7 @@ These baseline gaps no longer describe the current implementation:
 | Assigned listening guidance | Seven verified audio families receive concise mental approaches and optional scratchpad prompts beside native playback. Exact public recording metadata precedes conservative title/instruction matching; unknown audio has an instructor-first fallback. [Guidance](../src/shared/listening-guidance.ts). | Original instructions, speed/pass policy, time, completion and private saved evidence retain their existing owners. No proficiency or learned-word inference. #13 independently accepted and deployed; evidence and limits are recorded below. |
 | Recording coverage and passes | Native 1x movement supplies recording-local coverage and once-only completed passes. Overlap unions, file ownership and measured duration groups remain separate from heard time. Prior saved/current/remaining counts appear in Today, Plan and Studio; per-file facts survive review, history, reports and account/device backups. [Coverage](../src/client/recording-coverage.ts), [progress](../src/shared/plan.ts), [journey](../e2e/listening-passes.spec.ts). | Partial coverage stays in memory during in-app inspection; unfinished elapsed/coverage reload recovery is excluded. Old records remain unmeasured. Explicit imported source counts are labeled separately, and extra review supplies no required-pass credit. Independent validation/review are recorded in the #9 ledger below. |
 | Assigned course replay | Device-local automatic replay starts off. Only an observed full pass can continue while owned prior/current passes remain below the assigned minimum. Native 1x, the existing clock and Media Session remain in use. [Policy](../src/client/course-replay.ts), [journey](../e2e/course-replay.spec.ts). | Pause/recall/inspection/source changes cancel pending Play; ended feedback offers deliberate another pass and finish. Generated Repeat is independent. Optional daily loop remains #25. Validation and review are tracked below. |
-| Historical data access          | Imported practice exposes scratchpads, ratings, recall, passes, actual recording speeds, and per-run Runner/LCWO/CWT observations. Settings has an authenticated, on-demand reader for original reports, LCWO measurements, materials/revisions, course context, and device report drafts/preferences. [Imported history](../src/client/ImportedHistory.tsx).                  | Original reports and materials are readable snapshots, not native authoring/submission workflows. Device drafts are preserved for reference, not resumed.                                                                                            |
+| Historical data access          | Imported practice exposes scratchpads, ratings, recall, passes, actual recording speeds, and per-run Runner/LCWO/CWT observations. Settings has an authenticated, on-demand reader for original reports, LCWO measurements, materials/revisions, course context, and device report drafts/preferences. [Imported history](../src/client/ImportedHistory.tsx).                  | Original archives remain immutable. Issues #36–#40 add native report/draft workflows; #41 adds explicit original-material copies and private native reader/revisions (review pending).                                                                                            |
 | Native copy lifecycle           | Four public modes preserve exact targets/answers, actual trial speeds, score versions, replay/reveal flags, and separate audio/answer/review time. Account/guest-local drafts restore paused; pending saves retain stable IDs and tabs coordinate ownership. [Clock](../src/client/copy-clock.ts), [storage](../src/client/copy-storage.ts), [API](../src/worker/training.ts). | This recovery applies to CopyTrainer, not all tools. Hidden copy practice pauses; answer/review time idles after 30 seconds. Guest/signed-in desktop/mobile Chromium journeys and accessibility checks pass; physical-device behavior is unverified. |
 | Native copy history and reports      | Validated per-attempt evidence appears in history and printable reports, survives export/import, and does not sum scores across rounds. New Code Groups use `native-copy-v2`; older attempts retain `native-copy-v1` scores rather than being regraded. [Results](../src/client/CopyResult.tsx), [report details](../src/shared/copy-report.ts).                                                                                                                                                                              | Code Groups uses LCWO's lower-error comparison choice with deliberate extra-group and full-text handling. Native normalization, corpora, timing and other scoring details still differ from LCWO; exact LCWO parity and advisor-form submission are not claimed.                                                                                                           |
 | Published course coverage       | All four published catalogs use official links and factual metadata. Native copy recipes replace supported LCWO launches; source discrepancies are documented. [Coverage and counts](curriculum.md).                                                                                                                                                                           | Beginner/Advanced non-LCWO tools remain linked or use existing workflows. Prototypes are not defaults; automatic progression is absent.                                                                                                              |
@@ -196,10 +196,10 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R7 · Implemented; device check pending** Spoken answers | The September 30 follow-up explicitly adds prerecorded native spoken rounds and credits actual playback through the shared media clock. Runtime browser speech is removed. Physical iPhone locked playback remains unverified; compact prebuilt MP3 optimization remains absent.                                                                                                                                                                                                                                                                                                   | [Implementation](../src/client/morse-track.ts), [asset loader](../src/client/word-speech.ts), [verification](testing.md).                                                                                                                                                                                                                                                                             |
 | **R8 · P2** Course-audio progress                   | Issue #9 delivers actual coverage and whole passes without seek credit, distinct saved/current/remaining counts, and portable per-file evidence. Task-specific choices are independently accepted in #11; Issue #12 adds bounded private difficult timestamps and relative Replay 8 sec with deliberate native playback; optional daily listening remains #25. Course replay is delivered in #10.                                                                                                                                                                                                                                               | Personal [audio session](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/audio-session.ts#L41); [audio appendix](parity/audio.md#findings-by-behavior).                                                                                                                                                                                      |
 | **R9 · P1/P2** Runner continuity                          | Issue #15 retains acknowledged terminal results on the device before review, with stable run ID, accepted-start timezone/date, terminal creation time and distinct frozen review timestamp. Mixed-speed results omit generic WPM and expose recorded engine speed segments and bounded-history omissions. Logbook recovery, canceled review edits, exact retry and optional device backup inventory reuse the shared save/account/device boundaries. Issue #16 adds shared saved/current/combined/remaining time and an explicit completion policy, independently accepted and deployed. Issue #17 adds receipt-gated Save & next, retained settings/context and a fresh paused owner, including recovered Logbook continuation; no running-clock reload/crash estimate or live-engine resumption. | Personal [Runner transitions](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/runner-session.ts#L48); [Runner workflow](parity/listening.md#surrounding-workflow--partial).                                                                                                                                                                  |
-| **R10 · P1/P2** Instructor material                 | Add private session-linked text/link/file material, preparation/class/reference classification, original-plus-revision history, and readable practice context. Imported materials and their revision links are readable in Settings; native material authoring and practice integration remain absent. Current custom activities cover only notes/link/date/session.                                                                                                                                                                           | Personal [materials](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L757); [planning P12](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                                   |
+| **R10 · P1/P2** Instructor material                 | Issue #41 implements private session/cohort-linked paste, safe link and UTF-8 file materials, immutable revisions and old-version inspection. Today preparation precedes optional work; the remembered reader reuses the existing practice timer with separate class context and exact version evidence. Owned original materials have explicit validated normal-reader copies retaining archive IDs and lineage, including unmatched-session association. Shared account queue ordering, D1 ownership/quotas, portable backups/reset and device preferences are covered. Implementation validation passed; independent review and deployment remain pending. No push. | Personal [materials](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/client.ts#L757); [planning P12](parity/planning.md#instructor-materials-and-records).                                                                                                                                                                                   |
 | **R11 · P1/P2** Live practice and reminders         | Public SST/MST/CWT agenda, Local/UTC preference and recurring feed are independently accepted and deployed in #20 with current organizer verification. Assigned typed live eligibility and retained manual work are independently accepted and deployed in #21; private reminder subscriptions remain #46. Public schedule does not infer participation or query private data.                                                                                                                                                                                                                                           | Personal [live-task planning](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L135), [private calendar](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L625); [planning P06/P25/P26](parity/planning.md).                                                                |
 | **R12 · P2** Exact public listening recipes                  | Bounded, versioned public listening recipes that reproduce the exact exercise remain accepted issue #45. Real-contact operating guidance, contact logs, ADIF export and unrelated public practice tools are excluded from this execution.                                                                                                                                                                                                                                        | Personal [real QSO helper](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-qso.ts#L137), [share recipes](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/session.ts#L115); [public-tool inventory](parity/listening.md#standalone-public-tools-distinct-features-not-duplicate-page-names). |
-| **R13 · P1/P2** Migration fidelity                  | Historical imports now expose original scratchpads and structured results, map LCWO group speed correctly, omit pure dismissal bookkeeping, derive Runner completion, and add overlap-safe one-minute LCWO group estimates. A timezone-aware cutoff limits practice/completion while retaining the full source archive. Settings makes reports, LCWO, materials and device drafts readable. Native report/material editing and recoverable device work remain separate migrations; readable preserved records are not complete feature parity. | Tracker baseline [converter](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L502), [completion import](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L425); [planning P33–P36](parity/planning.md#backups-migrations-and-api-fidelity).                      |
+| **R13 · P1/P2** Migration fidelity                  | Historical imports now expose original scratchpads and structured results, map LCWO group speed correctly, omit pure dismissal bookkeeping, derive Runner completion, and add overlap-safe one-minute LCWO group estimates. A timezone-aware cutoff limits practice/completion while retaining the full source archive. Settings makes reports, LCWO, materials and device drafts readable. Native report workflows and recoverable device work are implemented; #41 adds explicit exact original-material copies into the native reader (review pending). Archive readability alone does not establish workflow parity. | Tracker baseline [converter](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/training.ts#L502), [completion import](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L425); [planning P33–P36](parity/planning.md#backups-migrations-and-api-fidelity).                      |
 | **R14 · P2/P3** Preference refinements              | Issue #31 implements independent Words/QSO/Stories setups with both speeds, exact/preset entry through 60 WPM, 1 Hz pitch and 0.1-second pauses, local drag preview and explicit storage retry. Independent review accepted the implementation; production delivery and limits are recorded in its ledger. Issue #32 delivers a shared distinct bounded QSO pair with actual native audio, stable station cues and historical-fact compatibility. Independent review accepted it; production validation and limits are in its ledger.                                                                                                                                                                                                                                                                          | Personal [speed control](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/speed-control.ts#L1); [word inventory](parity/listening.md#generated-word-practice), [known source omission](parity/listening.md#documentation-reconciliation).                                                                                                    |
 
 ## Coherent next work
@@ -4272,3 +4272,91 @@ is disclosed, and the complete inspector/private history remains available.
 No physical-device, native OS print, live LCWO or real external acceptance
 claim is made. The user forbids pushing: no push or PR was attempted, and issue
 #40 stays open because its local implementation is not published on GitHub.
+
+
+## Issue #41 — material workflow in progress
+
+Rechecked the current open issue, closed prerequisites #1/#2 and pinned
+original materials at `3106c9b8bf20b63be069f4019467cb565cdd17ec`. The
+original remains read-only. Native immutable private material versions,
+account operations, migration, source-archive adapters and reader wiring are
+being implemented. The public tools remain account-free. No #41 completion,
+review acceptance, commit or deployment is claimed yet; browser and complete
+validation gates remain required before the independent review.
+
+
+## Issue #41 implementation — private immutable instructor materials
+
+Rechecked current issue #41, comments and closed dependencies #1/#2. Current
+original material types, client and Worker match pinned
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`; original HEAD and five existing
+modified-file hashes remain unchanged. The approved f40/R10/P12 scope governs.
+
+The private Academy guide library authors pasted text, credential-free HTTP/S
+links and fatal-decoded UTF-8 text files. Materials retain a stable version ID,
+known level/cohort/session 1–16, title, usage, creation time and optional filename.
+Revisions create a new ID, retain originals, validate same-account/session/course
+acyclic ancestry and remain possible after current course settings change.
+Bounds are 200 native versions, 100,000 text characters, 100,000 file bytes,
+420,000 encoded bytes per material and the existing 6 MiB account quota.
+Null/binary/unpaired-Unicode text, unsafe URLs and invalid timestamps are rejected.
+
+Today shows upcoming latest preparation before optional work and removes only
+explicitly declared completion. The private reader displays exact version/source
+context, text rather than HTML, safe links, keyboard/touch size controls and
+per-material device size/scroll. Practice and Use in class reuse the existing
+studio timer, navigation/scratchpad owner and result queue. Class projection and
+saved time stay separate from independent practice; inspection/resizing creates
+no time or completion. History, ordinary reports and advisor evidence retain
+exact headers and revision IDs without copying restricted source text.
+
+Material create/revise joins the existing semantic account outbox, CAS receipts,
+FIFO parent-before-revision and material-before-attempt ordering, account/dataset/
+device fencing and save/retry feedback. Migration `0013_instructor_materials.sql`
+user-scopes immutable rows, owned parent/result guards, count/byte quotas and
+history accounting. Shared validators and real SQL protect save/PUT/import paths.
+Native backups include all versions, reverse-order revisions restore parent-first,
+merge repeats without duplicate mutation, replacement/reset use existing lifecycle
+transactions and failed imports roll back. Reader preferences join the validated
+scoped device inventory, backup/restore/clear and rollback memory; refused optional
+persistence retains in-app state with visible retry feedback. No elapsed-time
+reload/crash recovery was added.
+
+Owned original archive chunks expose materials and source identity through the
+coherent account snapshot. Explicit bounded copies preserve original content,
+IDs, archive hash and original supersedes lineage; invalid original lineage
+cannot be promoted. Unknown source sessions require a deliberate known-session
+choice and show source versus associated course context. Full source archives
+and restricted course bodies stay immutable; only identity metadata enters the
+material account adapter. Existing inventories above 1,000 rows remain readable
+under the inherited byte bound; a 1,001-material regression exercises actual SQL
+and export fidelity. Existing copies prevent silent replacement by another
+archive. Original raw records remain inspectable even when native validation
+rejects promotion.
+
+Validation: the complete serial browser suite passed **108 tests in 19.3m**.
+Two material journeys passed earlier in **23.6s**, exercising 1440/390 widths,
+keyboard/touch-capable emulation, paste/link/file/revision, actual plain text,
+size/scroll reopen, preparation order, cancellation without a save, measured
+65-second practice/30-second class, private history, unmatched original revision
+association, refused local outbox storage and successful retry. Axe checks cover
+settled distinctive author/reader/preparation/practice/class review/history/source
+association screens. Final audit corrections add large-inventory compatibility,
+original-lineage validation, historical-cohort revisions, explicit unmatched
+association and exact material kind; focused material/imported-history browser
+revalidation passed **3 tests in 29.3s**. Latest check/test/build passed **1,459 tests / 79 files**;
+final doc-inclusive gates remain required before commit. No binding/config changes
+required regenerated Env. Current Workers best-practices/D1 batch references and
+latest Workers types `5.20261003.1` were retrieved and inspected.
+
+Intermediate nonpasses are retained honestly: incomplete discriminated branches,
+file-buffer/bool typing, a missing fixture owner/window, empty preference counting,
+legacy-import course-date reset, early navigation/animation checks, label/array
+order assumptions, and one asset 404 from a concurrent build. Causes were fixed;
+no acceptance assertion, timeout, evidence validator or quota was weakened.
+Builds and browser harnesses now run sequentially. Physical devices/native OS
+background behavior and external live services are not claimed. Responsive
+anchor/reflow ergonomics remain the separately approved #42 work.
+
+Independent review, production deployment and the issue comment remain pending.
+Local source publication stays disabled; no push/PR/closure is performed.

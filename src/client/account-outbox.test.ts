@@ -1,3 +1,4 @@
+import type { InstructorMaterial } from '../shared/instructor-material';
 import { createReportDocument } from '../shared/report-document';
 import { starterAdvisorReportDefinition } from '../shared/report-definition';
 import { captureReportHandoff, confirmReportHandoff } from '../shared/report-handoff';
@@ -726,4 +727,24 @@ it('durably orders offline handoff and confirmation with exact retries, reserved
   expect(fetchMock.mock.calls[1][1].body).toBe(fetchMock.mock.calls[0][1].body);
   expect(loadAccountOperations(scope)).toEqual([]);
   expect(online.reports).toEqual([handoff, submitted]);
+});
+
+
+it('projects and uploads material parents before revisions without overwriting original content', async () => {
+  const base = { ...state(), settings: { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' } };
+  rememberAccount(owner(), base);
+  const material: InstructorMaterial = { version: 1, id: 'ordered-material', course: { level: 'beginner', firstClassDate: '2026-09-28' },
+    session: 1, title: 'Original', text: 'Original private content', usage: 'preparation', createdAt: '2026-09-28T00:00:00.000Z' };
+  const first = queueAccountChange(base, { type: 'material-create', material });
+  const revised = { ...material, id: 'ordered-revision', text: 'Revision', supersedesId: material.id };
+  const second = queueAccountChange(projectAccountState(base), { type: 'material-create', material: revised });
+  const one = { ...applyAccountChange(base, first.operation.change), revision: 1 };
+  const two = { ...applyAccountChange(one, second.operation.change), revision: 2 };
+  expect(projectAccountState(base).materials).toEqual([material, revised]);
+  fetchMock.mockResolvedValueOnce(Response.json({ state: one, operationId: first.operation.id }));
+  fetchMock.mockResolvedValueOnce(Response.json({ state: two, operationId: second.operation.id }));
+  await flushAccountOperations(scope);
+  expect(fetchMock.mock.calls.map(([, request]) => JSON.parse(request.body).change.material.id)).toEqual([material.id, revised.id]);
+  expect(loadAccountOperations(scope)).toEqual([]);
+  expect(loadCachedAccount(scope)?.state.materials).toEqual([material, revised]);
 });
