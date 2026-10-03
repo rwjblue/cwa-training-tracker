@@ -2225,3 +2225,39 @@ reopened position. All three affected material journeys pass in 35.8 seconds.
 Doc-inclusive gates, commit and exact application/build-equivalence recheck follow.
 Production deployment,
 completion journal and issue comment remain pending; no source push or closure.
+
+
+## Issue #41 delivery — independently accepted, locally committed and deployed
+
+Local implementation `182acf22`, scoped long-title correction `55b7bc88` and
+settled-scroll test follow-up `f3175546` are on local main. The fresh independent
+review found one substantive P2 F1; its exact accepted title/filename boundary
+is corrected without narrowing validation. Recheck accepts all five independent
+workflows and a focused visible practice-reader check. Final test-only equivalence
+recheck independently passes the actual keyboard material journey and confirms
+all 173 assets equal the accepted application build. No findings remain. All 562
+tracked hashes, original references/five existing dirty files, primary HEAD and
+approved scope remained intact throughout review; browser processes were released.
+
+Final validation: check, 1,459 fast tests in 79 files and production build pass.
+All 109 serial browser journeys pass in 19.7 minutes; all three affected material
+journeys pass in 35.8 seconds after the scrollend fixture correction. Independent
+review uses actual runtime and synthetic data at desktop/mobile widths with
+keyboard/emulated touch, settled Axe/geometry, inspected screenshots, rejected
+files/preferences/uploads, exact retry ordering and second-account restore.
+No binding/config changes required Env regeneration.
+
+The first established deploy failed at remote D1 authorization (7403) after
+successful gates/dry-run. Full-task retry exited successfully, applied migration
+`0013_instructor_materials.sql` and deployed production version
+`7fe3c05f-ad84-416b-af99-ece077bcfce0`. Read-only checks verify root/health 200,
+anonymous entries/account-state/lifecycle backup/LCWO 401, byte-identical served
+main/Studio JS/CSS and the native Runner integration module. No production
+private records were created for verification.
+
+Source publication remains disabled: no push, PR or closure. The issue completion
+comment records these local/deployed results and leaves #41 open pending source
+publication. Physical devices/native OS background and external private-resource
+acceptance are not claimed. #42 responsive anchor/reflow remains separately
+approved work; no elapsed-time reload/crash recovery or restricted public data
+was added. The original personal site remains read-only evidence.
