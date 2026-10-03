@@ -1856,3 +1856,35 @@ remains. Original HEAD, pinned references, five protected dirty files, approved
 scope ledger, primary checkout HEAD and push-signing policy are unchanged.
 Implementation commit and local main advancement follow; independent review and
 production deployment are still pending. No push or issue closure is authorized.
+
+### Issue #39 independent acceptance and production delivery
+
+Implementation `14323db0cfee79f47fb30ab59ca5c7a1dacd342b` passed independent
+post-commit review with no substantive findings. The reviewer independently
+authored four passing desktop keyboard/mobile touch journeys for frozen mapping
+and GET/copy/print, lost committed acknowledgement, storage refusal and offline
+source edits, original archive linked correction, actual reversed-file merge/
+replace and cross-account rejection. Five settled Axe/overflow scans are clear;
+12 focused domain/outbox/actual-SQL tests passed. All 546 tracked files matched
+the implementation commit and all 173 built files remained unchanged; original
+references/protected dirty work stayed intact. The reviewer explicitly released
+the source/build/browser lease with no owned processes and port 8791 free.
+Ignored review report, result files and integrity evidence are retained under
+`.tmp/parity-queue/issue-39-independent-review/`.
+
+The first deploy failed at remote D1 with Cloudflare error 7403; that attempt is
+not a successful deployment. Repeating the established deploy task passed
+check, all 1,434 tests/76 files, build and dry run; migration
+`0012_report_handoffs.sql` applied and production version
+`5fe9c929-1089-4727-93f7-836d550c9c48` deployed. Initial read-only verification
+saw the preceding HTML entry point; the next complete verification passed:
+root/health 200, four private endpoints 401, all four emitted JS/CSS assets and
+Runner integration matching local SHA-256 hashes. No production private writes
+were used. Exact deployment and verification logs remain ignored evidence.
+
+Local main contains the implementation and this delivery journal; push signing
+remains enabled. No push or PR occurred. Issue #39 remains open because source
+publication is forbidden by the learner's current instruction; production and
+review acceptance are delivered. Mobile evidence is emulation, print covers the
+text-node iframe rather than native OS output, and no physical iOS, live LCWO
+or real external-form acceptance is claimed. Learned words remain #40.
