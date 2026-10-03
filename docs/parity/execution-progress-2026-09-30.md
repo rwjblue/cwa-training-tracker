@@ -1216,3 +1216,33 @@ browser journeys in 18.1 minutes (actual exit 0). The unchanged mobile replay
 journey passes in the complete rerun. Earlier failures/interruption remain
 retained and honestly documented. Implementation commit and independent review
 follow this gate; production delivery remains pending. No push is authorized.
+
+
+### Issue #35 independent review correction — exact-quota Disconnect
+
+The fresh post-commit reviewer requested one substantive P2 correction after
+reviewing implementation `7c757ff9`: changing stored `true` to `false` added one
+byte and rejected Disconnect at exactly the 6 MiB ordinary-data limit. Its own
+real Wrangler/D1 reproduction independently summed actual row bytes. History
+remained intact, but the connection stayed active. The reviewer otherwise passed
+239 focused tests and independently exercised desktop/mobile keyboard/touch,
+consent, identity, save/retry, lost committed acknowledgement, actual portable
+files/reset, source facts, estimates and privacy. Twelve settled Axe/overflow
+checks were clear. This is REQUEST CHANGES, not acceptance.
+
+Private storage now uses same-width 0/1 flags and reads the older boolean format.
+API responses and portable backups retain strict boolean semantics. No quota,
+source fact, identity, account fence or schema change is needed. Two regression
+cases fill actual production-SQL rows to exactly 6 MiB, independently verify byte
+accounting, and require successful Disconnect with all 650 practice rows and
+source results intact. Both first failed HTTP 400 versus 200 before correction;
+both now pass, including older-format compatibility. All 241 focused tests pass.
+Final fast checks and affected runtime journeys, follow-up commit and independent
+recheck are subsequent gates; deployment remains pending. No push is attempted.
+
+Correction gate passes `mise run check`, all 1,314 tests in 70 files and production
+build, followed by both affected serial LCWO runtime journeys in 15.2 seconds
+(actual exit 0). The earlier full 96-journey pass remains implementation evidence;
+the small private encoding correction changes no frontend or wire shape. The
+reviewer will independently recheck the real quota workflow after the focused
+follow-up commit before deployment.

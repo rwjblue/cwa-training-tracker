@@ -33,8 +33,10 @@ export function lcwoFromResults(results: D1Result[]): LcwoData | null {
     connected: false,
     runs: results[1].results.map((row) => JSON.parse((row as { run_json: string }).run_json)),
   });
-  if (typeof link.connected !== 'boolean') throw new Error('Invalid retained LCWO connection.');
-  return { ...portable, connected: link.connected };
+  // Accept the original boolean storage format as well as the fixed-width flag.
+  if (typeof link.connected !== 'boolean' && link.connected !== 0 && link.connected !== 1)
+    throw new Error('Invalid retained LCWO connection.');
+  return { ...portable, connected: link.connected === true || link.connected === 1 };
 }
 export async function readLcwo(env: Env, accountId: string) {
   return lcwoFromResults(await env.DB.batch(lcwoReadStatements(env, accountId)));
@@ -51,10 +53,12 @@ export function lcwoWriteStatements(
   additions: readonly LcwoRun[],
 ) {
   const { runs: _runs, ...link } = data;
+  // Disconnect must remain possible at the exact storage limit. Both private
+  // flag values occupy one byte; API responses and backups still use booleans.
   const statements = [
     env.DB.prepare(
       'INSERT INTO lcwo_links (user_id, link_json) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET link_json=excluded.link_json',
-    ).bind(accountId, JSON.stringify(link)),
+    ).bind(accountId, JSON.stringify({ ...link, connected: data.connected ? 1 : 0 })),
   ];
   let chunk: LcwoRun[] = [],
     bytes = 0;

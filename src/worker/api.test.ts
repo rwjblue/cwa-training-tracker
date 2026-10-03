@@ -7,6 +7,7 @@ import {
   DEFAULT_PROFILE,
   getPracticePurpose,
   summarizePractice,
+  validatePracticeSession,
   type PracticeSession,
   type TrainingExport,
 } from '../shared/training';
@@ -7342,6 +7343,88 @@ describe('private request-only LCWO linking and retained history', () => {
       state: AccountSnapshot;
     };
   }
+  it.each(['current', 'older boolean'])(
+    'disconnects at the exact real 6 MiB limit without removing history (%s flag)',
+    async (flag) => {
+      const owner = await signIn('lcwo-full-disconnect@example.test');
+      upstream();
+      expect((await request('/api/lcwo', 'POST', credentials, owner.cookie)).status).toBe(200);
+      const original = (await retained(owner.cookie)).data!;
+      if (flag === 'older boolean') {
+        const stored = JSON.parse(
+          db.sqlite.prepare('SELECT link_json FROM lcwo_links WHERE user_id=?').get(owner.user.id)!
+            .link_json as string,
+        );
+        db.sqlite
+          .prepare('UPDATE lcwo_links SET link_json=? WHERE user_id=?')
+          .run(JSON.stringify({ ...stored, connected: true }), owner.user.id);
+      }
+      const rows = Array.from({ length: 650 }, (_, index) =>
+        validatePracticeSession({
+          id: `quota-fixture:${index}`,
+          date: '2026-09-29',
+          kind: 'other',
+          minutes: 0,
+          notes: '',
+          createdAt: '2026-09-29T12:00:00.000Z',
+          source: 'manual',
+          context: 'practice',
+        }),
+      );
+      const capacity = 6 * 1024 * 1024;
+      const initial = db.sqlite
+        .prepare('SELECT storage_bytes,lifecycle_control_bytes FROM users WHERE id=?')
+        .get(owner.user.id)!;
+      let padding =
+        capacity -
+        Number(initial.storage_bytes) +
+        Number(initial.lifecycle_control_bytes) -
+        rows.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)), 0);
+      expect(padding).toBeGreaterThan(0);
+      const insert = db.sqlite.prepare(
+        'INSERT INTO practice_entries (user_id,id,date,entry_json) VALUES (?,?,?,?)',
+      );
+      for (const row of rows) {
+        const size = Math.min(10000, padding);
+        padding -= size;
+        const entry = validatePracticeSession({ ...row, notes: 'x'.repeat(size) });
+        insert.run(owner.user.id, entry.id, entry.date, JSON.stringify(entry));
+      }
+      expect(padding).toBe(0);
+      const ordinaryBytes = () => {
+        const row = db.sqlite
+          .prepare('SELECT storage_bytes,lifecycle_control_bytes FROM users WHERE id=?')
+          .get(owner.user.id)!;
+        return Number(row.storage_bytes) - Number(row.lifecycle_control_bytes);
+      };
+      const independentBytes = () =>
+        Number(
+          db.sqlite
+            .prepare(
+              `SELECT coalesce((SELECT sum(length(CAST(entry_json AS BLOB))) FROM practice_entries WHERE user_id=?),0)
+                +coalesce((SELECT length(CAST(link_json AS BLOB)) FROM lcwo_links WHERE user_id=?),0)
+                +coalesce((SELECT sum(length(CAST(run_json AS BLOB))) FROM lcwo_results WHERE user_id=?),0) AS bytes`,
+            )
+            .get(owner.user.id, owner.user.id, owner.user.id)!.bytes,
+        );
+      expect(ordinaryBytes()).toBe(capacity);
+      expect(independentBytes()).toBe(capacity);
+      const response = await request('/api/lcwo', 'POST', { action: 'disconnect' }, owner.cookie);
+      expect(response.status).toBe(200);
+      expect((await retained(owner.cookie)).data).toEqual({ ...original, connected: false });
+      expect(ordinaryBytes()).toBeLessThanOrEqual(capacity);
+      expect(independentBytes()).toBe(ordinaryBytes());
+      expect(
+        db.sqlite
+          .prepare('SELECT count(*) AS count FROM practice_entries WHERE user_id=?')
+          .get(owner.user.id)!.count,
+      ).toBe(rows.length);
+      expect(
+        (await request('/api/lcwo', 'POST', { ...credentials, action: 'refresh' }, owner.cookie))
+          .status,
+      ).toBe(409);
+    },
+  );
   it('atomically links all source families, retains missing rows and refreshes without duplicates or secrets', async () => {
     const owner = await signIn('lcwo-owner@example.test');
     const fetcher = upstream();
