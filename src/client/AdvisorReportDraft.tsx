@@ -341,7 +341,7 @@ export default function AdvisorReportDraft({
         Configure advisor fields
       </button>
       {changedDefinition && (
-        <div className="alert">
+        <div className="alert advisor-definition-notice">
           <p>
             Your working draft keeps its original field definition. Download or save it before
             starting a new draft with the current configuration.

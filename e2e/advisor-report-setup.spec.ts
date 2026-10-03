@@ -239,6 +239,38 @@ test('private report definition, exact field rules, preparation window and retai
     .reportDefinition.fields[4];
   expect(changed).toMatchObject({ key: 'sendingRating', type: 'textarea', externalId: 'entry.42' });
   expect(changed.options).toBeUndefined();
+  // A notice can overflow the modal even when the outer page still fits.
+  const useDefinition = page.getByRole('button', {
+    name: 'Use current definition for new draft',
+    exact: true,
+  });
+  await expect(useDefinition).toBeVisible();
+  for (const width of [1440, 390, 375, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await settled(page);
+    const geometry = await useDefinition.evaluate((button) => {
+      const dialog = button.closest('dialog')!;
+      const action = button.getBoundingClientRect();
+      const bounds = dialog.getBoundingClientRect();
+      const notice = button.parentElement!;
+      return {
+        actionLeft: action.left,
+        actionRight: action.right,
+        dialogLeft: bounds.left,
+        dialogRight: bounds.right,
+        dialogScroll: dialog.scrollWidth,
+        dialogWidth: dialog.clientWidth,
+        noticeScroll: notice.scrollWidth,
+        noticeWidth: notice.clientWidth,
+      };
+    });
+    expect(geometry.actionLeft).toBeGreaterThanOrEqual(geometry.dialogLeft);
+    expect(geometry.actionRight).toBeLessThanOrEqual(geometry.dialogRight);
+    expect(geometry.dialogScroll).toBeLessThanOrEqual(geometry.dialogWidth + 1);
+    expect(geometry.noticeScroll).toBeLessThanOrEqual(geometry.noticeWidth + 1);
+    await expectResponsive(page, `advisor-report-definition-notice-${width}`);
+    await page.screenshot({ path: `.tmp/advisor-report-definition-notice-${width}.png` });
+  }
   // A whole-number definition must have a safe answer even with one-sided limits.
   await page.getByRole('button', { name: 'Configure advisor fields', exact: true }).tap();
   await keyboard(page.getByText('6. Verified points', { exact: true }));

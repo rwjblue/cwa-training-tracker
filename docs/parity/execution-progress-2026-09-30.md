@@ -1508,3 +1508,32 @@ protected approved-scope ledger remain unchanged. The existing large-bundle
 warning remains visible. No binding/config change or physical-device claim is
 made. A focused implementation commit and fresh independent review follow;
 production deployment and source publication are not yet claimed.
+
+
+## Issue #37 independent review correction — responsive definition notice
+
+The fresh post-commit reviewer inspected implementation `3686ffe5` and
+independently exercised seven functional real-Wrangler/D1 journeys, 36 focused
+domain/device/SQL cases and ten clear settled Axe scans. It verified lost
+acknowledgement/exact retry, explicit account conflict reapply, storage refusal,
+second-tab recovery, original provenance, submitted history, privacy/reset and
+a 2,522,011-byte/200-copy runtime history. All 533 tracked source and 173 built
+asset hashes remained unchanged. One substantive P2 finding, F1, prevented
+acceptance: the generic single-row alert clipped the definition-change action
+and compressed the explanation inside the mobile report dialog at 390/375px.
+The independent dedicated RED geometry case and screenshots retain the defect.
+
+The advisor notice now has a scoped stacked layout with a wrapping action;
+other alert callers retain their existing layout. The existing report
+configuration journey checks both action containment and inner dialog/notice
+overflow at 1440, 390, 375 and 320px, including settled accessibility and
+retained screenshots. The original working draft and deliberate edits remain
+protected until the learner explicitly chooses a new definition. Independent
+recheck and production delivery remain required after the focused correction
+commit. Physical devices and external submission are not claimed.
+
+Root correction validation passes check, all 1,403 tests/74 files, build and
+five serial affected report journeys (38.9 seconds, actual exit 0). Settled
+notice checks and inspected pixels include desktop, 390, 375 and 320px. The
+complete 101-journey implementation gate remains recorded above; this focused
+visual correction changes no auth, persistence or runtime wiring.
