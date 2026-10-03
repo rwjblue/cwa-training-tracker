@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PROFILE, type PracticeSession } from './training';
 import { validateAdvisorReportDefinition } from './report-definition';
 import {
+  MAX_REPORT_DOCUMENT_BYTES,
   createReportDocument,
   refreshReportDocument,
   validateReportDocument,
@@ -47,6 +48,12 @@ const entry = (
 const draft = () => createReportDocument(definition(), profile, [], 1, '2026-10-03', []);
 
 describe('explicit learned-word reporting', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-03T00:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it('extracts only declared lines, normalizes phrases/Unicode/case and retains first spelling', () => {
     expect(
       learnedWordsFromScratchpad(
@@ -151,5 +158,49 @@ describe('explicit learned-word reporting', () => {
         reports: restored,
       }).answers.words,
     ).toBe('QTH');
+  });
+
+  it('keeps an empty learned report reachable with many long confirmed declarations and bounded source details', () => {
+    for (const { letter, multiple } of [
+      { letter: 'a', multiple: false },
+      { letter: '漢', multiple: true },
+    ]) {
+      const words = Array.from(
+        { length: 90 },
+        (_, index) => `learner-${index}-${letter.repeat(680)}`,
+      );
+      const rows = words.map((word, index) => entry(`declared-${index}`, `Learned: ${word}`));
+      const reports = words.flatMap((word) => {
+        const original = draft();
+        original.answers.words = word;
+        original.editedKeys = ['words'];
+        const handoff = captureReportHandoff(original, '2026-10-03T00:00:00Z');
+        return [handoff, confirmReportHandoff(handoff, true, '2026-10-03T00:01:00Z')];
+      });
+      const config = definition();
+      if (multiple)
+        config.fields.push({ ...config.fields[0], key: 'more', label: 'Further learned words' });
+      const result = createReportDocument(
+        config,
+        profile,
+        [],
+        1,
+        '2026-10-03',
+        rows,
+        null,
+        reports,
+      );
+      expect(result.answers.words).toBe('');
+      if (multiple) expect(result.answers.more).toBe('');
+      expect(new Set(result.evidence.map((ref) => ref.id))).toEqual(
+        new Set(rows.map((row) => row.id)),
+      );
+      expect(result.provenance!.omittedSourceDetails).toBeGreaterThan(0);
+      expect(result.provenance!.fields[0].warnings.join(' ')).toContain('further exclusions');
+      expect(confirmedLearnedWordHistory(reports).map((item) => item.word)).toEqual(words);
+      expect(new TextEncoder().encode(JSON.stringify(result)).length).toBeLessThanOrEqual(
+        MAX_REPORT_DOCUMENT_BYTES,
+      );
+    }
   });
 });

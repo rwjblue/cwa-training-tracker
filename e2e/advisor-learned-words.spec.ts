@@ -234,6 +234,38 @@ test('saved explicit learned words stay eligible through handoff and retire only
       snapshot.facts.join('\n').includes('Explicit Learned: Rig, QTH'),
     ),
   ).toBe(true);
+  // A different eligible report date must still retire the exact confirmed word.
+  expect(
+    (
+      await accountRequest(context, 'POST', '/api/entries', {
+        id: 'prior-day-learned-declaration',
+        date: '2026-10-02',
+        kind: 'listening',
+        minutes: 0,
+        notes: '',
+        createdAt: '2026-10-02T00:00:00Z',
+        metadata: { scratchpad: 'Learned: Rig' },
+      })
+    ).status(),
+  ).toBe(201);
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await open(page);
+  await page.getByLabel('Report date', { exact: true }).fill('2026-10-02');
+  await expect(words()).toHaveValue('');
+  const savingDate = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/account-operations') &&
+      response.request().postDataJSON()?.change.type === 'report-save',
+  );
+  await page.getByRole('button', { name: 'Save account copy', exact: true }).tap();
+  expect((await savingDate).status()).toBe(200);
+  await words().fill('Deliberately omit these words');
+  await words().fill('');
+  await page.getByLabel('Report date', { exact: true }).fill('2026-10-03');
+  await expect(words()).toHaveValue('');
+  await page.getByRole('button', { name: 'Use suggestion for Words learned', exact: true }).tap();
+  await expect(words()).toHaveValue('QTH');
   // Bounded disclosure keeps all candidate actions reachable, and selection appends to literal edits.
   expect(
     (

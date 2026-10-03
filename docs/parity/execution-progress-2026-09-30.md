@@ -1954,8 +1954,8 @@ relaxed validation. Neither is relabeled a passing gate.
 Bounds remain explicit: report answers are at most 4,000 characters, retained
 whole declarations never become truncated false words, and omitted declarations
 are counted. Candidate/history displays expand in batches of 100; all rows remain
-reachable. Captured exclusion warnings are bounded to 90 detailed entries plus
-a summary; full scratchpads/confirmed answers remain in owned private history
+reachable. Captured exclusion details share a 2,000-byte allowance across configured
+learned fields, plus a summary; full scratchpads/confirmed answers remain in owned private history
 and backups. Existing report/source-detail byte budgets still apply with visible
 recovery. Learning is a learner declaration, not a server certification of
 proficiency. Physical-device/live-LCWO/native OS print/real external acceptance
@@ -1991,3 +1991,57 @@ captures were inspected. Original HEAD, three pinned source references, five
 protected dirty files, approved scope, primary checkout HEAD and push signing
 remain unchanged. Independent review starts only after the implementation
 commit; production deployment remains a separate gate. No push is authorized.
+
+## Issue #40 independent review corrections — date history and derived bytes
+
+The fresh reviewer returned REQUEST_CHANGES with two concrete P2 findings and
+released the source/assets/runtime lease. Its own desktop date-change journey
+reintroduced a confirmed word and received a real account-save 400 without
+mutation. Its actual chooser/D1 import of a valid 776,804-byte backup (90
+zero-time declarations, 180 native handoff/submission records, one learned
+textarea) made an empty new report unreachable: provenance alone was 112,321
+bytes, including 71,734 warning bytes and 39,995 source bytes. Five independently
+authored journeys yielded three passes and these two finding assertions; 45
+focused tests and six Axe/overflow scans passed. All 550 tracked/173 built hashes,
+original references/dirty work, scope and primary checkout were unchanged.
+
+Report-date changes now pass the current owned reports inventory, matching the
+other create/refresh paths. The new actual UI regression changes to an eligible
+prior day after exact native confirmation, verifies the reported word remains
+excluded, saves through the real account operation successfully, and protects
+a typed-then-cleared blank when changing dates again.
+
+Generated detailed exclusion explanations now share a 2,000-byte UTF-8 allowance
+across configured learned fields. Excess explanations are summarized with their
+count and directions to the complete candidate inspector/private history.
+Nothing raises the existing 96 KB document, 40 KB embedded source or 4,000-character
+answer limits; complete declared words, source IDs and native confirmations
+remain intact. A new cheap domain boundary covers 90 long ASCII and Unicode
+declarations, 180 exact native copies, and multiple learned fields. Empty drafts
+remain creatable, all source references/history remain exact, and omitted
+source/detail explanations are visible.
+
+Both meaningful regression REDs were observed before the fixes: the browser
+reintroduced Rig after the date change, and the large-history domain case threw
+the 96 KB error. An older domain fixture crossed its fixed noon refresh time as
+wall time advanced; it now has a deterministic test clock. An intermediate
+assertion expected insertion rather than canonical reference order; it now
+checks exact source identity sets. A blank browser fixture initially filled an
+already-empty field without an edit event; it now types and clears actual text.
+These fixture failures are retained separately, with no weakened validators,
+application assertions or timeouts.
+
+Affected fast coverage passed 264 tests across five files (3.90 seconds). The
+extended learned-word browser passed (14.8 seconds, complete launcher exit 0),
+then all nine affected report journeys passed (51.7 seconds, exit 0). Complete
+follow-up gates, a focused correction commit and independent recheck remain
+required before production deployment. Source publication remains forbidden.
+
+The complete correction gate passed typecheck, all 1,441 tests across 77 files
+and the production build. The complete serial browser run passed all 106
+journeys (19.5 minutes, exit 0), including the new prior-date account-save
+regression and existing desktop keyboard/mobile touch flows. Current issue
+body/comments, original HEAD/current and pinned references, five protected
+dirty files, approved scope, primary checkout HEAD and signing configuration
+were rechecked unchanged. A focused correction commit and independent recheck
+remain required before deployment; no source push is authorized.

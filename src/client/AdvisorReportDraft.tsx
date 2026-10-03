@@ -431,7 +431,7 @@ export default function AdvisorReportDraft({
                     profile,
                     entries,
                     undefined,
-                    { lcwo, tasks },
+                    { lcwo, tasks, reports },
                   ),
                 );
                 setDateError('');

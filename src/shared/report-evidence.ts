@@ -539,9 +539,10 @@ export function buildReportEvidence(
     });
   };
   const ref = (entry: PracticeSession): ReportReference => ({ kind: 'practice', id: entry.id });
-  const includeLearnedWords = document.definition.fields.some(
+  const learnedFields = document.definition.fields.filter(
     (field) => field.source === 'learned:words',
   );
+  const includeLearnedWords = learnedFields.length > 0;
   if (includeLearnedWords) {
     const candidates = learnedWordCandidates(eligible, reports, (entry) =>
       reportPracticeDate(entry, window.timezone),
@@ -550,6 +551,20 @@ export function buildReportEvidence(
     const excluded = candidates.filter((candidate) => candidate.reportedIn.length);
     const answer = learnedWordAnswer(included.map((candidate) => candidate.word));
     const selected = reportWordValues(answer).length;
+    // Derived explanatory prose must not consume the document's answer/source budget.
+    // Share this allowance across every configured learned field, which repeats these warnings.
+    const detailBudget = Math.floor(2000 / learnedFields.length);
+    const exclusionWarnings: string[] = [];
+    let detailBytes = 0;
+    for (const candidate of excluded) {
+      const warning = `Already confirmed: ${candidate.word.slice(0, 700)}${candidate.word.length > 700 ? '… [word excerpt]' : ''}; submission ${candidate.reportedIn[0].reportId} at ${candidate.reportedIn[0].submittedAt}.`;
+      const bytes = new TextEncoder().encode(JSON.stringify(warning)).length + 1;
+      if (detailBytes + bytes > detailBudget) break;
+      exclusionWarnings.push(warning);
+      detailBytes += bytes;
+    }
+    const omittedExclusions = excluded.length - exclusionWarnings.length;
+
     put(
       'learned:words',
       answer,
@@ -565,15 +580,10 @@ export function buildReportEvidence(
       [
         'Only explicit Learned: lines in saved report-window scratchpads suggest words. Edit the answer to deliberately include or omit words; hearing, scores and general notes never declare learning.',
         `${included.length} eligible declarations; ${excluded.length} already represented in exact confirmed native submissions. Draft saves, printing, opening forms and imported reference-only text never retire words.`,
-        ...excluded
-          .slice(0, 90)
-          .map(
-            (candidate) =>
-              `Already confirmed: ${candidate.word.slice(0, 700)}${candidate.word.length > 700 ? '… [word excerpt]' : ''}; submission ${candidate.reportedIn[0].reportId} at ${candidate.reportedIn[0].submittedAt}.`,
-          ),
-        ...(excluded.length > 90
+        ...exclusionWarnings,
+        ...(omittedExclusions
           ? [
-              `${excluded.length - 90} further exclusions remain visible in the learned-word candidate inspector and complete private submission history.`,
+              `${omittedExclusions} further exclusions remain visible in the learned-word candidate inspector and complete private submission history.`,
             ]
           : []),
         ...(selected < included.length

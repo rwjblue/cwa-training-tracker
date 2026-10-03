@@ -126,7 +126,7 @@ Priorities: **P1** = important to daily use or trustworthy records; **P2** = val
 | P27 | Partial / P1      | Basic private date-range practice report, separate practice/class totals, sessions/speeds/accuracy/QSO counts/notes, copy/print.                                                                                                                                                                                                                                                               | Personal structured report described below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Present [C/src/shared/plan.ts:377](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L377); [C/src/client/Plan.tsx:579](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/Plan.tsx#L579). Good generic report, but it is not the personal advisor-report workflow. It prints freeform notes, so an advisor-specific export should intentionally decide which personal text is included. |
 | P28 | Partial / P1 | Advisor report per class: default preparation-date window in course timezone, editable dates, 42 form fields/sections, field validation, device autosaved answers, explicit draft snapshots, refresh from results that preserves deliberate edits including blanks.                                                                                                                            | [P/src/lib/cw-training/report-fields.ts:20](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-fields.ts#L20); [P/src/lib/cw-training/report.ts:34](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L34), `:79`; [P/src/lib/cw-training/report-panel.ts:50](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L50), `:82`, `:228`, `:234`                               | Issue #36 delivers learner-owned field definitions, neutral context mappings, strict literal validation, private atomic persistence/export/import and visible inclusive preparation windows in the course timezone. Early dates cap evidence without inventing future days; missing preparation dates use an explained deterministic fallback. Generic copy/print and imported snapshots remain available. Issue #37 adds stable per-session device drafts, grouped editable answers, protected edits and intentional blanks, refresh/relinquish, immutable account snapshots, retry/conflict recovery and validated portable backups. Compatible original device drafts can be explicitly copied with retained archive provenance; category suggestions, handoff and submission remain #38–#40. Original identity, form URL and entry IDs are never public defaults. |
 | P29 | Partial / P1 | Evidence-aware report suggestions: per-file **actually practiced** audio speed/family, latest explicit performance rating, individual measured Runner verified points (highest eligible run, not sum/scaled score), actual run date rather than delayed save date, latest whole LCWO result and averaged matching-speed groups. Audit source IDs and warnings show what supported each answer. | [P/src/lib/cw-training/report.ts:54](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L54), `:112`, `:134`, `:196`; [P/src/lib/cw-training/report-panel.ts:236](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L236); tests [P/tests/cw-training-report.test.mjs:142](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-report.test.mjs#L142), `:148`, `:200`, `:234`, `:394` | Issue #38 implements explicit learner mappings and frozen source/answer provenance in the configured class-local window. Played catalog variants and explicit ratings, the highest single eligible Runner result (positive elapsed up to 900 seconds, points never summed/scaled), whole latest external LCWO/manual facts and matching character/effective-speed group errors are traceable to owned results. Native Copy retains separate compatible mappings/scoring; missing group length/adaptive speed remain unknown. Extra review is reportable without required credit. Owner-scoped captured-source validation, atomic history-revision guards and portable immutable snapshots are implemented; independent review passed and production is deployed; exact handoff/confirmation follows in #39. |
-| P30 | Locally implemented / gates pending      | Explicit learned-word tracking for reports: only learner-confirmed `Learned:` words, case-insensitive dedupe, omitted from later suggestions only after a submitted report, never inferred from exposure. Structured CWT heard/worked details feed appropriate fields and exclude private general notes.                                                                                       | [P/src/lib/cw-training/report.ts:186](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L186), `:196`; [P/src/lib/cw-training/report-panel.ts:233](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L233); tests [P/tests/cw-training-report.test.mjs:36](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-report.test.mjs#L36), `:273`                                         | Issue #40 locally implements explicit saved Learned: declarations, deterministic deduplication/window filtering, source/date and confirmed-history inspection, editable answers/blanks, and suppression from exact owned native confirmations only. Imported references and exposure remain neutral; full validation passed and independent review/deployment remain pending.                                                                                                                                                                                                                                                                                                                                                                           |
+| P30 | Locally implemented / gates pending      | Explicit learned-word tracking for reports: only learner-confirmed `Learned:` words, case-insensitive dedupe, omitted from later suggestions only after a submitted report, never inferred from exposure. Structured CWT heard/worked details feed appropriate fields and exclude private general notes.                                                                                       | [P/src/lib/cw-training/report.ts:186](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L186), `:196`; [P/src/lib/cw-training/report-panel.ts:233](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L233); tests [P/tests/cw-training-report.test.mjs:36](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-report.test.mjs#L36), `:273`                                         | Issue #40 locally implements explicit saved Learned: declarations, deterministic deduplication/window filtering, source/date and confirmed-history inspection, editable answers/blanks, and suppression from exact owned native confirmations only. Imported references and exposure remain neutral; initial full validation passed; two independent findings are corrected locally and follow-up validation/recheck/deployment remain pending.                                                                                                                                                                                                                                                                                                                                                                           |
 | P31 | Delivered / reviewed | Reviewable form handoff: opens a prefilled Google Form without submitting, stores exactly the opened snapshot, explicit confirmation after actual external submission, immutable submitted revision/history, downloadable report JSON, retry-safe sync. Later draft edits cannot mutate the submitted copy.                                                                                    | [P/src/lib/cw-training/report-panel.ts:163](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L163), `:282`, `:312`; [P/worker/cw-training.ts:521](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L521); tests [P/tests/cw-training-api.test.mjs:682](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-api.test.mjs#L682), `:709`                                                     | Issue #39 preserves exact reviewed private handoffs before opening/copying/printing. Safe responder prefill uses frozen mappings/answers; explicit confirmation reserves one submitted ID/timestamp, immutable history/JSON and linked corrections. Scoped durable FIFO retries and validated parent-ordered merge/replace preserve captured evidence and old imported references. The complete browser gate and fresh independent review passed; production is deployed. |
 
 ### Backups, migrations, and API fidelity
@@ -2409,8 +2409,8 @@ relaxed validation. Neither is relabeled a passing gate.
 Bounds remain explicit: report answers are at most 4,000 characters, retained
 whole declarations never become truncated false words, and omitted declarations
 are counted. Candidate/history displays expand in batches of 100; all rows remain
-reachable. Captured exclusion warnings are bounded to 90 detailed entries plus
-a summary; full scratchpads/confirmed answers remain in owned private history
+reachable. Captured exclusion details share a 2,000-byte allowance across configured
+learned fields, plus a summary; full scratchpads/confirmed answers remain in owned private history
 and backups. Existing report/source-detail byte budgets still apply with visible
 recovery. Learning is a learner declaration, not a server certification of
 proficiency. Physical-device/live-LCWO/native OS print/real external acceptance
@@ -2438,3 +2438,57 @@ captures were inspected. Original HEAD, three pinned source references, five
 protected dirty files, approved scope, primary checkout HEAD and push signing
 remain unchanged. Independent review starts only after the implementation
 commit; production deployment remains a separate gate. No push is authorized.
+
+## Issue #40 independent review corrections — date history and derived bytes
+
+The fresh reviewer returned REQUEST_CHANGES with two concrete P2 findings and
+released the source/assets/runtime lease. Its own desktop date-change journey
+reintroduced a confirmed word and received a real account-save 400 without
+mutation. Its actual chooser/D1 import of a valid 776,804-byte backup (90
+zero-time declarations, 180 native handoff/submission records, one learned
+textarea) made an empty new report unreachable: provenance alone was 112,321
+bytes, including 71,734 warning bytes and 39,995 source bytes. Five independently
+authored journeys yielded three passes and these two finding assertions; 45
+focused tests and six Axe/overflow scans passed. All 550 tracked/173 built hashes,
+original references/dirty work, scope and primary checkout were unchanged.
+
+Report-date changes now pass the current owned reports inventory, matching the
+other create/refresh paths. The new actual UI regression changes to an eligible
+prior day after exact native confirmation, verifies the reported word remains
+excluded, saves through the real account operation successfully, and protects
+a typed-then-cleared blank when changing dates again.
+
+Generated detailed exclusion explanations now share a 2,000-byte UTF-8 allowance
+across configured learned fields. Excess explanations are summarized with their
+count and directions to the complete candidate inspector/private history.
+Nothing raises the existing 96 KB document, 40 KB embedded source or 4,000-character
+answer limits; complete declared words, source IDs and native confirmations
+remain intact. A new cheap domain boundary covers 90 long ASCII and Unicode
+declarations, 180 exact native copies, and multiple learned fields. Empty drafts
+remain creatable, all source references/history remain exact, and omitted
+source/detail explanations are visible.
+
+Both meaningful regression REDs were observed before the fixes: the browser
+reintroduced Rig after the date change, and the large-history domain case threw
+the 96 KB error. An older domain fixture crossed its fixed noon refresh time as
+wall time advanced; it now has a deterministic test clock. An intermediate
+assertion expected insertion rather than canonical reference order; it now
+checks exact source identity sets. A blank browser fixture initially filled an
+already-empty field without an edit event; it now types and clears actual text.
+These fixture failures are retained separately, with no weakened validators,
+application assertions or timeouts.
+
+Affected fast coverage passed 264 tests across five files (3.90 seconds). The
+extended learned-word browser passed (14.8 seconds, complete launcher exit 0),
+then all nine affected report journeys passed (51.7 seconds, exit 0). Complete
+follow-up gates, a focused correction commit and independent recheck remain
+required before production deployment. Source publication remains forbidden.
+
+The complete correction gate passed typecheck, all 1,441 tests across 77 files
+and the production build. The complete serial browser run passed all 106
+journeys (19.5 minutes, exit 0), including the new prior-date account-save
+regression and existing desktop keyboard/mobile touch flows. Current issue
+body/comments, original HEAD/current and pinned references, five protected
+dirty files, approved scope, primary checkout HEAD and signing configuration
+were rechecked unchanged. A focused correction commit and independent recheck
+remain required before deployment; no source push is authorized.
