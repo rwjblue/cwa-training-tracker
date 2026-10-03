@@ -2175,3 +2175,32 @@ anchor/reflow ergonomics remain the separately approved #42 work.
 
 Independent review, production deployment and the issue comment remain pending.
 Local source publication stays disabled; no push/PR/closure is performed.
+
+
+## Issue #41 independent review — accepted title boundary correction
+
+Implementation `182acf22` received a fresh independent review after commit.
+Three independently authored desktop keyboard/mobile touch journeys passed file
+rejection/retry, reader preferences, navigation, exact original-version practice,
+revision inspection, unmatched original association/cancellation, class separation,
+portable second-account restore and Guest privacy. An injected material HTTP 500
+also proved that dependent result uploads wait for the actual material receipt.
+The reviewer passed 166 affected fast tests and 16 overlapping focused material
+cases, and verified all 562 tracked/173 built hashes plus protected original,
+primary HEAD and approved scope. No other substantive finding was established.
+
+One P2 finding reproduced accepted unbroken 200-character title overflow in
+native and original-material list/action labels (1,853 px at 390; 2,114 at 1,440
+for the native list). The correction wraps these labels and contains list/action
+children, reader and editor widths without reducing title/filename limits. A
+focused actual author/link/native revision control/imported association regression
+covers library, reader, Today and 255-character original filename contexts at
+1440/390 with keyboard/touch, settled Axe and geometry. All three material journeys
+pass in 36.4 seconds. Complete serial browser validation passed all 109 journeys
+in 19.7 minutes. Check, all 1,459 fast tests in 79 files and build passed on the
+corrected tree. Correction commit, independent recheck and deployment remain
+pending.
+
+Browser emulation remains the evidence boundary; no physical hardware/device,
+external service, production private writes or elapsed crash recovery is claimed.
+Source publication remains disabled under the user's no-push instruction.

@@ -2,6 +2,24 @@
   padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
+.material-library,
+.material-reader,
+.material-editor {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.material-list li > *,
+.material-actions > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.material-library .button,
+.material-library .text-button,
+.material-actions .button,
+.material-actions .text-button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .material-list {
   padding: 0;
   list-style: none;

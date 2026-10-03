@@ -262,3 +262,73 @@ test('unmatched imported material revisions can be explicitly associated and rem
     metadata: { instructorMaterial: { origin: { id: 'original:two' } } },
   });
 });
+
+test('accepted long native and imported titles fit the library, reader and association controls', async ({
+  page,
+  context,
+}) => {
+  await arrange(page, context, '198.51.100.23');
+  const title = 'T'.repeat(200);
+  await keyboard(page.getByRole('button', { name: 'Add material', exact: true }));
+  await page.getByRole('dialog').getByLabel('Title', { exact: true }).fill(title);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Material link', { exact: true })
+    .fill('https://example.test/long-title');
+  await keyboard(page.getByRole('button', { name: 'Save material', exact: true }));
+  await expect(page.getByRole('dialog', { name: 'Read instructor material' })).toBeVisible();
+  await settleDialog(page);
+  await expectResponsive(page, 'material-long-title-reader');
+  await page.keyboard.press('Escape');
+  await expectResponsive(page, 'material-long-title-library');
+  await keyboard(page.getByRole('button', { name: `Revise ${title}`, exact: true }));
+  await expect(page.getByRole('dialog').getByLabel('Title', { exact: true })).toHaveValue(title);
+  await page.keyboard.press('Escape');
+  await navigate(page, 'Today');
+  await expect(page.getByRole('region', { name: 'Instructor preparation' })).toContainText(title);
+  await expectResponsive(page, 'material-long-title-preparation');
+
+  const importedTitle = 'I'.repeat(200);
+  const original = {
+    course: { title: 'Synthetic source' },
+    attempts: [],
+    materials: [
+      {
+        id: 'original:long',
+        session: 1,
+        title: importedTitle,
+        text: 'PRIVATE SOURCE',
+        filename: 'F'.repeat(255),
+        usage: 'reference',
+      },
+    ],
+  };
+  expect(
+    (
+      await scopedRequest(context, 'POST', '/api/import', { mode: 'merge', data: original })
+    ).status(),
+  ).toBe(200);
+  expect(
+    (
+      await accountRequest(context, 'PUT', '/api/settings', {
+        ...DEFAULT_PROFILE,
+        timezone: 'UTC',
+        firstClassDate: '2026-10-03',
+        classDays: [0, 6],
+      })
+    ).status(),
+  ).toBe(200);
+  await page.reload();
+  await navigate(page, 'Academy guide');
+  await keyboard(page.getByText('Imported original materials (1)', { exact: true }));
+  await expectResponsive(page, 'material-long-imported-library');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: `Associate ${importedTitle}`, exact: true }).tap();
+  await settleDialog(page);
+  await expectResponsive(page, 'material-long-imported-association');
+  await keyboard(page.getByRole('button', { name: 'Save associated copy', exact: true }));
+  await expect(page.getByRole('dialog', { name: 'Read instructor material' })).toBeVisible();
+  await settleDialog(page);
+  await expectResponsive(page, 'material-long-imported-reader');
+  expect((await (await context.request.get('/api/export')).json()).legacy.data).toEqual(original);
+});
