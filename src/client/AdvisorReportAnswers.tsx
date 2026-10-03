@@ -33,7 +33,13 @@ export default function AdvisorReportAnswers({
                 id,
                 value: answers[field.key] ?? '',
                 'aria-invalid': Boolean(problem),
-                'aria-describedby': problem ? `${id}-error` : undefined,
+                'aria-describedby':
+                  [
+                    problem ? `${id}-error` : '',
+                    field.source === 'learned:words' ? `${id}-learned-help` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined,
                 onChange: (
                   event: React.ChangeEvent<
                     HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -68,6 +74,13 @@ export default function AdvisorReportAnswers({
                   {problem && (
                     <p id={`${id}-error`} role="alert">
                       {problem.message}
+                    </p>
+                  )}
+                  {field.source === 'learned:words' && (
+                    <p id={`${id}-learned-help`} className="field-hint">
+                      Only explicit Learned: lines in saved scratchpads suggest words. Edit this
+                      field to deliberately include or omit words. Review candidate sources and
+                      prior confirmations below; refresh preserves your edits, including a blank.
                     </p>
                   )}
                   {editedKeys.includes(field.key) && (

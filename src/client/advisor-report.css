@@ -133,3 +133,21 @@
 .advisor-handoff > label {
   margin-top: 0.75rem;
 }
+.advisor-learned-words {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+.advisor-learned-words li {
+  margin-block: 0.75rem;
+}
+.advisor-learned-words p {
+  margin-block: 0.5rem;
+}
+.advisor-learned-words summary {
+  font-weight: 600;
+}
+.advisor-learned-words .button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}

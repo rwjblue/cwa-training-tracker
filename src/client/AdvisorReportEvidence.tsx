@@ -34,7 +34,13 @@ function SourceFacts({
   const snapshot = report.provenance?.sources.find((source) => source.reference === index);
   const entry = reference.kind === 'practice' ? entries.get(reference.id) : undefined;
   const run = reference.kind === 'lcwo' ? lcwo.get(reference.id) : undefined;
-  const current = entry ? reportPracticeSnapshot(entry, report.window.timezone) : undefined;
+  const current = entry
+    ? reportPracticeSnapshot(
+        entry,
+        report.window.timezone,
+        report.definition.fields.some((field) => field.source === 'learned:words'),
+      )
+    : undefined;
   const { reference: _index, ...prior } = snapshot ?? { reference: index };
   const changed = snapshot && current && !sameReportValue(prior, current);
   return (
@@ -153,7 +159,10 @@ export default function AdvisorReportEvidence({
             </p>
             <p>
               <strong>Captured suggestion:</strong>{' '}
-              {suggestion.value || 'Unknown — no compatible measured answer'}
+              {suggestion.value ||
+                (suggestion.mapping === 'learned:words'
+                  ? 'No eligible declared words'
+                  : 'Unknown — no compatible measured answer')}
             </p>
             {report.editedKeys.includes(suggestion.key) && (
               <p>

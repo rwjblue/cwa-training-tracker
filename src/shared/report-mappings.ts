@@ -64,6 +64,7 @@ export type EvidenceReportMapping =
   | `audio:${ReportAudioCategory}:${'files' | 'rating'}`
   | 'sending:scales:rating'
   | 'generated:configurations'
+  | 'learned:words'
   | `runner:${(typeof REPORT_RUNNER_METRICS)[number]}`
   | `lcwo:${ReportLcwoKind}:${(typeof REPORT_LCWO_METRICS)[number]}`
   | `copy:${ReportCopyKind}:${(typeof REPORT_COPY_METRICS)[number]}`
@@ -113,6 +114,12 @@ const labels: Record<string, string> = {
   qsoCount: 'Explicit actual on-air QSO count',
 };
 export const EVIDENCE_REPORT_MAPPINGS: (ReportMapping & { id: EvidenceReportMapping })[] = [
+  {
+    id: 'learned:words',
+    label: 'Learned words — explicit saved declarations',
+    group: 'Learner-confirmed words',
+    types: ['text', 'textarea'],
+  },
   ...REPORT_AUDIO_CATEGORIES.flatMap((category) => [
     {
       id: `audio:${category}:files` as const,

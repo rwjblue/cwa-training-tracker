@@ -1888,3 +1888,106 @@ publication is forbidden by the learner's current instruction; production and
 review acceptance are delivered. Mobile evidence is emulation, print covers the
 text-node iframe rather than native OS output, and no physical iOS, live LCWO
 or real external-form acceptance is claimed. Learned words remain #40.
+
+## Issue #40 implementation — explicit learned words and confirmation authority
+
+Current #40 body/comments and dependencies #37/#39 were reread. Both dependencies
+are independently accepted/deployed but remain open under the no-push source
+publication instruction. Original current report extraction/derivation, panel
+confirmation behavior and corresponding report tests match pin
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`; original HEAD and protected dirty work
+remain unchanged. This issue follows approved P30 scope and excludes inference
+from hearing, recognition, generated selections or private general prose.
+
+The learner can configure a text/textarea field with explicit `learned:words`
+mapping. Only saved scratchpad lines beginning `Learned:` produce automatic
+candidates. Commas/semicolons separate declarations; interior phrase whitespace
+is normalized, Unicode NFC/case-insensitive duplicates collapse predictably and
+first display spelling is retained. Shared report eligibility uses actual
+course-local dates and inclusive windows, excludes class/future/out-of-window
+work, and accepts explicit zero-time saved notes without inventing practice time.
+Candidate inspection exposes each saved source ID/day, current inclusion or exact
+prior confirmation ID/time, and deliberate per-field selection. Selecting a word
+appends to existing literal answer text; duplicate inclusion and answer overflow
+are visibly disabled. Draft edits/intentional blanks remain protected through
+refresh/reload; choosing a suggestion or including a word is deliberate.
+
+Authority comes only from exact native submitted records with their valid owned
+handoff and reserved identity. Learned fields and answers are read from that
+frozen definition/copy. Saving drafts, preparing/opening/copying/printing forms
+and imported reference-only submitted text do not suppress candidates. Editing a
+working draft after handoff cannot change which confirmed words are excluded.
+Durably queued learner confirmations already retain this exact native authority
+on their device, then upload through existing scoped FIFO/CAS/receipt recovery.
+Only an explicit validated native copy/handoff/confirmation can give an original
+reference native authority; no import-text key or status label does so silently.
+
+Captured suggestions include bounded eligible/excluded explanations and source
+references. Source fact snapshots include explicit learned declarations only
+when a learned field is configured; other scratchpad prose stays private and
+older unmapped snapshots retain their original curated facts. Worker ordinary
+draft saves validate suggestions against current owned sources and confirmed
+history under existing revision guards. New history changes require an explicit
+refresh without erasing learner edits. Historical reviewed handoffs retain
+#39's captured-source behavior. Private native export/import and report JSON
+preserve exact words, answers, frozen provenance and confirmation parents;
+reference-only reports remain neutral. No new database entity, binding, migration
+or synchronization subsystem is needed.
+
+Four new domain cases protect extraction/deduplication, dates and privacy, exact
+confirmation versus draft-after-handoff edits/imported references, deliberate
+blanks and portable frozen declarations. Two actual-SQL Worker cases protect
+owned confirmation-based derivation, stale-history refresh, reverse merge/replace
+roundtrips, foreign/forged source rejection and atomic unchanged snapshots.
+Focused check and 233 relevant tests across five files passed. The five affected
+report browser journeys passed (33.5 seconds complete launcher exit 0). The
+extended learned-word journey then passed (13.8 seconds complete launcher):
+actual Scratchpad/Save notes, canceled/accepted mapping configuration, keyboard
+focus, synthetic responder GET/print without retirement, mobile offline confirm,
+new session, protected blank, reload/retry, deliberate excluded-word inclusion,
+actual private file roundtrip, 103-candidate disclosure and literal append. Four
+settled candidate/history Axe/overflow checks are clear; desktop/mobile captures
+were inspected. Initial domain RED exposed unsupported mapping before wiring;
+one test fixture omitted required ManualTiming fields and was corrected without
+relaxed validation. Neither is relabeled a passing gate.
+
+Bounds remain explicit: report answers are at most 4,000 characters, retained
+whole declarations never become truncated false words, and omitted declarations
+are counted. Candidate/history displays expand in batches of 100; all rows remain
+reachable. Captured exclusion warnings are bounded to 90 detailed entries plus
+a summary; full scratchpads/confirmed answers remain in owned private history
+and backups. Existing report/source-detail byte budgets still apply with visible
+recovery. Learning is a learner declaration, not a server certification of
+proficiency. Physical-device/live-LCWO/native OS print/real external acceptance
+and production private writes remain unclaimed. Complete pre-commit/browser,
+post-commit independent review and deployment gates are next. No push is allowed.
+
+The first full pre-commit run correctly failed the local legacy conversion
+command: learned-word derivation newly reaches a shared handoff module whose
+extensionless import is unavailable to Node's native TypeScript runtime. Both
+new reachable modules now use explicit `.ts` paths, retaining the existing
+validated confirmation logic. The focused conversion/learned-word/handoff
+regression suite passed (all 45 tests); this failed full attempt remains recorded
+in `issue-40-precommit.log` and is not a passing gate.
+
+The full pre-commit retry passed check, all 1,440 tests across 77 files and the
+production build. The first complete browser run finished with 105 passes and
+one failure in the existing device-clear held-acknowledgement setup (19.4
+minutes, exit 1). Its retained screenshot/context/trace show the expected pending
+result and an intercepted POST still awaiting its Worker response when the
+5-second predicate expired; there is no completed rejected response establishing
+a product cause. The unchanged exact test then passed in a fresh isolated
+runtime (9.5 seconds, exit 0). This failed complete attempt remains evidence,
+not a passing full gate; affected coverage and a complete retry follow without
+loosening timeouts, assertions or production behavior.
+
+The unchanged affected device/report suite passed all eight journeys (46.0
+seconds, exit 0). The complete serial retry then passed all 106 journeys (19.3
+minutes, exit 0), including the previously failing device-clear setup. No
+assertion, timeout or production behavior was weakened for that failure. All
+1,440 fast tests across 77 files, typecheck and production build also pass. Four
+learned-word settled Axe/overflow reports remain clear and desktop/mobile
+captures were inspected. Original HEAD, three pinned source references, five
+protected dirty files, approved scope, primary checkout HEAD and push signing
+remain unchanged. Independent review starts only after the implementation
+commit; production deployment remains a separate gate. No push is authorized.

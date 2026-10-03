@@ -330,7 +330,7 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
     // captured private facts; it does not claim the mutable sources still match.
     // Ownership/schema/atomic reference guards still apply to every entity.
     if (change.type === 'report-save')
-      await requireCurrentReportProvenance(env, auth.user.id, change.report);
+      await requireCurrentReportProvenance(env, auth.user.id, change.report, state.reports);
     statements.push(reportInsertStatement(env, auth.user.id, change.report));
   } else if (change.type === 'settings')
     statements.push(settingsStatement(env, auth.user.id, next.settings));

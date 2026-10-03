@@ -190,7 +190,7 @@ linked appendix contains the complete subfeatures and current-app comparison.
 | **R1 · P1** Recoverable practice beyond native copy       | Issue #6 implements one in-memory owner across in-app inspection, preserving content, preferences, measured time and acknowledged results. Finished Copy, listening, manual and Runner sessions retain durable upload queues; issues #2–#4 cover mutable outboxes, selected-scope device backup and destructive lifecycle fencing. Remaining accepted recovery work includes durable report drafts and private material ordering. Elapsed-time reload/crash recovery is excluded. Issue #6 is independently accepted, published and deployed. | Personal [device state](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/storage.ts#L21); [planning P15–P17](parity/planning.md#instructor-materials-and-records); [current navigation](../src/client/practice-navigation.ts).                                                                                                                |
 | **R2 · P1/P2** Daily guidance                       | Offer resume/next eligible exercise; rotate familiar review without assignment credit; show the separate optional ten-minute word-listening suggestion. Earlier reminders now support dismissal and restoration independently of completion. Issue #18 adds private timed meetings, exceptions and Join class; class logs remain separate from independent credit. Issue #19 adds exact-date required/rest goals, a preserved optional personal target, and shared saved/current/combined time from the existing owners. Issue #22 independently delivers retained-work-first guidance and eligible required next actions in production. Issue #23 independently delivers private dated Today pins, original schedule/history preservation, midnight expiry, exact retry and backward-compatible backups. Issue #24 independently delivers bounded familiar-review rotation and discoverable reached Runner/ICR recipes, with explicit review provenance and no required credit. Issue #25 implements a separate optional ten-minute word-listening goal with permitted generated words, actual native word-source subtotals, separate recall, receipt deduplication and deliberate continuation; independent acceptance and production evidence are recorded in its ledger. | Personal [planner](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/plan.ts#L270); [planning P03–P11/P38](parity/planning.md#curriculum-and-the-daily-queue). |
 | **R3 · P1** Remaining typed results                 | Native copy saves validated attempts. Issue #1 adds validated Runner and timer/recording evidence, immutable measurements, explicit corrections, history/report details and account plan checks. Issue #33 implements optional explicit performance ratings and bounded CWT observations through the common form, private save/edit/retry, history, reports and backups; independently accepted and deployed in production. Issue #34 implements optional source-specific LCWO/manual Runner capture and actual completion timestamps with explicit DST resolution; independently accepted and deployed in production. Imported LCWO history remains readable with source identity and overlap-safe estimated group minutes; Issue #35 adds optional, consented request-only LCWO linking/refresh, privately retained immutable source facts, inactive portable restore, and explicit overlap-safe group estimates; independently accepted after the exact-quota Disconnect correction and deployed in production.                                                                                                                                                                  | Personal [result fields](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/practice-results-form.ts#L3), [LCWO accounting](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/lcwo-practice.ts#L8); [planning P14/P18/P20–P24](parity/planning.md).                                      |
-| **R4 · P1** Advisor reports                         | Generic printable reporting remains available. Issues #36–#37 deliver private configurable fields and preparation windows, editable per-session device drafts, protected edits/blanks, immutable account copies, exact retry/conflict feedback, native backups and explicit compatible original-device-draft copies. Issue #38 adds explicit source mappings, single eligible Runner points, actual played catalog file/speed pairs, whole latest LCWO/manual observations, matching character/effective-speed group errors and compatible native Copy fields. Frozen suggestions, source IDs/facts and warnings remain private and portable; refresh protects edits and blanks. Extra review is reportable without required credit. Issue #38 is independently accepted and deployed. Issue #39 delivers persisted reviewed handoffs, explicit immutable confirmation, linked corrections, exact retries and portable history; complete browser coverage and independent review passed, and production is deployed. Confirmed learned words remain #40. Saved imported report snapshots are readable with original answers/evidence in Settings. New report authoring must use actual individual verified Runner results and practiced recording speeds; do not sum scores or infer learned words from exposure.                                          | Personal [report derivation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L196), [handoff](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L282); [planning P27–P31](parity/planning.md#reports-and-evidence).                                         |
+| **R4 · P1** Advisor reports                         | Generic printable reporting remains available. Issues #36–#37 deliver private configurable fields and preparation windows, editable per-session device drafts, protected edits/blanks, immutable account copies, exact retry/conflict feedback, native backups and explicit compatible original-device-draft copies. Issue #38 adds explicit source mappings, single eligible Runner points, actual played catalog file/speed pairs, whole latest LCWO/manual observations, matching character/effective-speed group errors and compatible native Copy fields. Frozen suggestions, source IDs/facts and warnings remain private and portable; refresh protects edits and blanks. Extra review is reportable without required credit. Issue #38 is independently accepted and deployed. Issue #39 delivers persisted reviewed handoffs, explicit immutable confirmation, linked corrections, exact retries and portable history; complete browser coverage and independent review passed, and production is deployed. Issue #40 locally implements explicit learned-word candidates, source/date inspection, protected edits and exact native-confirmation suppression; its complete validation gates passed; independent review and deployment remain pending. Saved imported report snapshots are readable with original answers/evidence in Settings. New report authoring must use actual individual verified Runner results and practiced recording speeds; do not sum scores or infer learned words from exposure.                                          | Personal [report derivation](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L196), [handoff](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L282); [planning P27–P31](parity/planning.md#reports-and-evidence).                                         |
 | **R5 · P1** Sending trainer                         | The native scales reader, prescribed sections, PDF reference and timer are present, but capture is absent. Port optional adapter setup/test, keyed MIDI or focus-scoped keyboard input, raw edge timing, cautious decode/target comparison, actual-timing replay, keep/discard takes, and local retention. Keep ordinary key practice available without capture.                                                                                                                                                                                                         | Personal [active panel](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/sending-panel.ts#L68); [sending subsystem](parity/listening.md#sending-practice--large-missing-subsystem-p1).                                                                                                                                                        |
 | **R6 · P1/P2** Listening content and continuity     | Add the three authored stories as a real third mode. Issue #26 delivers live word-prefix retiming and exact QSO occurrence with playing/paused state, native rate, source accounting and volume continuity; its ledger records validation and platform limits. Issue #27 delivers state-preserving word/item/relative seeks and explicit replay for Words/QSO/Free. Issue #28 prepares fresh validated Morse-only word rounds on native end, defers Shuffle and retains current playback through Repeat changes. It is independently accepted and deployed; the #28 ledger records keyboard/native-volume corrections and platform limits. Issue #29 delivers editable built-in copies, validated private custom sources, retained selection, scoped clear/retry and reviewed device backups. It is independently accepted and deployed; the #29 ledger records validation, recovery and platform limits. Issue #30 independently delivers authored Stories in production. Issue #31 implements precise independent sound settings; its review/deployment gate is tracked below. Issue #7 now retains bounded actual played configurations; selected-but-unplayed preferences supply no source evidence.                                                                                                                                                                                                                                        | Personal [stories](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/data/cw-listening/stories.ts#L6), [retiming](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-listening/qso-panel.ts#L120); [listening inventory](parity/listening.md#generated-contacts-stories-and-listening-lifecycle).                 |
 | **R7 · Implemented; device check pending** Spoken answers | The September 30 follow-up explicitly adds prerecorded native spoken rounds and credits actual playback through the shared media clock. Runtime browser speech is removed. Physical iPhone locked playback remains unverified; compact prebuilt MP3 optimization remains absent.                                                                                                                                                                                                                                                                                                   | [Implementation](../src/client/morse-track.ts), [asset loader](../src/client/word-speech.ts), [verification](testing.md).                                                                                                                                                                                                                                                                             |
@@ -4081,3 +4081,98 @@ publication is forbidden by the learner's current instruction; production and
 review acceptance are delivered. Mobile evidence is emulation, print covers the
 text-node iframe rather than native OS output, and no physical iOS, live LCWO
 or real external-form acceptance is claimed. Learned words remain #40.
+
+## Issue #40 implementation — explicit learned words and confirmation authority
+
+Current #40 body/comments and dependencies #37/#39 were reread. Both dependencies
+are independently accepted/deployed but remain open under the no-push source
+publication instruction. Original current report extraction/derivation, panel
+confirmation behavior and corresponding report tests match pin
+`3106c9b8bf20b63be069f4019467cb565cdd17ec`; original HEAD and protected dirty work
+remain unchanged. This issue follows approved P30 scope and excludes inference
+from hearing, recognition, generated selections or private general prose.
+
+The learner can configure a text/textarea field with explicit `learned:words`
+mapping. Only saved scratchpad lines beginning `Learned:` produce automatic
+candidates. Commas/semicolons separate declarations; interior phrase whitespace
+is normalized, Unicode NFC/case-insensitive duplicates collapse predictably and
+first display spelling is retained. Shared report eligibility uses actual
+course-local dates and inclusive windows, excludes class/future/out-of-window
+work, and accepts explicit zero-time saved notes without inventing practice time.
+Candidate inspection exposes each saved source ID/day, current inclusion or exact
+prior confirmation ID/time, and deliberate per-field selection. Selecting a word
+appends to existing literal answer text; duplicate inclusion and answer overflow
+are visibly disabled. Draft edits/intentional blanks remain protected through
+refresh/reload; choosing a suggestion or including a word is deliberate.
+
+Authority comes only from exact native submitted records with their valid owned
+handoff and reserved identity. Learned fields and answers are read from that
+frozen definition/copy. Saving drafts, preparing/opening/copying/printing forms
+and imported reference-only submitted text do not suppress candidates. Editing a
+working draft after handoff cannot change which confirmed words are excluded.
+Durably queued learner confirmations already retain this exact native authority
+on their device, then upload through existing scoped FIFO/CAS/receipt recovery.
+Only an explicit validated native copy/handoff/confirmation can give an original
+reference native authority; no import-text key or status label does so silently.
+
+Captured suggestions include bounded eligible/excluded explanations and source
+references. Source fact snapshots include explicit learned declarations only
+when a learned field is configured; other scratchpad prose stays private and
+older unmapped snapshots retain their original curated facts. Worker ordinary
+draft saves validate suggestions against current owned sources and confirmed
+history under existing revision guards. New history changes require an explicit
+refresh without erasing learner edits. Historical reviewed handoffs retain
+#39's captured-source behavior. Private native export/import and report JSON
+preserve exact words, answers, frozen provenance and confirmation parents;
+reference-only reports remain neutral. No new database entity, binding, migration
+or synchronization subsystem is needed.
+
+Four new domain cases protect extraction/deduplication, dates and privacy, exact
+confirmation versus draft-after-handoff edits/imported references, deliberate
+blanks and portable frozen declarations. Two actual-SQL Worker cases protect
+owned confirmation-based derivation, stale-history refresh, reverse merge/replace
+roundtrips, foreign/forged source rejection and atomic unchanged snapshots.
+Focused check and 233 relevant tests across five files passed. The five affected
+report browser journeys passed (33.5 seconds complete launcher exit 0). The
+extended learned-word journey then passed (13.8 seconds complete launcher):
+actual Scratchpad/Save notes, canceled/accepted mapping configuration, keyboard
+focus, synthetic responder GET/print without retirement, mobile offline confirm,
+new session, protected blank, reload/retry, deliberate excluded-word inclusion,
+actual private file roundtrip, 103-candidate disclosure and literal append. Four
+settled candidate/history Axe/overflow checks are clear; desktop/mobile captures
+were inspected. Initial domain RED exposed unsupported mapping before wiring;
+one test fixture omitted required ManualTiming fields and was corrected without
+relaxed validation. Neither is relabeled a passing gate.
+
+Bounds remain explicit: report answers are at most 4,000 characters, retained
+whole declarations never become truncated false words, and omitted declarations
+are counted. Candidate/history displays expand in batches of 100; all rows remain
+reachable. Captured exclusion warnings are bounded to 90 detailed entries plus
+a summary; full scratchpads/confirmed answers remain in owned private history
+and backups. Existing report/source-detail byte budgets still apply with visible
+recovery. Learning is a learner declaration, not a server certification of
+proficiency. Physical-device/live-LCWO/native OS print/real external acceptance
+and production private writes remain unclaimed. Complete pre-commit/browser,
+post-commit independent review and deployment gates are next. No push is allowed.
+
+The full pre-commit retry passed check, all 1,440 tests across 77 files and the
+production build. The first complete browser run finished with 105 passes and
+one failure in the existing device-clear held-acknowledgement setup (19.4
+minutes, exit 1). Its retained screenshot/context/trace show the expected pending
+result and an intercepted POST still awaiting its Worker response when the
+5-second predicate expired; there is no completed rejected response establishing
+a product cause. The unchanged exact test then passed in a fresh isolated
+runtime (9.5 seconds, exit 0). This failed complete attempt remains evidence,
+not a passing full gate; affected coverage and a complete retry follow without
+loosening timeouts, assertions or production behavior.
+
+The unchanged affected device/report suite passed all eight journeys (46.0
+seconds, exit 0). The complete serial retry then passed all 106 journeys (19.3
+minutes, exit 0), including the previously failing device-clear setup. No
+assertion, timeout or production behavior was weakened for that failure. All
+1,440 fast tests across 77 files, typecheck and production build also pass. Four
+learned-word settled Axe/overflow reports remain clear and desktop/mobile
+captures were inspected. Original HEAD, three pinned source references, five
+protected dirty files, approved scope, primary checkout HEAD and push signing
+remain unchanged. Independent review starts only after the implementation
+commit; production deployment remains a separate gate. No push is authorized.

@@ -13,6 +13,7 @@ export async function requireCurrentReportProvenance(
   env: Env,
   accountId: string,
   report: ReportDocument,
+  reports: readonly ReportDocument[] = [],
 ) {
   if (!report.provenance) return; // Compatible older copies have no suggestion snapshot.
   // Validate the captured owned source set. Later practice must not invalidate
@@ -37,7 +38,14 @@ export async function requireCurrentReportProvenance(
     }
   }
   const tasks = await getPlanData(env, accountId);
-  const expected = buildReportEvidence(report, entries, { runs, estimateSeconds: 0 }, tasks);
+  const expected = buildReportEvidence(
+    report,
+    entries,
+    { runs, estimateSeconds: 0 },
+    tasks,
+    undefined,
+    reports,
+  );
   const claims = report.provenance.fields.map((field) => ({
     key: field.key,
     mapping: field.mapping,
@@ -64,7 +72,7 @@ export async function requireCurrentReportProvenance(
   )
     throw new HttpError(
       400,
-      'The captured suggestion no longer matches its saved source results. Refresh the working draft; learner edits and intentional blanks are protected. Historical report copies remain unchanged.',
+      'The captured suggestion no longer matches its saved source results or confirmed report history. Refresh the working draft; learner edits and intentional blanks are protected. Historical report copies remain unchanged.',
     );
   for (const source of report.provenance.sources) {
     const ref = report.evidence[source.reference];

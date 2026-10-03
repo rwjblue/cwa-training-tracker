@@ -21,6 +21,12 @@ import { validateAdvisorReportAnswers } from './report-definition.ts';
 import type { ReportDocument, ReportReference } from './report-document.ts';
 import type { ReportProvenance, ReportSourceSnapshot } from './report-provenance.ts';
 import type { PlannedTask } from './plan.ts';
+import {
+  learnedWordCandidates,
+  learnedWordAnswer,
+  learnedWordsFromScratchpad,
+  reportWordValues,
+} from './report-learned-words.ts';
 
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value)
@@ -360,10 +366,11 @@ function importedLcwo(run: LcwoRun): LcwoCandidate {
   };
 }
 
-/** Curated facts only: no score prose, private notes, scratchpad or selected-unplayed settings. */
+/** Curated facts only; explicit Learned: declarations are opt-in, other scratchpad prose stays private. */
 export function reportPracticeSnapshot(
   entry: PracticeSession,
   timezone: string,
+  includeLearnedWords = false,
 ): Omit<ReportSourceSnapshot, 'reference'> {
   const actual = reportPracticeOccurrence(entry);
   const date = reportPracticeDate(entry, timezone);
@@ -373,6 +380,13 @@ export function reportPracticeSnapshot(
       : `Declared practice day: ${date}; actual start not recorded. Upload time is not a practice timestamp.`,
     `Saved ${display(entry.minutes)} minutes; ${getPracticePurpose(entry) === 'review' ? 'extra review (reportable, no required-task credit)' : 'ordinary practice'}.`,
   ];
+  if (includeLearnedWords) {
+    const words = learnedWordsFromScratchpad(entry.metadata?.scratchpad);
+    if (words.length)
+      facts.push(
+        `Explicit Learned: ${words.join(', ')} (learner declaration, not inferred from hearing).`,
+      );
+  }
   let source: ReportSourceSnapshot['source'] =
     entry.source === 'legacy' ? 'historical' : 'saved-practice';
   const runner = runnerCandidate(entry);
@@ -485,6 +499,7 @@ export function buildReportEvidence(
   lcwo: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null | undefined,
   tasks: readonly PlannedTask[] = [],
   now = Date.now(),
+  reports: readonly ReportDocument[] = [],
 ): { values: Record<string, string>; evidence: ReportReference[]; provenance: ReportProvenance } {
   const eligible = reportablePractice(document, entries, now);
   const window = document.window;
@@ -524,6 +539,51 @@ export function buildReportEvidence(
     });
   };
   const ref = (entry: PracticeSession): ReportReference => ({ kind: 'practice', id: entry.id });
+  const includeLearnedWords = document.definition.fields.some(
+    (field) => field.source === 'learned:words',
+  );
+  if (includeLearnedWords) {
+    const candidates = learnedWordCandidates(eligible, reports, (entry) =>
+      reportPracticeDate(entry, window.timezone),
+    );
+    const included = candidates.filter((candidate) => !candidate.reportedIn.length);
+    const excluded = candidates.filter((candidate) => candidate.reportedIn.length);
+    const answer = learnedWordAnswer(included.map((candidate) => candidate.word));
+    const selected = reportWordValues(answer).length;
+    put(
+      'learned:words',
+      answer,
+      [
+        ...new Map(
+          candidates.flatMap((candidate) =>
+            candidate.sources.map(
+              (source) => [source.id, { kind: 'practice' as const, id: source.id }] as const,
+            ),
+          ),
+        ).values(),
+      ],
+      [
+        'Only explicit Learned: lines in saved report-window scratchpads suggest words. Edit the answer to deliberately include or omit words; hearing, scores and general notes never declare learning.',
+        `${included.length} eligible declarations; ${excluded.length} already represented in exact confirmed native submissions. Draft saves, printing, opening forms and imported reference-only text never retire words.`,
+        ...excluded
+          .slice(0, 90)
+          .map(
+            (candidate) =>
+              `Already confirmed: ${candidate.word.slice(0, 700)}${candidate.word.length > 700 ? '… [word excerpt]' : ''}; submission ${candidate.reportedIn[0].reportId} at ${candidate.reportedIn[0].submittedAt}.`,
+          ),
+        ...(excluded.length > 90
+          ? [
+              `${excluded.length - 90} further exclusions remain visible in the learned-word candidate inspector and complete private submission history.`,
+            ]
+          : []),
+        ...(selected < included.length
+          ? [
+              `${included.length - selected} declarations do not fit the 4,000-character answer. Whole words were retained; inspect candidates and deliberately edit the answer.`,
+            ]
+          : []),
+      ],
+    );
+  }
   const audio = new Map<ReportAudioCategory, { pairs: Set<string>; entries: PracticeSession[] }>();
   const ratings = new Map<string, PracticeSession>();
   const taskMap = new Map(tasks.map((task) => [task.id, task]));
@@ -838,7 +898,11 @@ export function buildReportEvidence(
         warnings,
       };
     });
-  if (fields.some((field) => !field.value && field.warnings.length))
+  if (
+    fields.some(
+      (field) => field.mapping !== 'learned:words' && !field.value && field.warnings.length,
+    )
+  )
     globalWarnings.add(
       'Some mapped measurements are unknown or incompatible and remain blank. Review each field’s suggestion evidence before answering; older results, private notes and selected-but-unplayed settings never fill missing measurements.',
     );
@@ -854,7 +918,7 @@ export function buildReportEvidence(
     const entry = item.kind === 'practice' ? entryMap.get(item.id) : undefined;
     const run = item.kind === 'lcwo' ? runMap.get(item.id) : undefined;
     const snapshot: ReportSourceSnapshot | undefined = entry
-      ? { reference, ...reportPracticeSnapshot(entry, window.timezone) }
+      ? { reference, ...reportPracticeSnapshot(entry, window.timezone, includeLearnedWords) }
       : run
         ? {
             reference,

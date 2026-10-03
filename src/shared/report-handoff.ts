@@ -1,10 +1,10 @@
-import { validateAdvisorReportAnswers } from './report-definition';
+import { validateAdvisorReportAnswers } from './report-definition.ts';
 import {
   copyReportDocument,
   sameReportValue,
   validateReportDocument,
   type ReportDocument,
-} from './report-document';
+} from './report-document.ts';
 
 /** A prepared copy has its own frozen definition, mappings, answers and source facts. */
 export function captureReportHandoff(

@@ -268,11 +268,19 @@ export function reportSuggestions(
     lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null;
     tasks?: readonly PlannedTask[];
     now?: number;
+    reports?: readonly ReportDocument[];
   } = {},
 ): { answers: Record<string, string>; evidence: ReportReference[]; provenance: ReportProvenance } {
   const { window } = document;
   const unique = reportablePractice(document, entries, options.now);
-  const selected = buildReportEvidence(document, entries, options.lcwo, options.tasks, options.now);
+  const selected = buildReportEvidence(
+    document,
+    entries,
+    options.lcwo,
+    options.tasks,
+    options.now,
+    options.reports,
+  );
   const context = {
     callsign: profile.callsign,
     displayName: profile.displayName,
@@ -303,6 +311,7 @@ export function refreshReportDocument(
   options: {
     lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null;
     tasks?: readonly PlannedTask[];
+    reports?: readonly ReportDocument[];
   } = {},
 ): ReportDocument {
   const suggestions = reportSuggestions(document, profile, entries, {
@@ -330,6 +339,7 @@ export function createReportDocument(
   date: string,
   entries: PracticeSession[],
   lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null,
+  reports: readonly ReportDocument[] = [],
 ): ReportDocument {
   const now = new Date().toISOString();
   return refreshReportDocument(
@@ -348,7 +358,7 @@ export function createReportDocument(
     profile,
     entries,
     now,
-    { lcwo, tasks },
+    { lcwo, tasks, reports },
   );
 }
 export function copyReportDocument(document: ReportDocument): ReportDocument {

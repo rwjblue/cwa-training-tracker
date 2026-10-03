@@ -1,4 +1,5 @@
 import AdvisorReportHandoff from './AdvisorReportHandoff';
+import AdvisorLearnedWords from './AdvisorLearnedWords';
 import AdvisorReportAnswers from './AdvisorReportAnswers';
 import AdvisorReportEvidence from './AdvisorReportEvidence';
 import type { LcwoData } from '../shared/lcwo';
@@ -140,7 +141,7 @@ export default function AdvisorReportDraft({
       try {
         drafts = [
           ...drafts,
-          createReportDocument(definition, profile, tasks, session, date, entries, lcwo),
+          createReportDocument(definition, profile, tasks, session, date, entries, lcwo, reports),
         ];
       } catch (error) {
         setError((error as Error).message);
@@ -163,7 +164,7 @@ export default function AdvisorReportDraft({
   }, [scope]);
   function refresh(next: ReportDocument, message?: string) {
     try {
-      update(refreshReportDocument(next, profile, entries, undefined, { lcwo, tasks }));
+      update(refreshReportDocument(next, profile, entries, undefined, { lcwo, tasks, reports }));
       if (message) setMessage(message);
     } catch (error) {
       setError((error as Error).message);
@@ -384,6 +385,7 @@ export default function AdvisorReportDraft({
                     window.reportDate,
                     entries,
                     lcwo,
+                    reports,
                   ),
                 );
               } catch (error) {
@@ -520,6 +522,19 @@ export default function AdvisorReportDraft({
         }
       />
       <div className="plan-form-actions">
+        <AdvisorLearnedWords
+          report={draft}
+          reports={reports}
+          entries={entries}
+          onEdit={(key, value) =>
+            update({
+              ...draft,
+              answers: { ...draft.answers, [key]: value },
+              editedKeys: [...new Set([...draft.editedKeys, key])],
+              updatedAt: new Date().toISOString(),
+            })
+          }
+        />
         <button
           className="button outline"
           disabled={Boolean(dateError)}

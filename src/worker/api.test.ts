@@ -8,7 +8,11 @@ import {
 } from '../../e2e/report-evidence-fixture';
 import { createReportDocument, refreshReportDocument } from '../shared/report-document';
 import { lcwoFixtureResponse } from '../../e2e/lcwo-fixture';
-import { starterAdvisorReportDefinition } from '../shared/report-definition';
+import {
+  starterAdvisorReportDefinition,
+  validateAdvisorReportDefinition,
+} from '../shared/report-definition';
+import { confirmedLearnedWordHistory } from '../shared/report-learned-words';
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8128,6 +8132,169 @@ describe('private native advisor report copies', () => {
       evidenceLcwo,
     );
   }
+  it('keeps explicit learned declarations eligible until the exact native confirmation and roundtrips owned history privately', async () => {
+    const a = await signIn('learned-owner@example.test');
+    const b = await signIn('learned-other@example.test');
+    const definition = validateAdvisorReportDefinition({
+      version: 1,
+      title: 'Learned words',
+      fields: [
+        {
+          key: 'words',
+          label: 'Learned words',
+          section: 'New words',
+          source: 'learned:words',
+          type: 'textarea',
+          required: false,
+        },
+      ],
+    });
+    const profile = { ...DEFAULT_PROFILE, timezone: 'UTC', reportDefinition: definition };
+    const source: PracticeSession = {
+      id: 'learned-source',
+      date: '2026-10-02',
+      kind: 'listening',
+      minutes: 0,
+      notes: 'Private general note',
+      createdAt: '2026-10-02T00:00:00Z',
+      metadata: { scratchpad: 'CQ sounded familiar.\nLearned: Rig, QTH\nlearned: RIG' },
+    };
+    expect((await request('/api/settings', 'PUT', profile, a.cookie)).status).toBe(200);
+    expect((await request('/api/entries', 'POST', source, a.cookie)).status).toBe(201);
+    const draft = createReportDocument(definition, profile, [], 1, '2026-10-03', [source]);
+    expect(draft.answers.words).toBe('Rig, QTH');
+    expect((await op(a, { type: 'report-save', report: draft })).response.status).toBe(200);
+    const chosen = { ...draft, answers: { words: 'Rig' }, editedKeys: ['words'] };
+    const handoff = captureReportHandoff(chosen);
+    expect((await op(a, { type: 'report-handoff', report: handoff })).response.status).toBe(200);
+    const before = await getAccountSnapshot(env, a.user.id);
+    expect(
+      refreshReportDocument(
+        { ...draft, id: 'prepared-not-submitted' },
+        profile,
+        [source],
+        undefined,
+        { reports: before.reports },
+      ).answers.words,
+    ).toBe('Rig, QTH');
+    chosen.answers.words = 'QTH'; // The confirmation must still retire the actual handoff, Rig.
+    const submitted = confirmReportHandoff(handoff, true);
+    expect(
+      (await op(b, { type: 'report-confirm', report: submitted, confirmed: true })).response.status,
+    ).toBe(400);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([]);
+    expect(
+      (await op(a, { type: 'report-confirm', report: submitted, confirmed: true })).response.status,
+    ).toBe(200);
+    const state = await getAccountSnapshot(env, a.user.id);
+    expect(
+      (await op(a, { type: 'report-save', report: { ...draft, id: 'stale-learned-capture' } }))
+        .response.status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(state);
+    const refreshed = refreshReportDocument(
+      { ...draft, id: 'after-confirm' },
+      profile,
+      [source],
+      undefined,
+      { reports: state.reports },
+    );
+    expect(refreshed.answers.words).toBe('QTH');
+    expect(refreshed.provenance?.fields[0].warnings.join('\n')).toContain(submitted.id);
+    expect((await op(a, { type: 'report-save', report: refreshed })).response.status).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.reports?.find((row) => row.id === submitted.id)).toEqual(submitted);
+    expect(JSON.stringify(submitted.provenance)).toContain('Explicit Learned: Rig, QTH');
+    expect(JSON.stringify(submitted.provenance)).not.toContain('CQ sounded familiar');
+    const reversed = { ...exported, reports: [...exported.reports!].reverse() };
+    for (const mode of ['merge', 'merge', 'replace'] as const)
+      expect(
+        (await request('/api/import', 'POST', { mode, data: reversed }, b.cookie)).status,
+      ).toBe(200);
+    expect(
+      confirmedLearnedWordHistory((await getAccountSnapshot(env, b.user.id)).reports!),
+    ).toEqual(confirmedLearnedWordHistory(exported.reports!));
+    const { confirmation: _confirmation, ...reference } = submitted;
+    const importedReference = {
+      ...reference,
+      id: 'imported-reference-only',
+      answers: { words: 'QTH' },
+    };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...exported, reports: [importedReference] } },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      refreshReportDocument({ ...draft, id: 'reference-neutral' }, profile, [source], undefined, {
+        reports: (await getAccountSnapshot(env, a.user.id)).reports,
+      }).answers.words,
+    ).toBe('QTH');
+  });
+  it('rejects forged learned-source claims and foreign references without partial report or receipt writes', async () => {
+    const a = await signIn('learned-validation-owner@example.test');
+    const b = await signIn('learned-validation-other@example.test');
+    const definition = validateAdvisorReportDefinition({
+      version: 1,
+      title: 'Learned words',
+      fields: [
+        {
+          key: 'words',
+          label: 'Learned words',
+          section: 'New words',
+          source: 'learned:words',
+          type: 'text',
+          required: false,
+        },
+      ],
+    });
+    const profile = { ...DEFAULT_PROFILE, timezone: 'UTC', reportDefinition: definition };
+    const source: PracticeSession = {
+      id: 'learned-private-source',
+      date: '2026-10-02',
+      kind: 'listening',
+      minutes: 1,
+      notes: '',
+      createdAt: '2026-10-02T00:00:00Z',
+      metadata: { scratchpad: 'Learned: Rig' },
+    };
+    expect((await request('/api/entries', 'POST', source, a.cookie)).status).toBe(201);
+    const draft = createReportDocument(definition, profile, [], 1, '2026-10-03', [source]);
+    const forged = structuredClone(draft);
+    forged.provenance!.fields[0].value = 'QTH';
+    const before = await getAccountSnapshot(env, a.user.id);
+    expect((await op(a, { type: 'report-save', report: forged })).response.status).toBe(400);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    for (const kind of ['report-save', 'report-handoff'] as const)
+      expect(
+        (
+          await op(b, {
+            type: kind,
+            report: kind === 'report-save' ? draft : captureReportHandoff(draft),
+          })
+        ).response.status,
+      ).toBe(400);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([]);
+    expect(
+      db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+    ).toBe(0);
+    const edited = { ...source, metadata: { scratchpad: 'Ordinary prose: Rig' } };
+    expect(
+      (await request('/api/entries/learned-private-source', 'PUT', edited, a.cookie)).status,
+    ).toBe(200);
+    expect((await op(a, { type: 'report-save', report: draft })).response.status).toBe(400);
+    expect((await getAccountSnapshot(env, a.user.id)).reports).toEqual([]);
+    const fresh = refreshReportDocument(draft, profile, [edited]);
+    expect(fresh.answers.words).toBe('');
+    expect((await op(a, { type: 'report-save', report: fresh })).response.status).toBe(200);
+  });
   it('validates the full owned source window and preserves frozen answers, deliberate blanks and source facts across exports and restores', async () => {
     const owner = await signIn('provenance-owner@example.test');
     const other = await signIn('provenance-other@example.test');
