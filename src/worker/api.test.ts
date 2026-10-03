@@ -1,4 +1,5 @@
 import { lcwoFixtureResponse } from '../../e2e/lcwo-fixture';
+import { starterAdvisorReportDefinition } from '../shared/report-definition';
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6597,6 +6598,230 @@ describe('start-attributed finished Runner results', () => {
     expect(
       exported.sessions.find((entry) => entry.id === legacy.id)?.metadata?.evidence,
     ).not.toHaveProperty('run.attribution');
+  });
+});
+
+describe('private advisor report definition persistence', () => {
+  it('accepts valid configuration beyond the old settings request cap and rejects encoded overflow without mutation', async () => {
+    const auth = await signIn('report-definition-size@example.test');
+    const large = {
+      version: 1,
+      title: 'Large synthetic definition',
+      fields: Array.from({ length: 60 }, (_, index) => ({
+        key: `field${index}`,
+        label: 'a'.repeat(160),
+        section: 'b'.repeat(80),
+        type: 'textarea',
+        required: false,
+        source: 'manual',
+      })),
+    };
+    expect(Buffer.byteLength(JSON.stringify(large))).toBeGreaterThan(16_384);
+    expect(Buffer.byteLength(JSON.stringify(large))).toBeLessThan(32_000);
+    expect(
+      (
+        await request(
+          '/api/settings',
+          'PUT',
+          { settings: { ...DEFAULT_PROFILE, reportDefinition: large } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const saved = await getAccountSnapshot(env, auth.user.id);
+    expect(saved.settings.reportDefinition).toEqual(large);
+    const overflow = {
+      ...large,
+      fields: large.fields.map((field) => ({
+        ...field,
+        label: '🟢'.repeat(80),
+        section: '🟢'.repeat(40),
+      })),
+    };
+    expect(
+      (
+        await request(
+          '/api/settings',
+          'PUT',
+          { settings: { ...DEFAULT_PROFILE, reportDefinition: overflow } },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(saved);
+  });
+  const reportDefinition = {
+    ...starterAdvisorReportDefinition(),
+    formUrl: 'https://forms.example.test/learner?course=synthetic',
+    fields: [
+      ...starterAdvisorReportDefinition().fields,
+      {
+        key: 'rating',
+        label: 'Sending rating',
+        section: 'Practice',
+        type: 'rating' as const,
+        source: 'manual' as const,
+        required: false,
+        options: ['Very Good', 'Good', 'Fair', 'Poor'],
+        externalId: 'entry.42',
+      },
+    ],
+  };
+  const profile = { ...DEFAULT_PROFILE, reportDefinition };
+  async function read(cookie: string) {
+    const response = await request('/api/settings', 'GET', undefined, cookie);
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { settings: typeof profile }).settings;
+  }
+  it('persists a private bounded definition in coherent snapshots and backups without exposing another account', async () => {
+    const a = await signIn('report-definition-a@example.test');
+    const b = await signIn('report-definition-b@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await read(a.cookie)).reportDefinition).toEqual(reportDefinition);
+    expect((await read(b.cookie)).reportDefinition).toBeUndefined();
+    const row = db.sqlite
+      .prepare('SELECT profile_json,report_definition_json FROM users WHERE id = ?')
+      .get(a.user.id)!;
+    expect(JSON.parse(String(row.profile_json))).not.toHaveProperty('reportDefinition');
+    expect(JSON.parse(String(row.report_definition_json))).toEqual(reportDefinition);
+    const backup = (await (
+      await request('/api/account-lifecycle/backup', 'GET', undefined, a.cookie)
+    ).json()) as AccountLifecycleBackup;
+    expect(backup.data.profile?.reportDefinition).toEqual(reportDefinition);
+    expect(backup.state.settings.reportDefinition).toEqual(reportDefinition);
+    expect((await request('/api/settings', 'GET')).status).toBe(401);
+    expect(
+      (
+        await request('/api/settings', 'PUT', { settings: profile }, b.cookie, {
+          'X-CWA-Account': a.user.id,
+        })
+      ).status,
+    ).toBe(409);
+    expect((await read(b.cookie)).reportDefinition).toBeUndefined();
+  });
+  it('reuses semantic exact retry and stale revision conflict without replacing another preference', async () => {
+    const auth = await signIn('report-definition-operation@example.test');
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const operation: AccountOperation = {
+      version: 1,
+      id: 'report-definition-save',
+      accountId: auth.user.id,
+      baseRevision: before.revision,
+      generation: before.generation,
+      createdAt: new Date().toISOString(),
+      change: { type: 'settings', changes: { reportDefinition } },
+    };
+    expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(
+      200,
+    );
+    const saved = await getAccountSnapshot(env, auth.user.id);
+    expect((await request('/api/account-operations', 'POST', operation, auth.cookie)).status).toBe(
+      200,
+    );
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(saved);
+    expect(saved.settings.dailyGoalMinutes).toBe(before.settings.dailyGoalMinutes);
+    expect(
+      (
+        await request(
+          '/api/account-operations',
+          'POST',
+          { ...operation, id: 'stale-definition' },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await request(
+          '/api/account-operations',
+          'POST',
+          {
+            ...operation,
+            id: 'clear-definition',
+            baseRevision: saved.revision,
+            change: { type: 'settings', changes: { reportDefinition: null } },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await read(auth.cookie)).reportDefinition).toBeUndefined();
+  });
+  it('roundtrips privately, preserves new configuration when an old merge omits it, and clears it for replacement/reset', async () => {
+    const a = await signIn('report-definition-roundtrip-a@example.test');
+    const b = await signIn('report-definition-roundtrip-b@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, a.cookie)).status).toBe(
+      200,
+    );
+    const backup = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: backup }, b.cookie)).status,
+    ).toBe(200);
+    expect((await read(b.cookie)).reportDefinition).toEqual(reportDefinition);
+    const old = {
+      ...backup,
+      profile: { ...DEFAULT_PROFILE, displayName: 'Old synthetic profile' },
+    };
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: old }, b.cookie)).status,
+    ).toBe(200);
+    expect((await read(b.cookie)).reportDefinition).toEqual(reportDefinition);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: old }, b.cookie)).status,
+    ).toBe(200);
+    expect((await read(b.cookie)).reportDefinition).toBeUndefined();
+    expect((await read(a.cookie)).reportDefinition).toEqual(reportDefinition);
+    expect((await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await read(a.cookie)).reportDefinition).toBeUndefined();
+  });
+  it('rejects malformed configuration through direct settings, semantic operations and imports without partial mutations', async () => {
+    const auth = await signIn('report-definition-invalid@example.test');
+    expect((await request('/api/settings', 'PUT', { settings: profile }, auth.cookie)).status).toBe(
+      200,
+    );
+    const saved = await getAccountSnapshot(env, auth.user.id);
+    const bad = { ...reportDefinition, formUrl: 'https://secret:password@forms.example.test' };
+    const operation = {
+      version: 1,
+      id: 'bad-definition',
+      accountId: auth.user.id,
+      baseRevision: saved.revision,
+      generation: saved.generation,
+      createdAt: new Date().toISOString(),
+      change: { type: 'settings', changes: { reportDefinition: bad } },
+    };
+    for (const response of [
+      await request(
+        '/api/settings',
+        'PUT',
+        { settings: { ...profile, displayName: 'Must not save', reportDefinition: bad } },
+        auth.cookie,
+      ),
+      await request('/api/account-operations', 'POST', operation, auth.cookie),
+      await request(
+        '/api/import',
+        'POST',
+        {
+          mode: 'merge',
+          data: {
+            format: 'cwa-training-tracker',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            sessions: [],
+            profile: { ...profile, reportDefinition: { ...reportDefinition, accountId: 'other' } },
+          },
+        },
+        auth.cookie,
+      ),
+    ])
+      expect(response.status).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(saved);
   });
 });
 

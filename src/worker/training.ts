@@ -411,7 +411,7 @@ export async function getSettings(request: Request, env: Env): Promise<Response>
 export async function saveSettings(request: Request, env: Env): Promise<Response> {
   const auth = await requireAuth(request, env);
   const state = await requireAccountRevision(request, env, auth.user.id);
-  const body = await readJson(request);
+  const body = await readJson(request, 64_000);
   const settings = validated(validateProfile, body.settings ?? body);
   const applied = await mutateAccount(
     env,
@@ -529,7 +529,15 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   );
   const uniqueEntries = new Map(data.sessions.map((entry) => [entry.id, entry]));
   const ownedPlan = input.mode === 'merge' ? state.plan : [];
-  const resultingProfile = data.profile ?? state.settings;
+  const resultingProfile = { ...(data.profile ?? state.settings) };
+  if (
+    input.mode === 'merge' &&
+    data.profile?.reportDefinition === undefined &&
+    state.settings.reportDefinition
+  )
+    resultingProfile.reportDefinition = state.settings.reportDefinition;
+  if (input.mode === 'replace' && data.profile?.reportDefinition === undefined)
+    delete resultingProfile.reportDefinition;
   const resultingPlan = mergeCurriculumPlan(resultingProfile, [
     ...ownedPlan,
     ...(data.plan ?? []).filter((task) => !ownedPlan.some((item) => item.id === task.id)),
@@ -600,8 +608,8 @@ export async function importData(request: Request, env: Env): Promise<Response> 
       env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
     );
   }
-  if (data.profile) {
-    const settings = { ...data.profile };
+  if (data.profile || input.mode === 'replace') {
+    const settings = { ...resultingProfile };
     if (!isRecord(input.data) || input.data.format !== 'cwa-training-tracker') {
       const existing = state.settings;
       settings.callsign ||= existing.callsign;

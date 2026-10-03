@@ -1,3 +1,4 @@
+import AdvisorReportSetup from './AdvisorReportSetup';
 import type { LcwoData } from '../shared/lcwo';
 import ListeningPassProgress from './ListeningPassProgress';
 import LiveAssignmentWindow from './LiveAssignmentWindow';
@@ -503,6 +504,11 @@ export default function Plan({
       )}
       {reportOpen && (
         <Report
+          key={accountId ?? 'guest'}
+          accountId={accountId}
+          tasks={tasks}
+          revision={revision}
+          onChange={onChange}
           lcwo={lcwo}
           entries={entries}
           profile={profile}
@@ -833,6 +839,10 @@ function TaskEditor({
 }
 
 function Report({
+  accountId,
+  tasks,
+  revision,
+  onChange,
   lcwo,
   entries,
   profile,
@@ -841,6 +851,10 @@ function Report({
   onClose,
   returnToPractice,
 }: {
+  accountId?: string;
+  tasks: PlannedTask[];
+  revision: number;
+  onChange: (change: AccountChange, baseRevision?: number) => Promise<unknown>;
   lcwo?: LcwoData | null;
   entries: PracticeSession[];
   profile: Profile;
@@ -849,6 +863,8 @@ function Report({
   onClose: () => void;
   returnToPractice?: { label: string; onReturn: () => void };
 }) {
+  const [advisor, setAdvisor] = useState(false);
+  const [advisorVisited, setAdvisorVisited] = useState(false);
   const [from, setFrom] = useState(fromDate);
   const [to, setTo] = useState(toDate);
   const [copied, setCopied] = useState(false);
@@ -861,84 +877,118 @@ function Report({
   }
   return (
     <PlanDialog title="Your practice report" onClose={onClose} className="plan-report">
-      <p className="plan-no-print">
-        A plain-language summary for your own review or to share with your advisor. Review your
-        notes before sharing.
-      </p>
-      <div className="plan-form-grid plan-form plan-no-print">
-        <label>
-          From
-          <input
-            type="date"
-            value={from}
-            max={to}
-            onChange={(event) => {
-              setFrom(event.target.value);
-              setCopied(false);
+      {accountId && (
+        <div className="plan-form-actions plan-no-print" role="group" aria-label="Report format">
+          <button
+            className="button outline small"
+            aria-pressed={!advisor}
+            onClick={() => setAdvisor(false)}
+          >
+            Generic practice report
+          </button>
+          <button
+            className="button outline small"
+            aria-pressed={advisor}
+            onClick={() => {
+              setAdvisorVisited(true);
+              setAdvisor(true);
             }}
-          />
-        </label>
-        <label>
-          Through
-          <input
-            type="date"
-            value={to}
-            min={from}
-            onChange={(event) => {
-              setTo(event.target.value);
-              setCopied(false);
-            }}
-          />
-        </label>
-      </div>
-      <pre className="plan-report-text" tabIndex={0}>
-        {report}
-      </pre>
-      {copyError && (
-        <p className="plan-no-print" role="status">
-          {copyError}
-        </p>
+          >
+            Advisor report setup
+          </button>
+        </div>
       )}
-      <div className="plan-form-actions plan-no-print">
-        {returnToPractice && (
+      {accountId && advisorVisited && (
+        <div hidden={!advisor}>
+          <AdvisorReportSetup
+            active={advisor}
+            profile={profile}
+            tasks={tasks}
+            revision={revision}
+            onChange={onChange}
+          />
+        </div>
+      )}
+      <div hidden={advisor}>
+        <p className="plan-no-print">
+          A plain-language summary for your own review or to share with your advisor. Review your
+          notes before sharing.
+        </p>
+        <div className="plan-form-grid plan-form plan-no-print">
+          <label>
+            From
+            <input
+              type="date"
+              value={from}
+              max={to}
+              onChange={(event) => {
+                setFrom(event.target.value);
+                setCopied(false);
+              }}
+            />
+          </label>
+          <label>
+            Through
+            <input
+              type="date"
+              value={to}
+              min={from}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setCopied(false);
+              }}
+            />
+          </label>
+        </div>
+        <pre className="plan-report-text" tabIndex={0}>
+          {report}
+        </pre>
+        {copyError && (
+          <p className="plan-no-print" role="status">
+            {copyError}
+          </p>
+        )}
+        <div className="plan-form-actions plan-no-print">
+          {returnToPractice && (
+            <button
+              className="button outline"
+              title={returnToPractice.label}
+              onClick={returnToPractice.onReturn}
+            >
+              Return to practice
+            </button>
+          )}
           <button
             className="button outline"
-            title={returnToPractice.label}
-            onClick={returnToPractice.onReturn}
+            onClick={() => {
+              setFrom(addDays(fromDate, -7));
+              setTo(addDays(toDate, -7));
+              setCopied(false);
+            }}
           >
-            Return to practice
+            Previous week
           </button>
-        )}
-        <button
-          className="button outline"
-          onClick={() => {
-            setFrom(addDays(fromDate, -7));
-            setTo(addDays(toDate, -7));
-            setCopied(false);
-          }}
-        >
-          Previous week
-        </button>
-        <button className="button outline" onClick={() => window.print()}>
-          <Printer size={15} /> Print
-        </button>
-        <button
-          className="button dark"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(report);
-              setCopied(true);
-              setCopyError('');
-            } catch {
-              setCopyError(
-                'Select the report text above and copy it with your device’s copy command.',
-              );
-            }
-          }}
-        >
-          {copied ? <Check size={15} /> : <Clipboard size={15} />}
-          {copied ? 'Copied' : 'Copy report'}
-        </button>
+          <button className="button outline" onClick={() => window.print()}>
+            <Printer size={15} /> Print
+          </button>
+          <button
+            className="button dark"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(report);
+                setCopied(true);
+                setCopyError('');
+              } catch {
+                setCopyError(
+                  'Select the report text above and copy it with your device’s copy command.',
+                );
+              }
+            }}
+          >
+            {copied ? <Check size={15} /> : <Clipboard size={15} />}
+            {copied ? 'Copied' : 'Copy report'}
+          </button>
+        </div>
       </div>
     </PlanDialog>
   );

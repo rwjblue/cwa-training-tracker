@@ -43,6 +43,7 @@ const profileFields = [
   'firstClassDate',
   'classDays',
   'classSchedule',
+  'reportDefinition',
 ] as const;
 const editFields = [
   'title',
@@ -140,7 +141,9 @@ export function validateAccountChange(value: unknown): AccountChange {
       if (
         !Object.keys(changes).length ||
         Object.entries(changes).some(
-          ([key, value]) => value === undefined || (value === null && key !== 'classSchedule'),
+          ([key, value]) =>
+            value === undefined ||
+            (value === null && !['classSchedule', 'reportDefinition'].includes(key)),
         )
       )
         throw new Error('Choose profile fields to change.');
@@ -262,7 +265,9 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
   keys(settings, profileFields);
   if (
     profileFields.some(
-      (key) => !['useGravatar', 'classSchedule'].includes(key) && settings[key] === undefined,
+      (key) =>
+        !['useGravatar', 'classSchedule', 'reportDefinition'].includes(key) &&
+        settings[key] === undefined,
     )
   )
     throw new Error('The account snapshot is missing profile fields.');

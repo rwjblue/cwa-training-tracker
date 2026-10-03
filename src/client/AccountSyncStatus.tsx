@@ -1,3 +1,4 @@
+import type { AdvisorReportDefinition } from '../shared/report-definition';
 import { useState } from 'react';
 import { validateRecordingMarkSet, recordingMarkSetDetails } from '../shared/recording-marks';
 import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
@@ -14,6 +15,7 @@ const preferenceLabels: Record<string, string> = {
   classDays: 'Class meeting days',
   useGravatar: 'Gravatar',
   classSchedule: 'Private class meetings',
+  reportDefinition: 'Advisor report definition',
 };
 const valueLabel = (value: unknown) =>
   value === undefined || value === null || value === ''
@@ -26,6 +28,26 @@ const valueLabel = (value: unknown) =>
           : 'No'
         : String(value);
 const preferenceValueLabel = (key: string, value: unknown) => {
+  if (key === 'reportDefinition' && value) {
+    const definition = value as AdvisorReportDefinition;
+    return [
+      definition.title,
+      `destination ${definition.formUrl ?? 'not set'}`,
+      ...definition.fields.map((field) =>
+        [
+          `${field.section}: ${field.label} (${field.key})`,
+          field.type,
+          field.required ? 'required' : 'optional',
+          `source ${field.source}`,
+          ...(field.options ? [`exact choices ${field.options.join(' / ')}`] : []),
+          ...(['min', 'max', 'minExclusive', 'maxExclusive', 'integer'] as const)
+            .filter((rule) => field[rule] !== undefined)
+            .map((rule) => `${rule} ${field[rule]}`),
+          `external field ${field.externalId ?? 'not set'}`,
+        ].join('; '),
+      ),
+    ].join(' | ');
+  }
   if (key !== 'classSchedule' || !value) return valueLabel(value);
   const schedule = value as ClassSchedule;
   const time = (item: NonNullable<ClassSchedule['ordinary']>) =>

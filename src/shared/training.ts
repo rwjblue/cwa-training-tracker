@@ -1,3 +1,7 @@
+import {
+  validateAdvisorReportDefinition,
+  type AdvisorReportDefinition,
+} from './report-definition.ts';
 import { validateLcwoBackup, type LcwoBackup } from './lcwo.ts';
 import {
   validateManualSessionDetails,
@@ -35,6 +39,8 @@ export interface Profile {
   classDays: number[];
   /** Optional versioned private meeting details; null explicitly clears them. */
   classSchedule?: ClassSchedule | null;
+  /** Private advisor field rules; null explicitly clears them. */
+  reportDefinition?: AdvisorReportDefinition | null;
 }
 
 export interface PracticeSession {
@@ -390,6 +396,11 @@ export function validateProfile(
       input.classSchedule === null
         ? null
         : validateClassSchedule(input.classSchedule, profile, !options.partialSchedule);
+  if (input.reportDefinition !== undefined)
+    profile.reportDefinition =
+      input.reportDefinition === null
+        ? null
+        : validateAdvisorReportDefinition(input.reportDefinition);
   return profile;
 }
 

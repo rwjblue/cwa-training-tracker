@@ -1287,3 +1287,74 @@ LCWO service, physical devices and lock-screen behavior are not claimed. Source
 fixtures are synthetic, original trainer remains read only, and elapsed-time
 crash/reload recovery and new speech recognition remain outside approved scope.
 The independent review and production gates permit ascending issue #36 next.
+
+
+## Issue #36 — private advisor definitions and preparation windows (review pending)
+
+Rechecked current issue body/comments and dependency #18. The closed dependency
+is delivered, independently accepted and externally published with verified
+signatures; current class-schedule browser coverage still exercises its workflow.
+Original report fields, derivation and Worker references match pinned
+`3106c9b8` byte for byte at current original HEAD `c2bef7af`. Original owner
+identity, form destination and entry IDs are not shipped as defaults.
+
+Learners can configure private ordered field keys, labels, sections, types,
+required rules, exact rating choices, inclusive/exclusive numeric bounds, whole
+numbers, neutral context mappings and optional HTTPS form/field references.
+Whole-definition validation rejects unsafe destinations, duplicates, unknown
+account references and incoherent rules. Encoded definitions are capped at
+32,000 bytes; migration 0009 stores a nullable account-owned setting separately
+from ordinary practice quota, following the existing bounded class settings.
+Atomic CAS/exact retry and lifecycle ownership reuse the existing account
+architecture. Private backups roundtrip the definition; old omitted settings
+preserve an existing definition on merge, clear on replace/reset, and remain
+valid without invented data. Numeric zero, optional blanks, literal ratings and
+valid calendar dates obey the configured rules.
+
+The selected session/date shows actual preparation dates, course timezone,
+meeting exceptions and an inclusive window. All dated session-owned exercises
+contribute; Today pins do not change homework dates. Early reports cap at the
+chosen date and can produce an explicit empty window. Missing dates use two
+prior days through the class date (or chosen date), capped at the report date,
+with the fallback explained. Meeting exceptions remain separate from curriculum
+preparation dates. No future evidence or performance is inferred.
+
+The existing generic report copy/print and imported original snapshots remain
+readable. Configuration errors retain edits; cancellation restores preview
+focus. Report-format navigation retains setup work. A failed save retains the
+exact operation locally with visible feedback and actual account-sync retry.
+Readable conflict comparisons disclose the whole private definition. Preview
+answers are explicitly unsaved until #37; evidence suggestions, handoff and
+confirmed learned words remain #38–#40. No answers are sent to an external form.
+
+Focused check and 250 domain/actual-SQL/client-queue tests pass. The real local
+Wrangler/D1 browser journey passes in 12.9 seconds, including desktop keyboard,
+mobile touch, save failure/exact retry, backup download/file selection, literal
+values, early/empty windows and retained format navigation. Settled Axe/overflow
+checks and inspected desktop/mobile captures are clear. Earlier domain selection
+regression, incorrect test account header, JSX build error and accessible select
+locator failure remain retained; none is counted as passing evidence. Complete
+regression, implementation commit, fresh independent review and deployment are
+subsequent gates. Physical devices and production private writes are not claimed.
+No push is authorized or attempted; original site remains read only.
+
+Root source inspection caught a saved-rating-to-text transition retaining hidden
+old rating choices in the editor projection. The actual editor regression first
+fails with the retained “Only rating fields have choices” error; stripping
+obsolete choices from the draft projection makes it pass in 13.6 seconds with
+check. The complete browser attempt was deliberately interrupted after nine
+passes to fix this before review (exit 130, not a passing gate). Retained failure
+assertion, context, pixels and trace were inspected; no timeout was relaxed.
+A fresh complete gate follows this correction.
+
+The corrected complete gate passes `mise run check`, all 1,369 tests in 72
+files, `mise run build`, and all 97 serial browser journeys in 18.3 minutes
+(actual exit 0). Four settled report Axe/overflow checks are clear; desktop
+and mobile pixels were inspected. The full run also exercises the delivered
+closed class-schedule dependency, imported report references, public tools,
+native media/Runner, queues, account boundaries and backup/lifecycle workflows.
+The existing large-bundle warning remains visible. Binding/configuration files
+are unchanged, so no new binding types are required. Fresh issue/source checks
+remain unchanged; the original five dirty paths and protected scope-ledger hash
+are intact. Focused implementation commit and independent review follow;
+deployment and source publication are not yet claimed. No push is attempted.

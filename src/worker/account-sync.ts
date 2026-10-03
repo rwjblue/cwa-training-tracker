@@ -14,6 +14,7 @@ import { settingsStatement } from './settings';
 type AccountRow = {
   profile_json: string;
   class_schedule_json: string | null;
+  report_definition_json: string | null;
   account_revision: number;
   dataset_generation: number;
   history_revision: number;
@@ -22,7 +23,7 @@ type AccountRow = {
 export function accountSnapshotStatements(env: Env, accountId: string): D1PreparedStatement[] {
   return [
     env.DB.prepare(
-      'SELECT profile_json, class_schedule_json, account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
+      'SELECT profile_json, class_schedule_json, report_definition_json, account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
     ).bind(accountId),
     env.DB.prepare('SELECT task_json FROM training_plan WHERE user_id = ? ORDER BY id').bind(
       accountId,
@@ -36,6 +37,9 @@ export function snapshotFromResults(accountId: string, results: D1Result[]): Acc
     ...DEFAULT_PROFILE,
     ...JSON.parse(row.profile_json),
     ...(row.class_schedule_json ? { classSchedule: JSON.parse(row.class_schedule_json) } : {}),
+    ...(row.report_definition_json
+      ? { reportDefinition: JSON.parse(row.report_definition_json) }
+      : {}),
   };
   return {
     accountId,
