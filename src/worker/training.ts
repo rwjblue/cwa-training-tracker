@@ -264,6 +264,14 @@ export async function saveEntry(request: Request, env: Env, id?: string): Promis
     throw new HttpError(400, 'Historical evidence accounting cannot be changed or removed.');
   // Notes, placement and declared corrections are editable. Raw source facts
   // remain immutable even if a client removes or replaces the metadata object.
+  if (
+    previous?.metadata?.copyAttempt !== undefined &&
+    !equivalentEntry(previous.metadata.copyAttempt, entry.metadata?.copyAttempt)
+  )
+    throw new HttpError(
+      400,
+      'Native Copy measurements cannot be changed or replaced with manual results.',
+    );
   if (previousEvidence) {
     const raw = (value: typeof previousEvidence | undefined) => {
       if (value?.type === 'timed') {

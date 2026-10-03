@@ -1,4 +1,9 @@
 import {
+  validateManualSessionDetails,
+  type ExternalPractice,
+  type ManualTiming,
+} from './external-practice.ts';
+import {
   supportsOnAirObservations,
   validatePracticeAssessment,
   type PracticeAssessment,
@@ -57,6 +62,8 @@ export interface PracticeSession {
     evidence?: PracticeEvidence;
     practicePurpose?: PracticePurpose;
     assessment?: PracticeAssessment;
+    externalResult?: ExternalPractice;
+    manualTiming?: ManualTiming;
   };
 }
 
@@ -638,6 +645,7 @@ export function validatePracticeSession(
       session.metadata = { ...metadata, ...measured.metadata };
     }
   }
+  validateManualSessionDetails(session);
   if (session.metadata?.assessment !== undefined) {
     const assessment = validatePracticeAssessment(session.metadata.assessment);
     if (assessment.cwt !== undefined && !supportsOnAirObservations(session))

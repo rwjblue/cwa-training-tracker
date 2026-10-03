@@ -1,3 +1,8 @@
+import { createManualTiming, isExternalPracticeTimer } from '../shared/external-practice';
+import ManualPracticeFields, {
+  manualPracticeDraft,
+  readManualPracticeDraft,
+} from './ManualPracticeFields';
 import {
   CWT_OBSERVATION_FIELDS,
   PERFORMANCE_RATINGS,
@@ -1818,6 +1823,7 @@ function App() {
         <SessionModal
           initial={sessionEditor}
           isExisting={sessionEditorIsExisting}
+          timezone={profile.timezone}
           scope={user?.id ?? 'guest'}
           generation={
             historyGeneration.current && historyGeneration.current.accountId === user?.id
@@ -2915,6 +2921,7 @@ type SessionSaveAction = 'finish' | 'runner-next';
 function SessionModal({
   initial: providedInitial,
   isExisting,
+  timezone,
   scope,
   generation,
   canStartNextRun = false,
@@ -2923,6 +2930,7 @@ function SessionModal({
 }: {
   initial: Partial<PracticeSession>;
   isExisting: boolean;
+  timezone: string;
   scope: string;
   generation?: number;
   onClose: () => void;
@@ -3029,7 +3037,31 @@ function SessionModal({
     workedNames: initial.metadata?.assessment?.cwt?.workedNames ?? '',
     comments: initial.metadata?.assessment?.cwt?.comments ?? '',
   });
-  const canObserveOnAir = supportsOnAirObservations({ ...initial, kind: form.kind });
+  const [manualDraft, setManualDraft] = useState(() => manualPracticeDraft(initial, timezone));
+  const canCaptureManual =
+    !evidence &&
+    !copyAttempt &&
+    !initial.evidenceMode &&
+    !initial.metadata?.historicalTiming &&
+    (initial.source === undefined || initial.source === 'manual');
+  const canCaptureExternal = canCaptureManual || isExternalPracticeTimer(initial);
+  const manualMinutes = practiceMinutesFromInput(form.minutes, initial.minutes);
+  let displayedDate = form.date;
+  if (canCaptureManual && manualDraft.completedLocal && manualMinutes !== null) {
+    try {
+      const timing = createManualTiming(
+        manualDraft.completedLocal,
+        manualDraft.timezone,
+        manualMinutes * 60,
+        manualDraft.occurrence === '' ? undefined : (Number(manualDraft.occurrence) as 0 | 1),
+      );
+      displayedDate = dateInTimezone(timing.startedAt, timing.timezone);
+    } catch {
+      /* The manual fields show the actionable civil-time error. */
+    }
+  }
+  const canObserveOnAir =
+    !manualDraft.externalKind && supportsOnAirObservations({ ...initial, kind: form.kind });
   const metadataFromForm = (value: typeof form) => {
     const metadata: Record<string, unknown> = { ...initial.metadata, scratchpad: value.scratchpad };
     delete metadata.assessment;
@@ -3102,6 +3134,22 @@ function SessionModal({
       else delete data[key];
     }
     try {
+      if (canCaptureExternal) {
+        const { externalResult, manualTiming } = readManualPracticeDraft(manualDraft, minutes * 60);
+        const metadata = { ...(data.metadata as Record<string, unknown>) };
+        delete metadata.externalResult;
+        delete metadata.manualTiming;
+        if (externalResult) {
+          metadata.externalResult = externalResult;
+          for (const key of ['characterWpm', 'effectiveWpm', 'accuracy']) delete data[key];
+          if (externalResult.trainer === 'morse-runner') data.kind = 'simulator';
+        }
+        if (manualTiming) {
+          metadata.manualTiming = manualTiming;
+          data.date = dateInTimezone(manualTiming.startedAt, manualTiming.timezone);
+        }
+        data.metadata = metadata;
+      }
       if (evidence?.type === 'timed') {
         const corrected = { ...evidence };
         if (correctTime) {
@@ -3203,7 +3251,10 @@ function SessionModal({
         </p>
       )}
       {copyAttempt && <CopyResult attempt={copyAttempt} />}
-      {evidence && <EvidenceSummary evidence={evidence} />}
+      {evidence && !initial.metadata?.externalResult && <EvidenceSummary evidence={evidence} />}
+      {evidence && initial.metadata?.externalResult && (
+        <PracticeEvidenceDetails entry={initial} expanded />
+      )}
       {attributedRunner && (
         <p className="field-hint">
           Practice date follows the accepted run start in its captured timezone. Result creation is
@@ -3226,7 +3277,9 @@ function SessionModal({
               Activity
               <select
                 value={form.kind}
-                disabled={evidence?.type === 'runner'}
+                disabled={
+                  evidence?.type === 'runner' || manualDraft.externalKind === 'morse-runner'
+                }
                 onChange={(e) => update('kind', e.target.value)}
               >
                 {kinds.map((kind) => (
@@ -3240,8 +3293,10 @@ function SessionModal({
               Practice date
               <input
                 type="date"
-                value={form.date}
-                readOnly={attributedRunner}
+                value={displayedDate}
+                readOnly={
+                  attributedRunner || (canCaptureManual && Boolean(manualDraft.completedLocal))
+                }
                 required
                 onChange={(e) => update('date', e.target.value)}
               />
@@ -3278,47 +3333,64 @@ function SessionModal({
             or the earlier session for review. Logging from an exercise selects its session for you.
             Leave this blank for general practice.
           </p>
-          <div className="form-grid three">
-            <label className="field">
-              Character WPM
-              <input
-                type="number"
-                min="1"
-                max="150"
-                step="0.1"
-                placeholder={speedPlaceholder}
-                value={form.characterWpm}
-                readOnly={measuredSpeeds}
-                onChange={(e) => update('characterWpm', e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Effective WPM
-              <input
-                type="number"
-                min="1"
-                max={form.characterWpm || 150}
-                step="0.1"
-                placeholder={speedPlaceholder}
-                value={form.effectiveWpm}
-                readOnly={measuredSpeeds}
-                onChange={(e) => update('effectiveWpm', e.target.value)}
-              />
-            </label>
-            <label className="field">
-              Accuracy <span className="label-hint">%</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
-                value={form.accuracy}
-                readOnly={Boolean(copyAttempt || evidence?.type === 'runner')}
-                onChange={(e) => update('accuracy', e.target.value)}
-              />
-            </label>
-          </div>
+          {!(canCaptureExternal && manualDraft.externalKind) && (
+            <div className="form-grid three">
+              <label className="field">
+                Character WPM
+                <input
+                  type="number"
+                  min="1"
+                  max="150"
+                  step="0.1"
+                  placeholder={speedPlaceholder}
+                  value={form.characterWpm}
+                  readOnly={measuredSpeeds}
+                  onChange={(e) => update('characterWpm', e.target.value)}
+                />
+              </label>
+              <label className="field">
+                Effective WPM
+                <input
+                  type="number"
+                  min="1"
+                  max={form.characterWpm || 150}
+                  step="0.1"
+                  placeholder={speedPlaceholder}
+                  value={form.effectiveWpm}
+                  readOnly={measuredSpeeds}
+                  onChange={(e) => update('effectiveWpm', e.target.value)}
+                />
+              </label>
+              <label className="field">
+                Accuracy <span className="label-hint">%</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder={copyAttempt ? 'No submitted answers' : 'Optional'}
+                  value={form.accuracy}
+                  readOnly={Boolean(copyAttempt || evidence?.type === 'runner')}
+                  onChange={(e) => update('accuracy', e.target.value)}
+                />
+              </label>
+            </div>
+          )}
+          {canCaptureExternal && (
+            <ManualPracticeFields
+              draft={manualDraft}
+              captureTiming={canCaptureManual}
+              seconds={manualMinutes === null ? undefined : manualMinutes * 60}
+              onChange={(draft) => {
+                setManualDraft(draft);
+                setError('');
+                if (draft.externalKind === 'morse-runner')
+                  setForm((value) => ({ ...value, kind: 'simulator' }));
+                else if (draft.externalKind && form.kind === 'on-air')
+                  setForm((value) => ({ ...value, kind: 'head-copy' }));
+              }}
+            />
+          )}
           {evidence?.type === 'timed' && (
             <>
               <p id="recall-correction-help" className="field-hint">

@@ -1,3 +1,4 @@
+import { manualPracticeDetails } from './external-practice.ts';
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
 import { recordingSpeeds, recordingVariants, officialRecordingIdentity } from './recordings.ts';
 import {
@@ -593,6 +594,7 @@ export function practiceSessionEvidenceDetails(
   evidenceMode?: 'historical',
   savedMinutes?: number,
 ): string[] {
+  const manual = manualPracticeDetails(metadata);
   const evidence = sessionEvidence(metadata);
   if (evidenceMode === 'historical')
     return [
@@ -601,9 +603,9 @@ export function practiceSessionEvidenceDetails(
         ? practiceEvidenceDetails(evidence).map((detail) => `Historical raw source: ${detail}`)
         : []),
     ];
-  if (evidence) return practiceEvidenceDetails(evidence);
+  if (evidence) return [...practiceEvidenceDetails(evidence), ...manual];
   const historical = metadata?.historicalTiming;
-  if (!historical || typeof historical !== 'object' || Array.isArray(historical)) return [];
+  if (!historical || typeof historical !== 'object' || Array.isArray(historical)) return manual;
   const row = historical as Record<string, unknown>;
   const timing = row.timing;
   if (

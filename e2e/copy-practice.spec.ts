@@ -639,7 +639,7 @@ test('group feedback keeps adjacent columns and later matches after omissions an
   const shortInitial = createCopyAttempt(
     { ...initial.recipe, groupLength: 3 },
     {
-      id: initial.id,
+      id: crypto.randomUUID(),
       seed: initial.seed,
       now: createdAt,
     },
@@ -651,7 +651,11 @@ test('group feedback keeps adjacent columns and later matches after omissions an
     audioSeconds: 20,
     answerSeconds: 5,
   };
-  const replacement = await scopedRequest(context, 'PUT', `/api/entries/copy:${initial.id}`, {
+  // Arrange another independently measured attempt; never overwrite native raw facts.
+  expect(
+    (await scopedRequest(context, 'DELETE', `/api/entries/copy:${initial.id}`, undefined)).ok(),
+  ).toBe(true);
+  const replacement = await scopedRequest(context, 'POST', '/api/entries', {
     ...copyAttemptSessionFields(extraAttempt),
     date: endedAt.slice(0, 10),
     kind: 'icr',
@@ -691,7 +695,11 @@ test('group feedback keeps adjacent columns and later matches after omissions an
   }
   // A historical v1 attempt keeps its original whole-text score even where
   // today's group comparison would award a better result.
-  const legacyInitial = { ...shortInitial, scoringVersion: 'native-copy-v1' as const };
+  const legacyInitial = {
+    ...shortInitial,
+    id: crypto.randomUUID(),
+    scoringVersion: 'native-copy-v1' as const,
+  };
   const legacyAnswer = `${legacyInitial.targets[0]} X`;
   const legacyScore = scoreCopyText(legacyInitial.targets[0], legacyAnswer);
   expect(legacyScore.distance).toBe(2);
@@ -701,7 +709,12 @@ test('group feedback keeps adjacent columns and later matches after omissions an
     audioSeconds: 20,
     answerSeconds: 5,
   };
-  const legacyReplacement = await scopedRequest(context, 'PUT', `/api/entries/copy:${initial.id}`, {
+  expect(
+    (
+      await scopedRequest(context, 'DELETE', `/api/entries/copy:${shortInitial.id}`, undefined)
+    ).ok(),
+  ).toBe(true);
+  const legacyReplacement = await scopedRequest(context, 'POST', '/api/entries', {
     ...copyAttemptSessionFields(legacyAttempt),
     date: endedAt.slice(0, 10),
     kind: 'icr',

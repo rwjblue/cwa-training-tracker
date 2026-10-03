@@ -104,6 +104,7 @@ export function hasSyntheticContactSource(entry: PracticeSource): boolean {
   const evidence = sessionEvidence(entry.metadata);
   return Boolean(
     entry.source === 'morse' ||
+    entry.metadata?.externalResult !== undefined ||
     hasArchivedSyntheticSource(entry.metadata) ||
     entry.metadata?.copyAttempt ||
     ['words', 'qso', 'stories', 'free', 'copy', 'morse-runner', 'audio'].includes(

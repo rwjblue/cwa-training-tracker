@@ -1,3 +1,4 @@
+import { civilTimeCandidates } from './civil-time.ts';
 import {
   addDays,
   courseMeetings,
@@ -89,39 +90,7 @@ export function classTimestamp(date: string, time: string, zone: string): string
   if (!isCalendarDate(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time))
     throw new Error('Choose a valid class date and time.');
   timezone(zone);
-  const format = new Intl.DateTimeFormat('en-CA', {
-    timeZone: zone,
-    year: 'numeric',
-    era: 'short',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  });
-  const wall = (instant: number) => {
-    const parts = format.formatToParts(new Date(instant));
-    const part = (key: string) => Number(parts.find((item) => item.type === key)!.value);
-    const civil = new Date(0);
-    const year =
-      parts.find((item) => item.type === 'era')!.value === 'BC' ? 1 - part('year') : part('year');
-    // Date.UTC interprets years 0–99 as 1900–1999; keep accepted dates literal.
-    civil.setUTCFullYear(year, part('month') - 1, part('day'));
-    civil.setUTCHours(part('hour'), part('minute'), part('second'), 0);
-    return civil.getTime();
-  };
-  const target = Date.parse(`${date}T${time}:00Z`);
-  const offsets = new Set(
-    [-36, -24, -12, 0, 12, 24, 36].map((hours) => {
-      const sample = target + hours * 3_600_000;
-      return wall(sample) - sample;
-    }),
-  );
-  const candidates = [...offsets]
-    .map((offset) => target - offset)
-    .filter((instant) => wall(instant) === target)
-    .sort((a, b) => a - b);
+  const candidates = civilTimeCandidates(date, time, zone);
   if (!candidates.length)
     throw new Error(
       `${date} ${time} does not exist in ${zone} because the clock changes. Choose another time.`,

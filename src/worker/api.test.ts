@@ -29,6 +29,7 @@ import type { PracticeEvidence, RecordingEvidence } from '../shared/practice-evi
 import { createRunnerRun } from '../shared/runner';
 import { finishedRunnerSession, captureRunnerPracticeAttribution } from '../client/runner-session';
 import { timedClassMeetings, type ClassSchedule } from '../shared/class-schedule';
+import { createManualTiming } from '../shared/external-practice';
 
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
@@ -266,6 +267,295 @@ const backup = (sessions: unknown[] = [entry()]) => ({
   version: 1,
   exportedAt: '2026-09-28T12:00:00Z',
   sessions,
+});
+
+describe('external manual results and captured completion', () => {
+  it('round-trips all external families, explicit zeros and captured start across profile changes with account isolation', async () => {
+    const a = await signIn('external-owner@example.test');
+    const b = await signIn('external-other@example.test');
+    const timing = createManualTiming('2026-09-29T00:01:30', 'America/New_York', 120);
+    const bodies = ['letters', 'figures', 'custom', 'words', 'callsign'].map((kind) => ({
+      ...entry(`external-${kind}`),
+      source: 'manual',
+      minutes: 2,
+      date: '2026-09-28',
+      metadata: {
+        manualTiming: timing,
+        externalResult: {
+          version: 1,
+          source: 'user-entered',
+          trainer: 'lcwo',
+          kind,
+          ...(kind === 'words'
+            ? { speedWpm: 200, maximumLength: 12, errorCount: 0, score: 0 }
+            : kind === 'callsign'
+              ? { speedWpm: 35, errorCount: 0, score: 0 }
+              : { speedWpm: 20, groupLength: 5, errorPercent: 0 }),
+        },
+      },
+    }));
+    const manualRunner = {
+      ...entry('external-runner'),
+      source: 'manual',
+      kind: 'simulator',
+      minutes: 2,
+      metadata: {
+        externalResult: {
+          version: 1,
+          source: 'user-entered',
+          trainer: 'morse-runner',
+          mode: 'WPX',
+          elapsedSeconds: 120,
+          startingWpm: 35,
+          usedWpms: [35, 40],
+          verifiedPoints: 0,
+          score: 0,
+          contacts: 0,
+        },
+      },
+    };
+    const timedExternal = {
+      ...entry('external-timer'),
+      source: 'timer',
+      minutes: 2,
+      metadata: {
+        practiceTool: 'external',
+        elapsedSeconds: 120,
+        externalResult: {
+          version: 1,
+          source: 'user-entered',
+          trainer: 'lcwo',
+          kind: 'words',
+          score: 0,
+        },
+      },
+    };
+    for (const body of [...bodies, manualRunner, timedExternal])
+      expect((await request('/api/entries', 'POST', body, a.cookie)).status).toBe(201);
+    expect((await request('/api/entries', 'POST', bodies[0])).status).toBe(401);
+    expect((await request('/api/entries/external-words', 'PUT', bodies[3], b.cookie)).status).toBe(
+      404,
+    );
+    expect(
+      ((await (await request('/api/export', 'GET', undefined, b.cookie)).json()) as TrainingExport)
+        .sessions,
+    ).toEqual([]);
+    expect(
+      (
+        await request(
+          '/api/settings',
+          'PUT',
+          { ...DEFAULT_PROFILE, timezone: 'Asia/Tokyo' },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const first = await request('/api/entries', 'POST', bodies[0], a.cookie);
+    expect(first.status).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(
+      exported.sessions.find((value) => value.id === 'external-letters')!.metadata?.manualTiming,
+    ).toEqual(timing);
+    expect(exported.sessions.find((value) => value.id === 'external-words')!).not.toHaveProperty(
+      'characterWpm',
+    );
+    expect(
+      exported.sessions.find((value) => value.id === 'external-runner')!.metadata?.externalResult,
+    ).toEqual(manualRunner.metadata.externalResult);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, a.cookie)).status,
+    ).toBe(200);
+    expect(
+      ((await (await request('/api/export', 'GET', undefined, a.cookie)).json()) as TrainingExport)
+        .sessions,
+    ).toEqual(exported.sessions);
+    const edited = {
+      ...exported.sessions.find((value) => value.id === 'external-words')!,
+      metadata: {
+        ...exported.sessions.find((value) => value.id === 'external-words')!.metadata,
+        externalResult: { ...bodies[3].metadata.externalResult, score: 125.5, errorCount: 2 },
+      },
+    };
+    expect((await request('/api/entries/external-words', 'PUT', edited, a.cookie)).status).toBe(
+      200,
+    );
+  });
+
+  it('rejects mismatched write/import facts atomically and preserves native Copy evidence', async () => {
+    const auth = await signIn('external-boundary@example.test');
+    const base = {
+      ...entry('external-word'),
+      source: 'manual',
+      metadata: {
+        externalResult: {
+          version: 1,
+          source: 'user-entered',
+          trainer: 'lcwo',
+          kind: 'words',
+          score: 0,
+          errorCount: 0,
+        },
+      },
+    };
+    expect((await request('/api/entries', 'POST', base, auth.cookie)).status).toBe(201);
+    const timed = {
+      ...entry('native-external'),
+      source: 'timer',
+      minutes: 2,
+      metadata: { practiceTool: 'external', elapsedSeconds: 120 },
+    };
+    expect((await request('/api/entries', 'POST', timed, auth.cookie)).status).toBe(201);
+    expect(
+      (
+        await request(
+          '/api/entries/native-external',
+          'PUT',
+          {
+            ...timed,
+            metadata: { ...timed.metadata, externalResult: base.metadata.externalResult },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(
+          '/api/entries/native-external',
+          'PUT',
+          {
+            ...timed,
+            source: 'manual',
+            metadata: { externalResult: base.metadata.externalResult },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+
+    const before = await getAccountSnapshot(env, auth.user.id);
+    for (const bad of [
+      {
+        ...base,
+        metadata: { externalResult: { ...base.metadata.externalResult, errorPercent: 0 } },
+      },
+      { ...base, metadata: { externalResult: { ...base.metadata.externalResult, score: null } } },
+      { ...base, accuracy: 100 },
+      {
+        ...base,
+        metadata: {
+          manualTiming: {
+            ...createManualTiming('2026-09-28T13:00', 'UTC', 900),
+            startedAt: '2026-09-28T12:45:01.000Z',
+          },
+        },
+      },
+    ]) {
+      expect((await request('/api/entries/external-word', 'PUT', bad, auth.cookie)).status).toBe(
+        400,
+      );
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            { mode: 'replace', data: backup([entry('valid-prefix'), bad]) },
+            auth.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+    }
+    const attempt = submitCopyAnswer(
+      createCopyAttempt(
+        { ...defaultCopyRecipe(), lengthMode: 'count', groupCount: 1 },
+        { id: 'external-copy', seed: 'external-copy-synthetic', now: '2026-09-28T12:00:00Z' },
+      ),
+      'E',
+      { now: '2026-09-28T12:00:01Z' },
+    );
+    const copy = {
+      ...entry('copy:external-copy'),
+      ...copyAttemptSessionFields(attempt),
+      notes: 'Native Copy',
+      createdAt: '2026-09-28T12:00:01.000Z',
+    };
+    expect((await request('/api/entries', 'POST', copy, auth.cookie)).status).toBe(201);
+    const saved = (
+      (await (await request('/api/export', 'GET', undefined, auth.cookie)).json()) as TrainingExport
+    ).sessions.find((value) => value.id === copy.id)!;
+    expect(
+      (
+        await request(
+          `/api/entries/${copy.id}`,
+          'PUT',
+          {
+            ...saved,
+            source: 'manual',
+            metadata: { ...saved.metadata, externalResult: base.metadata.externalResult },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const stripped = {
+      ...saved,
+      source: 'manual',
+      metadata: { externalResult: base.metadata.externalResult },
+    };
+    for (const key of ['characterWpm', 'effectiveWpm', 'accuracy'] as const) delete stripped[key];
+    expect((await request(`/api/entries/${copy.id}`, 'PUT', stripped, auth.cookie)).status).toBe(
+      400,
+    );
+    expect(
+      (
+        (await (
+          await request('/api/export', 'GET', undefined, auth.cookie)
+        ).json()) as TrainingExport
+      ).sessions.find((value) => value.id === copy.id),
+    ).toEqual(saved);
+  });
+
+  it('rolls back real SQL import failure without losing external evidence', async () => {
+    const auth = await signIn('external-sql@example.test');
+    const original = {
+      ...entry('external-preserved'),
+      source: 'manual',
+      metadata: {
+        externalResult: {
+          version: 1,
+          source: 'user-entered',
+          trainer: 'lcwo',
+          kind: 'callsign',
+          score: 0,
+        },
+      },
+    };
+    expect((await request('/api/entries', 'POST', original, auth.cookie)).status).toBe(201);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    db.sqlite.exec(
+      "CREATE TRIGGER refuse_external BEFORE INSERT ON practice_entries WHEN NEW.id = 'external-refused' BEGIN SELECT RAISE(ABORT, 'synthetic external failure'); END;",
+    );
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'replace',
+            data: backup([
+              { ...original, id: 'external-prefix' },
+              { ...original, id: 'external-refused' },
+            ]),
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(500);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+  });
 });
 
 beforeEach(() => {

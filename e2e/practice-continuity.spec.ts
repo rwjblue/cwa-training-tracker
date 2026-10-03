@@ -316,6 +316,12 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await expect(scratchpad).toHaveValue(notes);
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:12');
+  await page.getByRole('combobox', { name: 'External result', exact: true }).selectOption('words');
+  await expect(
+    page.getByRole('textbox', { name: 'Actual local completion', exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel(/^Actual trainer speed/).fill('25');
+  await page.getByLabel(/^LCWO score/).fill('0');
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
   await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await page.clock.resume();
@@ -329,6 +335,21 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   expect((await receipt).status()).toBe(201);
   await expect(retained).toHaveCount(0);
   expect(await original!.evaluate((element) => element.isConnected)).toBe(false);
+  await page.clock.resume();
+  const historyMenu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  if (await historyMenu.isVisible()) await activate(historyMenu);
+  await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
+  await activate(page.getByRole('button', { name: 'Edit Sending on 2026-10-06', exact: true }));
+  await page.getByRole('combobox', { name: 'External result', exact: true }).selectOption('words');
+  await page.getByLabel(/^Actual trainer speed/).fill('25');
+  await page.getByLabel(/^LCWO score/).fill('0');
+  await page.getByLabel(/^Number of errors/).fill('0');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).tap();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByText('Practice evidence', { exact: true }).press('Enter');
+  await expect(page.getByText('LCWO score: 0', { exact: true })).toBeVisible();
+  await expectAccessible(page, `external-measured-score-${viewport.width}`);
+
   const { entries } = await (await context.request.get('/api/entries')).json();
   expect(entries).toHaveLength(1);
   expect(entries[0]).toMatchObject({
@@ -344,6 +365,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await expect.poll(readNotes).toBe(null);
   const { plan } = await (await context.request.get('/api/plan')).json();
   expect(plan.find((item: { id: string }) => item.id === task.id).done).toBe(false);
+  await activate(page.getByRole('button', { name: 'Today', exact: true }));
   await activate(row.getByRole('button', { name: 'Practice', exact: true }));
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();

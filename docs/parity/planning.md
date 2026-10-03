@@ -1505,3 +1505,92 @@ Local main contains the accepted commits; no push or PR was attempted. Issue #33
 remains open pending source publication on GitHub. Original personal-site evidence
 and protected planning files remain read-only. External measurements/actual manual
 completion timestamps (#34) and optional LCWO linking (#35) remain later work.
+
+
+## Issue #34 implementation checkpoint — October 2, 2026
+
+Fresh issue body/comments and documented dependencies #1/#15 were rechecked.
+Their delivered validators, immutable native results, actual Runner attribution
+and backup boundaries remain exercised by domain/real-SQL and browser regressions.
+Pinned/current original LCWO form, Worker result validation, result types, manual
+completion handler and history source were inspected read-only. Public capture
+uses the learner's IANA zone and retains broader existing duration bounds rather
+than reproducing original browser-zone/fixed-owner defaults.
+
+Optional letter/figure/custom-Koch groups capture actual effective speed, length
+and error percentage. Words capture own trainer speed, maximum length, error
+count and score; callsigns omit unrelated fields. Field applicability and limits
+are shared between the common form and Worker/import validator. Blank is unknown;
+zero is explicit. Source-specific speeds up to200 WPM stay external facts without
+being mislabeled native Copy/generic character speed. Manual Runner records mode,
+actual duration, optional starting/used speeds, verified points, score and
+simulated contacts. It never fabricates an acknowledged engine result or timeline.
+Changing trainer explicitly clears entered metrics. Native Copy measurements
+cannot be removed in a historical edit to substitute manual evidence.
+
+Optional actual local completion captures its IANA zone/explicit repeated-hour
+occurrence, derives start from entered duration and assigns the start's local
+practice date. Nonexistent times and future completion show actionable errors;
+ambiguous times require an explicit earlier/later choice. Date-only history stays
+unknown, and record creation/upload time is separate. Captured zones survive
+profile changes and exact retries. Shared civil-time candidate logic preserves
+the existing class schedule's earlier-fold contract. Phone timestamp/zone fields
+have full width. Review/history/report reuse the existing evidence inspector;
+Copy and imported archive readers remain intact. Private portable backup and
+Worker account/generation boundaries carry the optional envelopes.
+
+Initial focused domain/real-SQL regression passes349 tests in five files.
+Two new serial browser journeys pass17.6 seconds: all five LCWO families through
+create/edit/history/report, midnight with a different browser zone, keyboard
+selection, mobile touch, direct503 edit retry, manual Runner spring-gap and
+explicit fold choice, frozen queued503 exact retry and canceled edit. Eighteen
+distinct Axe/overflow reports are clear; desktop/mobile captures were inspected.
+Initial fixture failures (Copy seed/date, settings revision header and helper-text
+label match) and native-select probe failure were inspected and retained. Native
+keyboard typeahead works; the mobile timezone field was widened from an inspected
+cramped capture. No production limit, validation or timing workaround was made.
+
+Final complete regressions, post-commit independent acceptance and production
+remain pending. No schema/config/binding changed. Original/protected planning
+sources remain read-only; no push is authorized. Optional live LCWO linking (#35)
+and advisor suggestions/drafts (#36–#40) remain later work. Browser emulation
+does not establish physical-device or lock-screen behavior.
+
+
+The complete UI check also exposed a label-name collision in class logging: the
+completion helper contained “Time practiced.” Explicit short control names with
+linked descriptions fix that accessibility/query boundary without changing the
+existing class test. The first full94 gate was deliberately interrupted after
+nine passes/one failure; it is not complete validation. Failure assertion,
+context, pixels and bounded trace are retained. Two later extended-test probe
+failures (desktop menu absence and return-to-Today navigation) were inspected and
+corrected without changing application timing or weakening checks.
+
+Assigned external-tool reviews can also capture LCWO metrics while preserving
+immutable measured timer/recall facts. The shared inspector shows both sources.
+Manual completion timestamps cannot replace a native timer; manually entered
+Runner runtime belongs to Log practice, separate from an assigned measured block.
+The existing external continuity journey now checks cancel, actual save/edit,
+score zero, raw12-second retention, evidence readability and fresh-owner restart.
+Class schedule/new external/source continuity representative checks pass, including
+the final isolated extended journey (8.6 seconds). The focused domain/real-SQL
+suite passes245 tests after this addition; final full regression is next.
+
+
+The next full gate was interrupted after fifteen passes and a native Copy fixture
+failure. The API correctly refused replacement of a saved attempt's raw facts.
+The historical comparison test now arranges distinct attempts with fresh IDs,
+including its v1 score fixture. Both retained failure contexts, screenshots and
+bounded traces were inspected; a focused retry passes (one journey,8.4 seconds).
+The two new external journeys also pass with distinct synthetic network addresses.
+All1232 fast tests in67 files, check and build passed before these fixture changes;
+the final strict check/test/build and full94 browser gate will now run serially.
+Independent post-commit review and production delivery remain pending.
+
+
+Final root validation passes check, all1232 tests in67 files and production build.
+The complete serial browser gate passes all94 journeys in18.4 minutes (actual
+process exit0), including Copy historical scoring, all new external forms,
+assigned external timer retention, native Runner/audio, privacy and file backups.
+The issue body/comments were rechecked immediately before commit and are unchanged.
+Independent review and production delivery remain pending; no push was attempted.

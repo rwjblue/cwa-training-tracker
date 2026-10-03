@@ -4664,3 +4664,10 @@ body {
   flex-shrink: 0;
   max-width: 100%;
 }
+
+/* Civil timestamps and IANA names need full-width controls on a phone. */
+@media (max-width: 600px) {
+  .modal .manual-practice-timing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
