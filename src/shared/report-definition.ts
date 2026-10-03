@@ -1,6 +1,7 @@
+import { EVIDENCE_REPORT_MAPPINGS, type EvidenceReportMapping } from './report-mappings.ts';
 /** Learner-owned schema. No advisor identity, destination or field IDs are defaults. */
 export const REPORT_FIELD_TYPES = ['text', 'textarea', 'number', 'rating', 'date'] as const;
-export const REPORT_SOURCE_MAPPINGS = [
+const CONTEXT_SOURCE_MAPPINGS = [
   { id: 'manual', label: 'Learner answer' },
   { id: 'callsign', label: 'Profile callsign' },
   { id: 'displayName', label: 'Profile name' },
@@ -8,7 +9,23 @@ export const REPORT_SOURCE_MAPPINGS = [
   { id: 'reportDate', label: 'Selected report date' },
   { id: 'practiceSummary', label: 'Saved independent practice summary' },
 ] as const;
-export type ReportSourceMapping = (typeof REPORT_SOURCE_MAPPINGS)[number]['id'];
+export const REPORT_SOURCE_MAPPINGS = [
+  ...CONTEXT_SOURCE_MAPPINGS.map((mapping) => ({
+    ...mapping,
+    group: 'Report context',
+    types:
+      mapping.id === 'manual'
+        ? REPORT_FIELD_TYPES
+        : mapping.id === 'session'
+          ? (['number'] as const)
+          : mapping.id === 'reportDate'
+            ? (['date'] as const)
+            : (['text'] as const),
+  })),
+  ...EVIDENCE_REPORT_MAPPINGS,
+];
+export type ReportSourceMapping =
+  (typeof CONTEXT_SOURCE_MAPPINGS)[number]['id'] | EvidenceReportMapping;
 export interface AdvisorReportField {
   key: string;
   label: string;
@@ -101,16 +118,11 @@ export function validateAdvisorReportDefinition(value: unknown): AdvisorReportDe
           required: field.required,
           source: field.source as ReportSourceMapping,
         };
-        const expectedType =
-          field.source === 'session'
-            ? 'number'
-            : field.source === 'reportDate'
-              ? 'date'
-              : field.source !== 'manual'
-                ? 'text'
-                : undefined;
-        if (expectedType && result.type !== expectedType)
-          throw new Error(`The ${field.source} mapping requires a ${expectedType} field.`);
+        const mapping = REPORT_SOURCE_MAPPINGS.find((item) => item.id === field.source)!;
+        if (!(mapping.types as readonly string[]).includes(result.type))
+          throw new Error(
+            `The ${field.source} mapping requires a ${mapping.types.join(' or ')} field.`,
+          );
         if (result.type === 'rating') {
           if (
             !Array.isArray(field.options) ||

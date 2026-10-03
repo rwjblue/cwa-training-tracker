@@ -1,4 +1,6 @@
 import AdvisorReportAnswers from './AdvisorReportAnswers';
+import AdvisorReportEvidence from './AdvisorReportEvidence';
+import type { LcwoData } from '../shared/lcwo';
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import type { AccountChange } from '../shared/account-sync';
@@ -59,6 +61,7 @@ export default function AdvisorReportDraft({
   tasks,
   entries,
   reports,
+  lcwo,
   revision,
   onChange,
   onConfigure,
@@ -72,6 +75,7 @@ export default function AdvisorReportDraft({
   tasks: PlannedTask[];
   entries: PracticeSession[];
   reports: ReportDocument[];
+  lcwo?: LcwoData | null;
   revision: number;
   onChange: (change: AccountChange, revision: number) => Promise<unknown>;
   onConfigure: () => void;
@@ -99,6 +103,9 @@ export default function AdvisorReportDraft({
   );
   const [selectedArchive, setSelectedArchive] = useState('');
   const [removing, setRemoving] = useState<string | null>(null);
+  const [openingDate, setOpeningDate] = useState(() =>
+    dateInTimezone(new Date(), profile.classSchedule?.timezone ?? profile.timezone),
+  );
   const selected = state.value.selectedSession;
   const draft = state.value.drafts.find((draft) => draft.window.session === selected);
   useEffect(() => {
@@ -123,20 +130,16 @@ export default function AdvisorReportDraft({
       setError((error as Error).message);
     }
   }
-  function select(session: number) {
+  function select(
+    session: number,
+    date = dateInTimezone(new Date(), profile.classSchedule?.timezone ?? profile.timezone),
+  ) {
     let drafts = current.current.value.drafts;
     if (!drafts.some((draft) => draft.window.session === session)) {
       try {
         drafts = [
           ...drafts,
-          createReportDocument(
-            definition,
-            profile,
-            tasks,
-            session,
-            dateInTimezone(new Date(), profile.classSchedule?.timezone ?? profile.timezone),
-            entries,
-          ),
+          createReportDocument(definition, profile, tasks, session, date, entries, lcwo),
         ];
       } catch (error) {
         setError((error as Error).message);
@@ -157,6 +160,14 @@ export default function AdvisorReportDraft({
     globalThis.window.addEventListener(DEVICE_CAPTURE_EVENT, capture);
     return () => globalThis.window.removeEventListener(DEVICE_CAPTURE_EVENT, capture);
   }, [scope]);
+  function refresh(next: ReportDocument, message?: string) {
+    try {
+      update(refreshReportDocument(next, profile, entries, undefined, { lcwo, tasks }));
+      if (message) setMessage(message);
+    } catch (error) {
+      setError((error as Error).message);
+    }
+  }
   function update(next: ReportDocument) {
     persist({
       ...current.current.value,
@@ -201,6 +212,7 @@ export default function AdvisorReportDraft({
         report.answers,
         report.editedKeys,
         report.evidence,
+        report.provenance,
       ];
       const retained = reports.find(
         (report) =>
@@ -293,6 +305,17 @@ export default function AdvisorReportDraft({
     return (
       <section aria-label="Advisor report drafts">
         <p role="alert">{state.error || error || 'Opening your class draft…'}</p>
+        <label>
+          Report date to open draft
+          <input
+            type="date"
+            value={openingDate}
+            onChange={(event) => setOpeningDate(event.target.value)}
+          />
+        </label>
+        <button className="button outline" onClick={() => select(selected, openingDate)}>
+          Open draft for chosen report date
+        </button>
         <button className="button outline" onClick={reopenDeviceDrafts}>
           Reopen device drafts
         </button>
@@ -358,6 +381,7 @@ export default function AdvisorReportDraft({
                     selected,
                     window.reportDate,
                     entries,
+                    lcwo,
                   ),
                 );
               } catch (error) {
@@ -397,7 +421,15 @@ export default function AdvisorReportDraft({
                   selected,
                   event.target.value,
                 );
-                update(refreshReportDocument({ ...draft, window: nextWindow }, profile, entries));
+                update(
+                  refreshReportDocument(
+                    { ...draft, window: nextWindow },
+                    profile,
+                    entries,
+                    undefined,
+                    { lcwo, tasks },
+                  ),
+                );
                 setDateError('');
               } catch (error) {
                 setDateError((error as Error).message);
@@ -446,8 +478,8 @@ export default function AdvisorReportDraft({
       <button
         className="button outline"
         onClick={() => {
-          update(refreshReportDocument(draft, profile, entries));
-          setMessage(
+          refresh(
+            draft,
             'Practice answers refreshed. Your edited answers and deliberate blanks are preserved.',
           );
         }}
@@ -458,6 +490,16 @@ export default function AdvisorReportDraft({
         {draft.evidence.length} saved practice source references. Review the original results in
         your practice history.
       </p>
+      {draft.provenance && draft.provenance.warnings.length > 0 && (
+        <aside className="advisor-evidence-cautions" aria-label="Suggestion cautions">
+          <ul>
+            {draft.provenance.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </aside>
+      )}
+      <AdvisorReportEvidence report={draft} entries={entries} lcwo={lcwo} />
       <AdvisorReportAnswers
         definition={draft.definition}
         answers={draft.answers}
@@ -472,13 +514,7 @@ export default function AdvisorReportDraft({
           })
         }
         onSuggestion={(key) =>
-          update(
-            refreshReportDocument(
-              { ...draft, editedKeys: draft.editedKeys.filter((item) => item !== key) },
-              profile,
-              entries,
-            ),
-          )
+          refresh({ ...draft, editedKeys: draft.editedKeys.filter((item) => item !== key) })
         }
       />
       <div className="plan-form-actions">
@@ -542,6 +578,7 @@ export default function AdvisorReportDraft({
               <pre className="plan-report-text" tabIndex={0}>
                 {reportDocumentText(report)}
               </pre>
+              <AdvisorReportEvidence report={report} entries={entries} lcwo={lcwo} />
               <button
                 className="button outline"
                 onClick={() => {

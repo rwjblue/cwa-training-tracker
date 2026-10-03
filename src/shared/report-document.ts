@@ -3,15 +3,12 @@ import {
   validateAdvisorReportAnswers,
   type AdvisorReportDefinition,
 } from './report-definition.ts';
-import {
-  isCalendarDate,
-  dateInTimezone,
-  getPracticePurpose,
-  type PracticeSession,
-  type Profile,
-} from './training.ts';
+import { isCalendarDate, dateInTimezone, type PracticeSession, type Profile } from './training.ts';
 import { advisorReportWindow, type AdvisorReportWindow } from './report-window.ts';
 import type { PlannedTask } from './plan.ts';
+import type { LcwoBackup } from './lcwo.ts';
+import { buildReportEvidence, reportablePractice } from './report-evidence.ts';
+import { validateReportProvenance, type ReportProvenance } from './report-provenance.ts';
 
 export const MAX_REPORT_DOCUMENT_BYTES = 96_000;
 export const MAX_ACCOUNT_REPORTS = 200;
@@ -28,6 +25,8 @@ export interface ReportDocument {
   answers: Record<string, string>;
   editedKeys: string[];
   evidence: ReportReference[];
+  /** Optional on older saved copies; captured suggestions do not replace learner edits. */
+  provenance?: ReportProvenance;
   createdAt: string;
   updatedAt: string;
   /** A copy never acquires its source identity. */
@@ -73,6 +72,7 @@ export function validateReportDocument(
       'answers',
       'editedKeys',
       'evidence',
+      'provenance',
       'createdAt',
       'updatedAt',
       'source',
@@ -186,6 +186,8 @@ export function validateReportDocument(
   };
   if (Date.parse(result.updatedAt) < Date.parse(result.createdAt))
     throw new Error('Report update precedes creation.');
+  if (row.provenance !== undefined)
+    result.provenance = validateReportProvenance(row.provenance, definition, evidence);
   if (row.source !== undefined) {
     const source = object(row.source, ['kind', 'id', 'archiveId'], 'report source');
     if (source.kind !== 'native' && source.kind !== 'original-device')
@@ -211,7 +213,9 @@ export function validateReportDocument(
       throw new Error(errors.map((error) => `${error.key}: ${error.message}`).join(' '));
   }
   if (new TextEncoder().encode(JSON.stringify(result)).length > MAX_REPORT_DOCUMENT_BYTES)
-    throw new Error('A report document exceeds 96,000 bytes.');
+    throw new Error(
+      'A report document exceeds 96,000 bytes. Narrow the report date window or reduce configured fields before refreshing; existing drafts and saved copies are unchanged.',
+    );
   return result;
 }
 export function validateReportDocuments(value: unknown): ReportDocument[] {
@@ -226,19 +230,15 @@ export function reportSuggestions(
   document: ReportDocument,
   profile: Profile,
   entries: readonly PracticeSession[],
-): { answers: Record<string, string>; evidence: ReportReference[] } {
+  options: {
+    lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null;
+    tasks?: readonly PlannedTask[];
+    now?: number;
+  } = {},
+): { answers: Record<string, string>; evidence: ReportReference[]; provenance: ReportProvenance } {
   const { window } = document;
-  const eligible = entries.filter((entry) => {
-    const date = entry.date;
-    return (
-      !window.empty &&
-      date >= window.fromDate &&
-      date <= window.toDate &&
-      entry.context !== 'class' &&
-      getPracticePurpose(entry) !== 'review'
-    );
-  });
-  const unique = [...new Map(eligible.map((entry) => [entry.id, entry])).values()];
+  const unique = reportablePractice(document, entries, options.now);
+  const selected = buildReportEvidence(document, entries, options.lcwo, options.tasks, options.now);
   const context = {
     callsign: profile.callsign,
     displayName: profile.displayName,
@@ -250,10 +250,15 @@ export function reportSuggestions(
     answers: Object.fromEntries(
       document.definition.fields.map((field) => [
         field.key,
-        field.source === 'manual' ? '' : context[field.source],
+        field.source === 'manual'
+          ? ''
+          : Object.hasOwn(context, field.source)
+            ? context[field.source as keyof typeof context]
+            : (selected.values[field.key] ?? ''),
       ]),
     ),
-    evidence: unique.map((entry) => ({ kind: 'practice', id: entry.id })),
+    evidence: selected.evidence,
+    provenance: selected.provenance,
   };
 }
 export function refreshReportDocument(
@@ -261,9 +266,16 @@ export function refreshReportDocument(
   profile: Profile,
   entries: readonly PracticeSession[],
   now = new Date().toISOString(),
+  options: {
+    lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null;
+    tasks?: readonly PlannedTask[];
+  } = {},
 ): ReportDocument {
-  const suggestions = reportSuggestions(document, profile, entries);
-  return {
+  const suggestions = reportSuggestions(document, profile, entries, {
+    ...options,
+    now: Date.parse(now),
+  });
+  return validateReportDocument({
     ...document,
     answers: {
       ...suggestions.answers,
@@ -272,8 +284,9 @@ export function refreshReportDocument(
       ),
     },
     evidence: suggestions.evidence,
+    provenance: suggestions.provenance,
     updatedAt: now,
-  };
+  });
 }
 export function createReportDocument(
   definition: AdvisorReportDefinition,
@@ -282,6 +295,7 @@ export function createReportDocument(
   session: number,
   date: string,
   entries: PracticeSession[],
+  lcwo?: Pick<LcwoBackup, 'runs' | 'estimateSeconds'> | null,
 ): ReportDocument {
   const now = new Date().toISOString();
   return refreshReportDocument(
@@ -300,6 +314,7 @@ export function createReportDocument(
     profile,
     entries,
     now,
+    { lcwo, tasks },
   );
 }
 export function copyReportDocument(document: ReportDocument): ReportDocument {

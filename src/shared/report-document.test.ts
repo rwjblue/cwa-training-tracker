@@ -89,9 +89,12 @@ describe('private report documents and protected suggestions', () => {
     expect(refreshed.answers).toMatchObject({
       notes: ' <tag> exact\nline ',
       callsign: '',
-      summary: '1 saved practice result; 2 minutes (independent practice; inclusive window).',
+      summary: '2 saved practice results; 4 minutes (independent practice; inclusive window).',
     });
-    expect(refreshed.evidence).toEqual([{ kind: 'practice', id: 'practice-one' }]);
+    expect(refreshed.evidence).toEqual([
+      { kind: 'practice', id: 'practice-one' },
+      { kind: 'practice', id: 'review' },
+    ]);
     expect(first.evidence).toEqual([]);
     const relinquished = refreshReportDocument(
       { ...refreshed, editedKeys: ['notes'] },

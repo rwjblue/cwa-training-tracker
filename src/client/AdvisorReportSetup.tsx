@@ -1,5 +1,6 @@
 import AdvisorReportDraft from './AdvisorReportDraft';
 import type { ReportDocument } from '../shared/report-document';
+import type { LcwoData } from '../shared/lcwo';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AccountChange } from '../shared/account-sync';
 import type { PlannedTask } from '../shared/plan';
@@ -149,8 +150,8 @@ function DefinitionEditor({
       <h3>Configure advisor fields</h3>
       <p>
         Your definition is private. Choose your own labels and rules; no advisor identity or form
-        destination is supplied. Source mappings below supply report context, not inferred
-        performance.
+        destination is supplied. Explicit source mappings use saved measurements and learner
+        judgments; unknown values remain blank. Native Copy scoring is separate from LCWO.
       </p>
       <fieldset disabled={busy}>
         <div className="plan-form-grid">
@@ -230,11 +231,19 @@ function DefinitionEditor({
                       edit(field.editorId, { source: event.target.value as FieldDraft['source'] })
                     }
                   >
-                    {REPORT_SOURCE_MAPPINGS.map((mapping) => (
-                      <option key={mapping.id} value={mapping.id}>
-                        {mapping.label}
-                      </option>
-                    ))}
+                    {[...new Set(REPORT_SOURCE_MAPPINGS.map((mapping) => mapping.group))].map(
+                      (group) => (
+                        <optgroup key={group} label={group}>
+                          {REPORT_SOURCE_MAPPINGS.filter((mapping) => mapping.group === group).map(
+                            (mapping) => (
+                              <option key={mapping.id} value={mapping.id}>
+                                {mapping.label}
+                              </option>
+                            ),
+                          )}
+                        </optgroup>
+                      ),
+                    )}
                   </select>
                 </label>
                 <label>
@@ -382,6 +391,7 @@ export default function AdvisorReportSetup({
   tasks,
   entries,
   reports,
+  lcwo,
   revision,
   onChange,
 }: {
@@ -392,6 +402,7 @@ export default function AdvisorReportSetup({
   tasks: PlannedTask[];
   entries: PracticeSession[];
   reports: ReportDocument[];
+  lcwo?: LcwoData | null;
   revision: number;
   onChange: (change: AccountChange, revision: number) => Promise<unknown>;
 }) {
@@ -423,6 +434,7 @@ export default function AdvisorReportSetup({
       tasks={tasks}
       entries={entries}
       reports={reports}
+      lcwo={lcwo}
       revision={revision}
       onChange={onChange}
       notice={notice}

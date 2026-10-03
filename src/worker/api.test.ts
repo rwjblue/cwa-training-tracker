@@ -1,3 +1,11 @@
+import {
+  evidenceDefinition,
+  evidenceProfile,
+  evidenceSessions,
+  evidenceRunner,
+  evidenceLcwo,
+} from '../../e2e/report-evidence-fixture';
+import { createReportDocument, refreshReportDocument } from '../shared/report-document';
 import { lcwoFixtureResponse } from '../../e2e/lcwo-fixture';
 import { starterAdvisorReportDefinition } from '../shared/report-definition';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -8093,6 +8101,175 @@ describe('private native advisor report copies', () => {
     };
     return { body, response: await request('/api/account-operations', 'POST', body, auth.cookie) };
   }
+  async function arrangeEvidence(auth: Awaited<ReturnType<typeof signIn>>) {
+    const sessions = evidenceSessions();
+    const imported = await request(
+      '/api/import',
+      'POST',
+      {
+        mode: 'merge',
+        data: {
+          ...backup(sessions),
+          profile: evidenceProfile,
+          lcwo: evidenceLcwo,
+        },
+      },
+      auth.cookie,
+    );
+    expect(imported.status, await imported.clone().text()).toBe(200);
+    return createReportDocument(
+      evidenceDefinition,
+      evidenceProfile,
+      [],
+      1,
+      '2026-10-03',
+      sessions,
+      evidenceLcwo,
+    );
+  }
+  it('validates the full owned source window and preserves frozen answers, deliberate blanks and source facts across exports and restores', async () => {
+    const owner = await signIn('provenance-owner@example.test');
+    const other = await signIn('provenance-other@example.test');
+    const draft = await arrangeEvidence(owner);
+    draft.answers.points = '77';
+    draft.answers.groupLength = '';
+    draft.editedKeys = ['points', 'groupLength'];
+    expect(draft.provenance?.fields.find((field) => field.key === 'points')?.value).toBe('6');
+    expect(draft.answers.groupError).toBe('10');
+    expect(draft.evidence.map((ref) => ref.id)).not.toContain('class-evidence');
+    const saved = await op(owner, { type: 'report-save', report: draft });
+    expect(saved.response.status, await saved.response.clone().text()).toBe(200);
+    const after = await getAccountSnapshot(env, owner.user.id);
+    expect(after.reports).toEqual([draft]);
+    // A mutable assessment can change later without rewriting the saved copy.
+    const source = {
+      ...evidenceSessions()[1],
+      metadata: {
+        ...evidenceSessions()[1].metadata,
+        assessment: { version: 1, source: 'self-reported', performanceRating: 'poor' },
+      },
+    };
+    expect((await request('/api/entries/audio-evidence', 'PUT', source, owner.cookie)).status).toBe(
+      200,
+    );
+    expect(
+      (await request('/api/account-operations', 'POST', saved.body, owner.cookie)).status,
+    ).toBe(200);
+    expect((await getAccountSnapshot(env, owner.user.id)).reports).toEqual([draft]);
+    const stale = await op(owner, {
+      type: 'report-save',
+      report: { ...draft, id: 'stale-provenance' },
+    });
+    expect(stale.response.status).toBe(400);
+    expect(await stale.response.text()).toContain('Refresh');
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, owner.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.reports).toEqual([draft]);
+    for (let repeat = 0; repeat < 2; repeat++)
+      expect(
+        (await request('/api/import', 'POST', { mode: 'merge', data: exported }, other.cookie))
+          .status,
+      ).toBe(200);
+    expect((await getAccountSnapshot(env, other.user.id)).reports).toEqual([draft]);
+    const refreshed = refreshReportDocument(
+      { ...draft, id: 'refreshed-provenance' },
+      evidenceProfile,
+      evidenceSessions().map((entry) =>
+        entry.id === source.id ? validatePracticeSession(source) : entry,
+      ),
+      undefined,
+      { lcwo: evidenceLcwo },
+    );
+    expect(refreshed.answers.points).toBe('77');
+    expect(refreshed.answers.groupLength).toBe('');
+    expect((await op(owner, { type: 'report-save', report: refreshed })).response.status).toBe(200);
+  });
+  it('rejects forged points, malformed facts and foreign ownership while preserving captures when later results arrive', async () => {
+    const owner = await signIn('provenance-invalid@example.test');
+    const other = await signIn('provenance-foreign@example.test');
+    const draft = await arrangeEvidence(owner);
+    expect(
+      (await request('/api/entries', 'POST', evidenceRunner('foreign-runner', 10), other.cookie))
+        .status,
+    ).toBe(201);
+    const before = await getAccountSnapshot(env, owner.user.id);
+    const forged = structuredClone(draft);
+    forged.provenance!.fields.find((field) => field.key === 'points')!.value = '999';
+    const changed = structuredClone(draft);
+    changed.provenance!.sources[0].facts[0] = 'Fictional source claim';
+    const foreign = structuredClone(draft);
+    foreign.evidence[0] = { kind: 'practice', id: 'runner:foreign-runner' };
+    const malformed = structuredClone(draft);
+    malformed.provenance!.fields[0].references = [9999];
+    for (const invalid of [forged, changed, foreign, malformed]) {
+      expect((await op(owner, { type: 'report-save', report: invalid })).response.status).toBe(400);
+      expect(await getAccountSnapshot(env, owner.user.id)).toEqual(before);
+    }
+    // Invalid portable structure and another account's references must fail import atomically.
+    for (const invalid of [malformed, foreign]) {
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            {
+              mode: 'merge',
+              data: {
+                ...backup([]),
+                reports: [invalid],
+                profile: { ...evidenceProfile, displayName: 'must not save' },
+              },
+            },
+            owner.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(await getAccountSnapshot(env, owner.user.id)).toEqual(before);
+    }
+    const better = evidenceRunner('better-owned', 10);
+    expect((await request('/api/entries', 'POST', better, owner.cookie)).status).toBe(201);
+    const capturedSave = await op(owner, { type: 'report-save', report: draft });
+    expect(capturedSave.response.status, await capturedSave.response.clone().text()).toBe(200);
+    expect((await getAccountSnapshot(env, owner.user.id)).reports).toEqual([draft]);
+    const next = refreshReportDocument(
+      { ...draft, id: 'new-evidence-capture' },
+      evidenceProfile,
+      [...evidenceSessions(), better],
+      undefined,
+      { lcwo: evidenceLcwo },
+    );
+    expect(next.answers.points).toBe('10');
+    expect((await op(owner, { type: 'report-save', report: next })).response.status).toBe(200);
+    expect(
+      (await getAccountSnapshot(env, owner.user.id)).reports?.find((copy) => copy.id === draft.id),
+    ).toEqual(draft);
+  });
+  it('rolls back a report and receipt if saved evidence changes between validation reads and the transaction', async () => {
+    const owner = await signIn('provenance-race@example.test');
+    const draft = await arrangeEvidence(owner);
+    const originalBatch = db.batch.bind(db);
+    const spy = vi.spyOn(db, 'batch').mockImplementation(async (statements) => {
+      if (statements.some((statement) => statement.sql.startsWith('INSERT INTO advisor_reports'))) {
+        db.sqlite
+          .prepare('UPDATE users SET history_revision=history_revision+1 WHERE id=?')
+          .run(owner.user.id);
+      }
+      return originalBatch(statements);
+    });
+    try {
+      expect((await op(owner, { type: 'report-save', report: draft })).response.status).toBe(409);
+      expect((await getAccountSnapshot(env, owner.user.id)).reports).toEqual([]);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_operation_receipts').get()?.count,
+      ).toBe(0);
+      expect(
+        db.sqlite.prepare('SELECT count(*) AS count FROM account_revision_guards').get()?.count,
+      ).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   it('saves immutable owned snapshots, returns exact receipts and rejects stale writes or another owner', async () => {
     const a = await signIn('native-reports-a@example.test');
     const b = await signIn('native-reports-b@example.test');

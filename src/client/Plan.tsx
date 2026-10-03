@@ -917,6 +917,7 @@ function Report({
             generation={generation}
             entries={entries}
             reports={reports}
+            lcwo={lcwo}
             profile={profile}
             tasks={tasks}
             revision={revision}

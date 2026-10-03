@@ -1,4 +1,8 @@
-import { requireReportEvidence, reportInsertStatement } from './reports';
+import {
+  requireReportEvidence,
+  requireCurrentReportProvenance,
+  reportInsertStatement,
+} from './reports';
 import { validateReportDocuments } from '../shared/report-document';
 import {
   applyAccountChange,
@@ -185,11 +189,12 @@ export async function conditionalAccountWrite(
   env: Env,
   state: AccountSnapshot,
   statements: D1PreparedStatement[],
+  expectedHistoryRevision?: number,
 ): Promise<D1Result[]> {
   const results = await env.DB.batch([
     env.DB.prepare(
-      'INSERT INTO account_revision_guards (user_id, expected_revision, expected_generation) VALUES (?, ?, ?)',
-    ).bind(state.accountId, state.revision, state.generation),
+      'INSERT INTO account_revision_guards (user_id, expected_revision, expected_generation, expected_history_revision) VALUES (?, ?, ?, ?)',
+    ).bind(state.accountId, state.revision, state.generation, expectedHistoryRevision ?? null),
     ...statements,
     env.DB.prepare('DELETE FROM account_revision_guards WHERE user_id = ?').bind(state.accountId),
   ]);
@@ -202,6 +207,7 @@ export async function mutateAccount(
   statements: D1PreparedStatement[],
   receipt?: { id: string; payloadHash: string },
   retiredIds: readonly string[] = [],
+  expectedHistoryRevision?: number,
 ): Promise<{ state: AccountSnapshot; results: D1Result[] }> {
   const batch = [
     ...statements,
@@ -220,7 +226,7 @@ export async function mutateAccount(
     ...accountSnapshotStatements(env, state.accountId),
   ];
   try {
-    const results = await conditionalAccountWrite(env, state, batch);
+    const results = await conditionalAccountWrite(env, state, batch, expectedHistoryRevision);
     return {
       state: snapshotFromResults(state.accountId, results.slice(-2)),
       results: results.slice(0, statements.length),
@@ -307,6 +313,7 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
     );
   else if (change.type === 'report-save') {
     await requireReportEvidence(env, auth.user.id, [change.report]);
+    await requireCurrentReportProvenance(env, auth.user.id, change.report);
     statements.push(reportInsertStatement(env, auth.user.id, change.report));
   } else if (change.type === 'settings')
     statements.push(settingsStatement(env, auth.user.id, next.settings));
@@ -352,6 +359,7 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
       statements,
       { id: operation.id, payloadHash },
       retiredTaskIds(state, next.plan),
+      change.type === 'report-save' && change.report.provenance ? state.historyRevision : undefined,
     );
     return json({ state: applied.state, operationId: operation.id });
   } catch (error) {
