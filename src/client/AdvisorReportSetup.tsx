@@ -1,15 +1,15 @@
+import AdvisorReportDraft from './AdvisorReportDraft';
+import type { ReportDocument } from '../shared/report-document';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { AccountChange } from '../shared/account-sync';
 import type { PlannedTask } from '../shared/plan';
-import { dateInTimezone, type Profile } from '../shared/training';
-import { advisorReportWindow } from '../shared/report-window';
+import { type Profile, type PracticeSession } from '../shared/training';
 import {
   MAX_REPORT_FIELDS,
   REPORT_FIELD_TYPES,
   REPORT_SOURCE_MAPPINGS,
   starterAdvisorReportDefinition,
   validateAdvisorReportDefinition,
-  validateAdvisorReportAnswers,
   type AdvisorReportDefinition,
   type AdvisorReportField,
 } from '../shared/report-definition';
@@ -376,252 +376,60 @@ function DefinitionEditor({
 
 export default function AdvisorReportSetup({
   active,
+  scope,
+  generation,
   profile,
   tasks,
+  entries,
+  reports,
   revision,
   onChange,
 }: {
   active: boolean;
+  scope: string;
+  generation: number;
   profile: Profile;
   tasks: PlannedTask[];
+  entries: PracticeSession[];
+  reports: ReportDocument[];
   revision: number;
   onChange: (change: AccountChange, revision: number) => Promise<unknown>;
 }) {
   const definition = profile.reportDefinition ?? starterAdvisorReportDefinition();
   const [editing, setEditing] = useState(!profile.reportDefinition);
-  const [session, setSession] = useState(1);
-  const zone = profile.classSchedule?.timezone ?? profile.timezone;
-  const [reportDate, setReportDate] = useState(() => dateInTimezone(new Date(), zone));
-  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState('');
-  const [checked, setChecked] = useState(false);
-  const [copyError, setCopyError] = useState('');
-  const [copyNotice, setCopyNotice] = useState('');
-  const invalidateCopy = () => {
-    setCopyError('');
-    setCopyNotice('');
-  };
-  const configure = useRef<HTMLButtonElement>(null);
-  const firstSelect = useRef<HTMLSelectElement>(null);
-  useEffect(() => {
-    if (active && !editing) firstSelect.current?.focus();
-  }, [editing, active]);
-  let window;
-  let windowError = '';
-  try {
-    window = advisorReportWindow(profile, tasks, session, reportDate);
-  } catch (error) {
-    windowError = (error as Error).message;
-  }
-  const context = {
-    callsign: profile.callsign,
-    displayName: profile.displayName,
-    session: String(session),
-    reportDate,
-  };
-  const values = Object.fromEntries(
-    definition.fields.map((field) => [
-      field.key,
-      field.source === 'manual' ? (answers[field.key] ?? '') : context[field.source],
-    ]),
-  );
-  const errors = checked ? validateAdvisorReportAnswers(definition, values) : [];
-  const preview = [
-    definition.title,
-    `Session ${session}; report date ${reportDate}`,
-    window
-      ? `Course timezone: ${window.timezone}\nWindow: ${window.empty ? 'empty' : `${window.fromDate} through ${window.toDate} (inclusive)`}`
-      : windowError,
-    ...definition.fields.map((field) => `${field.section} — ${field.label}: ${values[field.key]}`),
-  ].join('\n');
-  if (editing)
-    return (
-      <DefinitionEditor
-        active={active}
-        definition={definition}
-        revision={revision}
-        onChange={onChange}
-        onCancel={() => {
-          setEditing(false);
-          setNotice('Configuration canceled. Your saved definition is unchanged.');
-        }}
-        onSaved={(message) => {
-          setEditing(false);
-          setNotice(message);
-          setChecked(false);
-        }}
-      />
-    );
-  return (
-    <section className="advisor-report-setup" aria-label="Advisor report setup">
-      <h3>{definition.title}</h3>
-      {notice && <p role="status">{notice}</p>}
-      <button
-        ref={configure}
-        className="button outline small"
-        onClick={() => {
-          setEditing(true);
-          setNotice('');
-        }}
-      >
-        Configure advisor fields
-      </button>
-      <div className="plan-form-grid">
-        <label>
-          Class session
-          <select
-            ref={firstSelect}
-            value={session}
-            onChange={(event) => {
-              setSession(Number(event.target.value));
-              invalidateCopy();
-              setChecked(false);
-            }}
-          >
-            {Array.from({ length: 16 }, (_, index) => (
-              <option key={index} value={index + 1}>
-                Session {index + 1}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Report date
-          <input
-            type="date"
-            value={reportDate}
-            onChange={(event) => {
-              setReportDate(event.target.value);
-              invalidateCopy();
-              setChecked(false);
-            }}
-          />
-        </label>
-      </div>
-      {windowError ? (
-        <p className="alert" role="alert">
-          {windowError}
-        </p>
-      ) : (
-        window && (
-          <section className="advisor-window" aria-label="Report preparation window">
-            <p>
-              <strong>Course timezone:</strong> {window.timezone}
-            </p>
-            <p>
-              <strong>Source preparation dates:</strong>{' '}
-              {window.preparationDates.length
-                ? window.preparationDates.join(', ')
-                : 'No dated preparation exercises'}
-            </p>
-            <p>
-              <strong>Class:</strong> {window.meetingDate ?? 'No scheduled date'}
-              {window.meetingStartsAt
-                ? `; ${new Intl.DateTimeFormat('en-US', { timeZone: window.timezone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(window.meetingStartsAt))} (${window.timezone})`
-                : ''}
-            </p>
-            <p>
-              <strong>Inclusive report window:</strong>{' '}
-              {window.empty
-                ? `Empty — preparation starts ${window.fromDate}; report ends ${window.toDate}`
-                : `${window.fromDate} through ${window.toDate}`}
-            </p>
-            <p>{window.explanation} Meeting exceptions do not move curriculum preparation dates.</p>
-          </section>
-        )
-      )}
-      <p>
-        Preview your field rules below. These preview answers are not saved; copy them before
-        closing.
-      </p>
-      <div className="advisor-answers">
-        {definition.fields.map((field, index) => {
-          const id = `advisor-answer-${index}`;
-          const error = errors.find((error) => error.key === field.key);
-          const input = {
-            id,
-            value: values[field.key],
-            'aria-invalid': Boolean(error),
-            'aria-describedby': error ? `${id}-error` : undefined,
-            onChange: (
-              event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-            ) => {
-              setAnswers((previous) => ({ ...previous, [field.key]: event.target.value }));
-              invalidateCopy();
-              setChecked(false);
-            },
-          };
-          return (
-            <div key={field.key}>
-              <label htmlFor={id}>
-                {field.section} — {field.label}
-                {field.required ? ' (required)' : ' (optional)'}
-              </label>
-              {field.type === 'rating' ? (
-                <select {...input}>
-                  <option value="">No answer</option>
-                  {field.options?.map((choice) => (
-                    <option key={choice} value={choice}>
-                      {choice}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === 'textarea' ? (
-                <textarea {...input} maxLength={4000} rows={3} />
-              ) : (
-                <input
-                  {...input}
-                  readOnly={field.source !== 'manual'}
-                  type={field.type === 'date' ? 'date' : 'text'}
-                  inputMode={field.type === 'number' ? 'decimal' : undefined}
-                  maxLength={4000}
-                />
-              )}
-              {error && (
-                <p id={`${id}-error`} role="alert">
-                  {error.message}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div className="plan-form-actions">
-        <button
-          className="button outline"
-          disabled={Boolean(windowError)}
-          onClick={() => setChecked(true)}
-        >
-          Check preview answers
-        </button>
-        <button
-          className="button outline"
-          disabled={Boolean(windowError)}
-          onClick={async () => {
-            setChecked(true);
-            if (validateAdvisorReportAnswers(definition, values).length) return;
-            try {
-              await navigator.clipboard.writeText(preview);
-              setCopyError('');
-              setCopyNotice('Preview copied.');
-            } catch {
-              setCopyError('Select the preview text below and use your device’s copy command.');
-            }
-          }}
-        >
-          Copy advisor preview
-        </button>
-      </div>
-      {checked && !errors.length && !windowError && (
-        <p role="status">
-          Preview answers satisfy your configured field rules. Nothing has been submitted.
-        </p>
-      )}
-      {copyNotice && <p role="status">{copyNotice}</p>}
-      {copyError && <p role="status">{copyError}</p>}
-      <pre className="plan-report-text" tabIndex={0} aria-label="Advisor preview text">
-        {preview}
-      </pre>
-    </section>
+  return editing ? (
+    <DefinitionEditor
+      active={active}
+      definition={definition}
+      revision={revision}
+      onChange={onChange}
+      onCancel={() => {
+        setEditing(false);
+        setNotice('Configuration canceled. Your saved definition is unchanged.');
+      }}
+      onSaved={(message) => {
+        setEditing(false);
+        setNotice(message);
+      }}
+    />
+  ) : (
+    <AdvisorReportDraft
+      active={active}
+      scope={scope}
+      generation={generation}
+      definition={definition}
+      profile={profile}
+      tasks={tasks}
+      entries={entries}
+      reports={reports}
+      revision={revision}
+      onChange={onChange}
+      notice={notice}
+      onConfigure={() => {
+        setEditing(true);
+        setNotice('');
+      }}
+    />
   );
 }

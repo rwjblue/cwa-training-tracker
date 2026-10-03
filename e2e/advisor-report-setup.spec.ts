@@ -7,6 +7,7 @@ async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
   const button = page.getByRole('button', { name, exact: true });
+  await expect(button).toBeEnabled();
   await button.focus();
   await button.press('Enter');
 }
@@ -269,6 +270,9 @@ test('private report definition, exact field rules, preparation window and retai
   await expect(
     page.getByRole('status').filter({ hasText: 'Report definition saved.' }),
   ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Use current definition for new draft', exact: true })
+    .tap();
   await page
     .getByLabel('Practice — Verified points (required)', { exact: true })
     .fill(String(Number.MAX_SAFE_INTEGER));

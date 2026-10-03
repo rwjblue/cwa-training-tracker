@@ -124,7 +124,7 @@ Priorities: **P1** = important to daily use or trustworthy records; **P2** = val
 | ID  | Status / priority | Feature and exact behavior                                                                                                                                                                                                                                                                                                                                                                     | Personal evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Current evidence / gap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | --- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P27 | Partial / P1      | Basic private date-range practice report, separate practice/class totals, sessions/speeds/accuracy/QSO counts/notes, copy/print.                                                                                                                                                                                                                                                               | Personal structured report described below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Present [C/src/shared/plan.ts:377](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L377); [C/src/client/Plan.tsx:579](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/Plan.tsx#L579). Good generic report, but it is not the personal advisor-report workflow. It prints freeform notes, so an advisor-specific export should intentionally decide which personal text is included. |
-| P28 | Partial / P1 | Advisor report per class: default preparation-date window in course timezone, editable dates, 42 form fields/sections, field validation, device autosaved answers, explicit draft snapshots, refresh from results that preserves deliberate edits including blanks.                                                                                                                            | [P/src/lib/cw-training/report-fields.ts:20](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-fields.ts#L20); [P/src/lib/cw-training/report.ts:34](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L34), `:79`; [P/src/lib/cw-training/report-panel.ts:50](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L50), `:82`, `:228`, `:234`                               | Issue #36 delivers learner-owned field definitions, neutral context mappings, strict literal validation, private atomic persistence/export/import and visible inclusive preparation windows in the course timezone. Early dates cap evidence without inventing future days; missing preparation dates use an explained deterministic fallback. Generic copy/print and imported snapshots remain available. Preview answers remain unsaved until durable draft issue #37; suggestions/refresh, handoff and submission are #38–#40. Original identity, form URL and entry IDs are never public defaults. |
+| P28 | Partial / P1 | Advisor report per class: default preparation-date window in course timezone, editable dates, 42 form fields/sections, field validation, device autosaved answers, explicit draft snapshots, refresh from results that preserves deliberate edits including blanks.                                                                                                                            | [P/src/lib/cw-training/report-fields.ts:20](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-fields.ts#L20); [P/src/lib/cw-training/report.ts:34](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L34), `:79`; [P/src/lib/cw-training/report-panel.ts:50](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L50), `:82`, `:228`, `:234`                               | Issue #36 delivers learner-owned field definitions, neutral context mappings, strict literal validation, private atomic persistence/export/import and visible inclusive preparation windows in the course timezone. Early dates cap evidence without inventing future days; missing preparation dates use an explained deterministic fallback. Generic copy/print and imported snapshots remain available. Issue #37 adds stable per-session device drafts, grouped editable answers, protected edits and intentional blanks, refresh/relinquish, immutable account snapshots, retry/conflict recovery and validated portable backups. Compatible original device drafts can be explicitly copied with retained archive provenance; category suggestions, handoff and submission remain #38–#40. Original identity, form URL and entry IDs are never public defaults. |
 | P29 | Missing / P1      | Evidence-aware report suggestions: per-file **actually practiced** audio speed/family, latest explicit performance rating, individual measured Runner verified points (highest eligible run, not sum/scaled score), actual run date rather than delayed save date, latest whole LCWO result and averaged matching-speed groups. Audit source IDs and warnings show what supported each answer. | [P/src/lib/cw-training/report.ts:54](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L54), `:112`, `:134`, `:196`; [P/src/lib/cw-training/report-panel.ts:236](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L236); tests [P/tests/cw-training-report.test.mjs:142](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-report.test.mjs#L142), `:148`, `:200`, `:234`, `:394` | Generic [C/src/shared/plan.ts:377](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/shared/plan.ts#L377) displays fields on each session only, with no category aggregation or evidence model. Embedded engine results now exist in metadata; summaries must use verifiedPoints and original run conditions without inventing reportable measurements.                                                                                                       |
 | P30 | Missing / P2      | Explicit learned-word tracking for reports: only learner-confirmed `Learned:` words, case-insensitive dedupe, omitted from later suggestions only after a submitted report, never inferred from exposure. Structured CWT heard/worked details feed appropriate fields and exclude private general notes.                                                                                       | [P/src/lib/cw-training/report.ts:186](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report.ts#L186), `:196`; [P/src/lib/cw-training/report-panel.ts:233](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L233); tests [P/tests/cw-training-report.test.mjs:36](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-report.test.mjs#L36), `:273`                                         | No learned-word or submitted-report tracking in current model. Do not equate generated/check-copy exposure with learned vocabulary.                                                                                                                                                                                                                                                                                                                                                                           |
 | P31 | Missing / P1      | Reviewable form handoff: opens a prefilled Google Form without submitting, stores exactly the opened snapshot, explicit confirmation after actual external submission, immutable submitted revision/history, downloadable report JSON, retry-safe sync. Later draft edits cannot mutate the submitted copy.                                                                                    | [P/src/lib/cw-training/report-panel.ts:163](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/src/lib/cw-training/report-panel.ts#L163), `:282`, `:312`; [P/worker/cw-training.ts:521](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/worker/cw-training.ts#L521); tests [P/tests/cw-training-api.test.mjs:682](https://github.com/rwjblue/rwjblue.com/blob/3106c9b8bf20b63be069f4019467cb565cdd17ec/tests/cw-training-api.test.mjs#L682), `:709`                                                     | No handoff/submission/revision/report export in current [C/src/client/Plan.tsx:579](https://github.com/rwjblue/cwa-training-tracker/blob/bc20fdb817a3c42969fafddc2d84c3664d73c10d/src/client/Plan.tsx#L579). Current full-account JSON backup is distinct from an advisor report artifact.                                                                                                                                                                                                                    |
@@ -1854,3 +1854,112 @@ JS/CSS assets and the public Runner module. No production private data was
 written. Source commits remain local, with main updated; no push is authorized
 or attempted. The issue stays open pending source publication. Durable reports,
 evidence selection, handoff and learned words remain #37–#40.
+
+
+## Issue #37 — editable private report drafts (independent review pending)
+
+Fresh issue bodies/comments and dependencies #2/#36 were checked. The four
+original report panel/derivation/storage/types files remain byte-identical to
+pin `3106c9b8bf20b63be069f4019467cb565cdd17ec`; original owner defaults
+are not copied. The original five dirty paths and approved-scope ledger remain
+unchanged. Closed dependency #2 is exercised by the actual retained-operation,
+retry, conflict and lifecycle browser workflows rather than skipped by status.
+
+Native working documents keep a stable identity, frozen validated definition,
+class/report date/inclusive window, literal answers, protected edited keys,
+source references and timestamps. Grouped fields autosave separately for each
+session/account/dataset. Reload and in-app report/configuration navigation
+retain the document. Refresh changes only untouched suggestions and refreshes
+practice references; relinquishing an override is explicit. Deliberate blanks
+remain protected. The optional practice-summary mapping counts distinct saved
+independent results/minutes in the window; it excludes class, review and future
+results and does not infer scores, proficiency or learned words.
+
+Explicit account save creates an immutable separate copy through the existing
+semantic outbox/CAS/exact-receipt architecture. Device-only, waiting to upload,
+account-saved and conflict states are visible. Retry preserves the same copy
+and operation. Saved/submitted snapshots are read only; reopening creates a
+new working identity. Removing a saved draft copy requires confirmation;
+submitted history cannot be removed as a draft. Local storage refusal retains
+page text with truthful retry/download feedback. A stale second tab cannot
+overwrite a newer copy; explicit download-and-reopen preserves both texts.
+
+Migration 0010 adds owner-scoped immutable copies, encoded byte/count quota,
+history revision and same-transaction native evidence ownership checks. Worker
+validation rejects malformed, foreign and missing evidence before mutation;
+SQL rechecks deletion races. Copies roundtrip in private account backups;
+working drafts join validated scoped device backups, clear/restore and dataset
+fencing. Old omitted report inventories remain compatible. Replace/reset and
+failure rollback use the existing lifecycle; referenced result deletion is
+blocked until export/removal of saved draft copies preserves reversibility.
+JSON member order does not make identical copies conflict; arrays stay ordered.
+
+Preserved original device drafts require an explicit selected-session copy and
+compatible configured keys/rules. Raw original drafts remain readable on mapping
+errors; submitted references are not automatically resumed. Copies keep a new
+native identity plus original ID/private archive hash; ownership is checked
+against that account's preserved archive. Repeat copy/import is bounded. The
+original archive remains byte-faithful and is included in portable backups.
+
+Focused domain/device/real-SQL tests pass (202), including intentional blanks,
+immutable/submitted history, the 200-copy cap, exact retries, foreign-source
+rejection, atomic rollback, quota, backup fidelity and stale storage. Four
+serial affected real-Wrangler/D1 browser journeys pass in 31.0 seconds: desktop
+keyboard/mobile touch, per-session reload, offline sync, refresh/relinquish,
+actual backup download/file import, compatible/incompatible original copies,
+archive fidelity, storage refusal and second-tab download/reopen recovery.
+Settled Axe/overflow checks are clear; desktop/mobile pixels were inspected.
+The initial new fixture/name mistakes and disabled-startup keyboard navigation
+race are retained as failures; no timeout was relaxed or early pass claimed.
+Complete regression, post-commit independent review and deployment are separate
+remaining gates. Configuration/bindings are unchanged. Physical devices, live
+external submission and production private writes are not claimed. #38 owns
+category-specific evidence, #39 exact form handoff/confirmation, and #40 learned
+words. No push is authorized or attempted; unpublished issues remain open.
+
+
+Root inspection found a platform-boundary issue before committing: aggregating
+all copies into one SQL JSON value could exceed D1's documented 2,000,000-byte
+value/row limit while the account still fit the 6 MiB application quota
+([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). A real SQL
+regression first failed with a 2,356,916-byte result row. Account snapshots now
+return individual bounded task/report rows in the existing coherent two-query
+batch boundary; lifecycle/export/LCWO offsets remain valid. Private export
+filters the raw task rows separately. A growing-history regression verifies
+all rows stay below the platform limit and all 28 large copies remain readable
+and exportable. The reviewed import screen also discloses the immutable report
+copy count and duplicate-ID rules. Focused 203 tests and check pass.
+
+The first complete browser attempt was intentionally stopped at exit 130 after
+33 passes (6.7 minutes) for this correction; 66 journeys did not run and one was
+interrupted. It is not a passing regression gate. The affected real-runtime
+journey now imports 29 valid report copies exceeding 2 MB through actual file
+selection, inspects import feedback, and verifies local D1 account reads/export.
+A fresh complete gate follows the platform correction.
+
+
+A second root workflow inspection caught an original-derived submitted copy
+being mistaken for an already-saved draft after reopening. The new actual
+keyboard/mobile journey first fails with “This exact copy is already saved” and
+no new saved draft. Filtering reusable copies to draft status fixes it: the
+working identity and saved draft are new, the confirmed snapshot is unchanged,
+and archive provenance/intentional blanks remain exact. Assertion, error
+context, mobile pixels and retained trace were inspected. The affected five
+serial runtime journeys pass, including the new submitted-history regression.
+The second complete attempt was stopped at exit 130 after 63 passes (11.2
+minutes), with one interrupted and 36 not run; it is not a passing gate.
+A final complete 101-journey gate follows this correction before commitment.
+
+
+The corrected complete gate passes `mise run check`, all 1,403 tests in 74
+files, `mise run build`, and all 101 serial real-Wrangler/D1 browser journeys
+in 18.5 minutes (actual exit 0). This includes all five report journeys, the
+large-history D1 boundary and original-derived submitted-copy regression,
+closed-dependency offline workflows, private backup/lifecycle, public tools,
+Stories, native media and real Runner behavior. Eighteen settled report
+accessibility/overflow scans are clear; desktop/mobile captures were inspected.
+Fresh issue bodies/comments, original reference/dirty-path integrity and the
+protected approved-scope ledger remain unchanged. The existing large-bundle
+warning remains visible. No binding/config change or physical-device claim is
+made. A focused implementation commit and fresh independent review follow;
+production deployment and source publication are not yet claimed.

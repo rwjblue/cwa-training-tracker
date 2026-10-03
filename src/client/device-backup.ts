@@ -1,3 +1,10 @@
+import {
+  reportDraftStoreKey,
+  readReportDraftStore,
+  validateReportDraftStore,
+  invalidateReportDraftMemory,
+  type ReportDraftStore,
+} from './report-drafts';
 import { validateWordContent, wordContentKey, type WordContent } from './word-storage';
 import { EVENT_TIME_MODE_KEY, validEventTimeMode, type EventTimeMode } from './event-preferences';
 import { validateAccountOperation, validateAccountSnapshot } from '../shared/account-sync';
@@ -108,6 +115,7 @@ export interface DeviceBackup {
     recordingChoices?: TaskRecordingChoice[];
     runnerResults?: RunnerFinishedResult[];
     wordContent?: WordContent;
+    reportDrafts?: ReportDraftStore;
   };
   shared: {
     practicePreferences?: PracticePreferences;
@@ -147,6 +155,7 @@ export const DEVICE_STORE_INVENTORY = [
   { id: 'scratchpads', label: 'Scratchpads', shared: false },
   { id: 'recordingChoices', label: 'Task recording choices', shared: false },
   { id: 'runnerResults', label: 'Finished Runner results awaiting review', shared: false },
+  { id: 'reportDrafts', label: 'Working advisor report drafts', shared: false },
   { id: 'wordContent', label: 'Saved word source and list selection', shared: false },
   { id: 'practicePreferences', label: 'Shared practice defaults', shared: true },
   { id: 'recordingSpeed', label: 'Shared recording speed preference', shared: true },
@@ -462,6 +471,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
     'recordingChoices',
     'runnerResults',
     'wordContent',
+    'reportDrafts',
   ]);
   const practice: RetainedPractice[] = list(stores.practice, 'Finished results', MAX_RESULTS).map(
     (value) => {
@@ -603,6 +613,16 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       recordingChoices.map((choice) => choice.taskId),
       'Task recording choices',
     );
+  const reportDrafts =
+    stores.reportDrafts === undefined ? undefined : validateReportDraftStore(stores.reportDrafts);
+  if (reportDrafts && scopeId === 'guest')
+    throw new Error('Guest backups cannot contain private report drafts.');
+  if (
+    reportDrafts &&
+    accountContext?.cache &&
+    reportDrafts.generation !== accountContext.cache.state.generation
+  )
+    throw new Error('Report drafts have a different original dataset generation.');
   const shared = object(input.shared, 'Shared device preferences', [
     'practicePreferences',
     'recordingSpeed',
@@ -633,6 +653,7 @@ export function validateDeviceBackup(raw: string, expectedScope: string): Device
       scratchpads,
       ...(recordingChoices === undefined ? {} : { recordingChoices }),
       ...(runnerResults === undefined ? {} : { runnerResults }),
+      reportDrafts,
       wordContent:
         stores.wordContent === undefined ? undefined : validateWordContent(stores.wordContent),
     },
@@ -854,6 +875,7 @@ export function captureDeviceBackup(
       recordingChoices,
       runnerResults: retainedRunner.results,
       wordContent,
+      ...(scope === 'guest' ? {} : { reportDrafts: readReportDraftStore(scope, storage) }),
     },
     shared: {
       ...(eventTimeMode === null ? {} : { eventTimeMode: eventTimeMode as EventTimeMode }),
@@ -997,6 +1019,15 @@ export function inspectDeviceRestore(
     conflicts.push(
       `Restoring would exceed ${MAX_OPERATIONS} pending account edits. Resolve or export them first.`,
     );
+  const existingReports = storage.getItem(reportDraftStoreKey(scope));
+  if (
+    checked.stores.reportDrafts &&
+    existingReports !== null &&
+    existingReports !== JSON.stringify(checked.stores.reportDrafts)
+  )
+    conflicts.push(
+      'Different working advisor drafts already exist on this device. Keep both exports, then clear this scope before restoring the older drafts.',
+    );
   const copy = storage.getItem(copyStorageKey(scope));
   let retainedScratchpads = 0;
   const currentNotes = new Map(
@@ -1058,6 +1089,7 @@ export class DeviceMutationError extends Error {
   }
 }
 function invalidateMemory(scope: string): void {
+  invalidateReportDraftMemory(scope);
   invalidatePracticeMemory(scope);
   invalidateAccountMemory(scope);
   invalidateScratchpadMemory(scope);
@@ -1229,6 +1261,8 @@ export function restoreDeviceBackup(
     );
   const recovery = captureDeviceBackup(scope, checked.scope.label, storage);
   const changes = new Map<string, string | null>();
+  if (checked.stores.reportDrafts && storage.getItem(reportDraftStoreKey(scope)) === null)
+    changes.set(reportDraftStoreKey(scope), JSON.stringify(checked.stores.reportDrafts));
   for (const result of checked.stores.runnerResults ?? []) {
     const key = runnerResultKey(scope, result.entry.id);
     if (storage.getItem(key) !== null) continue;
@@ -1322,6 +1356,7 @@ export function restoreDeviceBackup(
 
 /** Exact registered scope matching also removes orphan status/origin/lease records. */
 function isScopedStore(name: string, scope: string): boolean {
+  if (name === reportDraftStoreKey(scope)) return true;
   if (name === wordContentKey(scope)) return true;
   if (name.startsWith(runnerResultsPrefix(scope))) return true;
   if (taskRecordingChoiceTaskId(name, scope) !== undefined) return true;

@@ -100,9 +100,23 @@ export default {
           env,
         );
       }
+      if (error instanceof Error && error.message.includes('report_evidence_missing')) {
+        return securityHeaders(
+          json(
+            {
+              error:
+                'Report evidence changed before this copy was saved. Refresh the draft from saved practice, then save a new copy.',
+            },
+            400,
+          ),
+          env,
+        );
+      }
       if (
         error instanceof Error &&
-        /account_storage_limit|practice_entry_limit|lcwo_result_limit/.test(error.message)
+        /account_storage_limit|practice_entry_limit|lcwo_result_limit|report_copy_limit/.test(
+          error.message,
+        )
       ) {
         return securityHeaders(
           json(

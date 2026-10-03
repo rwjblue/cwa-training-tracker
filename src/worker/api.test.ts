@@ -16,7 +16,7 @@ import { dailyPlanSummary, type PlannedTask } from '../shared/plan';
 import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../shared/copy-practice';
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { getAuth } from './auth';
-import { getAccountSnapshot } from './account-sync';
+import { getAccountSnapshot, accountSnapshotStatements, snapshotFromResults } from './account-sync';
 import type { AccountChange, AccountOperation, AccountSnapshot } from '../shared/account-sync';
 import {
   hashLifecyclePayload,
@@ -8049,5 +8049,387 @@ describe('private request-only LCWO linking and retained history', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('private native advisor report copies', () => {
+  const report = (): import('../shared/report-document').ReportDocument => ({
+    version: 1,
+    id: 'native-report-one',
+    status: 'draft',
+    definition: starterAdvisorReportDefinition(),
+    window: {
+      session: 1,
+      reportDate: '2026-09-28',
+      timezone: 'UTC',
+      preparationDates: [],
+      fromDate: '2026-09-26',
+      toDate: '2026-09-28',
+      empty: false,
+      fallback: true,
+      explanation: 'Two prior days through report date.',
+    },
+    answers: { callsign: '', name: 'Synthetic', session: '1', reportDate: '2026-09-28' },
+    editedKeys: ['callsign'],
+    evidence: [],
+    createdAt: '2026-09-28T12:00:00Z',
+    updatedAt: '2026-09-28T12:00:00Z',
+  });
+  async function op(
+    auth: Awaited<ReturnType<typeof signIn>>,
+    change: AccountChange,
+    id: string = crypto.randomUUID(),
+    state?: AccountSnapshot,
+  ) {
+    const before = state ?? (await getAccountSnapshot(env, auth.user.id));
+    const body: AccountOperation = {
+      version: 1,
+      id,
+      accountId: auth.user.id,
+      baseRevision: before.revision,
+      generation: before.generation,
+      createdAt: '2026-09-28T12:00:00Z',
+      change,
+    };
+    return { body, response: await request('/api/account-operations', 'POST', body, auth.cookie) };
+  }
+  it('saves immutable owned snapshots, returns exact receipts and rejects stale writes or another owner', async () => {
+    const a = await signIn('native-reports-a@example.test');
+    const b = await signIn('native-reports-b@example.test');
+    const before = await getAccountSnapshot(env, a.user.id);
+    const first = await op(a, { type: 'report-save', report: report() });
+    expect(first.response.status).toBe(200);
+    const after = await getAccountSnapshot(env, a.user.id);
+    expect(after.reports).toEqual([report()]);
+    expect(after.revision).toBe(before.revision + 1);
+    expect((await request('/api/account-operations', 'POST', first.body, a.cookie)).status).toBe(
+      200,
+    );
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(after);
+    expect(
+      (
+        await op(
+          a,
+          { type: 'report-save', report: { ...report(), id: 'new-copy' } },
+          'stale-report',
+          before,
+        )
+      ).response.status,
+    ).toBe(409);
+    expect(
+      (
+        await op(a, {
+          type: 'report-save',
+          report: { ...report(), answers: { ...report().answers, name: 'changed' } },
+        })
+      ).response.status,
+    ).toBe(400);
+    expect((await request('/api/account-operations', 'POST', first.body, b.cookie)).status).toBe(
+      409,
+    );
+    expect((await request('/api/account-state')).status).toBe(401);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([]);
+    const reordered = {
+      ...report(),
+      answers: Object.fromEntries(Object.entries(report().answers).reverse()),
+    };
+    expect((await op(a, { type: 'report-save', report: reordered })).response.status).toBe(200);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...backup([]), reports: [reordered] } },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await getAccountSnapshot(env, a.user.id)).reports).toEqual([report()]);
+  });
+  it('reads and exports report history larger than a D1 value while keeping each SQL result row bounded', async () => {
+    const a = await signIn('report-large-history@example.test');
+    const definition = {
+      ...report().definition,
+      fields: [
+        ...report().definition.fields,
+        ...Array.from({ length: 20 }, (_, i) => ({
+          key: `note${i}`,
+          label: `Notes ${i}`,
+          section: 'Questions',
+          type: 'textarea' as const,
+          required: false,
+          source: 'manual' as const,
+        })),
+      ],
+    };
+    const answers = {
+      ...report().answers,
+      ...Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`note${i}`, 'x'.repeat(4000)])),
+    };
+    const copies = Array.from({ length: 28 }, (_, i) => ({
+      ...report(),
+      id: `large-report-${i}`,
+      definition,
+      answers,
+    }));
+    const insert = db.sqlite.prepare(
+      'INSERT INTO advisor_reports(user_id,id,report_json) VALUES(?,?,?)',
+    );
+    for (const copy of copies) insert.run(a.user.id, copy.id, JSON.stringify(copy));
+    expect(new TextEncoder().encode(JSON.stringify(copies)).length).toBeGreaterThan(2_000_000);
+    const results = await env.DB.batch(accountSnapshotStatements(env, a.user.id));
+    for (const result of results)
+      for (const row of result.results)
+        expect(new TextEncoder().encode(JSON.stringify(row)).length).toBeLessThan(2_000_000);
+    expect(snapshotFromResults(a.user.id, results).reports).toHaveLength(28);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.reports).toHaveLength(28);
+    expect(exported.reports?.find((copy) => copy.id === 'large-report-17')?.answers).toEqual(
+      answers,
+    );
+  });
+  it('retains imported submitted history as immutable and enforces the 200-copy bound in SQL', async () => {
+    const a = await signIn('report-submitted-bound@example.test');
+    const submitted = {
+      ...report(),
+      status: 'submitted' as const,
+      submittedAt: '2026-09-28T12:00:00Z',
+    };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...backup([]), reports: [submitted] } },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect((await op(a, { type: 'report-delete', id: submitted.id })).response.status).toBe(400);
+    expect((await op(a, { type: 'report-save', report: submitted })).response.status).toBe(400);
+    expect((await getAccountSnapshot(env, a.user.id)).reports).toEqual([submitted]);
+    const insert = db.sqlite.prepare(
+      'INSERT INTO advisor_reports(user_id,id,report_json) VALUES(?,?,?)',
+    );
+    for (let i = 1; i < 200; i++) {
+      const copy = { ...report(), id: `bounded-${i}` };
+      insert.run(a.user.id, copy.id, JSON.stringify(copy));
+    }
+    const before = await getAccountSnapshot(env, a.user.id);
+    expect(
+      (await op(a, { type: 'report-save', report: { ...report(), id: 'over-bound' } })).response
+        .status,
+    ).toBe(400);
+    expect(() =>
+      insert.run(a.user.id, 'over-bound', JSON.stringify({ ...report(), id: 'over-bound' })),
+    ).toThrow('report_copy_limit');
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+  });
+  it('rejects malformed and foreign evidence atomically through saved-copy and import paths', async () => {
+    const a = await signIn('report-source-owner@example.test');
+    const b = await signIn('report-source-other@example.test');
+    expect(
+      (await request('/api/entries', 'POST', entry('foreign-evidence'), b.cookie)).status,
+    ).toBe(201);
+    const before = await getAccountSnapshot(env, a.user.id);
+    for (const invalid of [
+      { ...report(), evidence: [{ kind: 'practice' as const, id: 'foreign-evidence' }] },
+      { ...report(), editedKeys: ['unknown'] },
+      { ...report(), answers: { ...report().answers, session: 'prose' } },
+    ]) {
+      expect((await op(a, { type: 'report-save', report: invalid })).response.status).toBe(400);
+      expect(
+        (
+          await request(
+            '/api/import',
+            'POST',
+            {
+              mode: 'merge',
+              data: {
+                ...backup([]),
+                profile: { ...DEFAULT_PROFILE, displayName: 'must not save' },
+                reports: [invalid],
+              },
+            },
+            a.cookie,
+          )
+        ).status,
+      ).toBe(400);
+      expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    }
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM advisor_reports').get()?.count).toBe(0);
+  });
+  it('roundtrips answers, blanks, edits and source references across accounts and handles old omitted reports', async () => {
+    const a = await signIn('report-export-owner@example.test');
+    const b = await signIn('report-export-other@example.test');
+    expect((await request('/api/entries', 'POST', entry('owned-source'), a.cookie)).status).toBe(
+      201,
+    );
+    const copy = { ...report(), evidence: [{ kind: 'practice' as const, id: 'owned-source' }] };
+    expect((await op(a, { type: 'report-save', report: copy })).response.status).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, a.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.reports).toEqual([copy]);
+    for (let i = 0; i < 2; i++)
+      expect(
+        (await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status,
+      ).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([copy]);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: backup([]) }, b.cookie)).status,
+    ).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([copy]);
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: backup([]) }, b.cookie))
+        .status,
+    ).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([]);
+    expect((await getAccountSnapshot(env, a.user.id)).reports).toEqual([copy]);
+  });
+  it('protects referenced history until draft-copy removal and keeps working identity separate', async () => {
+    const a = await signIn('report-remove@example.test');
+    expect((await request('/api/entries', 'POST', entry('owned-source'), a.cookie)).status).toBe(
+      201,
+    );
+    const copy = { ...report(), evidence: [{ kind: 'practice' as const, id: 'owned-source' }] };
+    expect((await op(a, { type: 'report-save', report: copy })).response.status).toBe(200);
+    expect((await request('/api/entries/owned-source', 'DELETE', undefined, a.cookie)).status).toBe(
+      409,
+    );
+    const removed = await op(a, { type: 'report-delete', id: copy.id });
+    expect(removed.response.status).toBe(200);
+    expect((await request('/api/account-operations', 'POST', removed.body, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await request('/api/entries/owned-source', 'DELETE', undefined, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await getAccountSnapshot(env, a.user.id)).reports).toEqual([]);
+  });
+  it('requires archive provenance to belong to the account and retains it in portable copies', async () => {
+    const a = await signIn('report-original-owner@example.test');
+    const b = await signIn('report-original-other@example.test');
+    const legacy = {
+      source: 'rwjblue.com' as const,
+      data: {
+        reportDrafts: {
+          '1': { id: 'original-working', session: 1, status: 'draft', answers: { callsign: '' } },
+        },
+      },
+    };
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          { mode: 'merge', data: { ...backup([]), legacy } },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    const archiveId = db.sqlite
+      .prepare('SELECT source_hash FROM import_sources WHERE user_id=?')
+      .get(a.user.id)?.source_hash as string;
+    const original = {
+      ...report(),
+      source: { kind: 'original-device' as const, id: 'original-working', archiveId },
+    };
+    expect((await op(a, { type: 'report-save', report: original })).response.status).toBe(200);
+    expect((await op(b, { type: 'report-save', report: original })).response.status).toBe(400);
+    const exported = await (await request('/api/export', 'GET', undefined, a.cookie)).json();
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: exported }, b.cookie)).status,
+    ).toBe(200);
+    expect((await getAccountSnapshot(env, b.user.id)).reports).toEqual([original]);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'merge',
+            data: { ...backup([]), legacy: { ...legacy, data: { reportDrafts: {} } } },
+          },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      ((await (await request('/api/export', 'GET', undefined, a.cookie)).json()) as TrainingExport)
+        .legacy,
+    ).toEqual(legacy);
+  });
+  it('rolls back reports, profile and result inserts on storage refusal and reset retires pending copies', async () => {
+    const a = await signIn('report-rollback@example.test');
+    const before = await getAccountSnapshot(env, a.user.id);
+    db.sqlite.exec(
+      "CREATE TRIGGER reject_report BEFORE INSERT ON advisor_reports BEGIN SELECT RAISE(ABORT,'synthetic_report_failure'); END;",
+    );
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'merge',
+            data: {
+              ...backup(),
+              profile: { ...DEFAULT_PROFILE, displayName: 'must rollback' },
+              reports: [report()],
+            },
+          },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(500);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM practice_entries').get()?.count).toBe(
+      0,
+    );
+    db.sqlite.exec('DROP TRIGGER reject_report');
+    const saved = await op(a, { type: 'report-save', report: report() });
+    expect(saved.response.status).toBe(200);
+    const stale = await getAccountSnapshot(env, a.user.id);
+    expect((await request('/api/reset', 'POST', { confirmation: 'RESET' }, a.cookie)).status).toBe(
+      200,
+    );
+    expect((await getAccountSnapshot(env, a.user.id)).reports).toEqual([]);
+    expect(
+      (
+        await op(
+          a,
+          { type: 'report-save', report: { ...report(), id: 'retired-report' } },
+          'retired-report-operation',
+          stale,
+        )
+      ).response.status,
+    ).toBe(409);
+  });
+  it('enforces ordinary encoded-byte quota and reference ownership within real SQL', async () => {
+    const a = await signIn('report-quota@example.test');
+    db.sqlite
+      .prepare('UPDATE users SET storage_bytes=lifecycle_control_bytes+6291456 WHERE id=?')
+      .run(a.user.id);
+    const before = await getAccountSnapshot(env, a.user.id);
+    expect((await op(a, { type: 'report-save', report: report() })).response.status).toBe(400);
+    expect(await getAccountSnapshot(env, a.user.id)).toEqual(before);
+    db.sqlite
+      .prepare('UPDATE users SET storage_bytes=lifecycle_control_bytes WHERE id=?')
+      .run(a.user.id);
+    expect(() =>
+      db.sqlite.prepare('INSERT INTO advisor_reports(user_id,id,report_json) VALUES(?,?,?)').run(
+        a.user.id,
+        'sql-missing',
+        JSON.stringify({
+          ...report(),
+          id: 'sql-missing',
+          evidence: [{ kind: 'practice', id: 'absent' }],
+        }),
+      ),
+    ).toThrow('report_evidence_missing');
+    expect(db.sqlite.prepare('SELECT count(*) AS count FROM advisor_reports').get()?.count).toBe(0);
   });
 });

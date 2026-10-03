@@ -68,6 +68,9 @@ const taskValueLabel = (key: string, value: unknown) => {
   return value.map(validateRecordingMarkSet).map(recordingMarkSetDetails).join(' / ');
 };
 function title(change: AccountChange, state?: AccountSnapshot): string {
+  if (change.type === 'report-delete') return 'Remove saved advisor draft copy';
+  if (change.type === 'report-save')
+    return `Save advisor report for session ${change.report.window.session}`;
   if (change.type === 'settings') return 'Practice preferences';
   if (change.type === 'task-create') return `Add ${change.task.title}`;
   if (change.type === 'task-status')
@@ -81,6 +84,18 @@ function title(change: AccountChange, state?: AccountSnapshot): string {
   return `${change.type === 'task-delete' ? 'Delete' : 'Edit'} ${state?.plan.find((task) => task.id === change.id)?.title ?? 'exercise'}`;
 }
 function comparisons(change: AccountChange, state: AccountSnapshot): string[] {
+  if (change.type === 'report-delete')
+    return [
+      `Remove draft copy ${change.id}; newer online snapshots remain separate. Keep a private backup before removing a saved copy.`,
+    ];
+  if (change.type === 'report-save')
+    return [
+      `Your frozen report copy: ${change.report.definition.title}; session ${change.report.window.session}; ${change.report.window.reportDate}. ${Object.entries(
+        change.report.answers,
+      )
+        .map(([key, value]) => `${key}: ${value || '(deliberately blank)'}`)
+        .join(' | ')}. Online copies remain immutable; reapply keeps this separate identity.`,
+    ];
   if (change.type === 'settings')
     return Object.entries(change.changes).map(
       ([key, value]) =>

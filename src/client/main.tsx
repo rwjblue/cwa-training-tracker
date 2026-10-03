@@ -1,3 +1,4 @@
+import type { ReportDocument } from '../shared/report-document';
 import { validateLcwoBackup } from '../shared/lcwo';
 import { useLcwoData, type LcwoController } from './useLcwoData';
 import LcwoSettings from './LcwoSettings';
@@ -400,7 +401,9 @@ function App() {
   const [accountStorageStatus, setAccountStorageStatus] = useState(() => getAccountStorageStatus());
   const [practiceStates, setPracticeStates] = useState(() => loadPracticeSaveStates('guest'));
   const pendingTaskIds = account.operations.flatMap(({ operation }) =>
-    operation.change.type === 'settings'
+    operation.change.type === 'settings' ||
+    operation.change.type === 'report-save' ||
+    operation.change.type === 'report-delete'
       ? []
       : operation.change.type === 'task-status'
         ? operation.change.ids
@@ -1764,6 +1767,8 @@ function App() {
               )}
               {page === 'course' && (
                 <Course
+                  generation={account.state?.generation ?? 0}
+                  reports={account.state?.reports ?? []}
                   lcwo={lcwo.data}
                   liveNow={liveNow}
                   profile={profile}
@@ -2594,6 +2599,8 @@ function Logbook({
 }
 
 function Course({
+  generation,
+  reports,
   lcwo,
   liveNow,
   profile,
@@ -2613,6 +2620,8 @@ function Course({
   inspection,
   returnToPractice,
 }: {
+  generation: number;
+  reports: ReportDocument[];
   lcwo: LcwoData | null;
   liveNow: number;
   tasks: PlannedTask[];
@@ -2656,6 +2665,8 @@ function Course({
       </div>
       {user && (
         <Plan
+          generation={generation}
+          reports={reports}
           lcwo={lcwo}
           key={`${user.id}:${getDeviceScopeToken(user.id)}`}
           liveNow={liveNow}
@@ -4270,6 +4281,13 @@ function Account({
               ) : null;
             })()}
           </p>
+          {Array.isArray((importData.data as { reports?: unknown }).reports) && (
+            <p>
+              {(importData.data as { reports: unknown[] }).reports.length} immutable advisor report
+              copies. Saved drafts and submitted history remain read only; duplicate IDs must have
+              identical contents.
+            </p>
+          )}
           <label className="import-choice">
             <input
               type="radio"

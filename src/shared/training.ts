@@ -1,3 +1,4 @@
+import { validateReportDocuments, type ReportDocument } from './report-document.ts';
 import {
   validateAdvisorReportDefinition,
   type AdvisorReportDefinition,
@@ -104,6 +105,7 @@ export interface TrainingExport {
   exportedAt: string;
   profile?: Profile;
   sessions: PracticeSession[];
+  reports?: ReportDocument[];
   /** Retained source facts and preferences; an imported link is always inactive. */
   lcwo?: LcwoBackup;
   plan?: PlannedTask[];
@@ -701,6 +703,7 @@ export function validateTrainingExport(value: unknown): TrainingExport {
       throw new Error('Unsupported practice evidence export version.');
     result.evidenceVersion = 1;
   }
+  if (input.reports !== undefined) result.reports = validateReportDocuments(input.reports);
   if (input.lcwo !== undefined) result.lcwo = validateLcwoBackup(input.lcwo);
   if (input.profile !== undefined) result.profile = validateProfile(input.profile);
   if (input.plan !== undefined) result.plan = validatePlan(input.plan);

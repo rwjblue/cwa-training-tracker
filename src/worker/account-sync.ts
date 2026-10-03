@@ -1,3 +1,5 @@
+import { requireReportEvidence, reportInsertStatement } from './reports';
+import { validateReportDocuments } from '../shared/report-document';
 import {
   applyAccountChange,
   validateAccountOperation,
@@ -25,9 +27,14 @@ export function accountSnapshotStatements(env: Env, accountId: string): D1Prepar
     env.DB.prepare(
       'SELECT profile_json, class_schedule_json, report_definition_json, account_revision, dataset_generation, history_revision FROM users WHERE id = ?',
     ).bind(accountId),
-    env.DB.prepare('SELECT task_json FROM training_plan WHERE user_id = ? ORDER BY id').bind(
-      accountId,
-    ),
+    // Keep the coherent two-statement snapshot boundary used by lifecycle/export
+    // batches. Return bounded individual rows: an aggregate JSON value could exceed
+    // D1's 2 MB per-value limit before the ordinary 6 MiB account quota.
+    env.DB.prepare(
+      `SELECT 'task' AS record_kind, task_json, NULL AS report_json, id FROM training_plan WHERE user_id = ?
+      UNION ALL SELECT 'report' AS record_kind, NULL AS task_json, report_json, id FROM advisor_reports WHERE user_id = ?
+      ORDER BY record_kind, id`,
+    ).bind(accountId, accountId),
   ];
 }
 
@@ -46,12 +53,17 @@ export function snapshotFromResults(accountId: string, results: D1Result[]): Acc
     revision: row.account_revision,
     generation: row.dataset_generation,
     historyRevision: row.history_revision,
+    reports: validateReportDocuments(
+      results[1].results
+        .filter((row) => (row as { record_kind: string }).record_kind === 'report')
+        .map((row) => JSON.parse((row as { report_json: string }).report_json)),
+    ),
     settings,
     plan: mergeCurriculumPlan(
       settings,
-      results[1].results.map(
-        (row) => JSON.parse((row as { task_json: string }).task_json) as PlannedTask,
-      ),
+      results[1].results
+        .filter((row) => (row as { record_kind: string }).record_kind === 'task')
+        .map((row) => JSON.parse((row as { task_json: string }).task_json) as PlannedTask),
     ),
   };
 }
@@ -286,7 +298,17 @@ export async function applyAccountOperation(request: Request, env: Env): Promise
   }
   const statements: D1PreparedStatement[] = [];
   const change = operation.change;
-  if (change.type === 'settings')
+  if (change.type === 'report-delete')
+    statements.push(
+      env.DB.prepare('DELETE FROM advisor_reports WHERE user_id=? AND id=?').bind(
+        auth.user.id,
+        change.id,
+      ),
+    );
+  else if (change.type === 'report-save') {
+    await requireReportEvidence(env, auth.user.id, [change.report]);
+    statements.push(reportInsertStatement(env, auth.user.id, change.report));
+  } else if (change.type === 'settings')
     statements.push(settingsStatement(env, auth.user.id, next.settings));
   else if (change.type === 'task-delete')
     statements.push(

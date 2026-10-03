@@ -6,6 +6,7 @@ export const REPORT_SOURCE_MAPPINGS = [
   { id: 'displayName', label: 'Profile name' },
   { id: 'session', label: 'Selected class session' },
   { id: 'reportDate', label: 'Selected report date' },
+  { id: 'practiceSummary', label: 'Saved independent practice summary' },
 ] as const;
 export type ReportSourceMapping = (typeof REPORT_SOURCE_MAPPINGS)[number]['id'];
 export interface AdvisorReportField {

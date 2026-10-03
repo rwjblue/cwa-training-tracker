@@ -1,3 +1,4 @@
+import { requireReportEvidence, reportInsertStatement, mergeReportCopies } from './reports';
 import {
   clearLcwoStatements,
   lcwoReadStatements,
@@ -380,6 +381,15 @@ export async function deleteEntry(request: Request, env: Env, id: string): Promi
   const auth = await requireAuth(request, env);
   const state = await getAccountSnapshot(env, auth.user.id);
   const generation = requireRequestGeneration(request, state);
+  if (
+    state.reports?.some((report) =>
+      report.evidence.some((ref) => ref.kind === 'practice' && ref.id === id),
+    )
+  )
+    throw new HttpError(
+      409,
+      'A saved advisor report references this result. Export your data and remove its saved draft copies before deleting the result.',
+    );
   try {
     await conditionalAccountWrite(env, state, [
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ? AND id = ?').bind(
@@ -444,6 +454,7 @@ async function readAccountBackup(env: Env, accountId: string): Promise<AccountLi
     format: 'cwa-training-tracker',
     version: 1,
     evidenceVersion: 1,
+    reports: state.reports ?? [],
     ...(lcwo ? { lcwo: { ...lcwo, connected: false as const } } : {}),
     exportedAt: new Date().toISOString(),
     profile: state.settings,
@@ -453,7 +464,9 @@ async function readAccountBackup(env: Env, accountId: string): Promise<AccountLi
         JSON.parse(row.entry_json),
       ),
     ),
-    plan: plan.results.map((row) => JSON.parse(row.task_json) as PlannedTask),
+    plan: plan.results
+      .filter((row) => row.record_kind === 'task')
+      .map((row) => JSON.parse(row.task_json) as PlannedTask),
     ...(archive.results.length
       ? {
           legacy: JSON.parse(
@@ -528,6 +541,42 @@ export async function importData(request: Request, env: Env): Promise<Response> 
     input.data,
   );
   const uniqueEntries = new Map(data.sessions.map((entry) => [entry.id, entry]));
+  const resultingReports = mergeReportCopies(
+    input.mode === 'replace' ? [] : (state.reports ?? []),
+    data.reports ?? [],
+  );
+  if (data.legacy) {
+    const archiveId = await hash(JSON.stringify(data.legacy));
+    if (
+      resultingReports.some(
+        (report) =>
+          report.source?.kind === 'original-device' && report.source.archiveId !== archiveId,
+      )
+    )
+      throw new HttpError(
+        400,
+        'Saved draft copies reference the current original archive. Export and remove those draft copies before replacing it with a different archive.',
+      );
+  }
+  await requireReportEvidence(env, auth.user.id, data.reports ?? [], {
+    practice: data.sessions.map((entry) => entry.id),
+    lcwo: data.lcwo?.runs.map((run) => run.id),
+    archive: data.legacy,
+  });
+  if (input.mode === 'replace') {
+    // Replacement must carry every reference; old account data will be retired.
+    for (const report of data.reports ?? [])
+      for (const ref of report.evidence)
+        if (
+          !(ref.kind === 'practice' ? data.sessions : (data.lcwo?.runs ?? [])).some(
+            (item) => item.id === ref.id,
+          )
+        )
+          throw new HttpError(
+            400,
+            'Replacement reports require their referenced results in the same backup.',
+          );
+  }
   const ownedPlan = input.mode === 'merge' ? state.plan : [];
   const resultingProfile = { ...(data.profile ?? state.settings) };
   if (
@@ -595,6 +644,9 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   }
   if (input.mode === 'replace') {
     statements.push(
+      env.DB.prepare('DELETE FROM advisor_reports WHERE user_id = ?').bind(auth.user.id),
+    );
+    statements.push(
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
     );
     statements.push(
@@ -644,6 +696,8 @@ export async function importData(request: Request, env: Env): Promise<Response> 
   }
   flush();
   statements.push(...planStatementsForImport(env, auth.user.id, data.plan, false));
+  for (const report of data.reports ?? [])
+    statements.push(reportInsertStatement(env, auth.user.id, report));
   if (data.legacy) {
     const archive = JSON.stringify(data.legacy);
     const sourceHash = await hash(archive);
@@ -720,6 +774,7 @@ export async function resetData(request: Request, env: Env): Promise<Response> {
   await rateLimit(env, `write:${auth.user.id}`, 120, 60);
   return json(
     await applyLifecycle(env, state, lifecycle.identity, [
+      env.DB.prepare('DELETE FROM advisor_reports WHERE user_id = ?').bind(auth.user.id),
       env.DB.prepare('DELETE FROM practice_entries WHERE user_id = ?').bind(auth.user.id),
       env.DB.prepare('DELETE FROM import_sources WHERE user_id = ?').bind(auth.user.id),
       deletePlanStatement(env, auth.user.id),

@@ -1,3 +1,4 @@
+import type { ReportDocument } from '../shared/report-document';
 import AdvisorReportSetup from './AdvisorReportSetup';
 import type { LcwoData } from '../shared/lcwo';
 import ListeningPassProgress from './ListeningPassProgress';
@@ -46,6 +47,8 @@ interface Props {
   liveNow?: number;
   lcwo?: LcwoData | null;
   accountId?: string;
+  generation?: number;
+  reports?: ReportDocument[];
   inspection?: { id: string; view: 'week' | 'report' };
   returnToPractice?: { label: string; onReturn: () => void };
   startNewTask?: boolean;
@@ -75,6 +78,8 @@ export default function Plan({
   liveNow = Date.now(),
   lcwo,
   accountId,
+  generation = 0,
+  reports = [],
   profile,
   entries,
   tasks,
@@ -506,6 +511,8 @@ export default function Plan({
         <Report
           key={accountId ?? 'guest'}
           accountId={accountId}
+          generation={generation}
+          reports={reports}
           tasks={tasks}
           revision={revision}
           onChange={onChange}
@@ -840,6 +847,8 @@ function TaskEditor({
 
 function Report({
   accountId,
+  generation,
+  reports,
   tasks,
   revision,
   onChange,
@@ -852,6 +861,8 @@ function Report({
   returnToPractice,
 }: {
   accountId?: string;
+  generation: number;
+  reports: ReportDocument[];
   tasks: PlannedTask[];
   revision: number;
   onChange: (change: AccountChange, baseRevision?: number) => Promise<unknown>;
@@ -902,6 +913,10 @@ function Report({
         <div hidden={!advisor}>
           <AdvisorReportSetup
             active={advisor}
+            scope={accountId}
+            generation={generation}
+            entries={entries}
+            reports={reports}
             profile={profile}
             tasks={tasks}
             revision={revision}

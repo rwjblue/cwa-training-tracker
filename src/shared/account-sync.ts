@@ -1,3 +1,10 @@
+import {
+  sameReportValue,
+  validateReportDocument,
+  validateReportDocuments,
+  MAX_ACCOUNT_REPORTS,
+  type ReportDocument,
+} from './report-document';
 import { mergeCurriculumPlan } from './curriculum';
 import { MAX_PLAN_TASKS, validatePlannedTask, validateNewTaskPin, type PlannedTask } from './plan';
 import { DEFAULT_PROFILE, validateProfile, type Profile } from './training';
@@ -10,6 +17,7 @@ export interface AccountSnapshot {
   historyRevision?: number;
   settings: Profile;
   plan: PlannedTask[];
+  reports?: ReportDocument[];
 }
 
 /** null explicitly clears an optional task field; omitted fields keep their value. */
@@ -21,7 +29,9 @@ export type AccountChange =
   | { type: 'task-create'; task: PlannedTask }
   | { type: 'task-edit'; id: string; changes: AccountTaskChanges }
   | { type: 'task-status'; ids: string[]; done?: boolean; dismissedFromToday?: boolean }
-  | { type: 'task-delete'; id: string };
+  | { type: 'task-delete'; id: string }
+  | { type: 'report-save'; report: ReportDocument }
+  | { type: 'report-delete'; id: string };
 
 export interface AccountOperation {
   version: 1;
@@ -226,6 +236,16 @@ export function validateAccountChange(value: unknown): AccountChange {
         throw new Error('Choose an exercise status to change.');
       return change;
     }
+    case 'report-delete':
+      keys(input, ['type', 'id']);
+      return { type: 'report-delete', id: id(input.id) };
+    case 'report-save': {
+      keys(input, ['type', 'report']);
+      const report = validateReportDocument(input.report, { fieldRules: true });
+      if (report.status !== 'draft')
+        throw new Error('Submitted copies require an explicit confirmed handoff.');
+      return { type: 'report-save', report };
+    }
     case 'task-delete':
       keys(input, ['type', 'id']);
       return { type: 'task-delete', id: id(input.id) };
@@ -260,7 +280,15 @@ export function validateAccountOperation(value: unknown): AccountOperation {
 
 export function validateAccountSnapshot(value: unknown): AccountSnapshot {
   const input = record(value);
-  keys(input, ['accountId', 'revision', 'generation', 'historyRevision', 'settings', 'plan']);
+  keys(input, [
+    'accountId',
+    'revision',
+    'generation',
+    'historyRevision',
+    'settings',
+    'plan',
+    'reports',
+  ]);
   const settings = record(input.settings);
   keys(settings, profileFields);
   if (
@@ -280,11 +308,28 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
       : { historyRevision: revision(input.historyRevision) }),
     settings: validateProfile(settings),
     plan: effectivePlan(input.plan),
+    ...(input.reports === undefined ? {} : { reports: validateReportDocuments(input.reports) }),
   };
 }
 
 /** Shared semantic projection; revisions are assigned only by the Worker. */
 export function applyAccountChange(state: AccountSnapshot, change: AccountChange): AccountSnapshot {
+  if (change.type === 'report-delete') {
+    const report = state.reports?.find((report) => report.id === change.id);
+    if (!report) throw new Error('This saved report was not found.');
+    if (report.status === 'submitted')
+      throw new Error('Confirmed submitted history cannot be deleted as a draft.');
+    return { ...state, reports: state.reports?.filter((report) => report.id !== change.id) };
+  }
+  if (change.type === 'report-save') {
+    const reports = state.reports ?? [];
+    const existing = reports.find((report) => report.id === change.report.id);
+    if (existing && !sameReportValue(existing, change.report))
+      throw new Error('Saved report copies are immutable. Reopen as a new draft.');
+    if (!existing && reports.length >= MAX_ACCOUNT_REPORTS)
+      throw new Error('Export and remove older saved reports before adding more copies.');
+    return { ...state, reports: existing ? reports : [...reports, change.report] };
+  }
   if (change.type === 'settings') {
     const settings = validateProfile({ ...state.settings, ...change.changes });
     return { ...state, settings, plan: mergeCurriculumPlan(settings, state.plan) };
