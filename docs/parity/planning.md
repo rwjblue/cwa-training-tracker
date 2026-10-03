@@ -1469,3 +1469,39 @@ no native clock, coverage tolerance, result or player workaround was introduced.
 Both final assessment journeys include the archive-source restriction. Browser
 processes have exited and port 8791 is free. Independent correction acceptance and
 production delivery remain pending.
+
+
+## Issue #33 accepted delivery — October 2, 2026
+
+Implementation `422714f4d7a9d06006f05b08c21fe021816e3730` and correction
+`309e0b0b2b9fe4efcce5c76c211ad2be08eb042c` deliver explicit learner performance
+ratings and structured CWT observations through create/edit, retained reviews,
+exact failed-save retries, history, report evidence and private backup restore.
+Blank counts remain unknown and zero remains explicit. Raw Copy, audio and Runner
+measurements remain separate from learner judgments. Archived simulator/recording
+provenance cannot acquire new actual on-air claims through activity edits; valid
+old exact bodies, archives and genuine original CWT remain compatible.
+
+Post-commit independent review ACCEPTS the final tree and closes R33-1 after five
+own desktop keyboard/mobile emulated-touch journeys, 270 focused tests in five
+files and 14 clear Axe/overflow reports. It independently exercises actual file
+restore, account isolation, direct and queued503 exact retry, cancellation,
+archived sources and genuine CWT. Accepted Runner raw time is unchanged at
+2.8908843537414963 seconds; guest generated audio uses actual native movement.
+No substantive finding remains. Root check, all 1,143 tests/66 files, build and
+final complete serial92 browser gate (17.7 minutes) pass. The earlier unchanged
+course-replay incomplete-pass failure and successful isolated/full retries remain
+recorded above; its cause is unconfirmed and no native-clock/player workaround
+was made. Browser emulation does not establish physical-device/lock-screen use.
+
+The complete deploy task stopped before upload on D1 API7403, then passed on one
+full retry with no pending migrations. Production version
+`57aeb792-3779-4cf1-a075-374f52153f93` at https://cwa.n1rwj.com serves exact built
+JS/CSS and public Runner-module hashes. Fresh root/health200, private entries,
+account-state and backup401 checks pass. Public calendar GET/HEAD200,
+conditional304, POST405, nine unique recurring events and DST expansion match the
+shared source exactly, without account cookies. No bindings/config/schema changed.
+Local main contains the accepted commits; no push or PR was attempted. Issue #33
+remains open pending source publication on GitHub. Original personal-site evidence
+and protected planning files remain read-only. External measurements/actual manual
+completion timestamps (#34) and optional LCWO linking (#35) remain later work.
