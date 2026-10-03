@@ -126,7 +126,6 @@
 }
 .studio-quick-actions.is-sending {
   position: sticky;
-  top: 12px;
   z-index: 2;
   box-shadow: 0 3px 12px #294c3612;
 }
@@ -194,7 +193,6 @@
     font-size: 27px;
   }
   .studio-quick-actions.is-sending {
-    top: 6px;
     display: grid;
     grid-template-columns: auto minmax(42px, 1fr) auto;
     gap: 8px;

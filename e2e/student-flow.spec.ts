@@ -29,6 +29,7 @@ test('Today opens a focused listening workspace and a concise save review at bot
   await page.getByRole('button', { name: 'Practice words', exact: true }).click();
   const play = page.getByRole('button', { name: 'Play Morse', exact: true });
   const notes = page.getByRole('textbox', { name: 'Scratchpad', exact: true });
+  const startPractice = page.getByRole('button', { name: 'Start practice', exact: true });
   await expect(play).toBeVisible();
   await expect(notes).toBeVisible();
   for (const width of [1440, 390]) {
@@ -45,7 +46,23 @@ test('Today opens a focused listening workspace and a concise save review at bot
       Math.abs(notesBox.y - playBox.y),
       `Scratchpad should stay beside playback at ${width}px`,
     ).toBeLessThan(350);
+    await page.setViewportSize({ width, height: 600 });
+    await startPractice.evaluate((element) => {
+      window.scrollBy({
+        top: element.parentElement!.getBoundingClientRect().top + 100,
+        behavior: 'instant',
+      });
+    });
+    await expect
+      .poll(
+        () =>
+          startPractice.evaluate((element) => element.parentElement!.getBoundingClientRect().top),
+        `Practice controls should stick to the viewport top at ${width}px`,
+      )
+      .toBe(0);
   }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await expectResponsive(page, 'focused-word-workspace');
   await notes.fill('Keep playback and notes together.');
   await play.tap();

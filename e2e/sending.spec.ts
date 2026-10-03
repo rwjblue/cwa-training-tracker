@@ -131,7 +131,7 @@ test('sending scales stay in the studio and save assigned practice without openi
   const controlsBox = await controls.boundingBox();
   expect(controlsBox).not.toBeNull();
   expect(controlsBox!.height).toBeLessThanOrEqual(80);
-  expect(controlsBox!.y).toBeGreaterThanOrEqual(0);
+  expect(controlsBox!.y).toBe(0);
   expect(controlsBox!.y + controlsBox!.height).toBeLessThan(844);
   for (const button of [
     controls.getByRole('button', { name: 'Resume practice', exact: true }),
