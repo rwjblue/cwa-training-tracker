@@ -1594,3 +1594,38 @@ process exit0), including Copy historical scoring, all new external forms,
 assigned external timer retention, native Runner/audio, privacy and file backups.
 The issue body/comments were rechecked immediately before commit and are unchanged.
 Independent review and production delivery remain pending; no push was attempted.
+
+
+## Issue #34 accepted delivery — October 2, 2026
+
+Implementation `fd4cc61aabf34226764bc2a54946675a069824da` is independently
+accepted with no substantive findings. The separate reviewer exercised four own
+browser journeys: all LCWO families, source switching/cancel, learner-zone
+midnight/DST/future errors, direct503 edit retry, exact queued retry after profile
+zone change, actual backup download/file merge, readable reports, real native
+AudioWorklet Runner and assigned timer protection. Native Runner facts remained
+unchanged and manual replacement was rejected400. Assigned timer raw12 seconds
+(including2 recall seconds) remained intact with custom/Koch LCWO metrics.
+Eighteen settled Axe/overflow checks were clear; four captures were inspected.
+The reviewer independently passed350 focused tests in five files and verified
+all501 tracked files against the commit. Its initial ignored server-cwd setup
+failure was corrected without application changes. Actual processes exited and
+the exclusive runtime lease was explicitly released with port8791 free.
+
+Root check/all1232 tests in67 files/build and all94 serial browser journeys pass
+(18.4 minutes), with earlier interrupted/failed fixtures retained above. Strict
+`mise run deploy` passes every prerequisite, dry run, no-pending D1 migrations and
+production upload without a bypass or retry. Production version is
+`e5f5a9ef-645e-4604-988b-44cfbe2ffabf` at https://cwa.n1rwj.com. Fresh production
+verification confirms entry-point JS/CSS and public Runner module hashes match
+the exact build, root/health200, private history/account-state/backup401, and the
+nine-event public calendar's exact body/DST recurrence/GET/HEAD200/304/405 contract.
+No signed-in production data was created for these checks.
+
+Local main includes the focused implementation; push signing remains enabled.
+No push is authorized or attempted. GitHub main still resolves to signed
+`7e4d66b22f950a6bc063412ffd68c5ee054f6dd9`, so issue34 remains open pending source
+publication despite accepted production delivery. Optional live LCWO sync is
+issue35; manual evidence does not claim native acknowledgment or on-air contacts.
+No restricted curriculum, original trainer mutation, physical-device verification,
+new spoken recognition or crash/reload elapsed recovery is claimed.
