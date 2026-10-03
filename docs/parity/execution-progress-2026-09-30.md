@@ -2045,3 +2045,45 @@ body/comments, original HEAD/current and pinned references, five protected
 dirty files, approved scope, primary checkout HEAD and signing configuration
 were rechecked unchanged. A focused correction commit and independent recheck
 remain required before deployment; no source push is authorized.
+
+## Issue #40 — independently accepted and deployed; source unpublished
+
+Implementation `597c353cb2ff4dbaf68da18a23ff88c0c908d9c7` and focused review
+correction `806c7c8a270e6162f4c5b011f5f3127bc790978c` are on local `main`.
+The same independent reviewer rechecked both concrete P2 failures and returned
+ACCEPT with no substantive findings remaining. Its own desktop keyboard and
+mobile touch journeys passed (two journeys, 17.5 seconds), 46 focused tests
+including the native Node converter passed, and four settled Axe/overflow scans
+were clear. All 550 tracked and 173 built hashes, original references and protected
+user work were unchanged; its processes exited and port 8791 was released.
+
+Changing to an eligible prior report date preserves the exact confirmed-word
+exclusion and real account save returns 200 without a repair refresh. Literal
+edits and typed/cleared blanks survive further date changes and reload. The
+original failing 776,804-byte backup restored through the actual chooser/D1 path
+and opened an empty report on its intended date at 47,569 UTF-8 bytes. All 90
+source IDs/dates and complete confirmed words remain inspectable; real account
+save succeeds, and the actual private export retains all 180 original report
+objects exactly and source records with existing equivalent timestamp
+canonicalization. An independent two-field Unicode boundary is 45,223 bytes.
+The review's first source-equality assertion used noncanonical timestamps; its
+fixture failure is retained, and only that expectation was corrected before
+the focused retry and final affected run.
+
+Complete author gates passed check, all 1,441 tests across 77 files, production
+build and all 106 serial browser journeys (19.5 minutes, exit 0). Previously
+recorded failed/intermediate attempts remain failures, not passing evidence.
+The first deploy attempt failed Cloudflare remote D1 with code 7403; the full
+established deploy retry passed and deployed production version `237e2d36-c490-4aaf-ae22-95b9def6468a`.
+Read-only production checks passed root/health 200, anonymous private entry,
+account-state, lifecycle-backup and LCWO rejection 401, all four exact JS/CSS
+asset hashes and the Runner integration module hash. No production private
+writes were made.
+
+Learning remains an explicit learner declaration rather than measured mastery.
+Existing 4,000-character answers, 40 KB embedded source details and 96 KB report
+limits remain; whole words and all reference IDs are retained, omitted detail
+is disclosed, and the complete inspector/private history remains available.
+No physical-device, native OS print, live LCWO or real external acceptance
+claim is made. The user forbids pushing: no push or PR was attempted, and issue
+#40 stays open because its local implementation is not published on GitHub.
