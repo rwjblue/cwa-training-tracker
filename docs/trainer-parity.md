@@ -3730,3 +3730,47 @@ five serial affected report journeys (38.9 seconds, actual exit 0). Settled
 notice checks and inspected pixels include desktop, 390, 375 and 320px. The
 complete 101-journey implementation gate remains recorded above; this focused
 visual correction changes no auth, persistence or runtime wiring.
+
+
+## Issue #37 — independently accepted private drafts, deployed
+
+Implementation `3686ffe55911d3a5250975f2f65a2937d29ffb95` and focused
+F1 correction `8e888588ebf53f91332266a947c03d8838927c74` are independently
+accepted. The same reviewer rechecked the original clipping trigger at 1440,
+390, 375 and 320px and verified both desktop keyboard and mobile touch paths:
+exact old downloads/account copies remain unchanged, the new working and saved
+identities are distinct, another session remains intact, and reload/export
+retain the new definition and text. Two functional rechecks pass across focused
+runs, with five additional clear settled Axe scans and unchanged 533 tracked
+source/173 asset hashes. The original seven functional journeys, 36 focused
+checks and ten clear Axe scans remain supporting evidence. The initial RED
+case and corrected-review harness failures are retained, not counted as passes.
+No substantive #37 finding remains.
+
+The report dialog/notice fits 320px; independent review found unrelated Academy
+guide background cards wider than 320px. Whole-page 320px fit is not claimed.
+Desktop and 390/375px report operation, cancellation, failed-save feedback,
+keyboard/touch and old/new immutable report preservation are verified. Mobile
+evidence is browser emulation, not physical-device or lock-screen verification.
+
+The established production task passed check, all 1,403 tests in 74 files, build
+and dry-run validation, applied `0010_reports.sql`, and deployed version
+`47195f51-2e1b-4063-84c2-9ea6d41d6228` to <https://cwa.n1rwj.com>. The first
+remote D1 request failed with transient API code 7403; the complete retry
+succeeded. Both logs remain in the ignored evidence directory. Read-only
+production verification confirms root/health 200, anonymous private
+history/account-state/lifecycle-backup/LCWO 401, exact hashes of all four built
+JS/CSS assets, and the public Runner module. No production private data was
+written for verification. Configuration/bindings did not change.
+
+Root's complete implementation regression is 101 serial real-Wrangler/D1
+journeys (18.5 minutes, actual exit 0). After the scoped visual correction,
+check/all tests/build and the five affected report journeys pass (38.9 seconds).
+The existing large-bundle warning remains visible. Original source references,
+the original site's five pre-existing dirty paths and the approved-scope ledger
+remain unchanged. Scoped drafts, backups, exact retries, immutable copies and
+explicit original-device copying are delivered; category suggestions #38, form
+handoff/confirmation #39 and confirmed learned words #40 remain subsequent
+work. No external submission, live LCWO, physical-device check, original-site
+mutation, push or PR is claimed. All source commits remain local with main
+updated; issue #37 remains open pending source publication as instructed.
