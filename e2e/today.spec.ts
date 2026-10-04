@@ -1,7 +1,14 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { addDays, dateInTimezone } from '../src/shared/training';
-import { openDisclosure, accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
+import {
+  openDisclosure,
+  accountRequest,
+  expectAccessible,
+  expectResponsive,
+  scopedRequest,
+  signIn,
+} from './helpers';
 
 test('Today brings personal assignments forward and keeps logging separate from completion', async ({
   page,
@@ -584,134 +591,215 @@ test('an exercise without a time target can be completed and reopened without lo
   expect(entryWrites).toBe(0);
 });
 
-test('earlier work can be dismissed in bulk and restored without completion or changed practice', async ({
-  page,
-  context,
-}) => {
-  await signIn(page);
-  const settings = (await (await context.request.get('/api/settings')).json()).settings;
-  const today = dateInTimezone(new Date(), settings.timezone);
-  const fixtures = [
-    {
-      id: 'earlier-started',
-      title: 'Earlier sending practice',
-      dueDate: addDays(today, -2),
-      done: false,
-    },
-    {
-      id: 'earlier-ready',
-      title: 'Earlier listening practice',
-      dueDate: addDays(today, -1),
-      done: false,
-    },
-    { id: 'today-ready', title: 'Today’s planned exchange', dueDate: today, done: false },
-    {
-      id: 'future-ready',
-      title: 'Future exchange practice',
-      dueDate: addDays(today, 1),
-      done: false,
-    },
-    {
-      id: 'earlier-done',
-      title: 'Previously completed practice',
-      dueDate: addDays(today, -3),
-      done: true,
-    },
-  ];
-  for (const task of fixtures) {
-    const response = await accountRequest(context, 'POST', '/api/plan', {
-      task: { ...task, kind: 'sending', notes: '', createdAt: new Date().toISOString() },
+test.describe('earlier work dismissal', () => {
+  test.use({ hasTouch: true });
+
+  test('earlier work can be dismissed individually or in bulk and restored without changing practice', async ({
+    page,
+    context,
+  }) => {
+    await signIn(page);
+    const now = new Date('2026-10-08T16:00:00Z');
+    await page.clock.setFixedTime(now);
+    const settings = (await (await context.request.get('/api/settings')).json()).settings;
+    const today = dateInTimezone(now, settings.timezone);
+    const fixtures = [
+      {
+        id: 'earlier-started',
+        title: 'Earlier sending practice',
+        dueDate: addDays(today, -2),
+        done: false,
+      },
+      {
+        id: 'earlier-ready',
+        title: 'Earlier listening practice',
+        dueDate: addDays(today, -1),
+        done: false,
+      },
+      {
+        id: 'earlier-other',
+        title: 'Earlier exchange review',
+        dueDate: addDays(today, -1),
+        done: false,
+      },
+      { id: 'today-ready', title: 'Today’s planned exchange', dueDate: today, done: false },
+      {
+        id: 'future-ready',
+        title: 'Future exchange practice',
+        dueDate: addDays(today, 1),
+        done: false,
+      },
+      {
+        id: 'earlier-done',
+        title: 'Previously completed practice',
+        dueDate: addDays(today, -3),
+        done: true,
+      },
+    ];
+    for (const task of fixtures) {
+      const response = await accountRequest(context, 'POST', '/api/plan', {
+        task: { ...task, kind: 'sending', notes: '', createdAt: new Date().toISOString() },
+      });
+      expect(response.status()).toBe(201);
+    }
+    const saved = await scopedRequest(context, 'POST', '/api/entries', {
+      date: addDays(today, -2),
+      kind: 'sending',
+      minutes: 2,
+      notes: 'Previously recorded practice stays intact.',
+      source: 'manual',
+      metadata: { plannedTaskId: 'earlier-started' },
     });
-    expect(response.status()).toBe(201);
-  }
-  const saved = await scopedRequest(context, 'POST', '/api/entries', {
-    date: addDays(today, -2),
-    kind: 'sending',
-    minutes: 2,
-    notes: 'Previously recorded practice stays intact.',
-    source: 'manual',
-    metadata: { plannedTaskId: 'earlier-started' },
-  });
-  expect(saved.status()).toBe(201);
-  const entries = (await (await context.request.get('/api/entries')).json()).entries;
-  await page.reload();
-  const panel = page.getByRole('region', { name: 'What should I do today?' });
-  await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
-  await expect(
-    panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
-  ).toBeVisible();
-  await expect(
-    panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
-  ).toBeVisible();
-  const updates: unknown[] = [];
-  page.on('request', (request) => {
-    if (
-      new URL(request.url()).pathname === '/api/account-operations' &&
-      request.method() === 'POST' &&
-      request.postDataJSON().change.type === 'task-status'
-    )
-      updates.push(request.postDataJSON().change);
-  });
-  await panel.getByRole('button', { name: 'Dismiss earlier work', exact: true }).click();
-  await expect(
-    panel.getByText(/2 earlier exercises are hidden from Today and still unfinished/),
-  ).toBeVisible();
-  expect(updates).toEqual([
-    { type: 'task-status', ids: ['earlier-started', 'earlier-ready'], dismissedFromToday: true },
-  ]);
-  const dismissed = (await (await context.request.get('/api/plan')).json()).plan;
-  for (const fixture of fixtures) {
-    const task = dismissed.find((item: { id: string }) => item.id === fixture.id);
-    expect(task.done).toBe(fixture.done);
-    expect(task.dismissedFromToday).toBe(
-      fixture.id === 'earlier-started' || fixture.id === 'earlier-ready' ? true : undefined,
+    expect(saved.status()).toBe(201);
+    const entries = (await (await context.request.get('/api/entries')).json()).entries;
+    const originalPlan = (await (await context.request.get('/api/plan')).json()).plan;
+    await page.reload();
+    const panel = page.getByRole('region', { name: 'What should I do today?' });
+    await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
+    ).toBeVisible();
+    const updates: unknown[] = [];
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname === '/api/account-operations' &&
+        request.method() === 'POST' &&
+        request.postDataJSON().change.type === 'task-status'
+      )
+        updates.push(request.postDataJSON().change);
+    });
+    const dismiss = panel.getByRole('button', {
+      name: 'Dismiss Earlier sending practice',
+      exact: true,
+    });
+    await expect(dismiss).toHaveText('Dismiss');
+    await expect(dismiss).toBeEnabled();
+    await expect(
+      panel
+        .getByRole('listitem')
+        .filter({
+          has: page.getByRole('heading', { name: 'Today’s planned exchange', exact: true }),
+        })
+        .getByRole('button', { name: /^Dismiss/ }),
+    ).toHaveCount(0);
+    await expectResponsive(page, 'earlier-dismiss-controls');
+    await dismiss.focus();
+    await expect(dismiss).toBeFocused();
+    const singleDismissed = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/account-operations' &&
+        response.request().postDataJSON().change.type === 'task-status' &&
+        response.ok(),
     );
-  }
-  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
-  await expect(
-    panel.getByRole('heading', { name: 'Today’s planned exchange', exact: true, level: 4 }),
-  ).toBeVisible();
-  await expectAccessible(page, 'earlier-dismissed-desktop');
+    await page.keyboard.press('Enter');
+    await singleDismissed;
+    await expect(
+      panel.getByRole('heading', { name: 'What should I do today?', exact: true }),
+    ).toBeFocused();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier exchange review', exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText(/1 earlier exercise is hidden from Today and still unfinished/),
+    ).toBeVisible();
+    expect(updates).toEqual([
+      { type: 'task-status', ids: ['earlier-started'], dismissedFromToday: true },
+    ]);
+    expect((await (await context.request.get('/api/plan')).json()).plan).toEqual(
+      originalPlan.map((task: { id: string }) =>
+        task.id === 'earlier-started' ? { ...task, dismissedFromToday: true } : task,
+      ),
+    );
+    expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
 
-  await page.reload();
-  await expect(panel.locator('summary').filter({ hasText: 'Earlier unfinished work' })).toHaveCount(
-    0,
-  );
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
-  const oldRow = page.getByRole('listitem').filter({
-    has: page.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
-  });
-  await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toBeVisible();
-  await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expectAccessible(page, 'earlier-restore-mobile');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
+    await page.reload();
+    await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(
+      panel.getByRole('button', { name: 'Dismiss Earlier listening practice', exact: true }),
+    ).toBeEnabled();
+    const bulkDismiss = panel.getByRole('button', { name: 'Dismiss earlier work', exact: true });
+    await expect(bulkDismiss).toBeEnabled();
+    const bulkDismissed = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/account-operations' &&
+        response.request().postDataJSON().change.type === 'task-status' &&
+        response.ok(),
+    );
+    await bulkDismiss.tap();
+    await bulkDismissed;
+    await expect(
+      panel.getByText(/2 earlier exercises are hidden from Today and still unfinished/),
+    ).toBeVisible();
+    expect(updates).toEqual([
+      { type: 'task-status', ids: ['earlier-started'], dismissedFromToday: true },
+      { type: 'task-status', ids: ['earlier-ready', 'earlier-other'], dismissedFromToday: true },
+    ]);
+    const dismissed = (await (await context.request.get('/api/plan')).json()).plan;
+    expect(dismissed).toEqual(
+      originalPlan.map((task: { id: string }) =>
+        ['earlier-started', 'earlier-ready', 'earlier-other'].includes(task.id)
+          ? { ...task, dismissedFromToday: true }
+          : task,
+      ),
+    );
+    expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
+    await expect(
+      panel.getByRole('heading', { name: 'Today’s planned exchange', exact: true, level: 4 }),
+    ).toBeVisible();
 
-  await oldRow.getByRole('button', { name: 'Restore to Today', exact: true }).click();
-  await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toHaveCount(0);
-  await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
-  await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
-  await page.reload();
-  await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
-  await expect(
-    panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
-  ).toBeVisible();
-  await expect(
-    panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
-  ).toHaveCount(0);
-  const restored = (await (await context.request.get('/api/plan')).json()).plan;
-  expect(restored.find((task: { id: string }) => task.id === 'earlier-started')).toMatchObject({
-    done: false,
-    dismissedFromToday: false,
+    await page.reload();
+    await expect(
+      panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();
+    await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+    const oldRow = page.getByRole('listitem').filter({
+      has: page.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+    });
+    await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toBeVisible();
+    await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
+    await expectAccessible(page, 'earlier-restore-mobile');
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+
+    await oldRow.getByRole('button', { name: 'Restore to Today', exact: true }).tap();
+    await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toHaveCount(0);
+    await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    await page.getByRole('button', { name: 'Today', exact: true }).click();
+    await page.reload();
+    await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole('heading', { name: 'Earlier listening practice', exact: true }),
+    ).toHaveCount(0);
+    const restored = (await (await context.request.get('/api/plan')).json()).plan;
+    expect(restored).toEqual(
+      dismissed.map((task: { id: string }) =>
+        task.id === 'earlier-started' ? { ...task, dismissedFromToday: false } : task,
+      ),
+    );
+    expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
   });
-  expect(restored.find((task: { id: string }) => task.id === 'earlier-ready')).toMatchObject({
-    done: false,
-    dismissedFromToday: true,
-  });
-  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
 });
 
 test('completion retries a failed measured sending save without discarding time or duplicating credit', async ({

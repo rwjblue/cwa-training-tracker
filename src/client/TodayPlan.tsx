@@ -20,6 +20,7 @@ import {
   Play,
   Plus,
   Upload,
+  X,
 } from 'lucide-react';
 import {
   courseMeetings,
@@ -99,7 +100,7 @@ export default function TodayPlan({
   onSetupCourse,
 }: TodayPlanProps) {
   const titleId = useId();
-  const [dismissing, setDismissing] = useState(false);
+  const [dismissing, setDismissing] = useState<string[]>([]);
   const [dismissedCount, setDismissedCount] = useState(0);
   const [saveError, setSaveError] = useState('');
   const [pinning, setPinning] = useState('');
@@ -117,24 +118,25 @@ export default function TodayPlan({
   const syllabusUrl = plan.nextMeeting
     ? sessionSyllabusUrl(profile.level, plan.nextMeeting.lesson)
     : undefined;
-  async function dismissEarlier() {
-    if (dismissing || !plan.earlier.length) return;
-    const earlier = plan.earlier.map(({ task }) => task);
-    setDismissing(true);
+  async function dismissTasks(selected: PlannedTask[]) {
+    if (dismissing.length || pinning || !selected.length) return;
+    setDismissing(selected.map((task) => task.id));
     setSaveError('');
     try {
-      await onDismiss(earlier);
-      setDismissedCount(earlier.length);
+      await onDismiss(selected);
+      setDismissedCount((count) => count + selected.length);
+      // Dismissed rows disappear after saving. Keep keyboard focus in the plan.
+      title.current?.focus();
     } catch (error) {
       setSaveError(
         error instanceof Error ? error.message : 'Could not dismiss earlier work. Try again.',
       );
     } finally {
-      setDismissing(false);
+      setDismissing([]);
     }
   }
   async function pinTask(task: PlannedTask, date: string | null) {
-    if (pinning) return;
+    if (pinning || dismissing.length) return;
     setPinning(task.id);
     setPinNotice('');
     setSaveError('');
@@ -153,7 +155,7 @@ export default function TodayPlan({
       setPinning('');
     }
   }
-  const renderTasks = (items: DailyPlannedTask[]) => (
+  const renderTasks = (items: DailyPlannedTask[], dismissible = false) => (
     <ul className="today-plan-list">
       {items.map((item) => (
         <TodayTask
@@ -164,8 +166,11 @@ export default function TodayPlan({
           item={item}
           runnerProgress={runnerProgress.get(item.task.id)}
           today={today}
-          pinBusy={pinning}
+          pinBusy={pinning || dismissing[0] || ''}
           onPin={(date) => void pinTask(item.task, date)}
+          onDismiss={dismissible ? () => void dismissTasks([item.task]) : undefined}
+          dismissBusy={dismissing.includes(item.task.id)}
+          dismissDisabled={dismissing.length > 0 || Boolean(pinning)}
           pending={pendingIds.includes(item.task.id)}
           onLog={() => onLog(practiceForTask(item.task, today))}
           onPractice={onPracticeTask ? (purpose) => onPracticeTask(item.task, purpose) : undefined}
@@ -361,14 +366,14 @@ export default function TodayPlan({
               <div className="today-plan-dismiss-actions">
                 <button
                   className="text-button"
-                  disabled={dismissing}
-                  onClick={() => void dismissEarlier()}
+                  disabled={dismissing.length > 0 || Boolean(pinning)}
+                  onClick={() => void dismissTasks(plan.earlier.map(({ task }) => task))}
                 >
-                  {dismissing ? 'Dismissing…' : 'Dismiss earlier work'}
+                  {dismissing.length ? 'Dismissing…' : 'Dismiss earlier work'}
                 </button>
                 <span>Keeps these exercises unfinished in your full plan.</span>
               </div>
-              {renderTasks(plan.earlier)}
+              {renderTasks(plan.earlier, true)}
             </details>
           )}
           {plan.unscheduled.length > 0 && (
@@ -448,6 +453,9 @@ function TodayTask({
   onPractice,
   onPin,
   pinBusy,
+  onDismiss,
+  dismissBusy,
+  dismissDisabled,
   pending,
 }: {
   profile: Profile;
@@ -459,6 +467,9 @@ function TodayTask({
   onLog: () => void;
   onPin: (date: string | null) => void;
   pinBusy: string;
+  onDismiss?: () => void;
+  dismissBusy: boolean;
+  dismissDisabled: boolean;
   pending: boolean;
   onPractice?: (purpose: PracticePurpose) => void;
 }) {
@@ -519,6 +530,15 @@ function TodayTask({
             </a>
           )}
           <TaskTodayPin task={task} dueDate={dueDate} today={today} busy={pinBusy} onPin={onPin} />
+          {onDismiss && (
+            <button
+              aria-label={`Dismiss ${task.title}`}
+              disabled={dismissDisabled}
+              onClick={onDismiss}
+            >
+              <X size={12} /> {dismissBusy ? 'Dismissing…' : 'Dismiss'}
+            </button>
+          )}
         </div>
         {task.exercise?.type === 'audio' && (
           <ListeningPassProgress
