@@ -125,8 +125,8 @@ export default function TodayPlan({
     try {
       await onDismiss(selected);
       setDismissedCount((count) => count + selected.length);
-      // Dismissed rows disappear after saving. Keep keyboard focus in the plan.
-      title.current?.focus();
+      // Dismissed rows disappear after saving. Keep focus without moving the viewport.
+      title.current?.focus({ preventScroll: true });
     } catch (error) {
       setSaveError(
         error instanceof Error ? error.message : 'Could not dismiss earlier work. Try again.',

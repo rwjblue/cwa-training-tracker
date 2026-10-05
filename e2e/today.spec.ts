@@ -616,6 +616,93 @@ test('an exercise without a time target completes through a zero-time review and
 test.describe('earlier work dismissal', () => {
   test.use({ hasTouch: true });
 
+  test('consecutive earlier dismissals keep the expanded list in view', async ({
+    page,
+    context,
+  }) => {
+    await signIn(page);
+    const now = new Date('2026-10-08T16:00:00Z');
+    await page.clock.setFixedTime(now);
+    const settings = (await (await context.request.get('/api/settings')).json()).settings;
+    const today = dateInTimezone(now, settings.timezone);
+    for (const group of [
+      { name: 'today', count: 5, dueDate: today },
+      { name: 'earlier', count: 8, dueDate: addDays(today, -1) },
+    ]) {
+      for (let number = 1; number <= group.count; number++) {
+        const response = await accountRequest(context, 'POST', '/api/plan', {
+          task: {
+            id: `scroll-${group.name}-${number}`,
+            title: `Scroll ${group.name} exercise ${number}`,
+            dueDate: group.dueDate,
+            kind: 'sending',
+            notes: '',
+            done: false,
+            createdAt: now.toISOString(),
+          },
+        });
+        expect(response.status()).toBe(201);
+      }
+    }
+    await page.reload();
+    const panel = page.getByRole('region', { name: 'What should I do today?' });
+    const heading = panel.getByRole('heading', { name: 'What should I do today?', exact: true });
+    const summary = panel.locator('summary').filter({ hasText: 'Earlier unfinished work' });
+    await summary.click();
+    const dismiss = (number: number) =>
+      panel.getByRole('button', { name: `Dismiss Scroll earlier exercise ${number}`, exact: true });
+
+    for (const [index, viewport] of [
+      { width: 1440, height: 1000 },
+      { width: 390, height: 844 },
+    ].entries()) {
+      await page.setViewportSize(viewport);
+      const firstNumber = index * 2 + 1;
+      await dismiss(firstNumber).evaluate((element) =>
+        element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+      );
+      for (const number of [firstNumber, firstNumber + 1]) {
+        const control = dismiss(number);
+        await expect(control).toBeEnabled();
+        await expect(control).toBeInViewport({ ratio: 1 });
+        if (index === 0) await control.focus();
+        const scrollBefore = await page.evaluate(() => window.scrollY);
+        expect(scrollBefore).toBeGreaterThan(400);
+        const rowHeight = await panel
+          .getByRole('listitem')
+          .filter({
+            has: page.getByRole('heading', {
+              name: `Scroll earlier exercise ${number}`,
+              exact: true,
+            }),
+          })
+          .evaluate((element) => element.getBoundingClientRect().height);
+        const saved = page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === '/api/account-operations' &&
+            response.request().postDataJSON().change.type === 'task-status' &&
+            response.request().postDataJSON().change.ids.includes(`scroll-earlier-${number}`) &&
+            response.ok(),
+        );
+        if (index === 0) await page.keyboard.press('Enter');
+        else await control.tap();
+        await saved;
+        await expect(heading).toBeFocused();
+        await expect(control).toHaveCount(0);
+        expect(
+          await summary.evaluate((element) => (element.parentElement as HTMLDetailsElement).open),
+        ).toBe(true);
+        // Removing a row can change browser scroll anchoring, but must not return to the heading.
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(
+          scrollBefore - rowHeight - 120,
+        );
+        await expect(dismiss(number + 1)).toBeEnabled();
+        await expect(dismiss(number + 1)).toBeInViewport({ ratio: 1 });
+      }
+    }
+    await expectResponsive(page, 'earlier-dismiss-scroll');
+  });
+
   test('earlier work can be dismissed individually or in bulk and restored without changing practice', async ({
     page,
     context,
