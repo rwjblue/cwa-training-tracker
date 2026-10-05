@@ -234,6 +234,35 @@ function practiceDetails(
   };
 }
 
+export interface PublicCurriculumExercise {
+  id: string;
+  session: number;
+  day: number;
+  optional: boolean;
+  title: string;
+  kind: PracticeKind;
+  notes?: string;
+  exercise?: PracticeExercise;
+  sourceUrl: string;
+}
+
+/** Public catalog material without a learner's schedule, overrides, or progress. */
+export function publicCurriculumExercises(level: Profile['level']): PublicCurriculumExercise[] {
+  const catalog = catalogs[level];
+  if (!catalog) return [];
+  return catalog.exercises.map((row) => {
+    const sourceUrl = row.sourceUrl ?? sessionSyllabusUrl(level, row.session) ?? catalog.sourceUrl;
+    return {
+      id: row.id,
+      session: row.session,
+      day: row.day,
+      optional: row.optional === true,
+      ...practiceDetails(row, sourceUrl),
+      sourceUrl,
+    };
+  });
+}
+
 /** Dates may move; a session/day/exercise identity and its saved progress do not. */
 export function curriculumPlan(profile: Profile): PlannedTask[] {
   const catalog = catalogs[profile.level];

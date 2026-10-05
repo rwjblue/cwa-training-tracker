@@ -14,6 +14,11 @@ export type PracticeActivity = NonNullable<PlannedTask['exercise']> | { type: 't
 /** A deliberate start from Today or the studio's public tool shortcuts. */
 export interface PracticeLaunch {
   id: string;
+  /** Public content/setup only; never the private owner or task identity. */
+  publicRoute?: string;
+  publicTitle?: string;
+  publicSourceUrl?: string;
+  publicRecordingUrl?: string;
   task?: PlannedTask;
   material?: InstructorMaterial;
   materialContext?: PracticeSession['context'];
