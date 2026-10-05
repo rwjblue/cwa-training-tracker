@@ -42,6 +42,7 @@ import { getConfirmedAccountGeneration } from './account-outbox';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 import { freezePracticeSaveOrigin, type PracticeSaveOrigin } from './practice-autosave';
 import { clearRunnerResult, retainFinishedRunnerResult, readRunnerReview } from './runner-results';
+import { runnerFrameSettings, runnerSettingsFromRoute, runnerSettingsRoute } from './tool-share';
 import './morse-runner.css';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
@@ -82,6 +83,8 @@ interface Props {
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   onLog: (initial?: Partial<PracticeSession>) => void;
   onUnsavedChange: (unsaved: boolean) => void;
+  publicRoute?: string;
+  onPublicRouteChange?: (hash: string) => void;
 }
 
 const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function MorseRunnerStudio(
@@ -103,10 +106,17 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     onCurrentPracticeChange,
     onLog,
     onUnsavedChange,
+    publicRoute,
+    onPublicRouteChange,
   },
   ref,
 ) {
-  const [run, setRun] = useState(() => createRunnerRun(crypto.randomUUID(), settings));
+  const [run, setRun] = useState(() =>
+    createRunnerRun(
+      crypto.randomUUID(),
+      (!task && runnerSettingsFromRoute(publicRoute)) || settings,
+    ),
+  );
   const capturedAttribution = useRef<RunnerPracticeAttribution | undefined>(undefined);
   capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose, context);
   const scope = accountId ?? 'guest';
@@ -127,6 +137,9 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const activeRef = useRef(active);
   activeRef.current = active;
   const resize = useRef<ResizeObserver | null>(null);
+  const stopSetupListener = useRef<(() => void) | undefined>(undefined);
+  const routeCallback = useRef(onPublicRouteChange);
+  routeCallback.current = onPublicRouteChange;
   const [frameHeight, setFrameHeight] = useState(900);
   const [stopping, setStopping] = useState(false);
   const [inspectionStopped, setInspectionStopped] = useState(false);
@@ -138,6 +151,15 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const ended = terminal(run);
   const hasTime = run.elapsedSeconds >= 1;
   const unsaved = !saved && (run.status === 'running' || hasTime);
+  const sharedSettingsRoute = runnerSettingsRoute({
+    ...run.settings,
+    wpm: run.speedHistory?.at(-1)?.wpm ?? run.settings.wpm,
+  });
+  useEffect(() => {
+    // Before Run, edited setup lives in the frame. A new parent URL callback
+    // must not replace those selections with this run's initial settings.
+    if (active && sharedSettingsRoute) routeCallback.current?.(sharedSettingsRoute);
+  }, [sharedSettingsRoute, active]);
 
   let projection: CurrentRunnerProgress | undefined;
   const attribution = capturedAttribution.current;
@@ -386,6 +408,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
       clearTimeout(timeout.current);
       stopFlight.current.dispose();
       resize.current?.disconnect();
+      stopSetupListener.current?.();
       frame.current?.contentWindow?.postMessage(
         runnerStopCommand(current.current),
         location.origin,
@@ -408,6 +431,22 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
       return;
     }
     element.contentWindow?.postMessage(runnerConfigureCommand(current.current), location.origin);
+    stopSetupListener.current?.();
+    const doc = element.contentDocument;
+    if (doc) {
+      const shareSetup = () => {
+        if (inspected.current || !activeRef.current || current.current.status !== 'ready') return;
+        const selected = runnerFrameSettings(doc);
+        const route = selected && runnerSettingsRoute(selected);
+        if (route) routeCallback.current?.(route);
+      };
+      doc.addEventListener('input', shareSetup);
+      doc.addEventListener('change', shareSetup);
+      stopSetupListener.current = () => {
+        doc.removeEventListener('input', shareSetup);
+        doc.removeEventListener('change', shareSetup);
+      };
+    }
     resize.current?.disconnect();
     const body = element.contentDocument?.body;
     if (body && typeof ResizeObserver !== 'undefined') {

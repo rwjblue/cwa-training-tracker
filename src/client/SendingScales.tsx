@@ -1,15 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import type { SendingSection } from '../shared/plan';
 import { BOB_CARTER_SCALES_PDF_URL, sendingScalesForSections } from './sending-scales';
+import { sendingSectionFromRoute, sendingSectionRoute } from './tool-share';
 import './sending-scales.css';
 
 /** Keep the material beside the clock; changing a section never restarts practice. */
-export default function SendingScales({ sections }: { sections?: SendingSection[] }) {
+export default function SendingScales({
+  sections,
+  active = true,
+  publicRoute,
+  onPublicRouteChange,
+}: {
+  sections?: SendingSection[];
+  active?: boolean;
+  publicRoute?: string;
+  onPublicRouteChange?: (hash: string) => void;
+}) {
   const scales = sendingScalesForSections(sections);
-  const [selected, setSelected] = useState(scales[0]?.id);
+  const [selected, setSelected] = useState(() => {
+    const shared = sendingSectionFromRoute(publicRoute);
+    return scales.find((scale) => scale.id === shared)?.id ?? scales[0]?.id;
+  });
   const [textSize, setTextSize] = useState('standard');
   const current = scales.find((scale) => scale.id === selected) ?? scales[0];
+  useEffect(() => {
+    if (active && current) onPublicRouteChange?.(sendingSectionRoute(current.id));
+  }, [current?.id, onPublicRouteChange, active]);
 
   return (
     <div className="sending-scales">

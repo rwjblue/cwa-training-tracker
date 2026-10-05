@@ -53,6 +53,7 @@ import {
 } from './copy-storage';
 import CopySettings from './CopySettings';
 import CopyResult, { COPY_LABELS, copyDuration, missedCopyCharacters } from './CopyResult';
+import { copyDraftMatchesSharedRecipe, copyRecipeFromRoute, copyRecipeRoute } from './tool-share';
 import {
   DEVICE_CAPTURE_EVENT,
   getDeviceScopeToken,
@@ -75,6 +76,8 @@ interface Props {
   savedEntry?: PracticeSession;
   onUnsavedChange?: (unsaved: boolean) => void;
   active?: boolean;
+  publicRoute?: string;
+  onPublicRouteChange?: (hash: string) => void;
 }
 
 export interface CopyTrainerHandle {
@@ -102,13 +105,27 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
     savedEntry,
     onUnsavedChange,
     active: studioActive = true,
+    publicRoute,
+    onPublicRouteChange,
   },
   ref,
 ) {
   const scope = accountId ?? 'guest';
   const [deviceToken] = useState(() => getDeviceScopeToken(scope));
   const currentDevice = () => isDeviceScopeCurrent(scope, deviceToken);
-  const [initial] = useState(() => loadCopyDraft(scope));
+  const [startup] = useState(() => {
+    const shared = !task ? copyRecipeFromRoute(publicRoute) : undefined;
+    const recovered = loadCopyDraft(scope);
+    const resume = !shared || copyDraftMatchesSharedRecipe(recovered, shared);
+    return {
+      shared,
+      initial: resume ? recovered : undefined,
+      retained: resume ? undefined : recovered,
+    };
+  });
+  const sharedRecipe = startup.shared;
+  const initial = startup.initial;
+  const [retainedBeforeShare, setRetainedBeforeShare] = useState(startup.retained);
   const [draft, setDraft] = useState<CopyDraft | undefined>(() =>
     initial
       ? {
@@ -124,10 +141,15 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
   const draftRef = useRef(draft);
   const [recipe, setRecipe] = useState(
     initial?.attempt.recipe ??
+      sharedRecipe ??
       copySetupRecipe(
         assignedRecipe ?? loadCopyPreferences(scope, 'groups') ?? defaultCopyRecipe(),
       ),
   );
+  const sharedRecipeRoute = copyRecipeRoute(draft?.attempt.recipe ?? recipe);
+  useEffect(() => {
+    if (studioActive && sharedRecipeRoute) onPublicRouteChange?.(sharedRecipeRoute);
+  }, [sharedRecipeRoute, onPublicRouteChange, studioActive]);
   const [confirmedCharacters, setConfirmedCharacters] = useState(false);
   useEffect(() => {
     setConfirmedCharacters(false);
@@ -311,7 +333,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
         loseControl();
         return;
       }
-      if (event.persisted && !savedRef.current) {
+      if (event.persisted && !savedRef.current && (!sharedRecipe || draftRef.current)) {
         // Another tab may have continued this round while this page was cached.
         const latest = loadCopyDraft(scope);
         player.current.clear();
@@ -506,7 +528,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
   };
 
   const start = (selected = recipe) => {
-    if (!canInteract()) return;
+    if (!canInteract() || retainedBeforeShare) return;
     try {
       const valid = validateCopyRecipe(copySetupRecipe(selected));
       saveCopyPreferences(scope, valid, deviceToken);
@@ -759,6 +781,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
       clock.current = new CopyClock();
       autoDeadline.current = undefined;
     }
+    setRetainedBeforeShare(undefined);
     savedRef.current = false;
     setSaved(false);
     prepared.current = '';
@@ -906,6 +929,38 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
           {error}
         </p>
       )}
+      {retainedBeforeShare && (
+        <div className="notice" role="status">
+          <p>
+            The shared settings are loaded. A saved round remains on this device; resume it or
+            discard it before starting a round with these settings.
+          </p>
+          <button className="text-button" disabled={blocked} onClick={takeOver}>
+            Resume saved round
+          </button>{' '}
+          <button
+            className="text-button"
+            disabled={blocked}
+            onClick={() => {
+              if (!canInteract()) return;
+              if (
+                !window.confirm(
+                  'Discard the saved Copy round on this device? Its unsubmitted answers and practice time will be removed.',
+                )
+              )
+                return;
+              if (clearCopyDraft(scope, retainedBeforeShare.attempt.id, deviceToken))
+                setRetainedBeforeShare(undefined);
+              else
+                setError(
+                  'The saved round could not be removed. Enable browser storage, then retry.',
+                );
+            }}
+          >
+            Discard saved round
+          </button>
+        </div>
+      )}
       <audio
         aria-label="Copy practice audio"
         hidden
@@ -1007,7 +1062,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
             <div className="copy-playback-controls">
               <button
                 className="button dark"
-                disabled={blocked || (!active && needsCharacters)}
+                disabled={blocked || Boolean(retainedBeforeShare) || (!active && needsCharacters)}
                 onClick={() => {
                   if (!draft) start();
                   else if (playing) pause();
