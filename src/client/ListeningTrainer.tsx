@@ -38,6 +38,7 @@ import { usesVariableListeningPitch, type PracticePreferences } from './practice
 import { MAX_CUSTOM_WORD_CHARACTERS, WORD_LISTS, type WordList } from './word-content';
 import type { WordContentEditor } from './useWordContent';
 import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
+import { listeningShareRoute, readListeningShare } from './listening-share';
 
 interface AppliedListeningTrack {
   readonly track: MorseTrack;
@@ -56,8 +57,12 @@ const matchesWordSource = (
   custom: string,
 ) =>
   round?.listId === preferences.wordList &&
-  round.shuffle === preferences.shuffleWords &&
   (round.listId !== 'custom' || round.sourceText === custom);
+const matchesWordSetup = (
+  round: ListeningWordRound | null,
+  preferences: PracticePreferences,
+  custom: string,
+) => matchesWordSource(round, preferences, custom) && round?.shuffle === preferences.shuffleWords;
 
 export interface ListeningTrainerHandle {
   play: () => Promise<void>;
@@ -85,6 +90,9 @@ export default forwardRef<
     onBeforeSeek?: () => void;
     onError: (message: string) => void;
     onRetry?: () => void;
+    /** Immutable launch URL; subsequent selected/generated material updates it through the callback. */
+    publicRoute?: string;
+    onPublicRouteChange?: (hash: string) => void;
   }
 >(function ListeningTrainer(
   {
@@ -104,6 +112,8 @@ export default forwardRef<
     onBeforeSeek,
     onError: onErrorMessage,
     onRetry,
+    publicRoute,
+    onPublicRouteChange,
   },
   ref,
 ) {
@@ -128,12 +138,32 @@ export default forwardRef<
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
   const onError = (message: string) => callbacks.current.onError(message);
   const custom = wordContent.draft;
-  const [qso, setQso] = useState(() => listeningQsoRound(generateQso(p.qsoScenario)));
-  const [copyMode, setCopyMode] = useState(false);
+  const [initialShare] = useState(() => (publicRoute ? readListeningShare(publicRoute, p) : null));
+  const [qso, setQso] = useState(
+    () => initialShare?.qso ?? listeningQsoRound(generateQso(p.qsoScenario)),
+  );
+  const [copyMode, setCopyMode] = useState(initialShare?.copyMode ?? false);
   const [revealedQso, setRevealedQso] = useState<PracticeQso | null>(null);
-  const [wordRound, setWordRound] = useState<ListeningWordRound | null>(null);
+  const [wordRound, setWordRound] = useState<ListeningWordRound | null>(() => {
+    if (initialShare?.words) return initialShare.words;
+    if (p.tool !== 'words') return null;
+    try {
+      return listeningWordRound(p.wordList, custom, p.shuffleWords);
+    } catch {
+      return null;
+    }
+  });
   const words = wordRound?.words ?? EMPTY_WORDS;
-  const [roundError, setRoundError] = useState('');
+  const [roundError, setRoundError] = useState(() => {
+    if (p.tool === 'words' && !wordRound) {
+      try {
+        listeningWordRound(p.wordList, custom, p.shuffleWords);
+      } catch (error) {
+        return (error as Error).message;
+      }
+    }
+    return '';
+  });
   const [continuationError, setContinuationError] = useState('');
   const retryRound = useRef(false);
   const pendingRound = useRef<{ round: ListeningWordRound; automatic: boolean } | null>(null);
@@ -161,9 +191,8 @@ export default forwardRef<
   const [speechAttempt, setSpeechAttempt] = useState(0);
   const isWords = p.tool === 'words';
   const isStory = p.tool === 'stories';
-  const story = useMemo(
-    () => listeningStoryRound(practiceStory(p.storySettings.storyId)),
-    [p.storySettings.storyId],
+  const [story, setStory] = useState(
+    () => initialShare?.story ?? listeningStoryRound(practiceStory(p.storySettings.storyId)),
   );
   const variablePitch = usesVariableListeningPitch(p);
   const narrative = isStory ? story : qso;
@@ -173,6 +202,16 @@ export default forwardRef<
   const spokenAnswers = isWords && p.spokenAnswers;
   const repeatList = isWords && p.repeatList;
   const wordGap = isWords ? p.wordGap : 0;
+  const wordSourceKey = JSON.stringify([
+    isWords,
+    isStory,
+    activeWordList,
+    activeCustom,
+    p.storySettings.storyId,
+  ]);
+  const previousWordSource = useRef(wordSourceKey);
+  const wordSetupKey = JSON.stringify([activeShuffle, spokenAnswers]);
+  const previousWordSetup = useRef(wordSetupKey);
   const content = isWords ? wordRound : narrative;
   const resetKey = JSON.stringify([
     isWords,
@@ -231,7 +270,7 @@ export default forwardRef<
       !spokenAnswers &&
       pending &&
       !pending.automatic &&
-      matchesWordSource(pending.round, p, custom)
+      matchesWordSetup(pending.round, p, custom)
     )
       return;
     resetTransport();
@@ -245,10 +284,16 @@ export default forwardRef<
     }
   };
   useEffect(() => {
+    // Initial material already belongs to this source. Retain the linked round
+    // through StrictMode effect replay; only an actual selection edit replaces it.
+    if (previousWordSource.current === wordSourceKey) return;
+    previousWordSource.current = wordSourceKey;
     if (isWords) resetWords();
     else resetTransport();
   }, [isWords, isStory, activeWordList, activeCustom, p.storySettings.storyId]);
   useEffect(() => {
+    if (previousWordSetup.current === wordSetupKey) return;
+    previousWordSetup.current = wordSetupKey;
     // A Morse-only installed round keeps its order; Shuffle chooses the next one.
     // Preserve the existing fresh-recording behavior for spoken answers.
     if (isWords && (spokenAnswers || !prepared.current)) resetWords();
@@ -258,6 +303,21 @@ export default forwardRef<
     if (p.tool === 'qso') resetTransport();
     setQso(listeningQsoRound(generateQso(p.qsoScenario)));
   }, [p.qsoScenario]);
+  useEffect(() => {
+    if (story.id === p.storySettings.storyId) return;
+    if (p.tool === 'stories') resetTransport();
+    setStory(listeningStoryRound(practiceStory(p.storySettings.storyId)));
+  }, [p.storySettings.storyId]);
+  useEffect(() => {
+    if (!visible || !publicRoute || !onPublicRouteChange) return;
+    if (
+      (isWords && wordRound && wordRound.listId !== p.wordList) ||
+      (p.tool === 'qso' && qso.id !== p.qsoScenario) ||
+      (isStory && story.id !== p.storySettings.storyId)
+    )
+      return;
+    onPublicRouteChange(listeningShareRoute(p, { qso, words: wordRound, story, copyMode }));
+  }, [visible, publicRoute, onPublicRouteChange, p, qso, wordRound, story, copyMode]);
   useEffect(() => {
     if (audio.current) player.current.attach(audio.current);
   }, []);
@@ -523,7 +583,15 @@ export default forwardRef<
       isWords &&
       !spokenAnswers &&
       !prepared.current &&
-      !matchesWordSource(wordRound, preferencesOwner.current, customOwner.current)
+      !matchesWordSetup(wordRound, preferencesOwner.current, customOwner.current) &&
+      // Only the explicitly imported round may differ from the selected next-
+      // round shuffle choice. A local edit still needs an owned replacement so
+      // a pending setup effect cannot reset a deliberate Play of stale material.
+      !(
+        wordRound === initialShare?.words &&
+        preferencesOwner.current.shuffleWords === initialShare.preferences.shuffleWords &&
+        matchesWordSource(wordRound, preferencesOwner.current, customOwner.current)
+      )
     )
       return advanceWordRound();
     pendingRound.current = null;
@@ -683,6 +751,11 @@ export default forwardRef<
   const current = isWords ? words[position] : narrative.lines[position];
   return (
     <div className="listening-trainer">
+      {initialShare?.error && (
+        <p className="alert error" role="alert">
+          {initialShare.error}
+        </p>
+      )}
       <div className="practice-generator-controls">
         {isWords ? (
           <label>
@@ -947,7 +1020,8 @@ export default forwardRef<
               ? `Valid words and list selection are saved for ${wordScopeLabel} on this device.`
               : `Words are active for this visit; saving for ${wordScopeLabel} needs attention.`}{' '}
             Custom text stays private on this device. Empty or invalid drafts do not replace saved
-            words.
+            words. Shared links to a custom list open Common QSO words with the shared sound
+            settings.
           </p>
           {wordContent.error && (
             <p className="alert error" role="alert">

@@ -8,7 +8,12 @@ export interface PracticeQso {
   season?: QsoSeason;
   /** Answers from this exact generated exchange, restricted to details it sends. */
   copyFields: QsoCopyField[];
+  /** Versioned indexes of public choices; never learner answers or notes. */
+  recipe?: string;
 }
+// Recipe v1 makes these pool positions and templates a public format. Append
+// choices; changing an existing entry or template needs a new version while
+// retaining the v1 renderer. See listening-share.test.ts compatibility fixtures.
 /** Illustrative calls only; these profiles do not describe the calls' real owners. */
 export const QSO_CALLSIGNS = [
   'W1DPN',
@@ -111,6 +116,7 @@ export const QSO_ANTENNAS = [
   'END FED WIRE',
 ] as const;
 const QSO_SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
+const QSO_WEATHER_CONDITIONS = ['SUNNY', 'CLEAR', 'CLOUDY', 'WINDY', 'RAIN', 'SNOW'] as const;
 export type QsoSeason = (typeof QSO_SEASONS)[number];
 type Climate = (typeof QSO_LOCATIONS)[number]['climate'];
 
@@ -266,6 +272,29 @@ export function generateQso(
   }
   const a = station(pick(pool));
   const b = station(pick(pool.filter((call) => call !== a.call)), a.name);
+  const indexes = (s: QsoStation) => {
+    const radio = QSO_RADIOS.findIndex((item) => item.rig === s.rig);
+    return [
+      QSO_CALLSIGNS.indexOf(s.call as (typeof QSO_CALLSIGNS)[number]),
+      QSO_NAMES.indexOf(s.name as (typeof QSO_NAMES)[number]),
+      QSO_LOCATIONS.findIndex((item) => item.city === s.city && item.state === s.state),
+      radio,
+      (QSO_RADIOS[radio].watts as readonly number[]).indexOf(s.watts),
+      QSO_ANTENNAS.indexOf(s.antenna as (typeof QSO_ANTENNAS)[number]),
+      QSO_WEATHER_CONDITIONS.indexOf(s.weatherCondition as (typeof QSO_WEATHER_CONDITIONS)[number]),
+      s.temperatureF,
+      QSO_REPORTS.indexOf(s.report as (typeof QSO_REPORTS)[number]),
+    ];
+  };
+  const recipe = [
+    1,
+    QSO_TEMPLATES.indexOf(template),
+    QSO_SEASONS.indexOf(season),
+    ...indexes(a),
+    ...indexes(b),
+  ]
+    .map((value) => value.toString(36))
+    .join('.');
   return {
     id,
     title: template.title,
@@ -273,6 +302,81 @@ export function generateQso(
     lines: template.lines(a, b),
     season,
     copyFields: createQsoCopyFields(a, b, template.copy),
+    recipe,
+  };
+}
+
+/** v1: version/template/season, then call/name/QTH/rig/power/antenna/WX/temp/RST. */
+export function qsoFromRecipe(recipe: string): PracticeQso {
+  const invalid = (): never => {
+    throw new Error('This QSO link is invalid or uses an unsupported recipe version.');
+  };
+  if (recipe.length > 160 || !/^[0-9a-z]+(?:\.[0-9a-z]+){20}$/.test(recipe)) return invalid();
+  const values = recipe.split('.').map((value) => parseInt(value, 36));
+  if (values[0] !== 1 || values.map((value) => value.toString(36)).join('.') !== recipe)
+    return invalid();
+  const template = QSO_TEMPLATES[values[1]];
+  const season = QSO_SEASONS[values[2]];
+  if (!template || !season) return invalid();
+  const station = ([
+    call,
+    name,
+    location,
+    radio,
+    power,
+    antenna,
+    weather,
+    temperature,
+    report,
+  ]: number[]): QsoStation => {
+    const place = QSO_LOCATIONS[location];
+    const rig = QSO_RADIOS[radio];
+    const weatherCondition = QSO_WEATHER_CONDITIONS[weather];
+    if (
+      !QSO_CALLSIGNS[call] ||
+      !QSO_NAMES[name] ||
+      !place ||
+      !rig ||
+      rig.watts[power] === undefined ||
+      !QSO_ANTENNAS[antenna] ||
+      !weatherCondition ||
+      !QSO_REPORTS[report]
+    )
+      return invalid();
+    const [low, high] = SEASONAL_TEMPERATURES[place.climate][season];
+    if (
+      Number(QSO_CALLSIGNS[call].match(/\d/)![0]) !== place.district ||
+      temperature < low ||
+      temperature > high ||
+      (weatherCondition === 'RAIN' && (temperature < 40 || place.climate === 'desert')) ||
+      (weatherCondition === 'SNOW' && (season !== 'winter' || temperature > 32))
+    )
+      return invalid();
+    return {
+      call: QSO_CALLSIGNS[call],
+      name: QSO_NAMES[name],
+      city: place.city,
+      state: place.state,
+      rig: rig.rig,
+      watts: rig.watts[power],
+      antenna: QSO_ANTENNAS[antenna],
+      weatherCondition,
+      temperatureF: temperature,
+      weather: `${weatherCondition} TEMP ${temperature} F`,
+      report: QSO_REPORTS[report],
+    };
+  };
+  const a = station(values.slice(3, 12));
+  const b = station(values.slice(12));
+  if (a.call === b.call || a.name === b.name) return invalid();
+  return {
+    id: template.id,
+    title: template.title,
+    stations: [a.call, b.call],
+    lines: template.lines(a, b),
+    season,
+    copyFields: createQsoCopyFields(a, b, template.copy),
+    recipe,
   };
 }
 import { createQsoCopyFields, type QsoCopyField, type QsoCopySelection } from './qso-copy';
