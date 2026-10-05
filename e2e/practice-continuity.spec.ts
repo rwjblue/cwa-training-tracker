@@ -165,7 +165,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expectResponsive(page, `retained-today-${viewport.width}`);
 
   await activate(retained.getByRole('button', { name: 'Inspect this week', exact: true }));
-  await expect(page).toHaveURL(/#course$/);
+  await expect(page).toHaveURL(/#course\?level=intermediate&session=1$/);
   await activate(retained.getByRole('button', { name: 'Inspect report', exact: true }));
   const report = page.getByRole('dialog');
   await expect(report).toBeVisible();

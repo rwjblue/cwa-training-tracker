@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { DEFAULT_PROFILE } from '../src/shared/training';
 import {
   DEFAULT_PRACTICE_PREFERENCES,
   PRACTICE_PREFERENCES_KEY,
@@ -202,7 +203,68 @@ test('a generated QSO and selected Story share their exact text and sound across
 
 test('public course sessions and exact recording speeds override a recipient device default', async ({
   page,
+  browser,
 }) => {
+  // Read-only identity fixtures give this sender a different private course
+  // default from the fresh guest, without changing any stored account data.
+  const user = {
+    id: 'public-course-sender',
+    email: 'public-course-sender@example.test',
+    createdAt: '2026-10-01T00:00:00.000Z',
+  };
+  const state = {
+    accountId: user.id,
+    revision: 0,
+    generation: 0,
+    settings: { ...DEFAULT_PROFILE, level: 'advanced', useGravatar: false },
+    plan: [],
+  };
+  const writes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().startsWith(`${e2eOrigin}/api/`) && request.method() !== 'GET')
+      writes.push(request.method());
+  });
+  await page.route('**/api/me', (route) => route.fulfill({ json: { user } }));
+  await page.route('**/api/account-state', (route) => route.fulfill({ json: { state } }));
+  await page.route('**/api/entries', (route) =>
+    route.fulfill({ json: { accountId: user.id, generation: 0, revision: 0, entries: [] } }),
+  );
+  await page.route('**/api/lcwo', (route) => route.fulfill({ json: { state, data: null } }));
+  await page.goto('/#course');
+  await expect(page).toHaveURL(/#course\?level=advanced&session=1$/);
+  await expect(
+    page.getByRole('heading', { name: 'Advanced curriculum', exact: true }),
+  ).toBeVisible();
+  const bareShare = page.url();
+  const recipient = await browser.newContext({
+    baseURL: e2eOrigin,
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  try {
+    const fresh = await recipient.newPage();
+    await fresh.goto('/#course');
+    await expect(fresh).toHaveURL(/#course\?level=beginner&session=1$/);
+    await fresh.goto(bareShare);
+    await expect(fresh).toHaveURL(bareShare);
+    await expect(
+      fresh.getByRole('heading', { name: 'Advanced curriculum', exact: true }),
+    ).toBeVisible();
+    await expect(
+      fresh
+        .getByRole('navigation', { name: 'Advanced sessions', exact: true })
+        .getByRole('link', { name: 'Session 1', exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+  } finally {
+    await recipient.close();
+  }
+  await page.goto('/#course?session=4');
+  await expect(page).toHaveURL(/#course\?level=advanced&session=4$/);
+  await page.goto('/#course?level=fundamental');
+  await expect(page).toHaveURL(/#course\?level=fundamental&session=1$/);
+  await page.goto('/#course');
+  await expect(page).toHaveURL(/#course\?level=advanced&session=1$/);
+  expect(writes).toEqual([]);
   await page.addInitScript((key) => localStorage.setItem(key, 'next'), RECORDING_SPEED_STORAGE_KEY);
   await page.route('https://cwa.cwops.org/wp-content/uploads/POTA*.mp3', syntheticRecording(12));
   await page.goto('/#course?level=advanced&session=7');
@@ -310,7 +372,7 @@ test('URL traversal retains hidden practice and a refused replacement restores i
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime))
     .toBeGreaterThan(1.2);
   await navigateView(page, 'Academy guide');
-  await expect(page).toHaveURL(/#course$/);
+  await expect(page).toHaveURL(/#course\?level=beginner&session=1$/);
   const position = await media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime);
   await expect(media(page)).toHaveJSProperty('paused', true);
   await page.goBack();
@@ -319,7 +381,7 @@ test('URL traversal retains hidden practice and a refused replacement restores i
   expect(await media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime)).toBe(position);
   await expect(media(page)).toHaveJSProperty('paused', true);
   await page.goForward();
-  await expect(page).toHaveURL(/#course$/);
+  await expect(page).toHaveURL(/#course\?level=beginner&session=1$/);
   await page.evaluate(() => {
     const set = Storage.prototype.setItem;
     Reflect.set(window, 'restorePublicRouteStorage', () => {
@@ -332,7 +394,7 @@ test('URL traversal retains hidden practice and a refused replacement restores i
     };
     location.hash = '#practice/sending';
   });
-  await expect(page).toHaveURL(/#course$/);
+  await expect(page).toHaveURL(/#course\?level=beginner&session=1$/);
   await page
     .getByRole('region', { name: 'Current practice block', exact: true })
     .getByRole('button', { name: 'Return to practice', exact: true })

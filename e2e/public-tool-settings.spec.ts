@@ -281,7 +281,7 @@ test('Free practice shares its generated set while a typed script stays private'
   await page.goto('/#logbook?owner=N0PRIVATE&notes=PRIVATE');
   await expect(page).toHaveURL(/#logbook$/);
   await page.goto('/#course?level=unknown&session=99&owner=N0PRIVATE');
-  await expect(page).toHaveURL(/#course$/);
+  await expect(page).toHaveURL(/#course\?level=beginner&session=1$/);
   await page.goto('/#settings?owner=N0PRIVATE');
   await expect(page).toHaveURL(/#overview$/);
   await page.goto('/#events?time=utc&owner=N0PRIVATE');

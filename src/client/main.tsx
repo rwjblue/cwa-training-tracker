@@ -489,8 +489,10 @@ function App() {
         currentPage.current === initial.page &&
         acceptedHash.current === initial.hash &&
         !(initial.page === 'settings' && !user)
-      )
-        writeHash(initial.hash, true);
+      ) {
+        if (initial.page === 'course') showPage('course', true, initial.hash);
+        else writeHash(initial.hash, true);
+      }
       return;
     }
     if (practiceLaunch) return;
@@ -500,7 +502,7 @@ function App() {
       replaceStudio({ id: crypto.randomUUID(), ...initial.launch });
       showPage('practice', true, initial.hash);
     } else showPage('tools', true);
-  }, [booting, page, practiceLaunch, user]);
+  }, [booting, page, practiceLaunch, user, profile.level]);
   useEffect(() => {
     setDeviceOpen(false);
     setLifecycleReview(null);
@@ -757,7 +759,13 @@ function App() {
   const showPage = (next: Page, traversed = false, hash?: string) => {
     setStartNewTask(false);
     currentPage.current = next;
-    const nextHash = hash ?? (next === 'practice' ? currentPracticeHash.current : `#${next}`);
+    const requestedHash = hash ?? (next === 'practice' ? currentPracticeHash.current : `#${next}`);
+    const courseRoute = next === 'course' ? readAppRoute(requestedHash) : undefined;
+    // Publish the actual public curriculum shown by a default or partial
+    // Course address, without changing the learner's private profile.
+    const nextHash = courseRoute
+      ? courseHash(courseRoute.level ?? profile.level, courseRoute.session ?? 1)
+      : requestedHash;
     acceptedHash.current = nextHash;
     writeHash(nextHash, traversed);
     setRouteHash(nextHash);
