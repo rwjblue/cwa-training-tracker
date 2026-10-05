@@ -289,6 +289,53 @@ const backup = (sessions: unknown[] = [entry()]) => ({
 });
 
 describe('external manual results and captured completion', () => {
+  it('persists and edits on-air categories through backups while rejecting inconsistent writes and imports', async () => {
+    const auth = await signIn('on-air-category-owner@example.test');
+    const other = await signIn('on-air-category-other@example.test');
+    const body = {
+      ...entry('on-air-category'),
+      kind: 'on-air',
+      source: 'manual',
+      metadata: { onAirCategory: 'pota' },
+    };
+    expect((await request('/api/entries', 'POST', body, auth.cookie)).status).toBe(201);
+    expect((await request('/api/entries/on-air-category', 'PUT', body, other.cookie)).status).toBe(404);
+    const edited = { ...body, metadata: { onAirCategory: 'sota' } };
+    expect((await request('/api/entries/on-air-category', 'PUT', edited, auth.cookie)).status).toBe(200);
+    const exported = (await (
+      await request('/api/export', 'GET', undefined, auth.cookie)
+    ).json()) as TrainingExport;
+    expect(exported.sessions[0].metadata?.onAirCategory).toBe('sota');
+    expect(
+      (await request('/api/import', 'POST', { mode: 'replace', data: exported }, auth.cookie)).status,
+    ).toBe(200);
+    expect(
+      ((await (await request('/api/export', 'GET', undefined, auth.cookie)).json()) as TrainingExport)
+        .sessions,
+    ).toEqual(exported.sessions);
+    const before = await getAccountSnapshot(env, auth.user.id);
+    const malformed = { ...edited, kind: 'listening' };
+    expect((await request('/api/entries/on-air-category', 'PUT', malformed, auth.cookie)).status).toBe(
+      400,
+    );
+    const invalid = { ...edited, id: 'invalid-on-air', metadata: { onAirCategory: 'invalid' } };
+    expect((await request('/api/entries', 'POST', invalid, auth.cookie)).status).toBe(400);
+    expect(
+      (
+        await request(
+          '/api/import',
+          'POST',
+          {
+            mode: 'replace',
+            data: { ...exported, sessions: [exported.sessions[0], malformed] },
+          },
+          auth.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(await getAccountSnapshot(env, auth.user.id)).toEqual(before);
+  });
+
   it('round-trips all external families, explicit zeros and captured start across profile changes with account isolation', async () => {
     const a = await signIn('external-owner@example.test');
     const b = await signIn('external-other@example.test');

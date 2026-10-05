@@ -1,3 +1,4 @@
+import { ON_AIR_CATEGORIES, onAirCategoryLabel } from '../shared/on-air-practice';
 import type { InstructorMaterial, OriginalMaterialInventory } from '../shared/instructor-material';
 import MaterialLibrary from './MaterialLibrary';
 import MaterialPreparation from './MaterialPreparation';
@@ -2353,6 +2354,9 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
       <div className="session-summary">
         <strong>
           {kind.label}
+          {entry.kind === 'on-air' && onAirCategoryLabel(entry.metadata?.onAirCategory) && (
+            <span className="lesson-label">{onAirCategoryLabel(entry.metadata?.onAirCategory)}</span>
+          )}
           {entry.context === 'class' && <span className="lesson-label">Class</span>}
           {getPracticePurpose(entry) === 'review' && (
             <span className="lesson-label">Extra review</span>
@@ -3168,6 +3172,7 @@ function SessionModal({
     qsoCount: initial.qsoCount === undefined ? '' : String(initial.qsoCount),
     performanceRating: initial.metadata?.assessment?.performanceRating ?? '',
     cwtEvent: initial.metadata?.assessment?.cwt !== undefined ? 'cwt' : '',
+    onAirCategory: initial.metadata?.onAirCategory ?? '',
     heardCallsigns: initial.metadata?.assessment?.cwt?.heardCallsigns ?? '',
     heardExchanges: initial.metadata?.assessment?.cwt?.heardExchanges ?? '',
     workedCallsigns: initial.metadata?.assessment?.cwt?.workedCallsigns ?? '',
@@ -3201,6 +3206,10 @@ function SessionModal({
     !manualDraft.externalKind && supportsOnAirObservations({ ...initial, kind: form.kind });
   const metadataFromForm = (value: typeof form) => {
     const metadata: Record<string, unknown> = { ...initial.metadata, scratchpad: value.scratchpad };
+    delete metadata.onAirCategory;
+    if (value.onAirCategory && !manualDraft.externalKind &&
+      supportsOnAirObservations({ ...initial, kind: value.kind }))
+      metadata.onAirCategory = value.onAirCategory;
     delete metadata.assessment;
     if (value.performanceRating || value.cwtEvent) {
       const cwt: CwtObservations = {};
@@ -3425,6 +3434,20 @@ function SessionModal({
                 ))}
               </select>
             </label>
+            {canObserveOnAir && (
+              <label className="field">
+                On-air category <span className="label-hint">optional</span>
+                <select
+                  value={form.onAirCategory}
+                  onChange={(e) => update('onAirCategory', e.target.value)}
+                >
+                  <option value="">Unspecified</option>
+                  {ON_AIR_CATEGORIES.map((category) => (
+                    <option key={category.id} value={category.id}>{category.label}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="field">
               Practice date
               <input

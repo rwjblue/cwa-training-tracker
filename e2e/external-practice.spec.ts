@@ -21,6 +21,55 @@ async function settled(page: Page) {
   });
 }
 
+test('on-air categories remain readable after reload and mobile edits, and clear when activity changes', async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await signIn(page);
+  await page.getByRole('button', { name: 'Log practice', exact: true }).press('Enter');
+  const activity = page.getByRole('combobox', { name: 'Activity', exact: true });
+  const category = page.getByRole('combobox', { name: /^On-air category/ });
+  await expect(category).toHaveCount(0);
+  await activity.selectOption('on-air');
+  await expect(category).toHaveValue('');
+  await category.focus();
+  await expect(category).toBeFocused();
+  await expect(category.getByRole('option', { name: 'QSO / ragchew', exact: true })).toHaveCount(1);
+  await category.selectOption('pota');
+  await page.getByLabel(/^Time practiced/).fill('5:00');
+  await page.getByLabel('Practice date', { exact: true }).fill('2026-10-02');
+  await page.getByLabel(/^Notes/).fill('Synthetic park activation');
+  await settled(page);
+  await expectResponsive(page, 'on-air-category-desktop');
+  await page.getByRole('button', { name: 'Save practice', exact: true }).press('Enter');
+  await expect(dialog(page)).toHaveCount(0);
+  const exported = () => context.request.get('/api/export').then((response) => response.json());
+  expect((await exported()).sessions[0].metadata.onAirCategory).toBe('pota');
+  await navigate(page, 'Practice log');
+  const row = page.getByText('Synthetic park activation', { exact: true }).locator('..');
+  await expect(row).toContainText('POTA');
+  await page.reload();
+  await expect(row).toContainText('POTA');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Edit On air on 2026-10-02', exact: true }).tap();
+  await expect(category).toHaveValue('pota');
+  await category.selectOption('sota');
+  await settled(page);
+  await expectResponsive(page, 'on-air-category-mobile');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).tap();
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(row).toContainText('SOTA');
+  expect((await exported()).sessions[0].metadata.onAirCategory).toBe('sota');
+  await page.getByRole('button', { name: 'Edit On air on 2026-10-02', exact: true }).tap();
+  await activity.selectOption('listening');
+  await expect(category).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save changes', exact: true }).tap();
+  await expect(dialog(page)).toHaveCount(0);
+  expect((await exported()).sessions[0].metadata).not.toHaveProperty('onAirCategory');
+  await expect(row).not.toContainText('SOTA');
+});
+
 test('all external LCWO families create, inspect and edit without generic score or speed claims', async ({
   page,
   context,

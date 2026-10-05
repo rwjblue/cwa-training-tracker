@@ -23,6 +23,7 @@ import { copyAttemptSessionFields } from './copy-report.ts';
 import { evidenceTime, sessionEvidence, type PracticeEvidence } from './practice-evidence.ts';
 import { generatedListeningSpeeds } from './generated-listening.ts';
 import { validateClassSchedule, type ClassSchedule } from './class-schedule.ts';
+import { validateOnAirCategory, type OnAirCategory } from './on-air-practice.ts';
 
 /** Public domain model. Course instructions and personal records stay private. */
 export type CourseLevel = 'beginner' | 'fundamental' | 'intermediate' | 'advanced';
@@ -77,6 +78,7 @@ export interface PracticeSession {
     manualTiming?: ManualTiming;
     instructorMaterial?: MaterialReference;
     materialCompleted?: boolean;
+    onAirCategory?: OnAirCategory;
   };
 }
 
@@ -675,6 +677,14 @@ export function validatePracticeSession(
     }
   }
   validateManualSessionDetails(session);
+  if (session.metadata?.onAirCategory !== undefined) {
+    const onAirCategory = validateOnAirCategory(session.metadata.onAirCategory);
+    if (!supportsOnAirObservations(session))
+      throw new Error(
+        'On-air categories require on-air practice, not recordings or simulator results.',
+      );
+    session.metadata = { ...session.metadata, onAirCategory };
+  }
   if (session.metadata?.assessment !== undefined) {
     const assessment = validatePracticeAssessment(session.metadata.assessment);
     if (assessment.cwt !== undefined && !supportsOnAirObservations(session))

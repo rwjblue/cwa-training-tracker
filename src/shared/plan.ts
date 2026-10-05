@@ -1,6 +1,7 @@
 import { lcwoRunDetails, type LcwoBackup } from './lcwo.ts';
 import { lcwoContributions, lcwoContributionDetails, estimatedLcwoSessions } from './lcwo-practice.ts';
 import { practiceAssessmentDetails } from './practice-assessment.ts';
+import { onAirCategoryLabel } from './on-air-practice.ts';
 import {
   addDays,
   courseMeetings,
@@ -675,6 +676,9 @@ export function weeklyReport(
       const details = [
         `${minutes(entry.minutes)} min`,
         entry.kind,
+        ...(entry.kind === 'on-air' && onAirCategoryLabel(entry.metadata?.onAirCategory)
+          ? [onAirCategoryLabel(entry.metadata?.onAirCategory)!]
+          : []),
         ...(entry.context === 'class' ? ['class'] : []),
         ...(getPracticePurpose(entry) === 'review'
           ? ['extra review (no required assignment credit)']
