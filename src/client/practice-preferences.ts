@@ -11,6 +11,7 @@ export interface PracticePreferences {
   wordList: WordList;
   wordGap: number;
   shuffleWords: boolean;
+  variableWordPitch: boolean;
   repeatList: boolean;
   spokenAnswers: boolean;
   hideTrainerText: boolean;
@@ -57,6 +58,7 @@ export const DEFAULT_PRACTICE_PREFERENCES: PracticePreferences = {
   wordList: 'common-qso',
   wordGap: 1,
   shuffleWords: true,
+  variableWordPitch: true,
   repeatList: true,
   spokenAnswers: false,
   hideTrainerText: true,
@@ -146,6 +148,10 @@ export function normalizePracticePreferences(value: unknown): PracticePreference
     wordGap: bounded(source.wordGap, defaults.wordGap, 0, 5, 0.1),
     shuffleWords:
       typeof source.shuffleWords === 'boolean' ? source.shuffleWords : defaults.shuffleWords,
+    variableWordPitch:
+      typeof source.variableWordPitch === 'boolean'
+        ? source.variableWordPitch
+        : defaults.variableWordPitch,
     repeatList: typeof source.repeatList === 'boolean' ? source.repeatList : defaults.repeatList,
     spokenAnswers:
       typeof source.spokenAnswers === 'boolean' ? source.spokenAnswers : defaults.spokenAnswers,

@@ -88,6 +88,24 @@ describe('generated listening summaries', () => {
     expect(generatedListeningDetails(result).join('\n')).toContain('mixed 2–8-letter words');
   });
 
+  it('preserves historical fixed pitches and optional variable word-pitch facts', () => {
+    const historical = words();
+    expect(validateGeneratedListeningSummary(historical)).toEqual(historical);
+    expect(validateGeneratedListeningSummary(historical)).not.toHaveProperty('variablePitch');
+    for (const variablePitch of [true, false]) {
+      const summary = words({ variablePitch });
+      expect(validateGeneratedListeningSummary(summary)).toEqual(summary);
+      expect(validateGeneratedListeningEvidence(envelope([summary])).summaries[0]).toEqual(summary);
+    }
+    expect(generatedListeningDetails(envelope([historical]))[0]).toContain('; 600 Hz;');
+    expect(generatedListeningDetails(envelope([words({ variablePitch: false })]))[0]).toContain(
+      '; 600 Hz;',
+    );
+    const variableDetails = generatedListeningDetails(envelope([words({ variablePitch: true })]))[0];
+    expect(variableDetails).toContain('; random 500–900 Hz per word;');
+    expect(variableDetails).not.toContain('600 Hz');
+  });
+
   it.each([
     { characterWpm: 4 },
     { characterWpm: 61 },
@@ -110,6 +128,10 @@ describe('generated listening summaries', () => {
     { shuffle: 'true' },
     { repeat: 1 },
     { spokenAnswers: null },
+    { variablePitch: 'true' },
+    { variablePitch: 1 },
+    { variablePitch: null },
+    { variablePitch: undefined },
     { customLabel: 'Unallowed published label' },
   ])('rejects malformed word facts %j', (change) => {
     expect(() => validateGeneratedListeningSummary({ ...words(), ...change })).toThrow();
@@ -130,6 +152,13 @@ describe('generated listening summaries', () => {
     { lines: ['PRIVATE SCRIPT'] },
   ])('rejects malformed QSO facts %j', (change) => {
     expect(() => validateGeneratedListeningSummary({ ...qso(), ...change })).toThrow();
+  });
+
+  it('restricts variable pitch to word-listening summaries', () => {
+    for (const summary of [qso(), free()])
+      expect(() => validateGeneratedListeningSummary({ ...summary, variablePitch: true })).toThrow(
+        /unsupported field/,
+      );
   });
 
   it('requires applicable free generation settings and rejects unrelated selections', () => {
@@ -176,6 +205,7 @@ describe('generated listening summaries', () => {
     'seconds',
     'accuracy',
     'qsoCount',
+    'pitchesHz',
   ])('rejects private or invented summary field %s instead of stripping it', (key) => {
     for (const summary of [words(), qso(), free()])
       expect(() => validateGeneratedListeningSummary({ ...summary, [key]: 'PRIVATE' })).toThrow(
@@ -198,6 +228,23 @@ describe('generated listening summaries', () => {
 });
 
 describe('played configuration collector', () => {
+  it('distinguishes applied variable pitch from fixed pitch without inventing historical facts', () => {
+    const collector = new GeneratedListeningCollector();
+    collector.record(words());
+    collector.record(words({ variablePitch: true }));
+    collector.record(words({ variablePitch: true }));
+    collector.record(words({ variablePitch: false }));
+    const saved = collector.snapshot()!;
+    expect(saved.summaries).toEqual([
+      words(),
+      words({ variablePitch: true }),
+      words({ variablePitch: false }),
+    ]);
+    expect(validateGeneratedListeningEvidence(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
+    expect(saved.summaries[0]).not.toHaveProperty('variablePitch');
+    expect(generatedListeningDetails(saved)[1]).toContain('random 500–900 Hz per word');
+  });
+
   it('collects only explicit applied configurations and freezes the earlier save snapshot', () => {
     const collector = new GeneratedListeningCollector();
     expect(collector.snapshot()).toBeUndefined();

@@ -4,17 +4,99 @@ import {
   qsoListeningSummary,
   qsoListeningTrack,
   qsoStationTones,
+  wordListeningFrequencies,
   wordListeningSummary,
   wordListeningTrack,
 } from './listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
 import { generateQso, QSO_TEMPLATES } from './qso-content';
 import { MORSE_SAMPLE_RATE, renderMorseWav, wordAtTime } from './morse-track';
-import { retimedOccurrencePosition } from './listening-retiming';
+import { retimedOccurrencePosition, retimeWordTrack } from './listening-retiming';
 import { practiceStory } from '../shared/listening-stories';
 import { storyListeningTrack } from './listening-configuration';
 
 describe('applied listening configurations', () => {
+  it('draws a bounded pitch once for each occurrence and retains it across replay and retiming', () => {
+    const pitchRandom = vi
+      .fn()
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
+      .mockReturnValue(0.999);
+    const round = listeningWordRound('custom', 'T T T', false, Math.random, pitchRandom);
+    const p = { ...DEFAULT_PRACTICE_PREFERENCES, variableWordPitch: true, tone: 975 };
+    const first = wordListeningTrack(round, p);
+    const replay = wordListeningTrack(round, p);
+    const faster = wordListeningTrack(round, { ...p, characterWpm: 30, effectiveWpm: 15 });
+    expect(round.frequenciesHz).toEqual([500, 700, 900]);
+    expect(Object.isFrozen(round.frequenciesHz)).toBe(true);
+    expect(wordListeningFrequencies(round, p)).toBe(round.frequenciesHz);
+    expect(pitchRandom).toHaveBeenCalledTimes(3);
+    expect(first.summary).toMatchObject({ variablePitch: true });
+    expect(first.summary).not.toHaveProperty('frequenciesHz');
+    expect(replay.track).toEqual(first.track);
+    for (const track of [
+      first.track,
+      faster.track,
+      retimeWordTrack(first.track, faster.track, 1),
+    ]) {
+      expect(track.items.map((item) => item.text)).toEqual(['T', 'T', 'T']);
+      for (const [index, item] of track.items.entries()) {
+        const tones = track.tones.filter((tone) => tone.at >= item.start && tone.at < item.end);
+        expect(new Set(tones.map((tone) => tone.frequency))).toEqual(
+          new Set([round.frequenciesHz[index]]),
+        );
+      }
+    }
+    const fixed = wordListeningTrack(round, { ...p, variableWordPitch: false });
+    expect(fixed.summary).not.toHaveProperty('variablePitch');
+    expect(wordListeningFrequencies(round, { ...p, variableWordPitch: false })).toEqual([
+      975, 975, 975,
+    ]);
+    expect(new Set(fixed.track.tones.map((tone) => tone.frequency))).toEqual(new Set([975]));
+    expect(fixed.track.words).toEqual(first.track.words);
+    expect(fixed.track.items).toEqual(first.track.items);
+    expect(fixed.track.duration).toBe(first.track.duration);
+    expect(wordListeningTrack(round, p).track).toEqual(first.track);
+    expect(pitchRandom).toHaveBeenCalledTimes(3);
+  });
+
+  it('renders each generated word pitch into PCM while preserving silent word pauses', async () => {
+    const pitchRandom = vi
+      .fn()
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
+      .mockReturnValue(0.999);
+    const round = listeningWordRound('custom', 'T T T', false, Math.random, pitchRandom);
+    const { track } = wordListeningTrack(round, {
+      ...DEFAULT_PRACTICE_PREFERENCES,
+      variableWordPitch: true,
+      characterWpm: 20,
+      effectiveWpm: 10,
+      wordGap: 0.5,
+    });
+    const data = new DataView(await renderMorseWav(track).arrayBuffer());
+    const sample = (index: number) => data.getInt16(44 + index * 2, true);
+    for (const [index, tone] of track.tones.entries()) {
+      const first = Math.round(tone.at * MORSE_SAMPLE_RATE);
+      const last = Math.round((tone.at + tone.duration) * MORSE_SAMPLE_RATE) - 1;
+      const measurementStart = first + Math.round(MORSE_SAMPLE_RATE * 0.01);
+      const measurementEnd = last - Math.round(MORSE_SAMPLE_RATE * 0.01);
+      const crossings: number[] = [];
+      for (let frame = measurementStart; frame < measurementEnd; frame++) {
+        const before = sample(frame - 1);
+        const value = sample(frame);
+        if (before <= 0 && value > 0) crossings.push(frame - 1 - before / (value - before));
+      }
+      expect(crossings.length).toBeGreaterThan(10);
+      const frequency =
+        ((crossings.length - 1) * MORSE_SAMPLE_RATE) / (crossings.at(-1)! - crossings[0]);
+      expect(frequency).toBeCloseTo(round.frequenciesHz[index], 0);
+      expect(sample(first)).toBe(0);
+      expect(sample(last)).toBe(0);
+      expect(sample(Math.round((track.items[index].end + 0.1) * MORSE_SAMPLE_RATE))).toBe(0);
+    }
+  });
+
   it('labels the actual published round while newer source preferences await generation', () => {
     const round = listeningWordRound('common-qso', '', false);
     const selected = {
@@ -278,8 +360,8 @@ describe('bounded two-station QSO pitch', () => {
     },
   );
 
-  it('leaves words and Stories at their own single preferred pitch', () => {
-    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 1000 };
+  it('leaves opted-out words and Stories at their own single preferred pitch', () => {
+    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 1000, variableWordPitch: false };
     const words = wordListeningTrack(listeningWordRound('custom', 'E T', false), p).track;
     const story = storyListeningTrack(practiceStory('story-trail'), p);
     for (const track of [words, story])

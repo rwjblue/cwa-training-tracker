@@ -285,6 +285,10 @@ export default function PracticeStudio({
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
   const activeListeningPreferences = listeningPreferences(preferences);
+  const listeningToneLabel =
+    activeListeningPreferences.tool === 'words' && activeListeningPreferences.variableWordPitch
+      ? '500–900 Hz variable'
+      : `${activeListeningPreferences.tone} Hz`;
   const isSending =
     Boolean(launch?.material) || activity?.type === 'sending' || (!assigned && tool === 'sending');
   const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
@@ -1087,7 +1091,7 @@ export default function PracticeStudio({
       <span className="playback-note">
         {activeListeningPreferences.characterWpm} / {activeListeningPreferences.effectiveWpm} WPM
         <span> · </span>
-        {activeListeningPreferences.tone} Hz
+        {listeningToneLabel}
       </span>
     </div>
   );
@@ -1998,7 +2002,7 @@ export default function PracticeStudio({
                     <span className="playback-note">
                       {activeListeningPreferences.characterWpm} /{' '}
                       {activeListeningPreferences.effectiveWpm} WPM <span>·</span>{' '}
-                      {activeListeningPreferences.tone} Hz
+                      {listeningToneLabel}
                     </span>
                   </div>
                 )}

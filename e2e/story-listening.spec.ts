@@ -135,7 +135,7 @@ test('public Stories share native sentence/word transport and retain independent
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Word listening', exact: true }).tap();
   await expect(
-    sound(page).getByText('Sound settings · 20/10 WPM · 600 Hz', { exact: true }),
+    sound(page).getByText('Sound settings · 20/10 WPM · 500–900 Hz variable', { exact: true }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Stories', exact: true }).tap();
   await expect(selector(page)).toHaveValue('story-light');

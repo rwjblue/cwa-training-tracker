@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildMorseTrack,
+  buildSpokenWordTrack,
   MAX_MORSE_SECONDS,
   MORSE_SAMPLE_RATE,
   renderMorseWav,
@@ -17,6 +18,49 @@ import {
 const settings = { characterWpm: 20, effectiveWpm: 10, frequency: 600, volume: 0.5 };
 
 describe('continuous Morse recordings', () => {
+  it('keeps each spoken word pitch across all three repeats without changing speech or timing', async () => {
+    const clips = new Map([['T', new Float32Array([0.5, -0.5])]]);
+    const spokenSettings = { ...settings, extraWordGap: 0.5 };
+    const fixed = buildSpokenWordTrack(['T', 'T'], clips, spokenSettings);
+    const variable = buildSpokenWordTrack(['T', 'T'], clips, spokenSettings, [500, 900]);
+    expect(variable.tones.map((tone) => tone.frequency)).toEqual([500, 500, 500, 900, 900, 900]);
+    expect(variable.words).toEqual(fixed.words);
+    expect(variable.items).toEqual(fixed.items);
+    expect(variable.speech).toEqual(fixed.speech);
+    expect(variable.duration).toBe(fixed.duration);
+    expect(variable.tones.map(({ at, duration }) => ({ at, duration }))).toEqual(
+      fixed.tones.map(({ at, duration }) => ({ at, duration })),
+    );
+    const data = new DataView(await renderMorseWav(variable).arrayBuffer());
+    const sample = (frame: number) => data.getInt16(44 + frame * 2, true);
+    for (const tone of variable.tones) {
+      const first = Math.round((tone.at + 0.01) * MORSE_SAMPLE_RATE);
+      const last = Math.round((tone.at + tone.duration - 0.01) * MORSE_SAMPLE_RATE);
+      const crossings: number[] = [];
+      for (let frame = first; frame < last; frame++) {
+        const before = sample(frame - 1);
+        const value = sample(frame);
+        if (before <= 0 && value > 0) crossings.push(frame - 1 - before / (value - before));
+      }
+      expect(crossings.length).toBeGreaterThan(10);
+      const frequency =
+        ((crossings.length - 1) * MORSE_SAMPLE_RATE) / (crossings.at(-1)! - crossings[0]);
+      expect(frequency).toBeCloseTo(tone.frequency, 0);
+    }
+  });
+
+  it('rejects invalid spoken word pitches before composing the longer recording', () => {
+    const clips = new Map([['T', new Float32Array([0.5])]]);
+    expect(() => buildSpokenWordTrack(['T', 'T'], clips, settings, [500])).toThrow(
+      'one sidetone for each word',
+    );
+    for (const pitch of [99, 2001, NaN, Infinity])
+      expect(() => buildSpokenWordTrack(['T'], clips, settings, [pitch])).toThrow('sidetone');
+    expect(() => buildSpokenWordTrack(['T'], clips, settings, Array<number>(1))).toThrow(
+      'sidetone',
+    );
+  });
+
   it('aligns every seekable word with the tone timeline across QSO transmissions', () => {
     const track = buildMorseTrack(
       [

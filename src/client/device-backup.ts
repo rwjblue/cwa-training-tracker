@@ -335,7 +335,10 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
     Object.keys(DEFAULT_PRACTICE_PREFERENCES),
   );
   for (const key of Object.keys(DEFAULT_PRACTICE_PREFERENCES))
-    if (!['version', 'storySettings', 'qsoSettings'].includes(key) && input[key] === undefined)
+    if (
+      !['version', 'storySettings', 'qsoSettings', 'variableWordPitch'].includes(key) &&
+      input[key] === undefined
+    )
       throw new Error(`Shared practice preferences are missing ${key}.`);
   for (const key of ['tool', 'wordList', 'mode', 'qsoScenario'])
     if (typeof input[key] !== 'string')
@@ -344,6 +347,7 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
   for (const [key, normalizedValue] of Object.entries(normalized)) {
     // Versioned mode settings extend older inventories without replacing their schema.
     if (key === 'version' && (input[key] === undefined || input[key] === 1)) continue;
+    if (key === 'variableWordPitch' && !Object.hasOwn(input, key)) continue;
     if (key === 'storySettings' || key === 'qsoSettings') {
       if (input[key] === undefined) continue;
       const setup = object(

@@ -14,6 +14,8 @@ export type GeneratedListeningSummary = GeneratedListeningSpeeds &
         readonly customLabel?: string;
         readonly entryCount: number;
         readonly toneHz: number;
+        /** Omitted historical configurations used the fixed tone. */
+        readonly variablePitch?: boolean;
         readonly wordGapSeconds: number;
         readonly shuffle: boolean;
         readonly repeat: boolean;
@@ -142,6 +144,7 @@ export function validateGeneratedListeningSummary(value: unknown): GeneratedList
         'listId',
         'entryCount',
         'toneHz',
+        'variablePitch',
         'wordGapSeconds',
         'shuffle',
         'repeat',
@@ -160,6 +163,9 @@ export function validateGeneratedListeningSummary(value: unknown): GeneratedList
       entryCount,
       ...speeds,
       toneHz: finite(row.toneHz, 'Generated tone', 300, 1000),
+      ...(Object.hasOwn(row, 'variablePitch')
+        ? { variablePitch: boolean(row.variablePitch, 'Variable word pitch') }
+        : {}),
       wordGapSeconds: finite(row.wordGapSeconds, 'Extra word pause', 0, 5),
       shuffle: boolean(row.shuffle, 'Word shuffle'),
       repeat: boolean(row.repeat, 'Word repeat'),
@@ -332,8 +338,10 @@ export function generatedListeningDetails(evidence: GeneratedListeningEvidence):
   return [
     ...evidence.summaries.map((summary) => {
       const speed = `${summary.characterWpm} character / ${summary.effectiveWpm} effective WPM`;
-      if (summary.mode === 'words')
-        return `Played ${summary.listId === 'custom' ? summary.customLabel : WORD_TITLES[summary.listId]}: ${summary.entryCount} entries; ${speed}; ${summary.toneHz} Hz; ${summary.wordGapSeconds}s extra word pause; ${summary.shuffle ? 'shuffled' : 'list order'}; ${summary.spokenAnswers ? 'three repeats + spoken answer' : 'Morse only'}; repeat ${summary.repeat ? 'on' : 'off'}.`;
+      if (summary.mode === 'words') {
+        const tone = summary.variablePitch ? 'random 500–900 Hz per word' : `${summary.toneHz} Hz`;
+        return `Played ${summary.listId === 'custom' ? summary.customLabel : WORD_TITLES[summary.listId]}: ${summary.entryCount} entries; ${speed}; ${tone}; ${summary.wordGapSeconds}s extra word pause; ${summary.shuffle ? 'shuffled' : 'list order'}; ${summary.spokenAnswers ? 'three repeats + spoken answer' : 'Morse only'}; repeat ${summary.repeat ? 'on' : 'off'}.`;
+      }
       if (summary.mode === 'qso')
         return `Played ${QSO_TITLES[summary.scenarioId]}: ${summary.stations.join(' / ')}; ${speed}; station tones ${summary.tonesHz.join(' / ')} Hz; ${summary.transmissionGapSeconds}s transmission pause.`;
       if (summary.mode === 'story')

@@ -14,10 +14,12 @@ export default function ListeningSoundSettings({
   onRetry: () => void;
 }) {
   const { characterWpm, effectiveWpm, tone, volume } = preferences;
+  const variablePitch = preferences.tool === 'words' && preferences.variableWordPitch;
   return (
     <details className="studio-sound-settings">
       <summary>
-        Sound settings · {characterWpm}/{effectiveWpm} WPM · {tone} Hz
+        Sound settings · {characterWpm}/{effectiveWpm} WPM ·{' '}
+        {variablePitch ? '500–900 Hz variable' : `${tone} Hz`}
         {!remembered && <span> · Not saved on this device</span>}
       </summary>
       <div className="studio-preferences-heading">
@@ -33,6 +35,23 @@ export default function ListeningSoundSettings({
         <button type="button" className="button outline" onClick={onRetry}>
           Retry saving listening preferences
         </button>
+      )}
+      {preferences.tool === 'words' && (
+        <div className="studio-preferences-heading">
+          <label>
+            <input
+              type="checkbox"
+              checked={preferences.variableWordPitch}
+              onChange={(event) => changePreferences({ variableWordPitch: event.target.checked })}
+              aria-describedby="word-variable-pitch-hint"
+            />{' '}
+            Variable pitch
+          </label>
+          <p id="word-variable-pitch-hint">
+            Choose a random pitch from 500 to 900 Hz for each word. Replays and spoken-answer
+            repeats keep that word’s pitch. Turn this off to use your selected sidetone.
+          </p>
+        </div>
       )}
       <div className="studio-preferences-heading studio-speed-presets">
         <label>
@@ -88,7 +107,11 @@ export default function ListeningSoundSettings({
           step={1}
           unit="Hz"
           onChange={(v) => changePreferences({ tone: v })}
-          hint="Find a comfortable pitch from 300 to 1000 Hz, in 1 Hz steps."
+          hint={
+            variablePitch
+              ? 'Used when Variable pitch is off. Choose from 300 to 1000 Hz, in 1 Hz steps.'
+              : 'Find a comfortable pitch from 300 to 1000 Hz, in 1 Hz steps.'
+          }
         />
         <PreciseRange
           continuous

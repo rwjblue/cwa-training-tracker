@@ -98,6 +98,10 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   measured second; Save notes explicitly retains nonempty zero-time text.
   Review & save still permits checking and canceling an entry.
   Sound controls sit alongside pause, repeat, and shuffle settings.
+  Word lists default to variable 500–900 Hz pitch per word, including custom lists
+  and spoken-answer mode. Sound settings offers a remembered opt-out using the
+  selected sidetone; replay, speed retiming and spoken repeats retain each word’s
+  pitch. Played evidence distinguishes variable pitch from historical fixed tones.
   The old “77” name is not seven missing vocabulary items. Geographic/seasonal
   coherence and scenario-aware copy checks are current-app improvements.
   [Listening](../src/client/ListeningTrainer.tsx), [content](../src/client/word-content.ts).

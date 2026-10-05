@@ -8,6 +8,8 @@ import { wordPracticeRound, type WordList } from './word-content';
 /** Source facts belong to the generated round, which can outlive a selected preference. */
 export interface ListeningWordRound {
   readonly words: readonly string[];
+  /** One pitch per occurrence, retained when the round is replayed or retimed. */
+  readonly frequenciesHz: readonly number[];
   readonly listId: WordList;
   readonly shuffle: boolean;
   /** Device content identity only; never included in a played summary. */
@@ -19,9 +21,12 @@ export function listeningWordRound(
   custom: string,
   shuffle: boolean,
   random = Math.random,
+  pitchRandom = Math.random,
 ): ListeningWordRound {
+  const words = Object.freeze(wordPracticeRound(listId, custom, shuffle, random));
   return Object.freeze({
-    words: Object.freeze(wordPracticeRound(listId, custom, shuffle, random)),
+    words,
+    frequenciesHz: Object.freeze(words.map(() => 500 + Math.floor(pitchRandom() * 401))),
     listId,
     shuffle,
     ...(listId === 'custom' ? { sourceText: custom } : {}),
@@ -40,6 +45,7 @@ export function wordListeningSummary(
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
     toneHz: p.tone,
+    ...(p.variableWordPitch ? { variablePitch: true } : {}),
     wordGapSeconds: p.wordGap,
     shuffle: round.shuffle,
     repeat: p.repeatList,
@@ -47,9 +53,18 @@ export function wordListeningSummary(
   });
 }
 
+/** The same applied pitches feed both Morse-only and prerecorded spoken rounds. */
+export function wordListeningFrequencies(
+  round: ListeningWordRound,
+  p: PracticePreferences,
+): readonly number[] {
+  return p.variableWordPitch ? round.frequenciesHz : round.words.map(() => p.tone);
+}
+
 /** One bounded Morse-only recording for the actual ordered source occurrences. */
 export function wordListeningTrack(round: ListeningWordRound, p: PracticePreferences) {
   const summary = wordListeningSummary(round, p);
+  const frequencies = wordListeningFrequencies(round, p);
   const options = {
     characterWpm: summary.characterWpm,
     effectiveWpm: summary.effectiveWpm,
@@ -57,8 +72,9 @@ export function wordListeningTrack(round: ListeningWordRound, p: PracticePrefere
     volume: p.volume / 100,
   };
   const track = buildMorseTrack(
-    round.words.map((text) => ({
+    round.words.map((text, index) => ({
       text,
+      frequency: frequencies[index],
       gapAfter: morseTimeline(text, options.characterWpm, options.effectiveWpm).wordGap + p.wordGap,
     })),
     options,

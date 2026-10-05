@@ -1463,6 +1463,34 @@ describe('public live agenda preference in device inventory', () => {
   });
 });
 
+it('defaults old backups to variable word pitch and preserves both choices through backup and restore', () => {
+  seed('guest');
+  const backup = captureDeviceBackup('guest', 'Guest');
+  const { variableWordPitch: omittedPitch, ...oldPreferences } = backup.shared.practicePreferences!;
+  const old = { ...backup, shared: { practicePreferences: oldPreferences } };
+  const migrated = validateDeviceBackup(JSON.stringify(old), 'guest');
+  expect(migrated.shared.practicePreferences?.variableWordPitch).toBe(true);
+  for (const variableWordPitch of [true, false]) {
+    const current = { ...backup.shared.practicePreferences!, variableWordPitch };
+    values.set(PRACTICE_PREFERENCES_KEY, JSON.stringify(current));
+    const captured = captureDeviceBackup('guest', 'Guest');
+    const checked = validateDeviceBackup(JSON.stringify(captured), 'guest');
+    expect(checked.shared.practicePreferences).toEqual(current);
+    values.delete(PRACTICE_PREFERENCES_KEY);
+    restoreDeviceBackup(checked, { expectedScope: 'guest', restoreSharedPreferences: true });
+    expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(current);
+  }
+  for (const variableWordPitch of [null, 0, 1, 'false', [], {}]) {
+    const malformed = {
+      ...backup,
+      shared: { practicePreferences: { ...oldPreferences, variableWordPitch } },
+    };
+    expect(() => validateDeviceBackup(JSON.stringify(malformed), 'guest')).toThrow(
+      /variableWordPitch is invalid/,
+    );
+  }
+});
+
 it('keeps old shared v1 preferences compatible and explicitly restores independent Story settings', () => {
   seed('guest');
   const backup = captureDeviceBackup('guest', 'Guest');

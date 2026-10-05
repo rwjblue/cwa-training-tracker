@@ -189,10 +189,15 @@ export function buildSpokenWordTrack(
   words: readonly string[],
   clips: ReadonlyMap<string, Float32Array>,
   options: MorseTrackOptions,
+  frequencies?: readonly number[],
 ): MorseTrack {
+  if (frequencies && frequencies.length !== words.length)
+    throw new Error('Provide one sidetone for each word.');
+  if (frequencies)
+    for (const frequency of frequencies) checkRange(frequency, 100, 2000, 'sidetone');
   // Shared validation also bounds the word list before constructing the longer round.
   buildMorseTrack(
-    words.map((text) => ({ text })),
+    words.map((text, index) => ({ text, frequency: frequencies?.[index] })),
     options,
   );
   const track: MorseTrack = {
@@ -204,6 +209,7 @@ export function buildSpokenWordTrack(
     volume: options.volume,
   };
   for (const [itemIndex, text] of words.entries()) {
+    const frequency = frequencies?.[itemIndex] ?? options.frequency;
     const samples = clips.get(text);
     if (!samples?.length || samples.length > MORSE_SAMPLE_RATE * 10)
       throw new Error(`No valid prerecorded answer for ${text}.`);
@@ -212,7 +218,7 @@ export function buildSpokenWordTrack(
     const gap = timeline.wordGap + (options.extraWordGap ?? 0);
     for (let repeat = 0; repeat < 3; repeat++) {
       for (const tone of timeline.tones)
-        track.tones.push({ ...tone, at: track.duration + tone.at, frequency: options.frequency });
+        track.tones.push({ ...tone, at: track.duration + tone.at, frequency });
       track.duration += timeline.duration + (repeat < 2 ? gap : timeline.wordGap);
     }
     const answerStart = track.duration;

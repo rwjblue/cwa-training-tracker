@@ -29,6 +29,7 @@ import {
   storyListeningTrack,
   wordListeningSummary,
   wordListeningTrack,
+  wordListeningFrequencies,
   type ListeningWordRound,
 } from './listening-configuration';
 import type { PracticePreferences } from './practice-preferences';
@@ -170,7 +171,8 @@ export default forwardRef<
   const resetKey = JSON.stringify([
     isWords,
     isStory,
-    p.tone,
+    isWords && p.variableWordPitch ? null : p.tone,
+    isWords && p.variableWordPitch,
     wordGap,
     spokenAnswers && repeatList,
     spokenAnswers,
@@ -301,10 +303,12 @@ export default forwardRef<
       if (spokenAnswers) {
         if (speech?.words !== words || !speech.clips)
           return { applied: null, error: speech?.words === words ? (speech.error ?? '') : '' };
-        track = buildSpokenWordTrack(words, speech.clips, {
-          ...options,
-          extraWordGap: wordGap,
-        });
+        track = buildSpokenWordTrack(
+          words,
+          speech.clips,
+          { ...options, extraWordGap: wordGap },
+          wordListeningFrequencies(wordRound!, p),
+        );
       } else if (isWords) {
         track = wordListeningTrack(wordRound!, p).track;
       } else if (isStory) {
@@ -333,7 +337,8 @@ export default forwardRef<
     repeatList,
     p.characterWpm,
     p.effectiveWpm,
-    p.tone,
+    isWords && p.variableWordPitch ? null : p.tone,
+    p.variableWordPitch,
     wordGap,
   ]);
   const { applied } = trackResult;

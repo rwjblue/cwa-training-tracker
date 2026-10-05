@@ -27,6 +27,7 @@ describe('browser practice preferences', () => {
       groupLength: 8,
       wordLength: 4 as const,
       mode: 'numbers' as const,
+      variableWordPitch: false,
     };
     expect(savePracticePreferences(preferences, storage)).toBe(true);
     expect(loadPracticePreferences(storage)).toEqual(preferences);
@@ -63,6 +64,26 @@ describe('browser practice preferences', () => {
       mode: 'words',
     });
     expect(normalizePracticePreferences({ tone: 613 }).tone).toBe(613);
+  });
+
+  it('defaults old and invalid word pitch choices to on while preserving an explicit opt-out', () => {
+    for (const version of [undefined, 1, 2]) {
+      expect(normalizePracticePreferences({ version }).variableWordPitch).toBe(true);
+      expect(
+        normalizePracticePreferences({ version, variableWordPitch: false }).variableWordPitch,
+      ).toBe(false);
+    }
+    for (const variableWordPitch of [null, 0, 1, 'false', [], {}])
+      expect(normalizePracticePreferences({ variableWordPitch }).variableWordPitch).toBe(true);
+    const words = changeListeningPreferences(DEFAULT_PRACTICE_PREFERENCES, {
+      variableWordPitch: false,
+    });
+    for (const tool of ['qso', 'stories', 'words'] as const) {
+      const current = changeListeningPreferences(words, { tool });
+      expect(current.variableWordPitch).toBe(false);
+      expect(current.qsoSettings).not.toHaveProperty('variableWordPitch');
+      expect(current.storySettings).not.toHaveProperty('variableWordPitch');
+    }
   });
 
   it('discards nonfinite and wrong-type values instead of scheduling invalid audio', () => {
