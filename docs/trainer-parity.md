@@ -4528,3 +4528,20 @@ streaks and a seven-day activity breakdown while Today retains the daily plan.
 These changes refine the practice workflow and do not declare additional
 trainer parity. Browser verification covers desktop/mobile review, failed save
 and completion retry, and recovered Copy disposal with synthetic data.
+
+## Practice streaks with days off — 2026-10-05
+
+Current and best streaks count saved positive independent practice dates while
+allowing a single day off between practice days. Isolated days off can recur;
+there is no fixed rest weekday or weekly allowance. Two consecutive completed
+calendar days without practice end the current streak, and today remains
+available until it ends in the learner's timezone. Rest dates add no practice
+days or minutes. Class time, duplicate IDs, zero or invalid time, and future
+entries retain their existing exclusions. Streaks do not require meeting the
+daily goal.
+
+Summary labels the count as practice days and welcomes single days off. This
+policy supports regular rest without tying the habit to a particular course
+schedule or adding a limited-use freeze. Pure tests cover current/best streaks,
+repeated rest days, exclusions and calendar boundaries; the existing Summary
+browser journey checks the displayed count at desktop and mobile widths.

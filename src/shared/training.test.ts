@@ -464,11 +464,67 @@ describe('practice totals', () => {
     expect(summary.days[6].date).toBe('2026-10-04');
   });
 
-  it("keeps yesterday's streak while today is in progress, but breaks after a missed day", () => {
+  it('keeps a streak through a day off while today is in progress', () => {
     const items = [session('a', '2026-09-26', 10), session('b', '2026-09-27', 10)];
     expect(summarizePractice(items, '2026-09-28').currentStreak).toBe(2);
-    expect(summarizePractice(items, '2026-09-29').currentStreak).toBe(0);
+    expect(summarizePractice(items, '2026-09-29').currentStreak).toBe(2);
+    expect(summarizePractice(items, '2026-09-30').currentStreak).toBe(0);
     expect(summarizePractice([], '2026-09-28').bestStreak).toBe(0);
+    expect(summarizePractice([], '2026-09-28').currentStreak).toBe(0);
+  });
+
+  it('resumes across repeated single days off without counting rest as practice', () => {
+    const dates = [
+      '2026-09-19',
+      '2026-09-20',
+      '2026-09-22',
+      '2026-09-23',
+      '2026-09-25',
+      '2026-09-26',
+      '2026-09-27',
+      '2026-09-29',
+    ];
+    const items = dates.toReversed().map((date) => session(date, date, 10));
+    const summary = summarizePractice(items, '2026-09-29');
+    expect(summary).toMatchObject({
+      currentStreak: 8,
+      bestStreak: 8,
+      practiceDays: 8,
+      totalMinutes: 80,
+      weekMinutes: 10,
+    });
+    expect(summary.days[0]).toEqual({ date: '2026-09-28', minutes: 0 });
+  });
+
+  it('starts a new streak after two days off and retains the best earlier streak', () => {
+    const items = [
+      session('a', '2026-09-20', 10),
+      session('b', '2026-09-21', 10),
+      session('c', '2026-09-22', 10),
+      session('class', '2026-09-23', 60, { context: 'class' }),
+      session('zero', '2026-09-24', 0),
+      session('nonfinite', '2026-09-23', Number.NaN),
+      session('invalid', '2026-02-30', 10),
+      session('d', '2026-09-25', 10),
+      session('d', '2026-09-24', 10),
+      session('e', '2026-09-26', 10),
+      session('future', '2026-09-28', 10),
+    ];
+    expect(summarizePractice(items, '2026-09-26')).toMatchObject({
+      currentStreak: 2,
+      bestStreak: 3,
+      practiceDays: 5,
+      totalMinutes: 50,
+    });
+  });
+
+  it.each([
+    ['2026-10-31', '2026-11-02'],
+    ['2024-02-28', '2024-03-01'],
+    ['2026-12-31', '2027-01-02'],
+  ])('allows a calendar day off from %s to %s', (before, after) => {
+    const items = [session('a', before, 10), session('b', after, 10)];
+    expect(summarizePractice(items, after)).toMatchObject({ currentStreak: 2, bestStreak: 2 });
   });
 });
 

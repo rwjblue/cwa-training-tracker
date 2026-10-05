@@ -75,9 +75,9 @@ describe('practice activity summary', () => {
     expect(summary.weekMinutes).toBe(3.75);
   });
 
-  it('uses a rolling seven days and counts practice once while preserving the older streak', () => {
+  it('uses a rolling seven days while preserving the older streak across a day off', () => {
     const entries = [
-      session('older', { date: '2026-09-28', minutes: 5 }),
+      session('older', { date: '2026-09-27', minutes: 5 }),
       session('first', { date: '2026-09-29', kind: 'icr', minutes: 10 }),
       session('first', { date: '2026-09-29', kind: 'icr', minutes: 10 }),
       ...['2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04'].map((date) =>

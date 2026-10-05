@@ -797,20 +797,17 @@ export function summarizePractice(sessions: readonly PracticeSession[], today: s
     date: addDays(weekStart, index),
     minutes: daily.get(addDays(weekStart, index)) ?? 0,
   }));
-  let currentStreak = 0;
-  let cursor = daily.has(today) ? today : addDays(today, -1);
-  while (daily.has(cursor)) {
-    currentStreak += 1;
-    cursor = addDays(cursor, -1);
-  }
   let bestStreak = 0,
     streak = 0,
     previous = '';
   for (const date of [...daily.keys()].sort()) {
-    streak = previous && addDays(previous, 1) === date ? streak + 1 : 1;
+    // Count practice days, allowing an isolated day off between them.
+    streak = previous && date <= addDays(previous, 2) ? streak + 1 : 1;
     bestStreak = Math.max(bestStreak, streak);
     previous = date;
   }
+  // Today is still available: only two fully missed days end the current streak.
+  const currentStreak = previous && previous >= addDays(today, -2) ? streak : 0;
   const todayMinutes = daily.get(today) ?? 0;
   return {
     todayMinutes,

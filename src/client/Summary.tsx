@@ -72,10 +72,8 @@ export default function Summary({
           icon={Flame}
           label="CURRENT STREAK"
           value={String(summary.currentStreak)}
-          unit={summary.currentStreak === 1 ? 'day' : 'days'}
-          sub={
-            summary.currentStreak ? 'Keep the frequency alive' : 'Every new habit starts with one'
-          }
+          unit={summary.currentStreak === 1 ? 'practice day' : 'practice days'}
+          sub="Single days off keep your streak."
           orange
         />
         <SummaryStat

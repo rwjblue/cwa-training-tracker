@@ -25,6 +25,9 @@ test('Summary shows saved activity colors and history separately from the Today 
     ...extra,
   });
   for (const practice of [
+    ...['2026-09-27', '2026-09-29', '2026-10-01', '2026-10-03'].map((date) =>
+      entry(date, 'icr', 1, { date }),
+    ),
     entry('copy', 'icr', 10),
     entry('runner', 'simulator', 15),
     entry('recording', 'listening', 20, {
@@ -44,8 +47,10 @@ test('Summary shows saved activity colors and history separately from the Today 
     page.getByRole('heading', { name: 'Your practice summary.', exact: true }),
   ).toBeVisible();
   const totals = page.getByRole('region', { name: 'Practice summary', exact: true });
-  await expect(totals).toContainText('76');
-  await expect(totals).toContainText('7 sessions in the last 7 days');
+  await expect(totals).toContainText('79');
+  await expect(totals).toContainText('10 sessions in the last 7 days');
+  await expect(totals).toContainText('5practice days');
+  await expect(totals).toContainText('Single days off keep your streak.');
   const todayBar = page.getByRole('img', { name: /Oct 5: 76 minutes/ });
   await expect(todayBar).toBeVisible();
   await expect(todayBar).toHaveAccessibleName(
