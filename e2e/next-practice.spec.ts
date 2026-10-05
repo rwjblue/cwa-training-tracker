@@ -1,6 +1,6 @@
 import { expect, type Locator, type BrowserContext } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, navigateView, accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 import { DEFAULT_PROFILE, addDays } from '../src/shared/training';
 import { defaultCopyRecipe } from '../src/shared/copy-practice';
@@ -90,8 +90,7 @@ test('next assignment preserves native work through inspection and exact retry b
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   const position = await owner!.evaluate((element: HTMLAudioElement) => element.currentTime);
   expect(await owner!.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });

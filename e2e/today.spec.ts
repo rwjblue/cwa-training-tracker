@@ -312,7 +312,6 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Copied ALICE in OH. Revisit the final sentence.',
   );
-  await openDisclosure(page, 'Recording options · marks and replay');
   await page
     .getByRole('combobox', { name: 'Recording speed default', exact: true })
     .selectOption('next');

@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectResponsive, signIn } from './helpers';
+import { openDisclosure, navigateView, expectResponsive, signIn } from './helpers';
 import { morseTimeline } from '../src/client/audio';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.226' } });
@@ -186,12 +186,9 @@ test('native QSO retiming retains exact occurrence and rejects canceled asynchro
   await expect(
     page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }),
   ).toBeVisible();
-  await openDisclosure(page, 'Browse other views');
   await expectResponsive(page, 'live-qso-paused');
-  await openDisclosure(page, 'Browse other views');
   await page.setViewportSize({ width: 390, height: 844 });
-  await openDisclosure(page, 'Browse other views');
-  await page.getByRole('button', { name: 'Inspect Today', exact: true }).tap();
+  await navigateView(page, 'Today', (control) => control.tap());
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await retained.getByRole('button', { name: 'Return to practice', exact: true }).tap();
   expect((await state(page)).paused).toBe(true);

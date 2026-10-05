@@ -1,7 +1,7 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import {
-  openDisclosure,
+  navigateView,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -62,8 +62,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   expect(guest[0].metadata.evidence).not.toHaveProperty('generatedListening');
   await expectResponsive(page, `zero-notes-guest-${width}`);
 
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Overview', exact: true }));
+  await navigateView(page, 'Overview', activate);
   await activate(
     page
       .getByRole('region', { name: 'Current practice block', exact: true })
@@ -115,12 +114,8 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   await activate(row.getByRole('button', { name: 'Extra review', exact: true }));
   const notes = '  Synthetic private review note\nwith exact spacing.  ';
   await scratchpad.fill(notes);
-  await openDisclosure(page, 'About saving notes');
-  await expect(
-    page.getByText('Save nonempty notes at zero time to your private history.', { exact: false }),
-  ).toBeVisible();
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await expect(saveNotes).toBeEnabled();
+  await navigateView(page, 'Today', activate);
   await activate(
     page
       .getByRole('region', { name: 'Current practice block', exact: true })
@@ -157,8 +152,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   await expect(scratchpad).toHaveValue(notes);
   const retryNotes = page.getByRole('button', { name: 'Retry saving session', exact: true });
   await expect(retryNotes).toBeFocused();
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   await activate(
     page
       .getByRole('region', { name: 'Current practice block', exact: true })

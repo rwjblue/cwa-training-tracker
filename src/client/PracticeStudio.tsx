@@ -32,7 +32,6 @@ import { taskPracticeMetadata } from '../shared/practice-attribution';
 import { savedTaskProgress, type PlannedTask } from '../shared/plan';
 import { recordingCompletedPasses } from '../shared/practice-evidence';
 import ListeningPassProgress from './ListeningPassProgress';
-import { loadCourseReplay, saveCourseReplay, shouldReplayCourse } from './course-replay';
 import {
   buildMorseTrack,
   type MorseTrack,
@@ -65,14 +64,8 @@ import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import { practiceActivityForLaunch, type PracticeLaunch } from './practice-launch';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
-import RecordingReviewControls, { type RecordingReviewDraft } from './RecordingReviewControls';
-import {
-  MAX_TASK_RECORDING_MARKS,
-  recordingReplayPosition,
-  validateRecordingMarkSet,
-  type RecordingMark,
-  type RecordingMarkSet,
-} from '../shared/recording-marks';
+import RecordingRewindControl from './RecordingRewindControl';
+import { recordingReplayPosition } from '../shared/recording-marks';
 import { preferredRecording, recordingSpeeds } from './recording-variants';
 import {
   clearTaskRecordingChoice,
@@ -123,18 +116,19 @@ export default function PracticeStudio({
   onSaved,
   onAutoSave,
   onTaskCompletion,
-  onRecordingMarksChange,
   onBeforeLeaveChange,
   onBeforeInspectChange,
   onRunnerProgressChange,
   onRunnerResultReadyChange,
   onCurrentPracticeChange,
   practiceSummary,
+  practiceNavigation,
 }: {
   profile?: Profile;
   liveNow?: number;
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   practiceSummary?: React.ReactNode;
+  practiceNavigation?: React.ReactNode;
   onLog: (initial?: Partial<PracticeSession>) => void;
   savedVersion: number;
   savedOwnerId?: string;
@@ -154,10 +148,6 @@ export default function PracticeStudio({
   onSaved?: (entry: PracticeSession) => void;
   onAutoSave: (entry: PracticeSession) => Promise<void>;
   onTaskCompletion?: (task: PlannedTask, done: boolean) => Promise<void>;
-  onRecordingMarksChange?: (
-    task: PlannedTask,
-    marks: RecordingMarkSet[],
-  ) => Promise<'server' | 'device'>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
   onRunnerProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
   onRunnerResultReadyChange?: (resultId: string | undefined) => void;
@@ -211,25 +201,6 @@ export default function PracticeStudio({
       : undefined;
   const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
   const guidance = launch?.task ? listeningGuidance(launch.task, recordingUrl) : undefined;
-  // Private, unsent edits live with this Studio owner, not a keyed file control.
-  const [recordingReviewDrafts, setRecordingReviewDrafts] = useState<
-    Record<string, RecordingReviewDraft>
-  >({});
-  const recordingReviewKey = JSON.stringify([launch?.task?.id, recordingUrl, recordingWpm]);
-  const recordingReviewUnsaved = Object.values(recordingReviewDrafts).some(
-    (draft) => draft.label.length > 0 || draft.pending !== undefined || draft.busy,
-  );
-  const changeRecordingReviewDraft = (
-    update: (draft: RecordingReviewDraft) => RecordingReviewDraft,
-  ) => {
-    if (!currentDevice()) return;
-    const key = recordingReviewKey;
-    setRecordingReviewDrafts((previous) => ({
-      ...previous,
-      [key]: update(previous[key] ?? { label: '' }),
-    }));
-  };
-
   const [publicRunner, setPublicRunner] = useState(launch?.tool === 'runner');
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
   const [publicCopy, setPublicCopy] = useState(
@@ -242,10 +213,6 @@ export default function PracticeStudio({
   const recording = useRef<HTMLAudioElement>(null);
   const recordingPlayback = useRef(new RecordingPlayback());
   const [recordingPending, setRecordingPending] = useState(false);
-  const [courseReplay, setCourseReplay] = useState(loadCourseReplay);
-  const courseReplayChoice = useRef(courseReplay);
-  const [courseReplayRemembered, setCourseReplayRemembered] = useState(true);
-  const consumedRecordingOutcome = useRef<number | undefined>(undefined);
   const recordingSession = useRef(new MediaSessionController());
   const claimRecordingSession = (audio: HTMLAudioElement) => {
     if (audio !== recording.current || !canPractice()) return;
@@ -292,6 +259,8 @@ export default function PracticeStudio({
   const isSending =
     Boolean(launch?.material) || activity?.type === 'sending' || (!assigned && tool === 'sending');
   const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
+  const isListening =
+    activity?.type === 'audio' || (!assigned && !isCopy && !isRunner && !isSending);
   const [text, setText] = useState(() => {
     const initial = loadPracticePreferences();
     return initial.mode === 'custom' ? '' : generatePractice(initial.mode, initial);
@@ -349,9 +318,6 @@ export default function PracticeStudio({
     : undefined;
   const recordingMarksTask = tasks.find((task) => task.id === launch?.task?.id) ?? launch?.task;
   const taskRecordingMarks = recordingMarksTask?.recordingMarks ?? [];
-  const currentRecordingMarks = taskRecordingMarks.find(
-    (set) => set.url === recordingUrl && set.speedWpm === recordingWpm,
-  );
   const currentPasses = timer.recordings.reduce(
     (total, item) => total + (recordingCompletedPasses(item) ?? 0),
     0,
@@ -434,21 +400,11 @@ export default function PracticeStudio({
       savingCompletion ||
         copyUnsaved ||
         runnerUnsaved ||
-        recordingReviewUnsaved ||
         running ||
         seconds > 0 ||
         scratchpad.length > 0,
     );
-  }, [
-    savingCompletion,
-    copyUnsaved,
-    runnerUnsaved,
-    recordingReviewUnsaved,
-    running,
-    seconds,
-    scratchpad,
-    onUnsavedChange,
-  ]);
+  }, [savingCompletion, copyUnsaved, runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
@@ -577,7 +533,6 @@ export default function PracticeStudio({
   const resetTimer = () => {
     stopPlayback();
     timer.reset();
-    consumedRecordingOutcome.current = undefined;
     generatedListening.current.reset();
     sessionIdentity.current = undefined;
     saveCoordinator.current.reset();
@@ -644,16 +599,6 @@ export default function PracticeStudio({
     if (completionFlight.current)
       return completionFlight.current.then((saved) => saved && beforeLeaveRef.current());
     if (navigationFlight.current) return navigationFlight.current;
-    if (recordingReviewUnsaved) {
-      pauseTimer();
-      if (
-        !window.confirm(
-          'Unsaved difficult-mark edits are still in this block. Finish or switch and discard them? Cancel to keep them for retry.',
-        )
-      )
-        return Promise.resolve(false);
-    }
-
     if (isCopy) return Promise.resolve(true);
     if (isRunner) return runner.current?.finishForNavigation() ?? Promise.resolve(!runnerUnsaved);
     pauseTimer();
@@ -822,8 +767,8 @@ export default function PracticeStudio({
     setFreeTrack(null);
     setFreeWord(-1);
   }, [text, mode, groupLength, wordLength, characterWpm, effectiveWpm, tone, volume, tool]);
-  const playRecording = (audio: HTMLAudioElement, automatic = false) =>
-    recordingPlayback.current.play(audio, automatic, {
+  const playRecording = (audio: HTMLAudioElement) =>
+    recordingPlayback.current.play(audio, false, {
       owns: () => audio === recording.current && canPractice(),
       pending: setRecordingPending,
       start: () => {
@@ -833,7 +778,7 @@ export default function PracticeStudio({
       beforePlay: () => timer.finalizeMedia(audio),
       failed: (error) => {
         setError(
-          `${automatic ? 'Automatic replay could not start. ' : ''}${(error as Error).message} Choose Play another pass, recall, or Finish practice.`,
+          `${(error as Error).message} Choose Play another pass, recall, or Finish practice.`,
         );
         setPlaying(false);
         timer.pauseMedia();
@@ -857,65 +802,11 @@ export default function PracticeStudio({
     if (play) void playRecording(audio);
     return target;
   };
-  const changeRecordingMarks = async (marks: RecordingMark[]): Promise<'server' | 'device'> => {
-    if (
-      !canPractice() ||
-      !recordingMarksTask ||
-      !onRecordingMarksChange ||
-      !recordingUrl ||
-      recordingWpm === undefined
-    )
-      throw new Error('Reopen the current account exercise before saving marks.');
-    const updated = marks.length
-      ? validateRecordingMarkSet({
-          taskId: recordingMarksTask.id,
-          url: recordingUrl,
-          speedWpm: recordingWpm,
-          marks,
-        })
-      : undefined;
-    const sets = [
-      ...taskRecordingMarks.filter((set) => set.url !== recordingUrl),
-      ...(updated ? [updated] : []),
-    ];
-    return onRecordingMarksChange(recordingMarksTask, sets);
-  };
-  const changeCourseReplay = (enabled: boolean) => {
-    courseReplayChoice.current = enabled;
-    setCourseReplay(enabled);
-    setCourseReplayRemembered(saveCourseReplay(enabled));
-    if (!enabled && recordingPlayback.current.pending?.automatic) stopPlayback();
-  };
   const endRecording = (audio: HTMLAudioElement) => {
     if (audio !== recording.current || !canPractice() || !audio.ended) return;
     setPlaying(false);
     recordingPlayback.current.intended = false;
-    // Capture has finalized the existing clock before this target callback.
-    const measured = timer.snapshot();
-    const outcome = measured.recordingOutcome;
-    if (!outcome || outcome.url !== recordingUrl) {
-      recordingSession.current.release();
-      return;
-    }
-    if (outcome.id === consumedRecordingOutcome.current) return;
-    consumedRecordingOutcome.current = outcome.id;
-    if (
-      shouldReplayCourse({
-        enabled: courseReplayChoice.current,
-        completed: outcome.completed,
-        minimumPasses: activity?.type === 'audio' ? activity.minimumPasses : undefined,
-        savedPasses: savedPassProgress?.completedPasses ?? 0,
-        currentPasses: measured.recordings.reduce(
-          (sum, item) => sum + (recordingCompletedPasses(item) ?? 0),
-          0,
-        ),
-        extraReview,
-      })
-    ) {
-      // The same paused transport can cancel a pending continuation. Claiming
-      // another owner still waits for actual native playing as before.
-      void playRecording(audio, true);
-    } else recordingSession.current.release();
+    recordingSession.current.release();
   };
   const play = async () => {
     if (!canPractice()) return;
@@ -1007,10 +898,16 @@ export default function PracticeStudio({
   };
   const recallControls = (
     <div className="playback-toolbar" role="group" aria-label="Listening and recall controls">
+      {activity?.type === 'audio' && recordingUrl && (
+        <RecordingRewindControl
+          key={recordingUrl}
+          audioRef={recording}
+          onReplay={() => seekRecording()}
+        />
+      )}
       <button
         className="button outline"
         aria-pressed={timer.recalling}
-        aria-describedby="recall-policy"
         onClick={() => (timer.recalling ? pauseTimer() : startTimer(true))}
       >
         {timer.recalling ? <Square size={14} /> : <Play size={14} />}
@@ -1023,7 +920,6 @@ export default function PracticeStudio({
       <button
         className="button outline"
         disabled={playing || (assigned && (recordingPending || !recordingUrl))}
-        aria-describedby="recall-policy"
         onClick={() => void play()}
       >
         <Play size={14} /> Resume listening
@@ -1063,19 +959,21 @@ export default function PracticeStudio({
         className="button outline"
         disabled={timer.seconds !== 0 || running || !scratchpad.trim()}
         onClick={saveNotes}
-        aria-describedby="notes-save-help"
+        aria-describedby={isListening ? undefined : 'notes-save-help'}
       >
         Save notes
       </button>
-      <details className="scratchpad-save-details">
-        <summary>About saving notes</summary>
-        <p id="notes-save-help" className="field-hint">
-          Save nonempty notes at zero time{' '}
-          {accountId ? 'to your private history' : 'on this device'}. This adds no practice time or
-          passes and does not complete an exercise. Use Finish practice or Review &amp; save for
-          measured practice.
-        </p>
-      </details>
+      {!isListening && (
+        <details className="scratchpad-save-details">
+          <summary>About saving notes</summary>
+          <p id="notes-save-help" className="field-hint">
+            Save nonempty notes at zero time{' '}
+            {accountId ? 'to your private history' : 'on this device'}. This adds no practice time
+            or passes and does not complete an exercise. Use Finish practice or Review &amp; save
+            for measured practice.
+          </p>
+        </details>
+      )}
     </div>
   );
   const generatedPlaybackControls = (
@@ -1154,34 +1052,6 @@ export default function PracticeStudio({
       )}
     </div>
   );
-  const recordingExerciseDetails = launch?.task && (
-    <details className="studio-disclosure recording-exercise-details">
-      <summary>Exercise details</summary>
-      {taskAttribution}
-      {launch.task.notes && (
-        <details className="studio-task-notes">
-          <summary>Exercise instructions</summary>
-          <p>{launch.task.notes}</p>
-        </details>
-      )}
-      {guidance && (
-        <div className="recording-guidance" role="note" aria-label="Listening approach">
-          <p>
-            <strong>{guidance.title}.</strong> {guidance.approach}
-          </p>
-          <p className="field-hint">
-            Follow the original instructions and your advisor’s requirements.
-          </p>
-        </div>
-      )}
-
-      <p className="field-hint">
-        Mark the exercise complete when you’re ready, even if you don’t need another replay. Saving
-        your practice and completing the exercise stay separate; only actual practice time is
-        logged.
-      </p>
-    </details>
-  );
   const finishPracticeControl = onFinish && (
     <button
       className="button outline"
@@ -1194,6 +1064,7 @@ export default function PracticeStudio({
   const SessionPanel = 'details';
   return (
     <>
+      {!isListening && practiceNavigation}
       <div
         className={`page-heading studio-page-heading ${activity?.type === 'audio' ? 'is-recording' : ''}`}
       >
@@ -1254,7 +1125,7 @@ export default function PracticeStudio({
               <ArrowRight size={14} />
             </a>
           )}
-          {activity?.type !== 'audio' && launch.task.notes && (
+          {launch.task.notes && (
             <details className="studio-task-notes">
               <summary>Exercise instructions</summary>
               <p>{launch.task.notes}</p>
@@ -1455,6 +1326,16 @@ export default function PracticeStudio({
                   </div>
                   {isSending ? <Radio size={23} /> : <Headphones size={23} />}
                 </div>
+                {!assigned && tool === 'free' && (
+                  <ListeningSoundSettings
+                    preferences={preferences}
+                    onChange={changePreferences}
+                    remembered={remembered}
+                    onRetry={() => {
+                      if (canPractice()) setRemembered(savePracticePreferences(preferences));
+                    }}
+                  />
+                )}
                 {activity?.type === 'audio' ? (
                   <div className="assigned-recording">
                     <p>
@@ -1470,6 +1351,87 @@ export default function PracticeStudio({
                     </p>
                     {recordingUrl ? (
                       <>
+                        <details className="studio-disclosure recording-speed-options">
+                          <summary>Choose a recording speed</summary>
+                          {activity.url && (
+                            <RecordingSpeedSelect
+                              assignedUrl={activity.url}
+                              assignedWpm={activity.characterWpm}
+                              selectedUrl={recordingUrl}
+                              onChange={(variant) => {
+                                if (!canPractice()) return;
+                                if (variant.url !== recordingUrl) {
+                                  timer.discardRecording(recording.current ?? undefined);
+                                  pauseTimer();
+                                  setSelectedRecording(variant);
+                                  setError('');
+                                }
+                                if (recordingChoiceContext?.assignedWpm !== undefined)
+                                  rememberTaskRecording({
+                                    ...recordingChoiceContext,
+                                    assignedWpm: recordingChoiceContext.assignedWpm,
+                                    version: 1,
+                                    selectedUrl: variant.url,
+                                  });
+                              }}
+                              taskChoiceControls={
+                                recordingChoiceContext && (
+                                  <div className="recording-task-choice">
+                                    <p>
+                                      {taskRecordingPreference.choice
+                                        ? `Remembered for this task: ${recordingSpeeds(taskRecordingPreference.choice.selectedUrl)?.effectiveWpm} WPM.`
+                                        : 'This task uses the recording default on its next visit.'}{' '}
+                                      Task choices are private to{' '}
+                                      {accountId ? 'this account' : 'Guest'} on this device.
+                                    </p>
+                                    <div className="playback-toolbar">
+                                      {currentTaskRecordingChoice() &&
+                                        taskRecordingPreference.pending === undefined &&
+                                        taskRecordingPreference.choice?.selectedUrl !==
+                                          recordingUrl && (
+                                          <button
+                                            className="button outline"
+                                            onClick={() => {
+                                              const choice = currentTaskRecordingChoice();
+                                              if (choice) rememberTaskRecording(choice);
+                                            }}
+                                          >
+                                            Remember current recording for this task
+                                          </button>
+                                        )}
+                                      <button
+                                        className="button outline"
+                                        disabled={
+                                          !taskRecordingPreference.choice &&
+                                          taskRecordingPreference.pending === undefined
+                                        }
+                                        onClick={() => rememberTaskRecording(null)}
+                                      >
+                                        Use recording default next time
+                                      </button>
+                                    </div>
+                                    {taskRecordingPreference.notice && (
+                                      <p role="status">{taskRecordingPreference.notice}</p>
+                                    )}
+                                    {taskRecordingPreference.pending !== undefined && (
+                                      <button
+                                        className="text-button"
+                                        onClick={() => {
+                                          const pending = taskRecordingPreference.pending;
+                                          if (pending !== undefined) rememberTaskRecording(pending);
+                                        }}
+                                      >
+                                        {taskRecordingPreference.pending === null
+                                          ? 'Retry clearing task choice'
+                                          : 'Retry remembering task choice'}
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              }
+                            />
+                          )}
+                        </details>
                         <div className="recording-practice-workspace">
                           <div>
                             <audio
@@ -1552,59 +1514,6 @@ export default function PracticeStudio({
                           {scratchpadWorkspace}
                         </div>
                         {taskActions}
-                        {recordingExerciseDetails}
-                        <details className="studio-disclosure recording-options">
-                          <summary>Recording options · marks and replay</summary>
-                          <RecordingReviewControls
-                            key={`review:${launch?.id}:${recordingUrl}`}
-                            audioRef={recording}
-                            draft={recordingReviewDrafts[recordingReviewKey] ?? { label: '' }}
-                            onDraftChange={changeRecordingReviewDraft}
-                            markSet={currentRecordingMarks}
-                            availableMarks={Math.max(
-                              0,
-                              MAX_TASK_RECORDING_MARKS -
-                                taskRecordingMarks.reduce((sum, set) => sum + set.marks.length, 0),
-                            )}
-                            onSeek={seekRecording}
-                            onSave={
-                              recordingMarksTask &&
-                              officialRecordingIdentity(recordingUrl) !== undefined &&
-                              onRecordingMarksChange
-                                ? changeRecordingMarks
-                                : undefined
-                            }
-                          />
-                          <label className="checkbox-label course-replay-choice">
-                            <input
-                              type="checkbox"
-                              checked={courseReplay}
-                              onChange={(event) => changeCourseReplay(event.target.checked)}
-                            />
-                            <span>Automatically replay required course passes</span>
-                          </label>
-                          <p className="field-hint">
-                            Off by default. Full passes repeat only until the assigned minimum is
-                            met. Extra review pauses between passes. Generated Repeat list is
-                            separate.
-                          </p>
-                          {!courseReplayRemembered && (
-                            <p role="status">
-                              This choice applies now, but could not be remembered on this device.
-                              Enable browser storage or free space, then{' '}
-                              <button
-                                className="text-button"
-                                onClick={() => changeCourseReplay(courseReplay)}
-                              >
-                                Retry remembering replay choice
-                              </button>
-                              .
-                            </p>
-                          )}
-                          {recordingPending && (
-                            <p role="status">Starting listening… Use Pause practice to cancel.</p>
-                          )}
-                        </details>
                         <ListeningPassProgress
                           savedPasses={savedPassProgress?.completedPasses ?? 0}
                           importedPasses={savedPassProgress?.importedCompletedPasses ?? 0}
@@ -1651,87 +1560,7 @@ export default function PracticeStudio({
                             passes remain; save this block before measuring more passes.
                           </p>
                         )}
-                        <details className="studio-disclosure recording-speed-options">
-                          <summary>Choose a recording speed</summary>
-                          {activity.url && (
-                            <RecordingSpeedSelect
-                              assignedUrl={activity.url}
-                              assignedWpm={activity.characterWpm}
-                              selectedUrl={recordingUrl}
-                              onChange={(variant) => {
-                                if (!canPractice()) return;
-                                if (variant.url !== recordingUrl) {
-                                  timer.discardRecording(recording.current ?? undefined);
-                                  pauseTimer();
-                                  setSelectedRecording(variant);
-                                  setError('');
-                                }
-                                if (recordingChoiceContext?.assignedWpm !== undefined)
-                                  rememberTaskRecording({
-                                    ...recordingChoiceContext,
-                                    assignedWpm: recordingChoiceContext.assignedWpm,
-                                    version: 1,
-                                    selectedUrl: variant.url,
-                                  });
-                              }}
-                              taskChoiceControls={
-                                recordingChoiceContext && (
-                                  <div className="recording-task-choice">
-                                    <p>
-                                      {taskRecordingPreference.choice
-                                        ? `Remembered for this task: ${recordingSpeeds(taskRecordingPreference.choice.selectedUrl)?.effectiveWpm} WPM.`
-                                        : 'This task uses the recording default on its next visit.'}{' '}
-                                      Task choices are private to{' '}
-                                      {accountId ? 'this account' : 'Guest'} on this device.
-                                    </p>
-                                    <div className="playback-toolbar">
-                                      {currentTaskRecordingChoice() &&
-                                        taskRecordingPreference.pending === undefined &&
-                                        taskRecordingPreference.choice?.selectedUrl !==
-                                          recordingUrl && (
-                                          <button
-                                            className="button outline"
-                                            onClick={() => {
-                                              const choice = currentTaskRecordingChoice();
-                                              if (choice) rememberTaskRecording(choice);
-                                            }}
-                                          >
-                                            Remember current recording for this task
-                                          </button>
-                                        )}
-                                      <button
-                                        className="button outline"
-                                        disabled={
-                                          !taskRecordingPreference.choice &&
-                                          taskRecordingPreference.pending === undefined
-                                        }
-                                        onClick={() => rememberTaskRecording(null)}
-                                      >
-                                        Use recording default next time
-                                      </button>
-                                    </div>
-                                    {taskRecordingPreference.notice && (
-                                      <p role="status">{taskRecordingPreference.notice}</p>
-                                    )}
-                                    {taskRecordingPreference.pending !== undefined && (
-                                      <button
-                                        className="text-button"
-                                        onClick={() => {
-                                          const pending = taskRecordingPreference.pending;
-                                          if (pending !== undefined) rememberTaskRecording(pending);
-                                        }}
-                                      >
-                                        {taskRecordingPreference.pending === null
-                                          ? 'Retry clearing task choice'
-                                          : 'Retry remembering task choice'}
-                                      </button>
-                                    )}
-                                  </div>
-                                )
-                              }
-                            />
-                          )}
-                        </details>
+
                         <p className="field-hint">
                           The recording plays directly from CWops. You can pause, seek, and use your
                           device’s audio controls.
@@ -1745,7 +1574,6 @@ export default function PracticeStudio({
                         {recallControls}
                         {scratchpadWorkspace}
                         {taskActions}
-                        {recordingExerciseDetails}
                       </>
                     )}
                     {recordingUrl && (
@@ -2006,28 +1834,21 @@ export default function PracticeStudio({
                     </span>
                   </div>
                 )}
-                <details className="studio-disclosure studio-practice-help">
-                  <summary>Practice and timing help</summary>
-                  <p className="field-hint">
-                    Visiting another view pauses this block and keeps it here. Return when you’re
-                    ready; playback stays paused.
-                  </p>
+                {!isListening && (
+                  <details className="studio-disclosure studio-practice-help">
+                    <summary>Practice and timing help</summary>
+                    <p className="field-hint">
+                      Visiting another view pauses this block and keeps it here. Return when you’re
+                      ready; playback stays paused.
+                    </p>
 
-                  <p
-                    className="studio-playback-help"
-                    id={activity?.type === 'audio' || isWordListening ? 'recall-policy' : undefined}
-                  >
-                    {isWordListening
-                      ? 'Start recall pauses word audio for focused notes. Resume listening stops recall before playback. Recall is included in total practice time, but not the optional listening goal; it pauses when this page is hidden or its timer is delayed.'
-                      : isSending
+                    <p className="studio-playback-help">
+                      {isSending
                         ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
-                        : assigned
-                          ? activity?.type === 'audio'
-                            ? 'Press Play to count listening time. Start recall pauses the recording for focused notes; Resume listening stops recall before playback. Recall pauses if this page is hidden or the timer is delayed.'
-                            : 'Start practice times this exercise. Review and save your elapsed time when you finish.'
-                          : 'Playing audio automatically counts listening time. Pauses and seeks do not add time; use the timer for practice away from the player.'}
-                  </p>
-                </details>
+                        : 'Start practice times this exercise. Review and save your elapsed time when you finish.'}
+                    </p>
+                  </details>
+                )}
                 {(assigned && activity?.type !== 'audio') ||
                 isSending ||
                 (!assigned && tool === 'free')
@@ -2040,16 +1861,6 @@ export default function PracticeStudio({
                     {accountId ? 'to your private history' : 'on this device'}. Review &amp; save
                     lets you check the measured entry first.
                   </p>
-                )}
-                {!assigned && tool === 'free' && (
-                  <ListeningSoundSettings
-                    preferences={preferences}
-                    onChange={changePreferences}
-                    remembered={remembered}
-                    onRetry={() => {
-                      if (canPractice()) setRemembered(savePracticePreferences(preferences));
-                    }}
-                  />
                 )}
               </section>
               <div className={`practice-aside ${isSending ? 'is-sending' : ''}`}>
@@ -2259,7 +2070,7 @@ export default function PracticeStudio({
                     </button>
                   </div>
                 </SessionPanel>
-                {!isSending && (
+                {!isSending && !isListening && (
                   <details className="practice-tip studio-disclosure">
                     <summary>Listening tip</summary>
                     <span className="eyebrow">A NOTE FROM THE SHACK</span>
@@ -2323,7 +2134,7 @@ export default function PracticeStudio({
           </div>
         </div>
       )}
-      <div className="studio-time-summary">{practiceSummary}</div>
+      {!isListening && <div className="studio-time-summary">{practiceSummary}</div>}
     </>
   );
 }

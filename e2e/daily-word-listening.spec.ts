@@ -1,7 +1,15 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, accountRequest, expectResponsive, scopedRequest, signIn } from './helpers';
+import {
+  openDisclosure,
+  navigateView,
+  accountRequest,
+  expectResponsive,
+  scopedRequest,
+  signIn,
+} from './helpers';
 import { dateInTimezone } from '../src/shared/training';
+import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.225' } });
 
@@ -12,6 +20,7 @@ test('optional daily words count actual replay separately from recall and retire
   test.setTimeout(90_000);
   await page.goto('/');
   await page.getByRole('button', { name: /^Word listening Build recognition/ }).click();
+  await navigateView(page, 'Overview');
   const daily = page.getByRole('region', { name: 'Optional daily word listening', exact: true });
   await expect(daily).toContainText('Public practice needs no account.');
   expect((await context.request.get('/api/entries')).status()).toBe(401);
@@ -110,45 +119,53 @@ test('optional daily words count actual replay separately from recall and retire
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .press('Enter');
   await expect(page.getByRole('checkbox', { name: 'Repeat list', exact: true })).toBeChecked();
-  await activate(page.getByRole('button', { name: /^Start practice$/ }));
   const audio = page.getByLabel('Practice audio', { exact: true });
+  await observeNativeMovement(audio);
+  await activate(page.getByRole('button', { name: /^Start practice$/ }));
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(0.1);
-  await expect(daily).toContainText('Ten-minute listening goal reached');
-  // Native looping remains active after the independent milestone.
+  // Native looping continues beyond the remaining two seconds of the daily goal.
+  // Inspect progress only after deliberately pausing this listening block.
+  await expect
+    .poll(async () => (await readNativeMovement(page)).seconds, { timeout: 10_000 })
+    .toBeGreaterThan(4);
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.paused))
     .toBe(false);
-  await expect
-    .poll(async () => {
-      const text = await daily.getByLabel('Word listening only').innerText();
-      return /Current listening\s+0:0[4-9]/.test(text);
-    })
-    .toBe(true);
   await activate(page.getByRole('button', { name: 'Start recall timer', exact: true }));
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   await activate(page.getByRole('button', { name: 'Pause recall', exact: true }));
+  await navigateView(page, 'Today', activate);
+  await expect(daily).toContainText('Ten-minute listening goal reached');
+  const currentListening = daily
+    .getByLabel('Word listening only')
+    .locator('div')
+    .filter({ has: page.getByText('Current listening', { exact: true }) })
+    .locator('dd');
+  await expect
+    .poll(async () => {
+      const parts = (await currentListening.innerText()).split(':').map(Number);
+      return parts.reduce((seconds, part) => seconds * 60 + part, 0);
+    })
+    .toBeGreaterThanOrEqual(4);
+  const listened = await daily.getByLabel('Word listening only').innerText();
+
+  await activate(daily.getByRole('button', { name: 'Continue word listening', exact: true }));
   await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
   const review = page.getByRole('dialog');
   await openDisclosure(review, 'Measured results and practice evidence');
   const rawListening = await review.getByText(/^Measured word listening:/).innerText();
   await activate(review.getByRole('button', { name: 'Cancel', exact: true }));
-  const listened = await daily.getByLabel('Word listening only').innerText();
   // Native audio and this short observed recall both use real advancing clocks.
+  await openDisclosure(page, 'Session options and logging');
   await activate(page.getByRole('button', { name: 'Resume recall timer', exact: true }));
-  await expect(
-    page.getByRole('region', { name: 'Today’s practice time', exact: true }),
-  ).toContainText('Recall included: 0:02');
+  await expect(page.getByText('Includes 00:02 of focused recall.', { exact: true })).toBeVisible();
   await activate(page.getByRole('button', { name: 'Pause recall', exact: true }));
-  await expect(daily.getByLabel('Word listening only')).toHaveText(listened, {
-    useInnerText: true,
-  });
+  await navigateView(page, 'Today', activate);
   await expect(
     page.getByRole('region', { name: 'Today’s practice time', exact: true }),
   ).toContainText('Recall included: 0:02');
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
   await expect(daily.getByLabel('Word listening only')).toHaveText(listened, {
     useInnerText: true,
   });
@@ -181,6 +198,7 @@ test('optional daily words count actual replay separately from recall and retire
   await expect(
     page.getByRole('button', { name: 'Retry practice uploads', exact: true }),
   ).toBeVisible();
+  await navigateView(page, 'Today', activate);
   await expect(daily.getByLabel('Word listening only')).toContainText('Current listening0:00');
   await expect(daily).toContainText('Ten-minute listening goal reached');
   const queuedText = await daily.innerText();
@@ -208,9 +226,7 @@ test('optional daily words count actual replay separately from recall and retire
     5,
   );
   expect((await (await context.request.get('/api/plan')).json()).plan).toEqual([task]);
-  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
-  if (await menu.isVisible()) await activate(menu);
-  await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
+  await navigateView(page, 'Practice log', activate);
   await page
     .getByRole('textbox', { name: 'Search practice log', exact: true })
     .fill('Custom word recognition');

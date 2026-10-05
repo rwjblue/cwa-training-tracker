@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, navigateView, accountRequest, expectResponsive, signIn } from './helpers';
 import { syntheticRecording } from './synthetic-recording';
 
 test.use({
@@ -210,14 +210,11 @@ test(`actual recording passes retain source evidence and separate learner comple
     await audio.evaluate((item: HTMLAudioElement) => item.paused && item.currentTime === 0),
   ).toBe(true);
   await expect(count('This block')).toHaveText('2');
-  await openDisclosure(page, 'Browse other views');
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
-  await openDisclosure(page, 'Browse other views');
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(0.8);
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   const inspectedPosition = await audio.evaluate((item: HTMLAudioElement) => item.currentTime);
   expect(inspectedPosition).toBeGreaterThan(0.8);

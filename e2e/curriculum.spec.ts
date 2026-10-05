@@ -219,8 +219,7 @@ test('all course plans launch their tools and retain progress across levels and 
     .click();
   const audio = page.getByLabel('Assigned recording', { exact: true });
   await expect(audio).toHaveAttribute('src', advanced.exercise.url);
-  await openDisclosure(page, 'Exercise details');
-  await page.locator('summary').filter({ hasText: 'Exercise instructions' }).click();
+  await openDisclosure(page, 'Exercise instructions');
   await expect(page.getByText(/20 WPM · at least 2 full plays/)).toBeVisible();
   await audio.evaluate((element: HTMLAudioElement) => element.play());
   await expect

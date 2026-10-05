@@ -157,7 +157,7 @@ behavior; do not replace assertions with a count or coverage-percentage target.
 | Authentication and privacy                  | Worker: code expiry, browser binding, single consumption, session revocation, origin checks and every private operation's ownership                    | Real email sign-in and passkey registration/sign-in against Wrangler                                                             |
 | Practice time and completion                | Clocks/domain: pause, buffering, seeks, rates, recall interruption, overlap, subsecond boundaries, independent goals/completion and duration precision | Native playback into a saved record; representative manual/recall transitions and completion without added time                  |
 | Generated content and scoring               | Domain/audio: corpus invariants, full alignment, versioned scores, answer keys, pitch, spacing, WAV/speech samples and strict evidence validation      | Applied content reaches playback/review; Copy focus, grading/replay and recovered round completion; explicit QSO reveal          |
-| Recording catalogs and curriculum           | Pure/catalog: all published sessions, URL groups, replacements, authored durations, learner overrides and tool recipes                                 | A course assignment launches the correct tool and official instructions; recording selection/marks/replay reach native media     |
+| Recording catalogs and curriculum           | Pure/catalog: all published sessions, URL groups, replacements, authored durations, learner overrides and tool recipes                                 | A course assignment launches the correct tool and official instructions; recording selection and compact rewind reach native media |
 | Autosave and offline work                   | Client queues: durable receipts, exact bodies, timeouts, failed storage, FIFO ordering, stale acknowledgements and account/dataset fencing             | Representative automatic-save, failed-review retry, offline reopen and explicit conflict decisions                               |
 | Imports, backups and destructive operations | Client/Worker: schema compatibility, conflicts, byte/count limits, account scope, SQL/local rollback, lifecycle authority and exact retry receipts     | Actual downloads/file selection, reviewed restore/reset/clear, and retained recovery after an uncertain response                 |
 | History and reports                         | Domain/Worker: exact raw facts, declared corrections, totals, provenance, archive fidelity and export/import round trips                               | Saved practice is readable, an edit is submitted correctly, and representative evidence appears in a report                      |
@@ -167,8 +167,12 @@ behavior; do not replace assertions with a count or coverage-percentage target.
 round completion; `copy-practice.test.ts` owns all adaptive trial transitions.
 `runner-recovery.spec.ts` owns finished-run history, reports and device backup;
 `runner-next.spec.ts` owns save-next and exact retry, without another backup
-cycle. `course-replay.spec.ts` owns native opt-in, incomplete-pass rejection,
-a canceled automatic continuation, failure/retry, saved passes and cold reopen.
+cycle. `listening-passes.spec.ts` owns observed complete/incomplete native passes,
+saved source evidence and completion independent of listening time.
+`recording-rewind.spec.ts` owns the compact native rewind, its early-position clamp
+and saved actual rehearing without seek or full-pass credit. Recording marks and
+automatic assigned replay have no active Studio controls; their stored-data,
+validation and policy compatibility remain covered by the fast suites.
 `recording-playback.test.ts` owns delayed resolutions/rejections, source
 replacement, superseding Play and ownership loss; `course-replay.test.ts` owns
 replay eligibility and the minimum-pass boundary. `media-session.test.ts`,

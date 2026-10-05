@@ -2,6 +2,7 @@ import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import {
   openDisclosure,
+  navigateView,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -99,8 +100,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(1.2);
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   await expect(page).toHaveURL(/#overview$/);
   const position = await element!.evaluate((item: HTMLAudioElement) => item.currentTime);
   expect(await element!.evaluate((item: HTMLAudioElement) => item.paused)).toBe(true);
@@ -119,8 +119,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
     .getByText(/^\d+\.\d{2} seconds listened/)
     .textContent();
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   // Stored notes matter here: the mounted textarea can mask a deleted value.
   await expect.poll(readNotes).toBe(notes);
   await activate(row.getByRole('button', { name: 'Log practice', exact: true }));
@@ -161,8 +160,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
     reviewedSource!,
   );
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   await expectResponsive(page, `retained-today-${viewport.width}`);
 
   await activate(retained.getByRole('button', { name: 'Inspect this week', exact: true }));
@@ -181,8 +179,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);
   await expect(scratchpad).toHaveValue(notes);
   // Editing an unrelated timer result cannot acknowledge/reset this owner.
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
 
   await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
   await activate(page.getByRole('button', { name: 'Edit Sending on 2026-09-30', exact: true }));
@@ -231,8 +228,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await activate(row.getByRole('button', { name: 'Listen & practice', exact: true }));
   await expect(scratchpad).toHaveValue('');
   await scratchpad.fill('Private owner notes.');
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   await activate(page.getByRole('button', { name: 'Open your account', exact: true }));
   await activate(page.getByRole('button', { name: 'Sign out', exact: true }));
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();

@@ -744,6 +744,7 @@ export default forwardRef<
           </button>
         </div>
       )}
+      {soundSettings}
       <div className="listening-practice-workspace">
         <div className="listening-playback-workspace">
           {playbackControls}
@@ -1004,7 +1005,6 @@ export default forwardRef<
           can use words from either built-in list.
         </p>
       )}
-      {soundSettings}
       <details className="studio-disclosure">
         <summary>How playback and changes work</summary>
         <p>

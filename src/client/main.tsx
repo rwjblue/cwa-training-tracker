@@ -1577,44 +1577,6 @@ function App() {
                   hidden={page !== 'practice'}
                   inert={page !== 'practice' || navigationBusy}
                 >
-                  <details className="practice-browse">
-                    <summary>Browse other views</summary>
-                    <p className="field-hint">Your current practice stays here, paused while you look around.</p>
-                    <div className="practice-view-actions" aria-label="Inspect other views">
-                    <button
-                      className="button outline small"
-                      disabled={navigationBusy || booting}
-                      onClick={() => navigate('events')}
-                    >
-                      Inspect live practice
-                    </button>
-                    <button
-                      className="button outline small"
-                      disabled={navigationBusy || booting}
-                      onClick={() => navigate('overview')}
-                    >
-                      {user ? 'Inspect Today' : 'Inspect Overview'}
-                    </button>
-                    {user && (
-                      <>
-                        <button
-                          className="button outline small"
-                          disabled={navigationBusy || booting}
-                          onClick={() => navigate('course', false, 'week')}
-                        >
-                          Inspect this week
-                        </button>
-                        <button
-                          className="button outline small"
-                          disabled={navigationBusy || booting}
-                          onClick={() => navigate('course', false, 'report')}
-                        >
-                          Inspect report
-                        </button>
-                      </>
-                    )}
-                    </div>
-                  </details>
                   <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
                     <PracticeStudio
                       profile={profile}
@@ -1626,27 +1588,52 @@ function App() {
                       }
                       onCurrentPracticeChange={onCurrentPracticeChange}
                       practiceSummary={practiceSummary}
+                      practiceNavigation={
+                        <details className="practice-browse">
+                          <summary>Browse other views</summary>
+                          <p className="field-hint">
+                            Your current practice stays here, paused while you look around.
+                          </p>
+                          <div className="practice-view-actions" aria-label="Inspect other views">
+                            <button
+                              className="button outline small"
+                              disabled={navigationBusy || booting}
+                              onClick={() => navigate('events')}
+                            >
+                              Inspect live practice
+                            </button>
+                            <button
+                              className="button outline small"
+                              disabled={navigationBusy || booting}
+                              onClick={() => navigate('overview')}
+                            >
+                              {user ? 'Inspect Today' : 'Inspect Overview'}
+                            </button>
+                            {user && (
+                              <>
+                                <button
+                                  className="button outline small"
+                                  disabled={navigationBusy || booting}
+                                  onClick={() => navigate('course', false, 'week')}
+                                >
+                                  Inspect this week
+                                </button>
+                                <button
+                                  className="button outline small"
+                                  disabled={navigationBusy || booting}
+                                  onClick={() => navigate('course', false, 'report')}
+                                >
+                                  Inspect report
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </details>
+                      }
                       onAutoSave={autoSave}
                       onTaskCompletion={(task: PlannedTask, done: boolean) =>
                         updateTaskStatus([task], { done })
                       }
-                      onRecordingMarksChange={async (task, recordingMarks) => {
-                        const owner = scope;
-                        const token = deviceToken;
-                        const result = await account.mutate({
-                          type: 'task-edit',
-                          id: task.id,
-                          changes: { recordingMarks },
-                        });
-                        if (
-                          (activeAccount.current ?? 'guest') !== owner ||
-                          !isDeviceScopeCurrent(owner, token)
-                        )
-                          throw new Error(
-                            'This exercise belongs to a previous account or device state.',
-                          );
-                        return result.destination;
-                      }}
                       onBeforeLeaveChange={(handler: (() => Promise<boolean>) | undefined) => {
                         if (currentLaunch.current?.id === practiceLaunch.id)
                           beforeLeaveStudio.current = handler;

@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectResponsive, signIn } from './helpers';
+import { openDisclosure, navigateView, expectResponsive, signIn } from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.228' } });
@@ -228,13 +228,11 @@ test('next-round failure retries visibly and cancels late native continuation on
   await last.tap();
   await expect.poll(async () => (await state(page)).source).not.toBe(qsoSource);
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(0.1);
-  await openDisclosure(page, 'Browse other views');
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   const repeatedCatalog = await list(page);
   expect(repeatedCatalog[0]).toBe('VVV');
   expect([...repeatedCatalog].sort()).toEqual([...catalog].sort());
-  await openDisclosure(page, 'Browse other views');
-  await page.getByRole('button', { name: 'Inspect Overview', exact: true }).tap();
+  await navigateView(page, 'Overview', (control) => control.tap());
   await page
     .getByRole('region', { name: 'Current practice block', exact: true })
     .getByRole('button', { name: 'Return to practice', exact: true })

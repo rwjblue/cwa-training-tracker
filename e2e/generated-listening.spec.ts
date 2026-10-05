@@ -1,6 +1,12 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectAccessible, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  navigateView,
+  expectAccessible,
+  expectResponsive,
+  signIn,
+} from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.107' } });
 
@@ -77,8 +83,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await page
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Keep only the two played setups.');
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);

@@ -46,20 +46,6 @@
   color: #5b6d50;
   margin: 14px 0 0;
 }
-.recording-guidance {
-  margin: 10px 0;
-  padding: 10px 12px;
-  border-left: 2px solid var(--line);
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.recording-guidance p {
-  margin: 0;
-}
-.recording-guidance .field-hint {
-  margin-top: 4px;
-}
 .studio-preferences-heading {
   margin-bottom: 25px;
 }
@@ -721,10 +707,17 @@
 .word-practice-options .word-options {
   margin-block: 8px;
 }
-.listening-trainer > .studio-sound-settings {
-  margin: 16px 0 0;
-  padding: 8px 0 0;
-  border-bottom: 0;
+.listening-trainer > .studio-sound-settings,
+.studio-card > .studio-sound-settings {
+  margin: 0 0 18px;
+  padding: 8px 0;
+  border-top: 0;
+  border-bottom: 1px solid #dde4d6;
+}
+.recording-speed-options {
+  margin: 0 0 18px;
+  padding-top: 0;
+  border-top: 0;
 }
 .studio-tool-picker {
   margin-top: 28px;
@@ -853,12 +846,6 @@
 }
 .recording-workspace-heading p {
   display: none;
-}
-.recording-exercise-details .studio-task-notes {
-  margin-block: 12px;
-}
-.recording-exercise-details p {
-  margin-block: 10px;
 }
 @media (max-width: 760px) {
   .studio-task-context.is-recording {

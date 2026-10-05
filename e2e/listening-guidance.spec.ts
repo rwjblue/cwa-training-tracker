@@ -6,7 +6,7 @@ import type { PlannedTask } from '../src/shared/plan';
 
 test.use({ hasTouch: true, actionTimeout: 10_000 });
 const width = 390;
-test(`assigned guidance preserves official instructions and optional scratchpad controls`, async ({
+test(`assigned instructions remain directly available with optional scratchpad prompts`, async ({
   page,
   context,
 }) => {
@@ -25,19 +25,9 @@ test(`assigned guidance preserves official instructions and optional scratchpad 
     await activate(page.getByRole('button', { name, exact: true }));
   };
   await signIn(page);
-  for (const [level, exerciseId, title, prompt] of [
-    [
-      'intermediate',
-      's1-d1-t3',
-      'Phrase meaning',
-      'Optional: meanings, phrase fragments, or ideas you retained.',
-    ],
-    [
-      'fundamental',
-      's11-d1-t6',
-      'Story meaning and fragments',
-      'Optional: story ideas, familiar words, or fragments you caught.',
-    ],
+  for (const [level, exerciseId, prompt] of [
+    ['intermediate', 's1-d1-t3', 'Optional: meanings, phrase fragments, or ideas you retained.'],
+    ['fundamental', 's11-d1-t6', 'Optional: story ideas, familiar words, or fragments you caught.'],
   ] as const) {
     const { settings } = await (await context.request.get('/api/settings')).json();
     expect(
@@ -67,17 +57,14 @@ test(`assigned guidance preserves official instructions and optional scratchpad 
         .filter({ hasText: `Session ${task.lesson} · Day ${task.curriculum!.day} ·` })
         .getByRole('button', { name: 'Listen & practice', exact: true }),
     );
-    await openDisclosure(page, 'Exercise details');
-    const guidance = page.getByRole('note', { name: 'Listening approach', exact: true });
-    await expect(guidance).toContainText(title);
-    await expect(guidance).toContainText(/meaning.*fragment/);
-    await expect(guidance).toContainText(
-      'Follow the original instructions and your advisor’s requirements.',
+    await expect(page.getByText('Exercise details', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('note', { name: 'Listening approach', exact: true })).toHaveCount(
+      0,
     );
     await expect(
       page.getByRole('link', { name: 'Official instructions', exact: true }),
     ).toHaveAttribute('href', task.curriculum!.sourceUrl);
-    await activate(page.getByText('Exercise instructions', { exact: true }));
+    await openDisclosure(page, 'Exercise instructions');
     await expect(page.getByText(task.notes, { exact: true })).toBeVisible();
     const audio = page.getByLabel('Assigned recording', { exact: true });
     await expect(audio).toHaveAttribute('src', (task.exercise as { url: string }).url);
@@ -89,7 +76,6 @@ test(`assigned guidance preserves official instructions and optional scratchpad 
     await expect(scratchpad).toHaveAttribute('placeholder', prompt);
     expect(await scratchpad.evaluate((el: HTMLTextAreaElement) => el.required)).toBe(false);
     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
-    expect((await guidance.boundingBox())!.height).toBeLessThan(190);
     const after = await (await context.request.get('/api/export')).json();
     expect(after.sessions).toEqual(before.sessions);
     expect(after.plan).toEqual(before.plan);

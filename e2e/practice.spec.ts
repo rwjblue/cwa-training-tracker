@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectAccessible, signIn } from './helpers';
+import { openDisclosure, navigateView, expectAccessible, signIn } from './helpers';
 
 test('practice preferences persist and generated material follows exact selected lengths', async ({
   page,
@@ -89,9 +89,11 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
   await page.clock.fastForward(83_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
+  await navigateView(page, 'Today');
   await expect(
     page.getByRole('region', { name: 'Optional daily word listening', exact: true }),
   ).toContainText('Total listening: 0:00 / 10:00.');
+  await page.getByRole('button', { name: 'Return to practice', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
   ).toBeEnabled();

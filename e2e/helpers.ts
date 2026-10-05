@@ -19,6 +19,21 @@ export async function openDisclosure(scope: Page | Locator, name: string) {
     await summary.click();
 }
 
+/** Inspect another view through the shared navigation without retiring the current block. */
+export async function navigateView(
+  page: Page,
+  name: string,
+  activate: (control: Locator) => Promise<void> = (control) => control.click(),
+) {
+  const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  if (await menu.isVisible()) await activate(menu);
+  await activate(
+    page
+      .getByRole('navigation', { name: 'Main navigation', exact: true })
+      .getByRole('button', { name, exact: true }),
+  );
+}
+
 async function accountHeaders(context: FixtureContext) {
   const request = 'request' in context ? context.request : context;
   const response = await request.get('/api/account-state');

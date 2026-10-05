@@ -1,6 +1,6 @@
 import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, accountRequest, expectResponsive, signIn } from './helpers';
+import { openDisclosure, navigateView, accountRequest, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.108' } });
 
@@ -120,8 +120,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(page.locator('.timer-readout')).toHaveText(hiddenElapsed!);
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   await activate(
     page

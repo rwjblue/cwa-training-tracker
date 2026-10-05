@@ -3,6 +3,7 @@ import { test } from './fixtures';
 import type { PlannedTask } from '../src/shared/plan';
 import {
   openDisclosure,
+  navigateView,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -153,12 +154,9 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   await pausedAtZero(18);
   await expect(page.getByText('Remembered for this task: 18 WPM.', { exact: false })).toBeVisible();
   await openDisclosure(page, 'Choose a recording speed');
-  await openDisclosure(page, 'Browse other views');
   await defaultSpeed.selectOption('next');
-  await openDisclosure(page, 'Browse other views');
   await pausedAtZero(18);
-  await openDisclosure(page, 'Browse other views');
-  await activate(page.getByRole('button', { name: 'Inspect Today', exact: true }));
+  await navigateView(page, 'Today', activate);
   await expect(
     page.getByText('Next visit: 18 WPM remembered on this device', { exact: false }),
   ).toBeVisible();
