@@ -29,4 +29,25 @@ redistribute restricted course documents, audio, or personal training data.
   validated. Keep unrelated features in separate commits instead of batching
   an entire work session into one commit.
 
+## Public URLs
+
+- Treat shareable URLs as part of every public feature. Navigation and public
+  selections must update the address automatically and reopen without an account.
+  Use real links for navigation so copy-link and opening another tab work.
+- Include the selected tool, course level/session/exercise, recording and public
+  setup in the URL. Generated public listening content must reproduce the same
+  material, order and pitches after reload or opening on another device.
+- Use bounded, validated, versioned recipes with stable catalog identities.
+  Preserve published recipe versions when generators or catalogs change. Explain
+  invalid or unsupported exact recipes visibly before preparing replacement content.
+- Shared URLs override device defaults, open paused and preserve existing
+  navigation/save guards. In-page setting changes replace the current history
+  entry; navigation adds an entry and supports Back/Forward.
+- Never serialize account/task/material IDs, dates, notes, answers, results,
+  training progress or personal/custom scripts. A public curriculum link opens
+  public practice without the sender's private assignment attribution.
+- Verify fresh guest reopening, device-default precedence, exact generated
+  content and guarded navigation. See [docs/public-urls.md](docs/public-urls.md)
+  for the current route inventory and sharing boundaries.
+
 commit-message-default: auto
