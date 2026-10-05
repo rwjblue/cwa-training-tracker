@@ -67,6 +67,8 @@ describe('browser practice preferences', () => {
   });
 
   it('defaults old and invalid word pitch choices to on while preserving an explicit opt-out', () => {
+    expect(normalizePracticePreferences(undefined).tone).toBe(450);
+    expect(normalizePracticePreferences({ tone: 600, variableWordPitch: false }).tone).toBe(600);
     for (const version of [undefined, 1, 2]) {
       expect(normalizePracticePreferences({ version }).variableWordPitch).toBe(true);
       expect(

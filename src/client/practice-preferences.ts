@@ -65,7 +65,7 @@ export const DEFAULT_PRACTICE_PREFERENCES: PracticePreferences = {
   qsoScenario: 'short-contact',
   characterWpm: 20,
   effectiveWpm: 10,
-  tone: 600,
+  tone: 450,
   volume: 40,
   mode: 'words',
   groupLength: 5,

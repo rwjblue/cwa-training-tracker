@@ -78,6 +78,12 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   await sound(page);
   const variable = page.getByRole('checkbox', { name: 'Variable pitch', exact: true });
   await expect(variable).toBeChecked();
+  await expect(
+    page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true }),
+  ).toHaveValue('450');
+  await variable.uncheck();
+  await expect(page.getByText(/^Sound settings ·/)).toContainText('450 Hz');
+  await variable.check();
   await expect(page.getByRole('combobox', { name: 'Word list', exact: true })).toHaveValue(
     'common-qso',
   );
