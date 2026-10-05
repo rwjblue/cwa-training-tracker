@@ -1,9 +1,9 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectAccessible, signIn } from './helpers';
+import { expectAccessible, openPracticeTool, signIn } from './helpers';
 
 async function startListening(page: Page) {
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   // Native audio must actually move for listening credit. This track is long
   // enough to cross the autosave threshold without seeking or mocking time.
@@ -30,10 +30,9 @@ test('listening tool changes save measured time once and recover a lost save res
 }) => {
   test.setTimeout(75_000);
   await signIn(page);
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   // Opening an empty tool and switching must not create a junk entry.
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
+  await openPracticeTool(page, 'QSO practice');
   await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
 
@@ -61,7 +60,7 @@ test('listening tool changes save measured time once and recover a lost save res
     }
     return route.continue();
   });
-  await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
+  await openPracticeTool(page, 'Copy practice');
   await expect(page.getByRole('region', { name: 'Copy practice', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect.poll(() => submitted.length).toBeGreaterThan(0);
@@ -93,10 +92,10 @@ test('guest inspection retains listening and explicit Finish saves it on this de
     if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/entries')
       posts.push(request.url());
   });
-  await page.goto('/#practice');
+  await page.goto('/#tools');
   // Opening an empty tool and switching must not create a junk entry.
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
+  await openPracticeTool(page, 'QSO practice');
   await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toBeVisible();
   const audio = await startListening(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

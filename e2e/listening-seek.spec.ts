@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectResponsive, signIn } from './helpers';
+import { openDisclosure, openPracticeTool, expectResponsive, signIn } from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.227' } });
@@ -20,8 +20,7 @@ test('word selection, stepping and rewind retain state and save only actual hear
 }) => {
   await signIn(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E PARIS E');
   await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
@@ -140,9 +139,9 @@ test('word selection, stepping and rewind retain state and save only actual hear
 test('public QSO and free text use exact paused occurrences and deliberate replay', async ({
   page,
 }) => {
-  await page.goto('/#practice');
+  await page.goto('/#tools');
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).tap();
+  await openPracticeTool(page, 'QSO practice', (control) => control.tap());
   await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('repeat');
   await page.getByText('View full conversation', { exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
@@ -158,7 +157,7 @@ test('public QSO and free text use exact paused occurrences and deliberate repla
   await settle(page, false);
   await expect.poll(() => position(page)).toBeGreaterThan(selected + 0.15);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
-  await page.getByRole('button', { name: 'Free practice', exact: true }).tap();
+  await openPracticeTool(page, 'Free practice', (control) => control.tap());
   await page.getByLabel('Practice text', { exact: true }).fill('PARIS E PARIS E');
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).tap();
   await expect.poll(() => position(page)).toBeGreaterThan(0.15);

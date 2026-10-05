@@ -4485,3 +4485,19 @@ Existing marks in private tasks, saved evidence, history and backups remain
 compatible. Their editing controls and automatic assigned replay have no active
 Studio entry point. The #10, #12 and #13 ledgers above retain historical delivery
 evidence; this usability change makes no new trainer parity or deployment claim.
+
+## Practice tools and lesson navigation — 2026-10-05
+
+Practice tools now has a dedicated public library and sidebar destination. Word
+listening, QSO practice, Stories, Copy, Sending, Free practice and Morse Runner
+remain available without an account. Lesson exercises launch from Today and the
+Academy guide into a Lesson practice workspace; private material keeps its own
+Material practice context. Public tool sessions display the selected tool and do
+not include course-next actions or an inline tool switcher.
+
+Browsing the library pauses and retains the current session. Resume returns to
+the same owner, native position and notes without autoplay; choosing a tool uses
+the existing finish/save boundary before replacing that owner. A legacy practice
+URL without an active session opens the library instead of starting a default
+tool. The shared players, attribution, completion and account boundaries remain
+unchanged. This navigation change makes no new trainer parity claim.

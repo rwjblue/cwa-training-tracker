@@ -161,6 +161,7 @@ behavior; do not replace assertions with a count or coverage-percentage target.
 | Autosave and offline work                   | Client queues: durable receipts, exact bodies, timeouts, failed storage, FIFO ordering, stale acknowledgements and account/dataset fencing             | Representative automatic-save, failed-review retry, offline reopen and explicit conflict decisions                               |
 | Imports, backups and destructive operations | Client/Worker: schema compatibility, conflicts, byte/count limits, account scope, SQL/local rollback, lifecycle authority and exact retry receipts     | Actual downloads/file selection, reviewed restore/reset/clear, and retained recovery after an uncertain response                 |
 | History and reports                         | Domain/Worker: exact raw facts, declared corrections, totals, provenance, archive fidelity and export/import round trips                               | Saved practice is readable, an edit is submitted correctly, and representative evidence appears in a report                      |
+| Practice tool navigation                    | Client: serialized inspection/replacement and owned launch/session attribution                                                                           | Guest tool library and empty session routing; retained lesson resume and guarded replacement through the library                  |
 | Practice continuity                         | Client: pause/end flights, stale owners, originating-block retirement and scratchpad disposal                                                          | Inspection pauses without saving, return retains position/notes without autoplay, and unrelated edits preserve the current block |
 
 `copy-practice.spec.ts` owns native first/final trial playback and recovered
@@ -178,6 +179,12 @@ replacement, superseding Play and ownership loss; `course-replay.test.ts` owns
 replay eligibility and the minimum-pass boundary. `media-session.test.ts`,
 `recall.spec.ts` and `practice-continuity.spec.ts` own Media Session actions,
 recall and inspection.
+`practice-tools.spec.ts` owns the dedicated public library, all seven discoverable
+tools, empty `#practice` normalization, distinct public/lesson headings and sidebar
+selection, plus retained lesson resume and failed/successful replacement through
+the library. `practice-continuity.spec.ts` retains broader inspection, unrelated
+history edits and scratchpad disposal coverage. Browsing `#tools` pauses the
+current owner; choosing a tool goes through its existing finish/save guard.
 `story-listening.spec.ts` and `precise-listening.spec.ts` establish native facts
 through save/retry and readable history. Shared report rendering and portable
 backups stay in the report/account journeys and their fast evidence tests; do

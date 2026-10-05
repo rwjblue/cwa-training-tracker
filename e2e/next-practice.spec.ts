@@ -173,7 +173,7 @@ test('next assignment preserves native work through inspection and exact retry b
   await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
   await expect(
     page
-      .getByRole('region', { name: 'Current practice studio', exact: true })
+      .getByRole('region', { name: 'Current practice session', exact: true })
       .getByText('Next manual exercise', { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeEnabled();
@@ -412,7 +412,7 @@ test('next activation rechecks a class boundary after finishing without replacin
       { exact: true },
     ),
   ).toBeVisible();
-  const studio = page.getByRole('region', { name: 'Current practice studio', exact: true });
+  const studio = page.getByRole('region', { name: 'Current practice session', exact: true });
   await expect(studio.getByText(earlier.title, { exact: true })).toBeVisible();
   await expect(next).toContainText('Class is in progress');
   const saved = (await (await context.request.get('/api/entries')).json()).entries[0];
@@ -475,9 +475,7 @@ test('saved Copy review opens the same required objective with a fresh assigned 
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name: task.title, exact: true }) });
   await key(row.getByRole('button', { name: 'Extra review', exact: true }));
-  await expect(
-    page.getByRole('heading', { name: 'Your extra review.', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   const audio = page.getByLabel('Copy practice audio', { exact: true });
   const finishNative = async () => {
     await expect
@@ -502,11 +500,9 @@ test('saved Copy review opens the same required objective with a fresh assigned 
   await expectResponsive(page, 'next-saved-copy-review');
   await page.setViewportSize({ width: 390, height: 844 });
   await next.getByRole('button', { name: 'Start next block', exact: true }).tap();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Your assigned practice.', exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('region', { name: 'Current practice studio', exact: true }),
+    page.getByRole('region', { name: 'Current practice session', exact: true }),
   ).toContainText(task.title);
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([reviewed]);
 

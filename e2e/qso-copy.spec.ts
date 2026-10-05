@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { navigateView, expectAccessible } from './helpers';
+import { navigateView, openPracticeTool, expectAccessible } from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -8,8 +8,8 @@ test('QSO copy checks stay with the heard contact and reveal answers only on req
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'QSO practice');
   await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('ragchew');
   // Capture the generated contact through its normal listening interface, then
   // verify copy mode overrides even a previously revealed transcript preference.

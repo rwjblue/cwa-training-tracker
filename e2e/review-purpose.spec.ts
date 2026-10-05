@@ -130,9 +130,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await expect(row.getByRole('button', { name: 'Extra review', exact: true })).toBeVisible();
   await expect(row.getByRole('button', { name: 'Practice', exact: true })).toBeVisible();
   await activate(page, row.getByRole('button', { name: 'Extra review', exact: true }), mobile);
-  await expect(
-    page.getByRole('heading', { name: 'Your extra review.', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await expect(page.getByText('EXTRA REVIEW', { exact: true })).toBeVisible();
   await inspect(page, `${label}-studio`);
   await page.addStyleTag({
@@ -276,9 +274,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await expect(row).not.toContainText('min practiced');
 
   await activate(page, row.getByRole('button', { name: 'Practice', exact: true }), mobile);
-  await expect(
-    page.getByRole('heading', { name: 'Your assigned practice.', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await minute(page, mobile);
   await activate(
     page,
@@ -342,9 +338,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await expect(olderRow.getByRole('button', { name: 'Practice', exact: true })).toHaveCount(0);
   await inspect(page, `${label}-full-plan`);
   await activate(page, olderRow.getByRole('button', { name: 'Extra review', exact: true }), mobile);
-  await expect(
-    page.getByRole('heading', { name: 'Your extra review.', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await openDisclosure(page, 'Session options and logging');
   await activate(
     page,

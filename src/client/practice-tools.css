@@ -1,0 +1,82 @@
+.practice-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.practice-tool-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+}
+
+.practice-tool-card:hover {
+  border-color: #789177;
+  background: #f3f6eb;
+}
+
+.practice-tool-card > svg {
+  color: #34573c;
+}
+
+.practice-tool-card h2 {
+  margin: 18px 0 9px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.practice-tool-card p {
+  margin-bottom: 22px;
+  color: #61705e;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.practice-tool-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-top: auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.retained-practice.is-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.retained-practice.is-tools h2 {
+  font-size: 16px;
+}
+
+.retained-practice.is-tools p {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .practice-tools-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .practice-tool-card {
+    padding: 20px;
+  }
+
+  .retained-practice.is-tools {
+    flex-wrap: wrap;
+  }
+}

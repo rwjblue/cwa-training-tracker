@@ -34,6 +34,20 @@ export async function navigateView(
   );
 }
 
+/** Deliberately launch a tool from the library, preserving the current block's save guard. */
+export async function openPracticeTool(
+  page: Page,
+  name: string,
+  activate: (control: Locator) => Promise<void> = (control) => control.click(),
+) {
+  await navigateView(page, 'Practice tools', activate);
+  await activate(
+    page
+      .getByRole('region', { name: 'Practice tools', exact: true })
+      .getByRole('button', { name, exact: true }),
+  );
+}
+
 async function accountHeaders(context: FixtureContext) {
   const request = 'request' in context ? context.request : context;
   const response = await request.get('/api/account-state');

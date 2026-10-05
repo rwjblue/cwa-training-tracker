@@ -1,7 +1,13 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { openDisclosure, accountRequest, expectAccessible, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  accountRequest,
+  expectAccessible,
+  signIn,
+} from './helpers';
 
 test('public practice is useful without signing in and fits a phone', async ({ page }) => {
   const failures: string[] = [];
@@ -12,7 +18,7 @@ test('public practice is useful without signing in and fits a phone', async ({ p
   ).toBeVisible();
   await expectAccessible(page, 'overview');
   await page.getByRole('button', { name: 'Try practice', exact: true }).click();
-  await page.getByRole('button', { name: 'Free practice', exact: true }).click();
+  await openPracticeTool(page, 'Free practice');
   await page.getByRole('button', { name: 'Your text', exact: true }).click();
   await page.getByLabel('Practice text', { exact: true }).fill('CQ TEST');
   await page.getByRole('button', { name: 'Play Morse', exact: true }).click();
@@ -31,6 +37,8 @@ test('public practice is useful without signing in and fits a phone', async ({ p
     true,
   );
   await page.reload();
+  await expect(page).toHaveURL(/#tools$/);
+  await openPracticeTool(page, 'Free practice');
   await expect(page.getByRole('heading', { name: 'The listening room' })).toBeVisible();
   expect(failures).toEqual([]);
 });

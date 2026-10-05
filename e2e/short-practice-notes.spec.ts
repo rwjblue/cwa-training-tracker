@@ -2,6 +2,7 @@ import { expect, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import {
   navigateView,
+  openPracticeTool,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -39,8 +40,8 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
         .filter((key) => key.startsWith('cwa:practice:pending:v1:guest:'))
         .map((key) => JSON.parse(localStorage.getItem(key)!)),
     );
-  await page.goto('/#practice');
-  await activate(page.getByRole('button', { name: 'Word listening', exact: true }));
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Word listening', activate);
   await expect(saveNotes).toBeDisabled();
   await scratchpad.fill(' \n\t');
   await expect(saveNotes).toBeDisabled();
@@ -222,8 +223,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   const plan = (await (await context.request.get('/api/plan')).json()).plan;
   expect(plan.find((item: { id: string }) => item.id === task.id).done).toBe(false);
 
-  await navigate('Practice studio');
-  await activate(page.getByRole('button', { name: 'Word listening', exact: true }));
+  await openPracticeTool(page, 'Word listening', activate);
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill(Array(100).fill('E').join(' '));
   const publicNotes = 'Twelve seconds of actual generated public listening.';
@@ -234,7 +234,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
     .poll(() => generated.evaluate((el: HTMLAudioElement) => el.currentTime), { timeout: 20_000 })
     .toBeGreaterThan(12);
   await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
-  await activate(page.getByRole('button', { name: 'QSO practice', exact: true }));
+  await openPracticeTool(page, 'QSO practice', activate);
   const publicEntry = (await (await context.request.get('/api/entries')).json()).entries.find(
     (item: PracticeSession) => item.metadata?.scratchpad === publicNotes,
   );

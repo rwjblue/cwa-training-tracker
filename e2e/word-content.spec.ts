@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { WORD_LISTS } from '../src/client/word-content';
-import { openDisclosure, expectResponsive, signIn } from './helpers';
+import { openDisclosure, openPracticeTool, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.229' } });
 const editor = (page: Page) => page.getByRole('textbox', { name: /^Your word list/ });
@@ -13,8 +13,7 @@ async function navigate(page: Page, name: string) {
   await page.getByRole('button', { name, exact: true }).click();
 }
 async function openWords(page: Page) {
-  await navigate(page, 'Practice studio');
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
 }
 async function pausedAtZero(page: Page) {
   const media = page.getByLabel('Practice audio', { exact: true });
@@ -49,8 +48,8 @@ test('editable source survives tool return, reopen/reload and device backup with
   await editor(page).fill('');
   await expect(page.getByRole('alert')).toContainText('last valid saved words');
   await page.getByRole('button', { name: 'Use saved words', exact: true }).press('Enter');
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'QSO practice');
+  await openPracticeTool(page, 'Word listening');
   await expect(editor(page)).toHaveValue(source);
   await pausedAtZero(page);
   await page.getByRole('button', { name: 'Finish practice', exact: true }).click();
@@ -91,8 +90,8 @@ test('editable source survives tool return, reopen/reload and device backup with
   });
   await editor(page).fill('T T <BT>');
   await expect(page.getByRole('alert')).toContainText('Words were not saved');
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'QSO practice');
+  await openPracticeTool(page, 'Word listening');
   await expect(editor(page)).toHaveValue('T T <BT>');
   await expect(page.getByRole('alert')).toContainText('Words were not saved');
   await page.getByRole('button', { name: 'Finish practice', exact: true }).click();

@@ -150,6 +150,8 @@ import {
 } from './practice-launch';
 import { PracticeNavigation } from './practice-navigation';
 import WelcomePanel from './WelcomePanel';
+import PracticeTools from './PracticeTools';
+import { practiceTool } from './practice-tools';
 import LivePracticeAgenda from './LivePracticeAgenda';
 import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './ImportedHistory';
 import CopyResult, { CopyAttemptDetails } from './CopyResult';
@@ -179,7 +181,7 @@ import {
   PRACTICE_UPLOADED_EVENT,
 } from './practice-autosave';
 
-type Page = 'overview' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
+type Page = 'overview' | 'tools' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
 // Choose once per page load so navigation keeps the decoration still.
 const sidebarLetters = Object.keys(MORSE).filter((letter) => /^[A-Z]$/.test(letter));
 const sidebarLetter = sidebarLetters[Math.floor(Math.random() * sidebarLetters.length)];
@@ -316,7 +318,7 @@ const sampleEntries: PracticeSession[] = [
 function App() {
   const readPage = (): Page => {
     const value = window.location.hash.slice(1);
-    return ['overview', 'practice', 'logbook', 'course', 'settings', 'events'].includes(value)
+    return ['overview', 'tools', 'practice', 'logbook', 'course', 'settings', 'events'].includes(value)
       ? (value as Page)
       : 'overview';
   };
@@ -353,7 +355,6 @@ function App() {
   const nextRunnerFocus = useRef<{ ownerId: string; scope: string; token: string } | undefined>(
     undefined,
   );
-  const initiallyPractice = useRef(page === 'practice');
   const [savedPracticeVersion, setSavedPracticeVersion] = useState(0);
   const [savedPracticeEntry, setSavedPracticeEntry] = useState<PracticeSession>();
   const [savedOwnerId, setSavedOwnerId] = useState<string>();
@@ -466,10 +467,8 @@ function App() {
     if (host && !host.hidden && !host.inert) host.focus();
   }, [page, practiceLaunch?.id, sessionEditor, scope, deviceToken]);
   useEffect(() => {
-    if (booting || !initiallyPractice.current) return;
-    initiallyPractice.current = false;
-    if (page === 'practice' && !currentLaunch.current) replaceStudio({ id: crypto.randomUUID() });
-  }, [booting]);
+    if (!booting && page === 'practice' && !practiceLaunch) showPage('tools', true);
+  }, [booting, page, practiceLaunch]);
   useEffect(() => {
     setDeviceOpen(false);
     setLifecycleReview(null);
@@ -771,8 +770,10 @@ function App() {
     traversed = false,
     inspection?: 'week' | 'report',
   ): Promise<boolean> => {
+    if (next === 'practice' && !currentLaunch.current) next = 'tools';
     if (next === currentPage.current && (next !== 'practice' || currentLaunch.current)) {
       setMenuOpen(false);
+      if (traversed && window.location.hash.slice(1) !== next) showPage(next, true);
       if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
       return true;
     }
@@ -786,8 +787,6 @@ function App() {
         return true;
       },
       () => {
-        if (next === 'practice' && !currentLaunch.current)
-          replaceStudio({ id: crypto.randomUUID() });
         if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
         showPage(next, traversed);
       },
@@ -1166,11 +1165,19 @@ function App() {
   };
   const navItems: { page: Page; label: string; icon: LucideIcon }[] = [
     { page: 'overview', label: user ? 'Today' : 'Overview', icon: LayoutDashboard },
-    { page: 'practice', label: 'Practice studio', icon: AudioLines },
+    { page: 'tools', label: 'Practice tools', icon: AudioLines },
     { page: 'events', label: 'Live practice', icon: Radio },
     { page: 'logbook', label: 'Practice log', icon: BookOpen },
     { page: 'course', label: 'Academy guide', icon: CalendarDays },
   ];
+  const lessonPractice = Boolean(practiceLaunch?.task);
+  const coursePractice = lessonPractice || Boolean(practiceLaunch?.material);
+  const practiceLabel = practiceLaunch?.material
+    ? 'Material practice'
+    : lessonPractice
+      ? 'Lesson practice'
+      : practiceTool(practiceLaunch?.tool).label;
+  const navigationPage = page === 'practice' ? (coursePractice ? 'course' : 'tools') : page;
   return (
     <div className="app-shell">
       <a
@@ -1212,14 +1219,14 @@ function App() {
           {navItems.map((item) => (
             <button
               key={item.page}
-              className={`nav-item ${page === item.page ? 'active' : ''}`}
+              className={`nav-item ${navigationPage === item.page ? 'active' : ''}`}
               onClick={() => navigate(item.page)}
               disabled={navigationBusy || booting}
-              aria-current={page === item.page ? 'page' : undefined}
+              aria-current={navigationPage === item.page ? 'page' : undefined}
             >
               <item.icon size={19} strokeWidth={1.7} />
               <span>{item.label}</span>
-              {page === item.page && <span className="nav-dot" />}
+              {navigationPage === item.page && <span className="nav-dot" />}
             </button>
           ))}
         </nav>
@@ -1283,7 +1290,11 @@ function App() {
               <span className="workspace-label">Your workspace</span>
               <span className="mobile-workspace-label">CW Companion</span> <span>/</span>{' '}
               <strong>
-                {page === 'settings' ? 'Account' : navItems.find((i) => i.page === page)?.label}
+                {page === 'settings'
+                  ? 'Account'
+                  : page === 'practice'
+                    ? practiceLabel
+                    : navItems.find((i) => i.page === page)?.label}
               </strong>
             </span>
           </div>
@@ -1418,16 +1429,24 @@ function App() {
               )}
               {navigationBusy && <p role="status">Pausing or finishing your current practice…</p>}
               {practiceLaunch && page !== 'practice' && (
-                <section className="retained-practice" aria-label="Current practice block">
+                <section
+                  className={`retained-practice ${page === 'tools' ? 'is-tools' : ''}`}
+                  aria-label="Current practice block"
+                >
                   <div>
                     <span className="eyebrow">
-                      CURRENT BLOCK{practiceLaunch.purpose === 'review' ? ' · EXTRA REVIEW' : ''}
+                      {page === 'tools' ? practiceLabel : 'CURRENT BLOCK'}
+                      {coursePractice && practiceLaunch.purpose === 'review' ? ' · EXTRA REVIEW' : ''}
                     </span>
-                    <h2>{practiceLaunch.task?.title ?? 'Your current practice'}</h2>
+                    <h2>
+                      {practiceLaunch.task?.title ?? practiceLaunch.material?.title ?? practiceLabel}
+                    </h2>
                     <p>
                       {ownedRunnerResult
                         ? 'The engine has stopped. Its acknowledged result is ready to review and save; it does not resume the simulator.'
-                        : 'Kept in this app while you look around. Return keeps playback and timers paused until you start them.'}
+                        : page === 'tools'
+                          ? 'Paused while you browse. Your progress and notes are kept here.'
+                          : 'Kept in this app while you look around. Return keeps playback and timers paused until you start them.'}
                     </p>
                   </div>
                   <div className="retained-practice-actions">
@@ -1436,10 +1455,16 @@ function App() {
                       disabled={navigationBusy || booting}
                       onClick={() => navigate('practice')}
                     >
-                      {ownedRunnerResult ? 'View/save result' : 'Return to practice'}{' '}
+                      {ownedRunnerResult
+                        ? 'View/save result'
+                        : page === 'tools'
+                          ? coursePractice
+                            ? 'Resume lesson practice'
+                            : 'Resume practice'
+                          : 'Return to practice'}{' '}
                       <ArrowRight size={16} />
                     </button>
-                    {user && (
+                    {user && page !== 'tools' && (
                       <>
                         <button
                           className="button outline"
@@ -1457,13 +1482,15 @@ function App() {
                         </button>
                       </>
                     )}
-                    <button
-                      className="button outline"
-                      disabled={navigationBusy || booting}
-                      onClick={() => void finishPractice()}
-                    >
-                      Finish practice
-                    </button>
+                    {page !== 'tools' && (
+                      <button
+                        className="button outline"
+                        disabled={navigationBusy || booting}
+                        onClick={() => void finishPractice()}
+                      >
+                        Finish practice
+                      </button>
+                    )}
                   </div>
                 </section>
               )}
@@ -1496,7 +1523,7 @@ function App() {
                     demo={!user && demo}
                     navigate={navigate}
                     openLog={openLog}
-                    onPractice={() => openPractice()}
+                    onPractice={() => navigate('tools')}
                     todayPlan={
                       user ? (
                         <TodayPlan
@@ -1549,7 +1576,7 @@ function App() {
                                 ?.scrollIntoView({ behavior: 'smooth' }),
                             );
                           }}
-                          onPractice={() => openPractice()}
+                          onPractice={() => navigate('tools')}
                           onSetupCourse={() => navigate('settings')}
                         />
                       ) : undefined
@@ -1561,7 +1588,9 @@ function App() {
                       <div className="card studio-time-summary">{practiceSummary}</div>
                     )}
                     <WelcomePanel
-                      onPractice={(tool) => openPractice({ tool })}
+                      onPractice={(tool) =>
+                        tool ? openPractice({ tool }) : navigate('tools')
+                      }
                       onSignIn={() => setAuthOpen(true)}
                       onGuide={() => navigate('course')}
                       onEvents={() => navigate('events')}
@@ -1572,12 +1601,12 @@ function App() {
                 <section
                   id="current-practice"
                   className="practice-host"
-                  aria-label="Current practice studio"
+                  aria-label="Current practice session"
                   tabIndex={-1}
                   hidden={page !== 'practice'}
                   inert={page !== 'practice' || navigationBusy}
                 >
-                  <React.Suspense fallback={<p role="status">Opening your practice studio…</p>}>
+                  <React.Suspense fallback={<p role="status">Opening your practice…</p>}>
                     <PracticeStudio
                       profile={profile}
                       liveNow={liveNow}
@@ -1688,7 +1717,7 @@ function App() {
                       launch={practiceLaunch}
                       onBack={() => navigate('overview')}
                       onFinish={() => void finishPractice()}
-                      onToolChange={(tool: PracticeLaunch['tool']) => void openPractice({ tool })}
+                      onBrowseTools={() => void navigate('tools')}
                       onUnsavedChange={(unsaved: boolean) => {
                         if (
                           currentLaunch.current?.id !== practiceLaunch.id ||
@@ -1701,19 +1730,14 @@ function App() {
                       }}
                     />
                   </React.Suspense>
-                  {nextPracticeAction}
+                  {coursePractice && nextPracticeAction}
                 </section>
               )}
-              {page === 'practice' && !practiceLaunch && (
-                <section className="page-heading">
-                  <div>
-                    <h1>Your practice studio.</h1>
-                    <p>Start a fresh block when you are ready.</p>
-                  </div>
-                  <button className="button" onClick={() => openPractice()}>
-                    Start practice <Play size={16} />
-                  </button>
-                </section>
+              {(page === 'tools' || (page === 'practice' && !practiceLaunch)) && (
+                <PracticeTools
+                  disabled={navigationBusy || booting}
+                  onPractice={(tool) => void openPractice({ tool })}
+                />
               )}
               {page === 'events' && (
                 <LivePracticeAgenda
@@ -2061,7 +2085,7 @@ function Overview({
                 <br />
                 Your next good conversation starts here.
               </p>
-              <button className="button cream" onClick={() => navigate('practice')}>
+              <button className="button cream" onClick={() => navigate('tools')}>
                 <Play size={14} fill="currentColor" /> Start a practice session{' '}
                 <ArrowRight size={17} />
               </button>

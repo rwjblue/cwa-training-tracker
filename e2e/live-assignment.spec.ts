@@ -110,7 +110,11 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await page.getByLabel('Class start time', { exact: true }).fill('13:00');
   await activate(page.getByRole('button', { name: 'Save preferences', exact: true }));
   await expect(page.getByRole('button', { name: 'Save preferences', exact: true })).toBeEnabled();
-  await navigate('Practice studio');
+  await activate(
+    page
+      .getByRole('region', { name: 'Current practice block', exact: true })
+      .getByRole('button', { name: 'Return to practice', exact: true }),
+  );
   await expect(opportunity).toContainText('No CWT window remains before the deadline.');
   await expect(opportunity).toContainText('ask your advisor');
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeDisabled();
@@ -273,7 +277,11 @@ test('retained manual work follows event edits and every timer checks current el
       .selectOption(event);
     await activate(page.getByRole('button', { name: 'Save exercise', exact: true }));
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await navigate('Practice studio');
+    await activate(
+      page
+        .getByRole('region', { name: 'Current practice block', exact: true })
+        .getByRole('button', { name: 'Return to practice', exact: true }),
+    );
   };
   await editEvent('cwt');
   await expect(

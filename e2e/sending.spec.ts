@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { dateInTimezone } from '../src/shared/training';
-import { accountRequest, expectAccessible, signIn } from './helpers';
+import { accountRequest, expectAccessible, openPracticeTool, signIn } from './helpers';
 
 test('sending scales stay in the studio and save assigned practice without opening the PDF', async ({
   page,
@@ -9,7 +9,6 @@ test('sending scales stay in the studio and save assigned practice without openi
 }) => {
   const scalesUrl =
     'https://cwops.org/wp-content/uploads/2022/03/Everyday-Send-Code-WR7Q-ver.-7.pdf';
-  const sending = page.getByRole('button', { name: 'Sending practice', exact: true });
   const warmUp = page.getByRole('button', { name: 'Warm-up', exact: true });
   const drill = page.getByRole('button', { name: 'Drill', exact: true });
   const exercise = page.getByRole('button', { name: 'Exercise', exact: true });
@@ -20,7 +19,7 @@ test('sending scales stay in the studio and save assigned practice without openi
   await page.goto('/');
   await page.getByRole('button', { name: /Sending practice/ }).click();
   await expect(page).toHaveURL(/#practice$/);
-  await expect(sending).toHaveAttribute('aria-pressed', 'true');
+  await expect(text).toBeVisible();
   await expect(warmUp).toBeVisible();
   await expect(drill).toBeVisible();
   await expect(exercise).toBeVisible();
@@ -47,7 +46,7 @@ test('sending scales stay in the studio and save assigned practice without openi
   await expect(textSize).toHaveValue('large');
   expect((await context.request.get('/api/entries')).status()).toBe(401);
   await page.reload();
-  await expect(sending).toHaveAttribute('aria-pressed', 'true');
+  await openPracticeTool(page, 'Sending practice');
   await expect(text).toBeVisible();
 
   await signIn(page);

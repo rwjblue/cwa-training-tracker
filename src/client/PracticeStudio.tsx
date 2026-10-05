@@ -10,6 +10,7 @@ import { officialRecordingIdentity } from '../shared/recordings';
 import { listeningGuidance } from '../shared/listening-guidance';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   ArrowRight,
   AudioLines,
   CheckCheck,
@@ -63,6 +64,7 @@ import CopyTrainer, { type CopyTrainerHandle } from './CopyTrainer';
 import SendingScales from './SendingScales';
 import { loadCopyDraft } from './copy-storage';
 import { practiceActivityForLaunch, type PracticeLaunch } from './practice-launch';
+import { practiceTool } from './practice-tools';
 import RecordingSpeedSelect from './RecordingSpeedSelect';
 import RecordingRewindControl from './RecordingRewindControl';
 import { recordingReplayPosition } from '../shared/recording-marks';
@@ -105,7 +107,7 @@ export default function PracticeStudio({
   active = true,
   onBack,
   onFinish,
-  onToolChange,
+  onBrowseTools,
   onUnsavedChange,
   accountId,
   wordContent,
@@ -137,7 +139,7 @@ export default function PracticeStudio({
   active?: boolean;
   onBack?: () => void;
   onFinish?: () => void;
-  onToolChange?: (tool: PracticeLaunch['tool']) => void;
+  onBrowseTools?: () => void;
   onUnsavedChange?: (unsaved: boolean) => void;
   accountId?: string;
   wordContent: WordContentEditor;
@@ -860,13 +862,6 @@ export default function PracticeStudio({
     stopPlayback();
     if (mode !== 'custom') setText(generatePractice(mode, preferences));
   };
-  const chooseTool = (nextTool: PracticeLaunch['tool']) => {
-    const current = publicCopy ? 'copy' : publicRunner ? 'runner' : tool;
-    if (nextTool === current || !canPractice()) return;
-    // App owns the same pause/finish/replacement flight as assignment switches.
-    // A deliberate tool change receives a fresh owner; view inspection does not.
-    onToolChange?.(nextTool);
-  };
   const onMedia = (event: React.SyntheticEvent) => {
     if (
       event.target instanceof HTMLAudioElement &&
@@ -1062,8 +1057,18 @@ export default function PracticeStudio({
     </button>
   );
   const SessionPanel = 'details';
+  const publicPracticeTool = practiceTool(publicCopy ? 'copy' : publicRunner ? 'runner' : tool);
   return (
     <>
+      {!assigned && onBrowseTools && (
+        <button
+          className="text-button practice-tools-back"
+          onClick={onBrowseTools}
+          disabled={!canPractice()}
+        >
+          <ArrowLeft size={15} /> All practice tools
+        </button>
+      )}
       {!isListening && practiceNavigation}
       <div
         className={`page-heading studio-page-heading ${activity?.type === 'audio' ? 'is-recording' : ''}`}
@@ -1073,18 +1078,18 @@ export default function PracticeStudio({
             <span className="small-line" /> TUNE IN. TAKE YOUR TIME.
           </div>
           <h1>
-            {assigned
-              ? extraReview
-                ? 'Your extra review.'
-                : 'Your assigned practice.'
-              : 'Your practice studio.'}
+            {launch?.material
+              ? 'Material practice'
+              : assigned
+                ? 'Lesson practice'
+                : publicPracticeTool.label}
           </h1>
           <p>
             {assigned
               ? isRunner
                 ? 'Your assigned simulator settings and engine results, together.'
                 : 'Your course material and practice timer, together.'
-              : 'Copy practice, sending scales, word listening, QSO conversations, Stories, and simulator practice. No account required to practice.'}
+              : publicPracticeTool.description}
           </p>
         </div>
         <div className="studio-heading-status">
@@ -2094,45 +2099,6 @@ export default function PracticeStudio({
             )}
           </fieldset>
         </>
-      )}
-      {!assigned && onToolChange && (
-        <div className="studio-tool-picker">
-          <h2>Choose another practice tool</h2>
-          <div className="studio-tool-tabs" role="group" aria-label="Studio tools">
-            <button
-              className={publicCopy ? 'selected' : ''}
-              aria-pressed={publicCopy}
-              onClick={() => chooseTool('copy')}
-            >
-              Copy practice
-            </button>
-            {(
-              [
-                ['words', 'Word listening'],
-                ['qso', 'QSO practice'],
-                ['stories', 'Stories'],
-                ['free', 'Free practice'],
-                ['sending', 'Sending practice'],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                className={!publicRunner && !publicCopy && tool === value ? 'selected' : ''}
-                aria-pressed={!publicRunner && !publicCopy && tool === value}
-                onClick={() => chooseTool(value)}
-              >
-                {label}
-              </button>
-            ))}
-            <button
-              className={publicRunner ? 'selected' : ''}
-              aria-pressed={publicRunner}
-              onClick={() => chooseTool('runner')}
-            >
-              Morse Runner
-            </button>
-          </div>
-        </div>
       )}
       {!isListening && <div className="studio-time-summary">{practiceSummary}</div>}
     </>

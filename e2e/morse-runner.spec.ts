@@ -1,6 +1,12 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, accountRequest, expectAccessible, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  accountRequest,
+  expectAccessible,
+  signIn,
+} from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -16,22 +22,21 @@ test('embedded Runner startup preserves outer focus and mobile tool navigation',
     await loading;
     await route.continue();
   });
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'Morse Runner', exact: true }).tap();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Morse Runner', (control) => control.tap());
   const runner = page.frameLocator('iframe');
   await expect(runner.getByRole('button', { name: /Run$/ })).toBeDisabled();
-  const wordListening = page.getByRole('button', { name: 'Word listening', exact: true });
-  await wordListening.focus();
+  const allTools = page.getByRole('button', { name: 'All practice tools', exact: true });
+  await allTools.focus();
   const beforeBootScroll = await page.evaluate(() => window.scrollY);
   releaseSimulator();
   await expect(runner.getByRole('button', { name: /Run$/ })).toBeEnabled();
-  await expect(wordListening).toBeFocused();
+  await expect(allTools).toBeFocused();
   expect(await page.evaluate(() => window.scrollY)).toBe(beforeBootScroll);
   await expectAccessible(page, 'runner-startup-mobile');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
-  await wordListening.tap();
-  await expect(wordListening).toHaveAttribute('aria-pressed', 'true');
+  await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await expect(
     page.getByRole('heading', { name: 'The listening room', exact: true }),
   ).toBeVisible();
@@ -49,16 +54,16 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
     await loading;
     await route.continue();
   });
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Morse Runner');
   const publicRunner = page.frameLocator('iframe');
   await expect(publicRunner.getByRole('button', { name: /Run$/ })).toBeDisabled();
-  const wordListening = page.getByRole('button', { name: 'Word listening', exact: true });
-  await wordListening.focus();
+  const allTools = page.getByRole('button', { name: 'All practice tools', exact: true });
+  await allTools.focus();
   const beforeBootScroll = await page.evaluate(() => window.scrollY);
   releaseSimulator();
   await expect(publicRunner.getByRole('button', { name: /Run$/ })).toBeEnabled();
-  await expect(wordListening).toBeFocused();
+  await expect(allTools).toBeFocused();
   expect(await page.evaluate(() => window.scrollY)).toBe(beforeBootScroll);
   await publicRunner.getByRole('button', { name: /Run$/ }).click();
   await expect(page.getByRole('button', { name: 'Stop run', exact: true })).toBeEnabled();
@@ -67,7 +72,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await page.getByRole('button', { name: 'Stop run', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Review & save run', exact: true })).toBeEnabled();
   expect((await context.request.get('/api/entries')).status()).toBe(401);
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await signIn(page);
   // Keep the curriculum day deterministic while wall time advances alongside
   // the real AudioWorklet clock and its start/end evidence.

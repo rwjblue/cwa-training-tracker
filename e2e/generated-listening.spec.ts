@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import {
   openDisclosure,
+  openPracticeTool,
   navigateView,
   expectAccessible,
   expectResponsive,
@@ -47,8 +48,7 @@ test(`generated listening saves only applied setups and retains exact content at
     await activate(page.getByRole('button', { name, exact: true }));
   };
   await signIn(page);
-  await navigate('Practice studio');
-  await activate(page.getByRole('button', { name: 'Word listening', exact: true }));
+  await openPracticeTool(page, 'Word listening', activate);
   const audio = page.getByLabel('Practice audio', { exact: true });
   const listen = async () => {
     await activate(page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }));
@@ -217,8 +217,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await expect(review).toHaveCount(0);
   await expectAccessible(page, `generated-history-${viewport.width}`);
 
-  await navigate('Practice studio');
-  await activate(page.getByRole('button', { name: 'QSO practice', exact: true }));
+  await openPracticeTool(page, 'QSO practice', activate);
   await page
     .getByRole('combobox', { name: 'QSO scenario', exact: true })
     .selectOption('short-contact');

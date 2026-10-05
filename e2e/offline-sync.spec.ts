@@ -1,7 +1,13 @@
 import { e2eOrigin } from './environment';
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectAccessible, expectResponsive, signIn } from './helpers';
+import {
+  accountRequest,
+  openPracticeTool,
+  expectAccessible,
+  expectResponsive,
+  signIn,
+} from './helpers';
 
 test.use({ hasTouch: true });
 
@@ -37,8 +43,7 @@ test(`finished results and account edits survive offline reopen (desktop keyboar
       posted.push(request.postDataJSON());
   });
   // Load the actual engine before disconnecting. Running-time recovery is excluded.
-  await navigate('Practice studio');
-  await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
+  await openPracticeTool(page, 'Morse Runner');
   const runner = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
   await expect(runner.getByRole('button', { name: /Run$/ })).toBeEnabled();
   await runner.getByRole('button', { name: /Run$/ }).click();

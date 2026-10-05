@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectResponsive, signIn } from './helpers';
+import { openDisclosure, openPracticeTool, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.231' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -53,8 +53,8 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
         }),
       );
   });
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Word listening');
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('5');
   await expect(exact(page, 'Effective speed')).toHaveValue('3');
@@ -112,14 +112,14 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await exact(page, 'Character speed').press('Escape');
   await expect(exact(page, 'Character speed')).toHaveValue('55');
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).tap();
+  await openPracticeTool(page, 'QSO practice', (control) => control.tap());
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('5');
   await expect(exact(page, 'Effective speed')).toHaveValue('3');
   await setExact(page, 'Character speed', 20);
   await setExact(page, 'Effective speed', 8);
   await setExact(page, 'Sidetone', 731, 'Hz');
-  await page.getByRole('button', { name: 'Stories', exact: true }).tap();
+  await openPracticeTool(page, 'Stories', (control) => control.tap());
   await sound(page);
   await setExact(page, 'Character speed', 60);
   await setExact(page, 'Effective speed', 51);
@@ -133,15 +133,17 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await expectResponsive(page, 'precise-story-controls');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
+  await expect(page).toHaveURL(/#tools$/);
+  await openPracticeTool(page, 'Stories', (control) => control.tap());
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('60');
   await expect(exact(page, 'Effective speed')).toHaveValue('51');
   await expect(exact(page, 'Sidetone', 'Hz')).toHaveValue('420');
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).tap();
+  await openPracticeTool(page, 'QSO practice', (control) => control.tap());
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('20');
   await expect(exact(page, 'Effective speed')).toHaveValue('8');
-  await page.getByRole('button', { name: 'Word listening', exact: true }).tap();
+  await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('55');
   await expect(exact(page, 'Effective speed')).toHaveValue('55');
@@ -204,8 +206,7 @@ test('native 55/60 WPM listening survives canceled review and exact save retry i
 }) => {
   test.setTimeout(90_000);
   await signIn(page);
-  await navigate(page, 'Practice studio');
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await sound(page);
   await setExact(page, 'Character speed', 55);
   await setExact(page, 'Effective speed', 55);

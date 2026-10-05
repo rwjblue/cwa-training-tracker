@@ -1,6 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  accountRequest,
+  scopedRequest,
+  expectResponsive,
+  signIn,
+} from './helpers';
 import { createRunnerRun, RUNNER_REVISION } from '../src/shared/runner';
 import type { PlannedTask } from '../src/shared/plan';
 import type { PracticeSession } from '../src/shared/training';
@@ -39,8 +46,8 @@ async function expectTotal(region: Locator, label: string, value: string) {
     await page.setViewportSize(
       mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
     );
-    await page.goto('/#practice');
-    await activate(page, page.getByRole('button', { name: 'Morse Runner', exact: true }), mobile);
+    await page.goto('/#tools');
+    await openPracticeTool(page, 'Morse Runner', (control) => activate(page, control, mobile));
     await expect(page.getByRole('region', { name: 'Runner assignment progress' })).toHaveCount(0);
     const frame = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
     await frame.getByRole('button', { name: /Run$/ }).click();

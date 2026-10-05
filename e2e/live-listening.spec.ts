@@ -1,13 +1,18 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, navigateView, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  navigateView,
+  expectResponsive,
+  signIn,
+} from './helpers';
 import { morseTimeline } from '../src/client/audio';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.226' } });
 async function studio(page: Page, tool: string) {
   await signIn(page);
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
-  await page.getByRole('button', { name: tool, exact: true }).click();
+  await openPracticeTool(page, tool);
   const settings = page.locator('details').filter({ has: page.getByText(/^Sound settings ·/) });
   await settings.getByText(/^Sound settings ·/).click();
 }

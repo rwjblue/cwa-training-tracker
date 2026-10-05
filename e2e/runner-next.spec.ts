@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { accountRequest, openPracticeTool, expectResponsive, signIn } from './helpers';
 import type { PracticeSession } from '../src/shared/training';
 
 test.use({ hasTouch: true });
@@ -79,8 +79,8 @@ async function refuseWrites(page: Page, refused: boolean) {
       await expect(page.getByLabel('0:00 engine time', { exact: true })).toBeVisible();
       await expect(page.locator('#current-practice')).toBeFocused();
     };
-    await page.goto('/#practice');
-    await activate(page, page.getByRole('button', { name: 'Morse Runner', exact: true }), mobile);
+    await page.goto('/#tools');
+    await openPracticeTool(page, 'Morse Runner', (control) => activate(page, control, mobile));
     await runShort();
     const guest = await terminalResult(page, 'guest');
     await refuseWrites(page, true);

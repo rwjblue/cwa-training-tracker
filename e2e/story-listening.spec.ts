@@ -3,7 +3,7 @@ import { test } from './fixtures';
 import { PRACTICE_STORIES, practiceStory } from '../src/shared/listening-stories';
 import { storyListeningTrack } from '../src/client/listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from '../src/client/practice-preferences';
-import { openDisclosure, expectResponsive, signIn } from './helpers';
+import { openDisclosure, openPracticeTool, expectResponsive, signIn } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.230' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -16,8 +16,7 @@ async function navigate(page: Page, name: string) {
   await page.getByRole('button', { name, exact: true }).click();
 }
 async function openStories(page: Page) {
-  await navigate(page, 'Practice studio');
-  await page.getByRole('button', { name: 'Stories', exact: true }).press('Enter');
+  await openPracticeTool(page, 'Stories', (control) => control.press('Enter'));
 }
 async function paused(page: Page) {
   await expect
@@ -117,7 +116,10 @@ test('public Stories share native sentence/word transport and retain independent
     (audio: HTMLAudioElement) => audio.currentTime,
   );
   await navigate(page, 'Academy guide');
-  await page.getByRole('button', { name: /Return to practice/ }).click();
+  await page
+    .getByRole('region', { name: 'Current practice block', exact: true })
+    .getByRole('button', { name: 'Return to practice', exact: true })
+    .click();
   await paused(page);
   await expect
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime))
@@ -133,11 +135,11 @@ test('public Stories share native sentence/word transport and retain independent
   ).toBeVisible();
   await expectResponsive(page, 'story-native-retained');
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Word listening', exact: true }).tap();
+  await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await expect(
     sound(page).getByText('Sound settings · 20/10 WPM · 500–900 Hz variable', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Stories', exact: true }).tap();
+  await openPracticeTool(page, 'Stories', (control) => control.tap());
   await expect(selector(page)).toHaveValue('story-light');
   await expect(
     sound(page).getByText('Sound settings · 21/11 WPM · 600 Hz', { exact: true }),

@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, openDisclosure } from './helpers';
+import { expectResponsive, openDisclosure, openPracticeTool } from './helpers';
 
 test.use({ hasTouch: true });
 const audio = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -73,8 +73,8 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
       return url;
     };
   });
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Word listening');
   await sound(page);
   const variable = page.getByRole('checkbox', { name: 'Variable pitch', exact: true });
   await expect(variable).toBeChecked();
@@ -122,10 +122,12 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   expect(await bands(page)).toEqual([1000]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
+  await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await sound(page);
   await expect(variable).not.toBeChecked();
   await variable.tap();
   await page.reload();
+  await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await sound(page);
   await expect(variable).toBeChecked();
   await expect(page.getByText(/^Sound settings ·/)).toContainText('500–900 Hz variable');

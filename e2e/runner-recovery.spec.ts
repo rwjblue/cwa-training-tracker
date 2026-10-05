@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import type { PracticeSession } from '../src/shared/training';
 import {
   openDisclosure,
+  openPracticeTool,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -60,13 +61,13 @@ async function retainedResults(page: Page, scope: string) {
       },
       { times: 1 },
     );
-    await page.goto('/#practice');
+    await page.goto('/#tools');
     await expect(page.getByText('Tuning in to your workspace…', { exact: true })).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Practice log', exact: true, includeHidden: true }),
     ).toBeDisabled();
     finishAccountSelection();
-    await activate(page, page.getByRole('button', { name: 'Morse Runner', exact: true }), mobile);
+    await openPracticeTool(page, 'Morse Runner', (control) => activate(page, control, mobile));
     const runner = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
     await runner.getByRole('button', { name: /Run$/ }).click();
     await expect.poll(() => runner.locator('#clock').textContent()).not.toBe('00:00:00');
@@ -425,8 +426,8 @@ async function retainedResults(page: Page, scope: string) {
     await signIn(page);
     const { user } = await (await context.request.get('/api/me')).json();
     await page.route('**/vendor/web-morse-runner/integration/main.js', (route) => route.abort());
-    await page.goto('/#practice');
-    await activate(page, page.getByRole('button', { name: 'Morse Runner', exact: true }), mobile);
+    await page.goto('/#tools');
+    await openPracticeTool(page, 'Morse Runner', (control) => activate(page, control, mobile));
     // The real load-timeout boundary has no acknowledged practice/result to discard.
     await expect(
       page.getByText('No practice time was recorded. Start a new run when you’re ready.', {
@@ -459,7 +460,13 @@ async function retainedResults(page: Page, scope: string) {
     const reset = page.getByRole('dialog', { name: 'Start with a fresh page?', exact: true });
     await expect(reset).toContainText('1 finished Runner results');
     await page.keyboard.press('Escape');
-    await navigate(page, 'Practice studio', mobile);
+    await activate(
+      page,
+      page
+        .getByRole('region', { name: 'Current practice block', exact: true })
+        .getByRole('button', { name: 'View/save result', exact: true }),
+      mobile,
+    );
     // A restored old unreviewed draft may coexist with an immutable queue body.
     // Review must display the exact submission it will retry, rather than draft fields.
     const [oldDraft] = await retainedResults(page, user.id);

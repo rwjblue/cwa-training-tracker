@@ -1,7 +1,14 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { openDisclosure, accountRequest, expectAccessible, scopedRequest, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  accountRequest,
+  expectAccessible,
+  scopedRequest,
+  signIn,
+} from './helpers';
 import {
   createCopyAttempt,
   copyToneHz,
@@ -31,9 +38,9 @@ async function openCopy(page: Page) {
     };
   };
   await page.addInitScript(observeAudio);
-  await page.goto('/#practice');
+  await page.goto('/#tools');
   await page.evaluate(observeAudio);
-  await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
+  await openPracticeTool(page, 'Copy practice');
   await expect(page.getByRole('region', { name: 'Copy practice', exact: true })).toBeVisible();
 }
 
@@ -219,6 +226,8 @@ test.describe('guest code-group comparison', () => {
     ).toHaveText('0:00');
     await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
     await page.reload();
+    await expect(page).toHaveURL(/#tools$/);
+    await openPracticeTool(page, 'Copy practice');
     await expect(page.getByText(/Recovered on this device/)).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(answer);
     await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
@@ -432,10 +441,10 @@ test('a recovered word round finishes through native audio and retries an uncert
   test.setTimeout(90_000);
   await signIn(page);
   await openCopy(page);
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   const retainedNotes = 'Keep these word-listening notes when Copy saves its own result.';
   await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill(retainedNotes);
-  await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
+  await openPracticeTool(page, 'Copy practice');
   await page.getByRole('button', { name: 'Word copy', exact: true }).click();
   await openDisclosure(page, 'Round settings');
   await page.getByRole('spinbutton', { name: /^Minimum character speed/ }).fill('50');
@@ -491,6 +500,8 @@ test('a recovered word round finishes through native audio and retries an uncert
     draft,
   });
   await page.reload();
+  await expect(page).toHaveURL(/#tools$/);
+  await openPracticeTool(page, 'Copy practice');
   await expect(page.getByText(/Recovered on this device/)).toBeVisible();
   await page.getByRole('button', { name: 'Play audio', exact: true }).click();
   await expect
@@ -550,7 +561,7 @@ test('a recovered word round finishes through native audio and retries an uncert
   await expectAccessible(page, 'copy-words-mobile');
 
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     retainedNotes,
   );
@@ -895,6 +906,8 @@ test.describe('copy review inspection and recovery', () => {
     await expect(option).toBeDisabled();
     await expect(option).toHaveValue('1');
     await page.reload();
+    await expect(page).toHaveURL(/#tools$/);
+    await openPracticeTool(page, 'Copy practice');
     await expect(page.getByText(/Recovered on this device/)).toBeVisible();
     await openDisclosure(page, 'View round settings');
     const copy = page.getByRole('region', { name: 'Copy practice', exact: true });

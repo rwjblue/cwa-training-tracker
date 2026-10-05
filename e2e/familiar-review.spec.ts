@@ -125,9 +125,7 @@ test('familiar review rotates native material and saves exact private evidence w
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await activate(reviews.getByRole('button', { name: `Review ${audioTask.title}`, exact: true }));
-  await expect(
-    page.getByRole('heading', { name: 'Your extra review.', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await expect(page.locator('#current-practice')).toBeFocused();
   const audio = page.getByLabel('Assigned recording', { exact: true });
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));

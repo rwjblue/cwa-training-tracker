@@ -269,7 +269,7 @@ export default function TodayPlan({
             {onPractice && (
               <button className="today-plan-studio" onClick={onPractice}>
                 <Headphones size={15} />
-                <span>Ready to practice now? Open the listening room.</span>
+                <span>Ready for extra practice? Explore the practice tools.</span>
                 <ArrowRight size={14} />
               </button>
             )}
@@ -297,7 +297,7 @@ export default function TodayPlan({
                 </p>
                 {onPractice && (
                   <button className="text-button" onClick={onPractice}>
-                    Open practice studio <ArrowRight size={13} />
+                    Open practice tools <ArrowRight size={13} />
                   </button>
                 )}
               </div>

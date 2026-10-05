@@ -5,6 +5,7 @@ import {
   expectAccessible,
   expectResponsive,
   openDisclosure,
+  openPracticeTool,
   scopedRequest,
   signIn,
 } from './helpers';
@@ -153,8 +154,13 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
   await expect(page.getByRole('region', { name: 'Account sync status' })).toContainText(
     '1 account edit',
   );
-  await navigate(page, 'Practice studio', mobile);
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening', async (control) => {
+    if (mobile) await control.tap();
+    else {
+      await control.focus();
+      await control.press('Enter');
+    }
+  });
   await page
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Retained listening notes without invented time');
@@ -164,7 +170,7 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
   await exactTone.fill('700');
   await exactTone.press('Enter');
   await expect(tone).toHaveValue('700');
-  await page.getByRole('button', { name: 'Copy practice', exact: true }).click();
+  await openPracticeTool(page, 'Copy practice');
   await openDisclosure(page, 'Round settings');
   await page.getByRole('combobox', { name: 'Target duration', exact: true }).selectOption('10');
   await page.getByRole('button', { name: 'Start code groups', exact: true }).click();
@@ -344,10 +350,8 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
   await expectAccessible(page, `device-restored-desktop`);
 
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await activateDeviceControl(
-    page,
-    page.getByRole('button', { name: 'Start practice', exact: true }),
-    mobile,
+  await openPracticeTool(page, 'Copy practice', (control) =>
+    activateDeviceControl(page, control, mobile),
   );
   await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('ES');
   await expect(

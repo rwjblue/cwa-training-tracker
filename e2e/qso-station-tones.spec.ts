@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive } from './helpers';
+import { expectResponsive, openPracticeTool } from './helpers';
 
 test.use({ hasTouch: true });
 const audio = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -66,8 +66,8 @@ test('public QSO upper-bound station cues survive native seek, replay and retimi
       return url;
     };
   });
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).press('Enter');
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'QSO practice', (control) => control.press('Enter'));
   await sound(page);
   await exact(page, 'Character speed', 55);
   await exact(page, 'Effective speed', 55);
@@ -127,8 +127,8 @@ test('public QSO upper-bound station cues survive native seek, replay and retimi
     page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }),
   ).toBeVisible();
   await expect(audio(page)).toBeHidden();
-  await page.getByRole('button', { name: 'Word listening', exact: true }).tap();
+  await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await expect(pair).toHaveCount(0);
-  await page.getByRole('button', { name: 'Stories', exact: true }).tap();
+  await openPracticeTool(page, 'Stories', (control) => control.tap());
   await expect(pair).toHaveCount(0);
 });

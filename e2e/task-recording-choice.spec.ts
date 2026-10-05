@@ -344,8 +344,12 @@ test(`remembered native recording choices stay scoped and preserve played facts 
     JSON.parse((await page.evaluate((name) => localStorage.getItem(name), key('guest', task.id)))!)
       .selectedUrl,
   ).toBe(url(25));
-  await navigate('Practice studio');
-  await expect(page.getByRole('button', { name: 'Word listening', exact: true })).toBeEnabled();
+  await navigateView(page, 'Practice tools', activate);
+  await expect(
+    page
+      .getByRole('region', { name: 'Practice tools', exact: true })
+      .getByRole('button', { name: 'Word listening', exact: true }),
+  ).toBeEnabled();
   await signIn(page, { email: `choice-b-${crypto.randomUUID()}@example.test` });
   const taskB = await configure();
   expect(taskB.id).toBe(task.id); // Same stable curriculum ID, separate account.

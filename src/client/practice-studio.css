@@ -206,24 +206,9 @@
   }
 }
 
-.studio-tool-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 18px;
-  flex-wrap: wrap;
-}
-.studio-tool-tabs button {
-  border: 1px solid #bfcbb5;
-  border-radius: 8px;
-  padding: 12px 22px;
-  background: #fffefa;
-  color: #415836;
-  font-size: 14px;
-}
-.studio-tool-tabs button.selected {
-  background: #38513b;
-  color: white;
-  border-color: #38513b;
+.practice-tools-back {
+  margin-bottom: 18px;
+  min-height: 44px;
 }
 .studio-task-context {
   display: flex;
@@ -405,14 +390,6 @@
   overflow-y: auto;
 }
 @media (max-width: 640px) {
-  .studio-tool-tabs {
-    gap: 6px;
-  }
-  .studio-tool-tabs button {
-    flex: 1;
-    padding: 11px 9px;
-    font-size: 12px;
-  }
   .studio-quick-actions {
     gap: 10px;
     padding: 12px;
@@ -719,17 +696,6 @@
   padding-top: 0;
   border-top: 0;
 }
-.studio-tool-picker {
-  margin-top: 28px;
-  padding-top: 20px;
-  border-top: 1px solid #d8e0d0;
-}
-.studio-tool-picker h2 {
-  margin-bottom: 12px;
-  font-family: Georgia, serif;
-  font-size: 20px;
-  color: #36523a;
-}
 .studio-time-summary {
   margin-top: 24px;
 }
@@ -764,9 +730,6 @@
   }
   .studio-quick-actions {
     margin-bottom: 16px;
-  }
-  .studio-tool-tabs button {
-    min-height: 44px;
   }
 }
 

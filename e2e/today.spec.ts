@@ -3,6 +3,7 @@ import { test } from './fixtures';
 import { addDays, dateInTimezone } from '../src/shared/training';
 import {
   openDisclosure,
+  openPracticeTool,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -224,8 +225,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   const row = panel.getByRole('listitem').filter({
     has: page.getByRole('heading', { name: assigned.title, exact: true }),
   });
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
-  await page.getByRole('button', { name: 'Free practice', exact: true }).click();
+  await openPracticeTool(page, 'Free practice');
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   const audio = page.getByLabel('Assigned recording', { exact: true });

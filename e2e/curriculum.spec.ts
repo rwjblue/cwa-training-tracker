@@ -134,9 +134,7 @@ test('all course plans launch their tools and retain progress across levels and 
   await taskRow(page, beginnerPlan, beginner)
     .getByRole('button', { name: 'Practice', exact: true })
     .click();
-  await expect(
-    page.getByRole('heading', { name: 'Your assigned practice.', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'Official instructions', exact: true }),
   ).toHaveAttribute('href', beginner.curriculum!.sourceUrl);

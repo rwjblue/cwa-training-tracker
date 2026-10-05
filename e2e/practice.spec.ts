@@ -1,13 +1,18 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, navigateView, expectAccessible, signIn } from './helpers';
+import {
+  openDisclosure,
+  navigateView,
+  openPracticeTool,
+  expectAccessible,
+  signIn,
+} from './helpers';
 
 test('practice preferences persist and generated material follows exact selected lengths', async ({
   page,
 }) => {
-  await page.goto('/#practice');
-  await expect(page.getByRole('heading', { name: 'The listening room' })).toBeVisible();
-  await page.getByRole('button', { name: 'Free practice', exact: true }).click();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Free practice');
   await page.getByText(/^Sound settings ·/).click();
   const characterSpeed = page.getByRole('slider', { name: 'Character speed', exact: true });
   const effectiveSpeed = page.getByRole('slider', { name: 'Effective speed', exact: true });
@@ -21,6 +26,7 @@ test('practice preferences persist and generated material follows exact selected
   expect(words.every((word) => word.length === 3 && /^[A-Z]+$/.test(word))).toBe(true);
 
   await page.reload();
+  await openPracticeTool(page, 'Free practice');
   await page.getByText(/^Sound settings ·/).click();
   await expect(characterSpeed).toHaveValue('60');
   await expect(effectiveSpeed).toHaveValue('60');
@@ -54,6 +60,7 @@ test('practice preferences persist and generated material follows exact selected
       .every((group) => /^\d{10}$/.test(group)),
   ).toBe(true);
   await page.reload();
+  await openPracticeTool(page, 'Free practice');
   await expect(page.getByRole('combobox', { name: 'Digits per group', exact: true })).toHaveValue(
     '10',
   );
@@ -62,6 +69,7 @@ test('practice preferences persist and generated material follows exact selected
   await page.getByRole('button', { name: 'Your text', exact: true }).click();
   await page.getByLabel('Practice text', { exact: true }).fill('MY PRIVATE PRACTICE TEXT');
   await page.reload();
+  await openPracticeTool(page, 'Free practice');
   await expect(page.getByLabel('Practice text', { exact: true })).toHaveValue('');
   await expectAccessible(page, 'studio-preferences-desktop');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -76,7 +84,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   context,
 }) => {
   await signIn(page);
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('heading', { name: 'Time your practice.' })).toBeVisible();
   await page.addStyleTag({
@@ -180,7 +188,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(submitted[1]).toEqual(submitted[0]);
   await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await openDisclosure(page, 'Session options and logging');
   await expect(
     page.getByRole('button', { name: 'Review & save session', exact: true }),
@@ -234,14 +242,11 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#logbook$/);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(2);
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await page.getByRole('textbox', { name: 'Scratchpad', exact: true }).fill('Unsaved copy notes');
-  await page.getByRole('button', { name: 'Morse Runner', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Morse Runner', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Morse Runner');
+  await expect(page.locator('iframe[title="Web Morse Runner practice simulator"]')).toBeVisible();
+  await openPracticeTool(page, 'Word listening');
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Unsaved copy notes',
   );
@@ -254,8 +259,8 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
 test('word and QSO trainers expose the complete material and remember listening choices', async ({
   page,
 }) => {
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'Word listening');
   const list = page.getByRole('combobox', { name: 'Word list', exact: true });
   await expect(list).toHaveValue('common-qso');
   await page.getByText('View word list', { exact: true }).click();
@@ -280,6 +285,7 @@ test('word and QSO trainers expose the complete material and remember listening 
     .getByRole('spinbutton', { name: 'Extra word pause exact (seconds)', exact: true })
     .press('Enter');
   await page.reload();
+  await openPracticeTool(page, 'Word listening');
   await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await expect(list).toHaveValue('common-30');
   await expect(
@@ -292,7 +298,7 @@ test('word and QSO trainers expose the complete material and remember listening 
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E T');
   await expect(vocabulary).toContainText('E T');
 
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).click();
+  await openPracticeTool(page, 'QSO practice');
   await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('ragchew');
   await expect(page.getByText(/A fictional (spring|summer|autumn|winter) contact/)).toBeVisible();
   await page.getByText('View full conversation', { exact: true }).click();

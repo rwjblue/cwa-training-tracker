@@ -1,7 +1,7 @@
 import { expect, type Page, type Locator } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { accountRequest, expectResponsive, signIn } from './helpers';
+import { accountRequest, expectResponsive, openPracticeTool, signIn } from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
 import { starterAdvisorReportDefinition } from '../src/shared/report-definition';
 
@@ -74,8 +74,7 @@ test('saved explicit learned words stay eligible through handoff and retire only
     ).status(),
   ).toBe(200);
   await page.reload();
-  await navigate(page, 'Practice studio');
-  await keyboard(page.getByRole('button', { name: 'Word listening', exact: true }));
+  await openPracticeTool(page, 'Word listening', keyboard);
   await page
     .getByRole('textbox', { name: 'Scratchpad', exact: true })
     .fill('Heard NAME and ordinary private prose.\nLearned: Rig, QTH\nlearned: RIG');

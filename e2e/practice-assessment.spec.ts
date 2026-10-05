@@ -1,7 +1,13 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { readFile } from 'node:fs/promises';
-import { openDisclosure, expectResponsive, scopedRequest, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  expectResponsive,
+  scopedRequest,
+  signIn,
+} from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.191' } });
 const rating = (page: Page) => page.getByRole('combobox', { name: /^Performance rating/ });
@@ -212,8 +218,8 @@ test('guest finished generated listening supports explicit ratings without on-ai
   page,
   context,
 }) => {
-  await page.goto('/#practice');
-  await page.getByRole('button', { name: 'QSO practice', exact: true }).press('Enter');
+  await page.goto('/#tools');
+  await openPracticeTool(page, 'QSO practice', (control) => control.press('Enter'));
   await page.getByRole('button', { name: 'Start practice', exact: true }).press('Enter');
   await expect
     .poll(() =>

@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, expectResponsive } from './helpers';
+import { openDisclosure, openPracticeTool, expectResponsive } from './helpers';
 
 {
   const viewport = { width: 390, height: 844 };
@@ -27,7 +27,8 @@ import { openDisclosure, expectResponsive } from './helpers';
       // Speech must work even on devices with no speech synthesis API.
       Object.defineProperty(window, 'speechSynthesis', { value: undefined });
     });
-    await page.goto('/#practice');
+    await page.goto('/#tools');
+    await openPracticeTool(page, 'Word listening');
     const play = page.getByRole('button', { name: 'Play Morse', exact: true });
     const stop = page.getByRole('button', { name: 'Stop playback', exact: true });
     const media = page.getByLabel('Practice audio', { exact: true });

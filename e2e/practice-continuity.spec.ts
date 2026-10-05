@@ -3,6 +3,7 @@ import { test } from './fixtures';
 import {
   openDisclosure,
   navigateView,
+  openPracticeTool,
   accountRequest,
   expectAccessible,
   expectResponsive,
@@ -235,7 +236,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect(retained).toHaveCount(0);
   expect((await context.request.get('/api/entries')).status()).toBe(401);
 
-  await activate(page.getByRole('button', { name: 'Practice studio', exact: true }));
+  await openPracticeTool(page, 'Word listening', activate);
   await expect(audio).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
 });

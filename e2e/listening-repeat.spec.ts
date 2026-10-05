@@ -1,6 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, navigateView, expectResponsive, signIn } from './helpers';
+import {
+  openDisclosure,
+  openPracticeTool,
+  navigateView,
+  expectResponsive,
+  signIn,
+} from './helpers';
 import { observeNativeMovement, readNativeMovement } from './native-movement';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.228' } });
@@ -18,7 +24,7 @@ const state = (page: Page) =>
 const list = (page: Page) =>
   page.getByRole('button', { name: /^Seek to word \d+:/ }).allTextContents();
 async function words(page: Page) {
-  await page.getByRole('button', { name: 'Word listening', exact: true }).click();
+  await openPracticeTool(page, 'Word listening');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('PARIS E PARIS <AR>');
   await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
@@ -46,7 +52,6 @@ test('native repeated rounds use fresh source order and count only actual bounda
 }) => {
   await signIn(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole('button', { name: 'Practice studio', exact: true }).click();
   await words(page);
   await observeNativeMovement(media(page));
   // Observe real native tails before source replacement; do not forge end events.
@@ -148,7 +153,7 @@ test('native repeated rounds use fresh source order and count only actual bounda
 test('next-round failure retries visibly and cancels late native continuation on pause and source change', async ({
   page,
 }) => {
-  await page.goto('/#practice');
+  await page.goto('/#tools');
   await page.setViewportSize({ width: 390, height: 844 });
   await words(page);
   await page.getByRole('textbox', { name: /^Your word list/ }).fill('E T');
