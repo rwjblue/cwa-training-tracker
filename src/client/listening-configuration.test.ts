@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  listeningQsoRound,
+  listeningStoryRound,
   listeningWordRound,
   qsoListeningSummary,
   qsoListeningTrack,
@@ -215,11 +217,12 @@ describe('applied listening configurations', () => {
   });
 
   it('captures the actual contact and rendered tone pair without mutating its script or answers', () => {
-    const qso = generateQso('short-contact', () => 0.25);
+    const qso = listeningQsoRound(generateQso('short-contact', () => 0.25));
     const exact = structuredClone(qso);
     const summary = qsoListeningSummary(qso, {
       ...DEFAULT_PRACTICE_PREFERENCES,
       qsoScenario: 'pota',
+      variableQsoPitch: false,
       tone: 975,
     });
     expect(summary).toMatchObject({
@@ -237,9 +240,48 @@ describe('applied listening configurations', () => {
     expect(summary.stations).not.toBe(qso.stations);
     expect(Object.isFrozen(summary.stations)).toBe(true);
     expect(Object.isFrozen(summary.tonesHz)).toBe(true);
-    expect(qsoListeningSummary(qso, { ...DEFAULT_PRACTICE_PREFERENCES, tone: 1000 })).toMatchObject(
-      { tonesHz: [1000, 950] },
+    expect(
+      qsoListeningSummary(qso, {
+        ...DEFAULT_PRACTICE_PREFERENCES,
+        tone: 1000,
+        variableQsoPitch: false,
+      }),
+    ).toMatchObject({ tonesHz: [1000, 950] });
+  });
+
+  it('keeps each randomized QSO station pitch through every handoff, replay and retime', () => {
+    const pitchRandom = vi.fn(() => 0.5);
+    const qso = listeningQsoRound(
+      generateQso('short-contact', () => 0.25),
+      pitchRandom,
     );
+    const p = { ...DEFAULT_PRACTICE_PREFERENCES, variableQsoPitch: true, tone: 975 };
+    const first = qsoListeningTrack(qso, p);
+    const replay = qsoListeningTrack(qso, p);
+    const faster = qsoListeningTrack(qso, { ...p, characterWpm: 30, effectiveWpm: 15 });
+    expect(qso.tonesHz).toEqual([700, 735]);
+    expect(Object.isFrozen(qso)).toBe(true);
+    expect(Object.isFrozen(qso.tonesHz)).toBe(true);
+    expect(first.summary.tonesHz).toBe(qso.tonesHz);
+    expect(first.summary).not.toHaveProperty('variablePitch');
+    expect(replay.track).toEqual(first.track);
+    for (const track of [first.track, faster.track]) {
+      expect(track.items.map((item) => item.text)).toEqual(qso.lines);
+      for (const [index, item] of track.items.entries()) {
+        const tones = track.tones.filter((tone) => tone.at >= item.start && tone.at < item.end);
+        expect(tones.length).toBeGreaterThan(0);
+        expect(new Set(tones.map((tone) => tone.frequency))).toEqual(
+          new Set([qso.tonesHz[index % 2]]),
+        );
+      }
+    }
+    const fixed = qsoListeningTrack(qso, { ...p, variableQsoPitch: false });
+    expect(fixed.summary.tonesHz).toEqual([975, 925]);
+    expect(fixed.track.words).toEqual(first.track.words);
+    expect(fixed.track.items).toEqual(first.track.items);
+    expect(fixed.track.duration).toBe(first.track.duration);
+    expect(qsoListeningTrack(qso, p).track).toEqual(first.track);
+    expect(pitchRandom).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -258,9 +300,9 @@ describe('bounded two-station QSO pitch', () => {
       expect(qsoStationTones(preferred)).toEqual([preferred, second]);
       expect(Object.isFrozen(qsoStationTones(preferred))).toBe(true);
       for (const scenario of QSO_TEMPLATES) {
-        const qso = generateQso(scenario.id, () => 0.25);
+        const qso = listeningQsoRound(generateQso(scenario.id, () => 0.25));
         const original = structuredClone(qso);
-        const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: preferred };
+        const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: preferred, variableQsoPitch: false };
         const first = qsoListeningTrack(qso, p);
         const next = qsoListeningTrack(qso, { ...p, characterWpm: 30, effectiveWpm: 12 });
         expect(first.summary.tonesHz).toEqual([preferred, second]);
@@ -294,10 +336,11 @@ describe('bounded two-station QSO pitch', () => {
     'rejects an invalid preferred pitch %s before rendering',
     (tone) => {
       expect(() =>
-        qsoListeningTrack(
-          generateQso('short-contact', () => 0.25),
-          { ...DEFAULT_PRACTICE_PREFERENCES, tone },
-        ),
+        qsoListeningTrack(listeningQsoRound(generateQso('short-contact', () => 0.25)), {
+          ...DEFAULT_PRACTICE_PREFERENCES,
+          tone,
+          variableQsoPitch: false,
+        }),
       ).toThrow('300 to 1000');
     },
   );
@@ -305,13 +348,14 @@ describe('bounded two-station QSO pitch', () => {
   it.each(boundaries)(
     'renders both frequency bands at preferred %i Hz, with bounded edges and silent handoffs',
     async (preferred, second) => {
-      const qso = {
+      const qso = listeningQsoRound({
         ...generateQso('short-contact', () => 0.25),
         lines: ['T E', 'T E', 'T E', 'T E'],
-      };
+      });
       const { track, summary } = qsoListeningTrack(qso, {
         ...DEFAULT_PRACTICE_PREFERENCES,
         tone: preferred,
+        variableQsoPitch: false,
       });
       const data = new DataView(await renderMorseWav(track).arrayBuffer());
       const sample = (index: number) => data.getInt16(44 + index * 2, true);
@@ -361,9 +405,14 @@ describe('bounded two-station QSO pitch', () => {
   );
 
   it('leaves opted-out words and Stories at their own single preferred pitch', () => {
-    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 1000, variableWordPitch: false };
+    const p = {
+      ...DEFAULT_PRACTICE_PREFERENCES,
+      tone: 1000,
+      variableWordPitch: false,
+      variableStoryPitch: false,
+    };
     const words = wordListeningTrack(listeningWordRound('custom', 'E T', false), p).track;
-    const story = storyListeningTrack(practiceStory('story-trail'), p);
+    const story = storyListeningTrack(listeningStoryRound(practiceStory('story-trail')), p);
     for (const track of [words, story])
       expect(new Set(track.tones.map((tone) => tone.frequency))).toEqual(new Set([1000]));
   });

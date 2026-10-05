@@ -12,6 +12,8 @@ export interface PracticePreferences {
   wordGap: number;
   shuffleWords: boolean;
   variableWordPitch: boolean;
+  variableQsoPitch: boolean;
+  variableStoryPitch: boolean;
   repeatList: boolean;
   spokenAnswers: boolean;
   hideTrainerText: boolean;
@@ -59,6 +61,8 @@ export const DEFAULT_PRACTICE_PREFERENCES: PracticePreferences = {
   wordGap: 1,
   shuffleWords: true,
   variableWordPitch: true,
+  variableQsoPitch: true,
+  variableStoryPitch: true,
   repeatList: true,
   spokenAnswers: false,
   hideTrainerText: true,
@@ -122,6 +126,19 @@ export function listeningPreferences(value: PracticePreferences): PracticePrefer
   const { characterWpm, effectiveWpm, tone, hideTrainerText } = sound;
   return { ...value, characterWpm, effectiveWpm, tone, hideTrainerText };
 }
+/** Each listening mode remembers its own randomized-pitch choice. */
+export function usesVariableListeningPitch(value: PracticePreferences): boolean {
+  switch (value.tool) {
+    case 'words':
+      return value.variableWordPitch;
+    case 'qso':
+      return value.variableQsoPitch;
+    case 'stories':
+      return value.variableStoryPitch;
+    default:
+      return false;
+  }
+}
 export function normalizePracticePreferences(value: unknown): PracticePreferences {
   let source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   if (source.version !== undefined && source.version !== 1 && source.version !== 2) source = {};
@@ -152,6 +169,14 @@ export function normalizePracticePreferences(value: unknown): PracticePreference
       typeof source.variableWordPitch === 'boolean'
         ? source.variableWordPitch
         : defaults.variableWordPitch,
+    variableQsoPitch:
+      typeof source.variableQsoPitch === 'boolean'
+        ? source.variableQsoPitch
+        : defaults.variableQsoPitch,
+    variableStoryPitch:
+      typeof source.variableStoryPitch === 'boolean'
+        ? source.variableStoryPitch
+        : defaults.variableStoryPitch,
     repeatList: typeof source.repeatList === 'boolean' ? source.repeatList : defaults.repeatList,
     spokenAnswers:
       typeof source.spokenAnswers === 'boolean' ? source.spokenAnswers : defaults.spokenAnswers,

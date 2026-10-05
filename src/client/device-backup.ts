@@ -329,6 +329,7 @@ function validateRecipe(value: unknown): CopyRecipe {
   return validateCopyRecipe(input);
 }
 function validateSharedPreferences(value: unknown): PracticePreferences {
+  const pitchKeys = ['variableWordPitch', 'variableQsoPitch', 'variableStoryPitch'];
   const input = object(
     value,
     'Shared practice preferences',
@@ -336,7 +337,7 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
   );
   for (const key of Object.keys(DEFAULT_PRACTICE_PREFERENCES))
     if (
-      !['version', 'storySettings', 'qsoSettings', 'variableWordPitch'].includes(key) &&
+      !['version', 'storySettings', 'qsoSettings', ...pitchKeys].includes(key) &&
       input[key] === undefined
     )
       throw new Error(`Shared practice preferences are missing ${key}.`);
@@ -347,7 +348,7 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
   for (const [key, normalizedValue] of Object.entries(normalized)) {
     // Versioned mode settings extend older inventories without replacing their schema.
     if (key === 'version' && (input[key] === undefined || input[key] === 1)) continue;
-    if (key === 'variableWordPitch' && !Object.hasOwn(input, key)) continue;
+    if (pitchKeys.includes(key) && !Object.hasOwn(input, key)) continue;
     if (key === 'storySettings' || key === 'qsoSettings') {
       if (input[key] === undefined) continue;
       const setup = object(

@@ -1,6 +1,6 @@
 import React from 'react';
 import PreciseRange from './PreciseRange';
-import type { PracticePreferences } from './practice-preferences';
+import { usesVariableListeningPitch, type PracticePreferences } from './practice-preferences';
 
 export default function ListeningSoundSettings({
   preferences,
@@ -14,7 +14,14 @@ export default function ListeningSoundSettings({
   onRetry: () => void;
 }) {
   const { characterWpm, effectiveWpm, tone, volume } = preferences;
-  const variablePitch = preferences.tool === 'words' && preferences.variableWordPitch;
+  const variablePitch = usesVariableListeningPitch(preferences);
+  const pitchPreference =
+    preferences.tool === 'qso'
+      ? 'variableQsoPitch'
+      : preferences.tool === 'stories'
+        ? 'variableStoryPitch'
+        : 'variableWordPitch';
+  const pitchHintId = `${preferences.tool}-variable-pitch-hint`;
   return (
     <details className="studio-sound-settings">
       <summary>
@@ -24,7 +31,7 @@ export default function ListeningSoundSettings({
       </summary>
       <div className="studio-preferences-heading">
         <h3>Your listening preferences</h3>
-        <p>Words, QSO, and Stories remember separate speeds and pitch. Volume is shared.</p>
+        <p>Words, QSO, and Stories remember separate speeds and pitch choices. Volume is shared.</p>
         <p>
           {remembered
             ? 'Sound defaults are saved on this device, including when you sign out. Word sources use the separate account or Guest device scope.'
@@ -36,20 +43,24 @@ export default function ListeningSoundSettings({
           Retry saving listening preferences
         </button>
       )}
-      {preferences.tool === 'words' && (
+      {['words', 'qso', 'stories'].includes(preferences.tool) && (
         <div className="studio-preferences-heading">
           <label>
             <input
               type="checkbox"
-              checked={preferences.variableWordPitch}
-              onChange={(event) => changePreferences({ variableWordPitch: event.target.checked })}
-              aria-describedby="word-variable-pitch-hint"
+              checked={variablePitch}
+              onChange={(event) => changePreferences({ [pitchPreference]: event.target.checked })}
+              aria-describedby={pitchHintId}
             />{' '}
             Variable pitch
           </label>
-          <p id="word-variable-pitch-hint">
-            Choose a random pitch from 500 to 900 Hz for each word. Replays and spoken-answer
-            repeats keep that word’s pitch. Turn this off to use your selected sidetone.
+          <p id={pitchHintId}>
+            {preferences.tool === 'words'
+              ? 'Choose a random pitch from 500 to 900 Hz for each word. Replays and spoken-answer repeats keep that word’s pitch.'
+              : preferences.tool === 'qso'
+                ? 'Choose random pitches from 500 to 900 Hz for both stations, at least 35 Hz apart. Each station keeps its pitch until New QSO.'
+                : 'Choose one random pitch from 500 to 900 Hz for the whole story. Replays and speed changes keep that pitch.'}{' '}
+            Turn this off to use your selected sidetone.
           </p>
         </div>
       )}

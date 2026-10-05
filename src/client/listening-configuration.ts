@@ -1,4 +1,5 @@
 import { type PracticeStory } from '../shared/listening-stories';
+import { randomToneHz, randomTonePair } from '../shared/random-tone';
 import { buildMorseTrack, morseTimeline } from './audio';
 import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import type { PracticePreferences } from './practice-preferences';
@@ -26,7 +27,7 @@ export function listeningWordRound(
   const words = Object.freeze(wordPracticeRound(listId, custom, shuffle, random));
   return Object.freeze({
     words,
-    frequenciesHz: Object.freeze(words.map(() => 500 + Math.floor(pitchRandom() * 401))),
+    frequenciesHz: Object.freeze(words.map(() => randomToneHz(pitchRandom))),
     listId,
     shuffle,
     ...(listId === 'custom' ? { sourceText: custom } : {}),
@@ -89,8 +90,29 @@ export function qsoStationTones(preferredHz: number): readonly [number, number] 
   return Object.freeze([preferredHz, preferredHz <= 950 ? preferredHz + 50 : preferredHz - 50]);
 }
 
+export interface ListeningQsoRound extends PracticeQso {
+  /** One pitch per station, retained when the exchange is replayed or retimed. */
+  readonly tonesHz: readonly [number, number];
+}
+
+export function listeningQsoRound(qso: PracticeQso, random = Math.random): ListeningQsoRound {
+  return Object.freeze({ ...qso, tonesHz: randomTonePair(random) });
+}
+
+export type ListeningStoryRound = PracticeStory & {
+  /** One narrator pitch for the complete story, retained across replay and retiming. */
+  readonly toneHz: number;
+};
+
+export function listeningStoryRound(
+  story: PracticeStory,
+  random = Math.random,
+): ListeningStoryRound {
+  return Object.freeze({ ...story, toneHz: randomToneHz(random) });
+}
+
 export function qsoListeningSummary(
-  qso: PracticeQso,
+  qso: ListeningQsoRound,
   p: PracticePreferences,
 ): Extract<GeneratedListeningSummary, { mode: 'qso' }> {
   return Object.freeze({
@@ -98,7 +120,7 @@ export function qsoListeningSummary(
     // The native generator only produces these four published scenario identities.
     scenarioId: qso.id as Extract<GeneratedListeningSummary, { mode: 'qso' }>['scenarioId'],
     stations: Object.freeze([...qso.stations] as [string, string]),
-    tonesHz: qsoStationTones(p.tone),
+    tonesHz: p.variableQsoPitch ? qso.tonesHz : qsoStationTones(p.tone),
     transmissionGapSeconds: 2,
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
@@ -106,7 +128,7 @@ export function qsoListeningSummary(
 }
 
 /** Render the same ordered station pair that the applied evidence describes. */
-export function qsoListeningTrack(qso: PracticeQso, p: PracticePreferences) {
+export function qsoListeningTrack(qso: ListeningQsoRound, p: PracticePreferences) {
   const summary = qsoListeningSummary(qso, p);
   const track = buildMorseTrack(
     qso.lines.map((text, index) => ({
@@ -125,30 +147,31 @@ export function qsoListeningTrack(qso: PracticeQso, p: PracticePreferences) {
 }
 
 export function storyListeningSummary(
-  story: PracticeStory,
+  story: ListeningStoryRound,
   p: PracticePreferences,
 ): GeneratedListeningSummary {
   return Object.freeze({
     mode: 'story',
     storyId: story.id,
-    toneHz: p.tone,
+    toneHz: p.variableStoryPitch ? story.toneHz : p.tone,
     sentenceGapSeconds: 2,
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
   });
 }
 /** Public authored sentences share one narrator; no station alternation or trailing handoff. */
-export function storyListeningTrack(story: PracticeStory, p: PracticePreferences) {
+export function storyListeningTrack(story: ListeningStoryRound, p: PracticePreferences) {
+  const frequency = p.variableStoryPitch ? story.toneHz : p.tone;
   return buildMorseTrack(
     story.lines.map((text, index) => ({
       text,
-      frequency: p.tone,
+      frequency,
       gapAfter: index < story.lines.length - 1 ? 2 : 0,
     })),
     {
       characterWpm: p.characterWpm,
       effectiveWpm: p.effectiveWpm,
-      frequency: p.tone,
+      frequency,
       volume: p.volume / 100,
     },
   );

@@ -102,6 +102,12 @@ active equivalent was found. P1/P2/P3 describe product priority, not security se
   and spoken-answer mode. Sound settings offers a remembered opt-out using the
   selected sidetone; replay, speed retiming and spoken repeats retain each word’s
   pitch. Played evidence distinguishes variable pitch from historical fixed tones.
+  QSO defaults to a random 500–900 Hz pitch for each station, at least 35 Hz
+  apart; Stories defaults to one random pitch in that range for the whole story.
+  Both modes remember their own opt-out. A shared pitch utility selects tones
+  when material is generated, so replay, seek and speed retiming retain them.
+  Played QSO and Story evidence records the actual pitches. Fixed QSO pitch
+  still uses the selected sidetone with a bounded 50 Hz station separation.
   The old “77” name is not seven missing vocabulary items. Geographic/seasonal
   coherence and scenario-aware copy checks are current-app improvements.
   [Listening](../src/client/ListeningTrainer.tsx), [content](../src/client/word-content.ts).

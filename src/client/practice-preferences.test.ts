@@ -7,6 +7,7 @@ import {
   loadPracticePreferences,
   normalizePracticePreferences,
   savePracticePreferences,
+  usesVariableListeningPitch,
 } from './practice-preferences';
 
 describe('browser practice preferences', () => {
@@ -28,6 +29,8 @@ describe('browser practice preferences', () => {
       wordLength: 4 as const,
       mode: 'numbers' as const,
       variableWordPitch: false,
+      variableQsoPitch: false,
+      variableStoryPitch: false,
     };
     expect(savePracticePreferences(preferences, storage)).toBe(true);
     expect(loadPracticePreferences(storage)).toEqual(preferences);
@@ -66,25 +69,52 @@ describe('browser practice preferences', () => {
     expect(normalizePracticePreferences({ tone: 613 }).tone).toBe(613);
   });
 
-  it('defaults old and invalid word pitch choices to on while preserving an explicit opt-out', () => {
+  it('defaults old and invalid listening pitch choices to on while preserving independent opt-outs', () => {
     expect(normalizePracticePreferences(undefined).tone).toBe(450);
     expect(normalizePracticePreferences({ tone: 600, variableWordPitch: false }).tone).toBe(600);
-    for (const version of [undefined, 1, 2]) {
-      expect(normalizePracticePreferences({ version }).variableWordPitch).toBe(true);
-      expect(
-        normalizePracticePreferences({ version, variableWordPitch: false }).variableWordPitch,
-      ).toBe(false);
+    const pitchKeys = ['variableWordPitch', 'variableQsoPitch', 'variableStoryPitch'] as const;
+    for (const key of pitchKeys) {
+      for (const version of [undefined, 1, 2]) {
+        expect(normalizePracticePreferences({ version })[key]).toBe(true);
+        expect(normalizePracticePreferences({ version, [key]: false })[key]).toBe(false);
+      }
+      for (const invalid of [null, 0, 1, 'false', [], {}])
+        expect(normalizePracticePreferences({ [key]: invalid })[key]).toBe(true);
     }
-    for (const variableWordPitch of [null, 0, 1, 'false', [], {}])
-      expect(normalizePracticePreferences({ variableWordPitch }).variableWordPitch).toBe(true);
     const words = changeListeningPreferences(DEFAULT_PRACTICE_PREFERENCES, {
       variableWordPitch: false,
     });
     for (const tool of ['qso', 'stories', 'words'] as const) {
       const current = changeListeningPreferences(words, { tool });
       expect(current.variableWordPitch).toBe(false);
-      expect(current.qsoSettings).not.toHaveProperty('variableWordPitch');
-      expect(current.storySettings).not.toHaveProperty('variableWordPitch');
+      for (const key of pitchKeys) {
+        expect(current.qsoSettings).not.toHaveProperty(key);
+        expect(current.storySettings).not.toHaveProperty(key);
+      }
+    }
+  });
+
+  it('applies only the selected listening mode pitch choice without changing other modes', () => {
+    let current = changeListeningPreferences(DEFAULT_PRACTICE_PREFERENCES, {
+      variableWordPitch: false,
+    });
+    current = changeListeningPreferences(current, { tool: 'qso', variableQsoPitch: false });
+    current = changeListeningPreferences(current, { tool: 'stories', variableStoryPitch: false });
+    current = changeListeningPreferences(current, { variableStoryPitch: true });
+    for (const [tool, expected] of [
+      ['words', false],
+      ['qso', false],
+      ['stories', true],
+      ['free', false],
+      ['sending', false],
+    ] as const) {
+      current = changeListeningPreferences(current, { tool });
+      expect(usesVariableListeningPitch(listeningPreferences(current))).toBe(expected);
+      expect(current).toMatchObject({
+        variableWordPitch: false,
+        variableQsoPitch: false,
+        variableStoryPitch: true,
+      });
     }
   });
 

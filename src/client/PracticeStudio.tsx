@@ -45,6 +45,7 @@ import {
 import {
   loadPracticePreferences,
   listeningPreferences,
+  usesVariableListeningPitch,
   changeListeningPreferences,
   savePracticePreferences,
   normalizePracticePreferences,
@@ -254,10 +255,9 @@ export default function PracticeStudio({
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
   const activeListeningPreferences = listeningPreferences(preferences);
-  const listeningToneLabel =
-    activeListeningPreferences.tool === 'words' && activeListeningPreferences.variableWordPitch
-      ? '500–900 Hz variable'
-      : `${activeListeningPreferences.tone} Hz`;
+  const listeningToneLabel = usesVariableListeningPitch(activeListeningPreferences)
+    ? '500–900 Hz variable'
+    : `${activeListeningPreferences.tone} Hz`;
   const isSending =
     Boolean(launch?.material) || activity?.type === 'sending' || (!assigned && tool === 'sending');
   const isWordListening = !assigned && !isCopy && !isRunner && tool === 'words';
@@ -667,6 +667,7 @@ export default function PracticeStudio({
           key === 'effectiveWpm' ||
           key === 'volume' ||
           key === 'hideTrainerText' ||
+          (key === 'tone' && usesVariableListeningPitch(preferences)) ||
           (tool === 'words' &&
             !preferences.spokenAnswers &&
             (key === 'shuffleWords' || key === 'repeatList')),

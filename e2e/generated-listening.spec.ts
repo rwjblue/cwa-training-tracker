@@ -228,6 +228,7 @@ test(`generated listening saves only applied setups and retains exact content at
     ...new Set([...transcript.matchAll(/\bDE ([A-Z0-9]+)\b/g)].map((match) => match[1])),
   ];
   await speed(page, 20, 10);
+  await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   const qsoPitch = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
   await qsoPitch.fill('1000');
   await qsoPitch.press('Enter');

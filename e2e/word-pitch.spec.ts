@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { expectResponsive, openDisclosure, openPracticeTool } from './helpers';
+import { morsePcmBands, observeMorsePcm } from './morse-pcm';
 
 test.use({ hasTouch: true });
 const audio = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -23,56 +24,10 @@ async function listenAndPause(page: Page) {
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
 }
 
-/** Measure emitted Morse PCM without changing native playback or its clock. */
-async function bands(page: Page) {
-  return audio(page).evaluate(async (element: HTMLAudioElement) => {
-    const blobs = Reflect.get(window, 'wordEmittedBlobs') as Map<string, Blob>;
-    const data = new DataView(await blobs.get(element.src)!.arrayBuffer());
-    const rate = data.getUint32(24, true);
-    const frames = (data.byteLength - 44) / 2;
-    const sample = (index: number) => data.getInt16(44 + index * 2, true);
-    const measured = new Set<number>();
-    let beginning = -1;
-    let silence = 0;
-    const measure = (end: number) => {
-      const crossings: number[] = [];
-      for (let index = beginning + Math.ceil(rate * 0.005); index < end - rate * 0.005; index++) {
-        const before = sample(index - 1),
-          value = sample(index);
-        if (before <= 0 && value > 0) crossings.push(index - 1 - before / (value - before));
-      }
-      if (crossings.length > 5)
-        measured.add(
-          Math.round(((crossings.length - 1) * rate) / (crossings.at(-1)! - crossings[0])),
-        );
-    };
-    for (let index = 0; index < frames; index++) {
-      if (Math.abs(sample(index)) > 1) {
-        if (beginning < 0) beginning = index;
-        silence = 0;
-      } else if (beginning >= 0 && ++silence > rate * 0.008) {
-        measure(index - silence + 1);
-        beginning = -1;
-      }
-    }
-    if (beginning >= 0) measure(frames);
-    return [...measured].sort((a, b) => a - b);
-  });
-}
-
 test('word pitch defaults on, reaches native audio, stays stable on replay/retime and remembers opt-out', async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const create = URL.createObjectURL;
-    const blobs = new Map<string, Blob>();
-    Reflect.set(window, 'wordEmittedBlobs', blobs);
-    URL.createObjectURL = function (blob) {
-      const url = create.call(this, blob);
-      if (blob instanceof Blob) blobs.set(url, blob);
-      return url;
-    };
-  });
+  await observeMorsePcm(page);
   await page.goto('/#tools');
   await openPracticeTool(page, 'Word listening');
   await sound(page);
@@ -102,7 +57,7 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   await expect(page.getByText('40 / 40 WPM · 500–900 Hz variable', { exact: true })).toBeVisible();
   await listenAndPause(page);
   const original = await audio(page).evaluate((a: HTMLAudioElement) => a.src);
-  const variableBands = await bands(page);
+  const { bands: variableBands } = await morsePcmBands(page);
   expect(variableBands.length).toBeGreaterThan(0);
   expect(variableBands.every((hz) => hz >= 500 && hz <= 900)).toBe(true);
   await exact(page, 'Sidetone', 1000, 'Hz');
@@ -115,11 +70,11 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   expect(await audio(page).evaluate((a: HTMLAudioElement) => a.src)).toBe(original);
   await exact(page, 'Character speed', 50);
   await expect.poll(() => audio(page).evaluate((a: HTMLAudioElement) => a.src)).not.toBe(original);
-  expect(await bands(page)).toEqual(variableBands);
+  expect((await morsePcmBands(page)).bands).toEqual(variableBands);
   await variable.press('Space');
   await expect(variable).not.toBeChecked();
   await listenAndPause(page);
-  expect(await bands(page)).toEqual([1000]);
+  expect((await morsePcmBands(page)).bands).toEqual([1000]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await openPracticeTool(page, 'Word listening', (control) => control.tap());

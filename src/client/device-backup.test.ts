@@ -1463,15 +1463,27 @@ describe('public live agenda preference in device inventory', () => {
   });
 });
 
-it('defaults old backups to variable word pitch and preserves both choices through backup and restore', () => {
+it('defaults old backups to variable listening pitch and preserves independent choices through backup and restore', () => {
   seed('guest');
   const backup = captureDeviceBackup('guest', 'Guest');
-  const { variableWordPitch: omittedPitch, ...oldPreferences } = backup.shared.practicePreferences!;
+  const {
+    variableWordPitch: omittedWordPitch,
+    variableQsoPitch: omittedQsoPitch,
+    variableStoryPitch: omittedStoryPitch,
+    ...oldPreferences
+  } = backup.shared.practicePreferences!;
   const old = { ...backup, shared: { practicePreferences: oldPreferences } };
   const migrated = validateDeviceBackup(JSON.stringify(old), 'guest');
-  expect(migrated.shared.practicePreferences?.variableWordPitch).toBe(true);
-  for (const variableWordPitch of [true, false]) {
-    const current = { ...backup.shared.practicePreferences!, variableWordPitch };
+  expect(migrated.shared.practicePreferences).toMatchObject({
+    variableWordPitch: true,
+    variableQsoPitch: true,
+    variableStoryPitch: true,
+  });
+  for (const choices of [
+    { variableWordPitch: false, variableQsoPitch: true, variableStoryPitch: false },
+    { variableWordPitch: true, variableQsoPitch: false, variableStoryPitch: true },
+  ]) {
+    const current = { ...backup.shared.practicePreferences!, ...choices };
     values.set(PRACTICE_PREFERENCES_KEY, JSON.stringify(current));
     const captured = captureDeviceBackup('guest', 'Guest');
     const checked = validateDeviceBackup(JSON.stringify(captured), 'guest');
@@ -1480,14 +1492,16 @@ it('defaults old backups to variable word pitch and preserves both choices throu
     restoreDeviceBackup(checked, { expectedScope: 'guest', restoreSharedPreferences: true });
     expect(JSON.parse(values.get(PRACTICE_PREFERENCES_KEY)!)).toEqual(current);
   }
-  for (const variableWordPitch of [null, 0, 1, 'false', [], {}]) {
-    const malformed = {
-      ...backup,
-      shared: { practicePreferences: { ...oldPreferences, variableWordPitch } },
-    };
-    expect(() => validateDeviceBackup(JSON.stringify(malformed), 'guest')).toThrow(
-      /variableWordPitch is invalid/,
-    );
+  for (const key of ['variableWordPitch', 'variableQsoPitch', 'variableStoryPitch']) {
+    for (const invalid of [null, 0, 1, 'false', [], {}]) {
+      const malformed = {
+        ...backup,
+        shared: { practicePreferences: { ...oldPreferences, [key]: invalid } },
+      };
+      expect(() => validateDeviceBackup(JSON.stringify(malformed), 'guest')).toThrow(
+        `${key} is invalid`,
+      );
+    }
   }
 });
 

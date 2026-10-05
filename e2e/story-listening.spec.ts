@@ -1,9 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { PRACTICE_STORIES, practiceStory } from '../src/shared/listening-stories';
-import { storyListeningTrack } from '../src/client/listening-configuration';
+import { listeningStoryRound, storyListeningTrack } from '../src/client/listening-configuration';
 import { DEFAULT_PRACTICE_PREFERENCES } from '../src/client/practice-preferences';
 import { openDisclosure, openPracticeTool, expectResponsive, signIn } from './helpers';
+import { morsePcmBands, observeMorsePcm } from './morse-pcm';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.230' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
@@ -38,9 +39,18 @@ test('public Stories share native sentence/word transport and retain independent
   page,
 }) => {
   test.setTimeout(90_000);
+  await observeMorsePcm(page);
   await page.goto('/');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openStories(page);
+  await sound(page)
+    .getByText(/^Sound settings ·/)
+    .click();
+  const variable = page.getByRole('checkbox', { name: 'Variable pitch', exact: true });
+  await expect(variable).toBeChecked();
+  await sound(page)
+    .getByText(/^Sound settings ·/)
+    .click();
   await expect(selector(page).locator('option')).toHaveCount(3);
   await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'New QSO', exact: true })).toHaveCount(0);
@@ -57,9 +67,20 @@ test('public Stories share native sentence/word transport and retain independent
       await page.evaluate(() => navigator.mediaSession.metadata?.artwork.length),
     ).toBeGreaterThan(0);
     await pause(page);
+    const { bands } = await morsePcmBands(page);
+    expect(bands).toHaveLength(1);
+    expect(bands[0]).toBeGreaterThanOrEqual(500);
+    expect(bands[0]).toBeLessThanOrEqual(900);
+    await expect(page.getByLabel('Story narrator tone', { exact: true })).toContainText(
+      `${bands[0]} Hz`,
+    );
   }
+  const storyBands = (await morsePcmBands(page)).bands;
   await page.getByRole('button', { name: 'Reveal text', exact: true }).press('Enter');
-  const track = storyListeningTrack(practiceStory('story-light'), DEFAULT_PRACTICE_PREFERENCES);
+  const track = storyListeningTrack(
+    listeningStoryRound(practiceStory('story-light')),
+    DEFAULT_PRACTICE_PREFERENCES,
+  );
   await page.getByRole('button', { name: 'Next', exact: true }).press('Enter');
   await paused(page);
   await expect
@@ -101,8 +122,20 @@ test('public Stories share native sentence/word transport and retain independent
     'aria-current',
     'true',
   );
+  expect((await morsePcmBands(page)).bands).toEqual(storyBands);
+  await page
+    .getByRole('button', { name: 'Replay current word and start playback', exact: true })
+    .press('Enter');
+  await expect(media(page)).toHaveJSProperty('paused', false);
+  await pause(page);
+  expect((await morsePcmBands(page)).bands).toEqual(storyBands);
   await start(page);
   const playingSource = await media(page).evaluate((audio: HTMLAudioElement) => audio.src);
+  const preferredTone = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
+  await preferredTone.fill('1000');
+  await preferredTone.press('Enter');
+  expect(await media(page).evaluate((audio: HTMLAudioElement) => audio.src)).toBe(playingSource);
+  await expect(media(page)).toHaveJSProperty('paused', false);
   await page.getByRole('slider', { name: 'Effective speed', exact: true }).press('ArrowRight');
   await expect
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.src))
@@ -111,6 +144,7 @@ test('public Stories share native sentence/word transport and retain independent
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.paused))
     .toBe(false);
   await pause(page);
+  expect((await morsePcmBands(page)).bands).toEqual(storyBands);
   await expect(page.locator('.playback-note')).toContainText('21 / 11 WPM');
   const retainedPosition = await media(page).evaluate(
     (audio: HTMLAudioElement) => audio.currentTime,
@@ -129,11 +163,24 @@ test('public Stories share native sentence/word transport and retain independent
   await expect
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime))
     .toBe(0);
+  await start(page);
+  await pause(page);
+  expect((await morsePcmBands(page)).bands).toEqual(storyBands);
   await page.getByRole('button', { name: 'Hide text', exact: true }).press('Enter');
   await expect(
     page.getByText('Listen first. Reveal when you’re ready.', { exact: true }),
   ).toBeVisible();
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await variable.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `.tmp/story-pitch-${width}.png` });
+  }
   await expectResponsive(page, 'story-native-retained');
+  await variable.tap();
+  await expect(variable).not.toBeChecked();
+  await start(page);
+  await pause(page);
+  expect((await morsePcmBands(page)).bands).toEqual([1000]);
   await page.setViewportSize({ width: 390, height: 844 });
   await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await expect(
@@ -142,14 +189,14 @@ test('public Stories share native sentence/word transport and retain independent
   await openPracticeTool(page, 'Stories', (control) => control.tap());
   await expect(selector(page)).toHaveValue('story-light');
   await expect(
-    sound(page).getByText('Sound settings · 21/11 WPM · 600 Hz', { exact: true }),
+    sound(page).getByText('Sound settings · 21/11 WPM · 1000 Hz', { exact: true }),
   ).toBeVisible();
   await paused(page);
   await page.reload();
   await openStories(page);
   await expect(selector(page)).toHaveValue('story-light');
   await expect(
-    sound(page).getByText('Sound settings · 21/11 WPM · 600 Hz', { exact: true }),
+    sound(page).getByText('Sound settings · 21/11 WPM · 1000 Hz', { exact: true }),
   ).toBeVisible();
   await paused(page);
   await expect
@@ -158,6 +205,7 @@ test('public Stories share native sentence/word transport and retain independent
   await sound(page)
     .getByText(/^Sound settings ·/)
     .click();
+  await expect(variable).not.toBeChecked();
   await openDisclosure(page, 'Session options and logging');
   await page.getByRole('button', { name: 'Log practice manually', exact: true }).tap();
   const manual = page.getByRole('dialog');
@@ -211,6 +259,10 @@ test('actual Story save keeps native time, canceled review and exact retry priva
   await page.setViewportSize({ width: 1440, height: 1000 });
   await signIn(page);
   await openStories(page);
+  await sound(page)
+    .getByText(/^Sound settings ·/)
+    .click();
+  await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   await selector(page).selectOption('story-trail');
   await start(page);
   await expect

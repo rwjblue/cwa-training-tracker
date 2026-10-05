@@ -114,6 +114,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await expect(page.getByRole('alert')).toHaveCount(0);
   await openPracticeTool(page, 'QSO practice', (control) => control.tap());
   await sound(page);
+  await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   await expect(exact(page, 'Character speed')).toHaveValue('5');
   await expect(exact(page, 'Effective speed')).toHaveValue('3');
   await setExact(page, 'Character speed', 20);
@@ -121,6 +122,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await setExact(page, 'Sidetone', 731, 'Hz');
   await openPracticeTool(page, 'Stories', (control) => control.tap());
   await sound(page);
+  await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   await setExact(page, 'Character speed', 60);
   await setExact(page, 'Effective speed', 51);
   await setExact(page, 'Sidetone', 419, 'Hz');

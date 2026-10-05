@@ -24,6 +24,8 @@ import {
 import type { GeneratedListeningSummary } from '../shared/generated-listening';
 import {
   listeningWordRound,
+  listeningQsoRound,
+  listeningStoryRound,
   qsoListeningTrack,
   storyListeningSummary,
   storyListeningTrack,
@@ -32,7 +34,7 @@ import {
   wordListeningFrequencies,
   type ListeningWordRound,
 } from './listening-configuration';
-import type { PracticePreferences } from './practice-preferences';
+import { usesVariableListeningPitch, type PracticePreferences } from './practice-preferences';
 import { MAX_CUSTOM_WORD_CHARACTERS, WORD_LISTS, type WordList } from './word-content';
 import type { WordContentEditor } from './useWordContent';
 import { generateQso, QSO_TEMPLATES, type PracticeQso } from './qso-content';
@@ -126,7 +128,7 @@ export default forwardRef<
   const onPlaying = (playing: boolean) => callbacks.current.onPlaying(playing);
   const onError = (message: string) => callbacks.current.onError(message);
   const custom = wordContent.draft;
-  const [qso, setQso] = useState(() => generateQso(p.qsoScenario));
+  const [qso, setQso] = useState(() => listeningQsoRound(generateQso(p.qsoScenario)));
   const [copyMode, setCopyMode] = useState(false);
   const [revealedQso, setRevealedQso] = useState<PracticeQso | null>(null);
   const [wordRound, setWordRound] = useState<ListeningWordRound | null>(null);
@@ -159,7 +161,11 @@ export default forwardRef<
   const [speechAttempt, setSpeechAttempt] = useState(0);
   const isWords = p.tool === 'words';
   const isStory = p.tool === 'stories';
-  const story = practiceStory(p.storySettings.storyId);
+  const story = useMemo(
+    () => listeningStoryRound(practiceStory(p.storySettings.storyId)),
+    [p.storySettings.storyId],
+  );
+  const variablePitch = usesVariableListeningPitch(p);
   const narrative = isStory ? story : qso;
   const activeWordList = isWords ? p.wordList : null;
   const activeShuffle = isWords ? p.shuffleWords : null;
@@ -171,8 +177,8 @@ export default forwardRef<
   const resetKey = JSON.stringify([
     isWords,
     isStory,
-    isWords && p.variableWordPitch ? null : p.tone,
-    isWords && p.variableWordPitch,
+    variablePitch ? null : p.tone,
+    variablePitch,
     wordGap,
     spokenAnswers && repeatList,
     spokenAnswers,
@@ -250,7 +256,7 @@ export default forwardRef<
   useEffect(() => {
     if (qso.id === p.qsoScenario) return;
     if (p.tool === 'qso') resetTransport();
-    setQso(generateQso(p.qsoScenario));
+    setQso(listeningQsoRound(generateQso(p.qsoScenario)));
   }, [p.qsoScenario]);
   useEffect(() => {
     if (audio.current) player.current.attach(audio.current);
@@ -337,8 +343,8 @@ export default forwardRef<
     repeatList,
     p.characterWpm,
     p.effectiveWpm,
-    isWords && p.variableWordPitch ? null : p.tone,
-    p.variableWordPitch,
+    variablePitch ? null : p.tone,
+    variablePitch,
     wordGap,
   ]);
   const { applied } = trackResult;
@@ -833,7 +839,7 @@ export default forwardRef<
                 else if (isStory) resetTransport();
                 else {
                   resetTransport();
-                  setQso(generateQso(p.qsoScenario, Math.random, qso.stations));
+                  setQso(listeningQsoRound(generateQso(p.qsoScenario, Math.random, qso.stations)));
                 }
               }}
             >
@@ -880,10 +886,22 @@ export default forwardRef<
           Hz
           {' · '}
           {hideTranscript ? 'Station 2' : applied.summary.stations[1]}: {applied.summary.tonesHz[1]}{' '}
-          Hz. Station 1 uses your preferred pitch. Station 2 is 50 Hz{' '}
-          {applied.summary.tonesHz[1] > applied.summary.tonesHz[0]
-            ? 'higher.'
-            : 'lower to stay within the 1000 Hz limit.'}
+          Hz.{' '}
+          {variablePitch
+            ? 'Random pitches from 500 to 900 Hz, at least 35 Hz apart. Each station keeps its pitch for this QSO.'
+            : `Station 1 uses your preferred pitch. Station 2 is 50 Hz ${
+                applied.summary.tonesHz[1] > applied.summary.tonesHz[0]
+                  ? 'higher.'
+                  : 'lower to stay within the 1000 Hz limit.'
+              }`}
+        </p>
+      )}
+      {isStory && applied?.summary.mode === 'story' && (
+        <p className="field-hint" aria-label="Story narrator tone">
+          Narrator: {applied.summary.toneHz} Hz.{' '}
+          {variablePitch
+            ? 'One random pitch from 500 to 900 Hz for the whole story. Replays and speed changes keep this pitch.'
+            : 'All sentences use your selected sidetone.'}
         </p>
       )}
       {isWords && (

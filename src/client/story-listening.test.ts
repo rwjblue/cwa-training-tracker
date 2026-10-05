@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PRACTICE_STORIES, practiceStory } from '../shared/listening-stories';
 import { cleanMorseText } from './audio';
-import { storyListeningSummary, storyListeningTrack } from './listening-configuration';
+import {
+  listeningStoryRound,
+  storyListeningSummary,
+  storyListeningTrack,
+} from './listening-configuration';
 import { retimedOccurrencePosition } from './listening-retiming';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
 
@@ -28,15 +32,16 @@ describe('public authored story listening', () => {
     expect(() => practiceStory('official-course-story')).toThrow('three public');
   });
   it('uses one narrator, two-second handoffs and no trailing handoff for every story', () => {
-    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 725 };
+    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 725, variableStoryPitch: false };
     for (const story of PRACTICE_STORIES) {
-      const track = storyListeningTrack(story, p);
+      const round = listeningStoryRound(story);
+      const track = storyListeningTrack(round, p);
       expect(track.items.map((item) => item.text)).toEqual(story.lines);
       expect(new Set(track.tones.map((tone) => tone.frequency))).toEqual(new Set([725]));
       for (let index = 1; index < track.items.length; index++)
         expect(track.items[index].start - track.items[index - 1].end).toBeCloseTo(2, 9);
       expect(track.duration).toBe(track.items.at(-1)!.end);
-      expect(storyListeningSummary(story, p)).toMatchObject({
+      expect(storyListeningSummary(round, p)).toMatchObject({
         mode: 'story',
         storyId: story.id,
         toneHz: 725,
@@ -45,7 +50,7 @@ describe('public authored story listening', () => {
     }
   });
   it('retimes exact repeated-word occurrences and sentence gaps without matching by text', () => {
-    const story = practiceStory('story-radio');
+    const story = listeningStoryRound(practiceStory('story-radio'));
     const first = storyListeningTrack(story, DEFAULT_PRACTICE_PREFERENCES);
     const next = storyListeningTrack(story, {
       ...DEFAULT_PRACTICE_PREFERENCES,
@@ -65,11 +70,43 @@ describe('public authored story listening', () => {
     expect(retimedOccurrencePosition(first, next, end)).toBe(next.words[lastWord].start);
     expect(retimedOccurrencePosition(first, next, first.duration)).toBe(next.duration);
   });
+  it('samples one narrator pitch per generated story and retains it through replay and retiming', () => {
+    const pitchRandom = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0.999999);
+    const story = practiceStory('story-trail');
+    const round = listeningStoryRound(story, pitchRandom);
+    const p = { ...DEFAULT_PRACTICE_PREFERENCES, variableStoryPitch: true, tone: 975 };
+    const first = storyListeningTrack(round, p);
+    const replay = storyListeningTrack(round, p);
+    const faster = storyListeningTrack(round, { ...p, characterWpm: 30, effectiveWpm: 15 });
+    expect(round.toneHz).toBe(500);
+    expect(Object.isFrozen(round)).toBe(true);
+    expect(replay).toEqual(first);
+    for (const track of [first, faster]) {
+      expect(track.items.map((item) => item.text)).toEqual(story.lines);
+      expect(new Set(track.tones.map((tone) => tone.frequency))).toEqual(new Set([500]));
+    }
+    expect(storyListeningSummary(round, p)).toMatchObject({
+      storyId: story.id,
+      toneHz: 500,
+    });
+    expect(storyListeningSummary(round, p)).not.toHaveProperty('variablePitch');
+    const fixed = storyListeningTrack(round, { ...p, variableStoryPitch: false });
+    expect(new Set(fixed.tones.map((tone) => tone.frequency))).toEqual(new Set([975]));
+    expect(fixed.words).toEqual(first.words);
+    expect(fixed.items).toEqual(first.items);
+    expect(fixed.duration).toBe(first.duration);
+    expect(storyListeningTrack(round, p)).toEqual(first);
+    expect(pitchRandom).toHaveBeenCalledTimes(1);
+    const next = listeningStoryRound(story, pitchRandom);
+    expect(next.toneHz).toBe(900);
+    expect(round.toneHz).toBe(500);
+    expect(pitchRandom).toHaveBeenCalledTimes(2);
+  });
 });
 
 it('rejects a Story that exceeds the bounded native recording limit at very slow spacing', () => {
   expect(() =>
-    storyListeningTrack(practiceStory('story-light'), {
+    storyListeningTrack(listeningStoryRound(practiceStory('story-light')), {
       ...DEFAULT_PRACTICE_PREFERENCES,
       characterWpm: 5,
       effectiveWpm: 3,
