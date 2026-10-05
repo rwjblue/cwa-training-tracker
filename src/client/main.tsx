@@ -30,6 +30,7 @@ import {
   type CurrentPracticeTime,
 } from '../shared/practice-time';
 import PracticeTimeSummary from './PracticeTimeSummary';
+import Summary from './Summary';
 import DailyWordListening from './DailyWordListening';
 import { dailyWordListening } from '../shared/daily-word-listening';
 import { useLearnerDate } from './useLearnerDate';
@@ -60,11 +61,9 @@ import {
   BookOpen,
   CalendarDays,
   Check,
-  Clock3,
   Download,
   ExternalLink,
   Fingerprint,
-  Flame,
   Headphones,
   LayoutDashboard,
   LogOut,
@@ -99,12 +98,16 @@ import {
   COURSE_LEVELS,
   courseMeetings,
   dateInTimezone,
-  addDays,
   summarizePractice,
   validatePracticeSession,
   getPracticePurpose,
 } from '../shared/training';
-import { evidenceTime, sessionEvidence, practiceSessionEvidenceDetails, type PracticeEvidence } from '../shared/practice-evidence';
+import {
+  evidenceTime,
+  sessionEvidence,
+  practiceSessionEvidenceDetails,
+  type PracticeEvidence,
+} from '../shared/practice-evidence';
 import { EvidenceSummary, PracticeEvidenceDetails } from './PracticeEvidenceDetails';
 import { api, ApiError, getEntries, setApiAccount, type Passkey, type User } from './api';
 import {
@@ -182,7 +185,8 @@ import {
   PRACTICE_UPLOADED_EVENT,
 } from './practice-autosave';
 
-type Page = 'overview' | 'tools' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
+type Page =
+  'summary' | 'overview' | 'tools' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
 // Choose once per page load so navigation keeps the decoration still.
 const sidebarLetters = Object.keys(MORSE).filter((letter) => /^[A-Z]$/.test(letter));
 const sidebarLetter = sidebarLetters[Math.floor(Math.random() * sidebarLetters.length)];
@@ -319,7 +323,16 @@ const sampleEntries: PracticeSession[] = [
 function App() {
   const readPage = (): Page => {
     const value = window.location.hash.slice(1);
-    return ['overview', 'tools', 'practice', 'logbook', 'course', 'settings', 'events'].includes(value)
+    return [
+      'summary',
+      'overview',
+      'tools',
+      'practice',
+      'logbook',
+      'course',
+      'settings',
+      'events',
+    ].includes(value)
       ? (value as Page)
       : 'overview';
   };
@@ -1165,6 +1178,7 @@ function App() {
     }
   };
   const navItems: { page: Page; label: string; icon: LucideIcon }[] = [
+    { page: 'summary', label: 'Summary', icon: TrendingUp },
     { page: 'overview', label: user ? 'Today' : 'Overview', icon: LayoutDashboard },
     { page: 'tools', label: 'Practice tools', icon: AudioLines },
     { page: 'events', label: 'Live practice', icon: Radio },
@@ -1437,10 +1451,14 @@ function App() {
                   <div>
                     <span className="eyebrow">
                       {page === 'tools' ? practiceLabel : 'CURRENT BLOCK'}
-                      {coursePractice && practiceLaunch.purpose === 'review' ? ' · EXTRA REVIEW' : ''}
+                      {coursePractice && practiceLaunch.purpose === 'review'
+                        ? ' · EXTRA REVIEW'
+                        : ''}
                     </span>
                     <h2>
-                      {practiceLaunch.task?.title ?? practiceLaunch.material?.title ?? practiceLabel}
+                      {practiceLaunch.task?.title ??
+                        practiceLaunch.material?.title ??
+                        practiceLabel}
                     </h2>
                     <p>
                       {ownedRunnerResult
@@ -1512,16 +1530,25 @@ function App() {
                   </button>
                 </div>
               )}
+              {page === 'summary' && (
+                <Summary
+                  entries={summaryEntries}
+                  profile={profile}
+                  today={today}
+                  demo={!user && demo && !localEntries.length}
+                  openLog={() => openLog()}
+                  openLogbook={() => void navigate('logbook')}
+                  openCourse={() => void navigate('course')}
+                  renderSession={(entry) => <SessionRow key={entry.id} entry={entry} />}
+                />
+              )}
               {page === 'overview' &&
                 (user ? (
                   <Overview
-                    entries={summaryEntries}
                     today={today}
-                    practiceTime={practiceTime.practice.totalSeconds / 60}
                     practiceSummary={practiceSummary}
                     profile={profile}
                     user={user}
-                    demo={!user && demo}
                     navigate={navigate}
                     openLog={openLog}
                     onPractice={() => navigate('tools')}
@@ -1529,8 +1556,16 @@ function App() {
                       user ? (
                         <TodayPlan
                           key={`${user.id}:${deviceToken}`}
-                          preparation={<MaterialPreparation profile={profile} today={today} materials={account.state?.materials ?? []}
-                            original={account.state?.originalMaterials} entries={visibleEntries} onOpen={() => void navigate('course')} />}
+                          preparation={
+                            <MaterialPreparation
+                              profile={profile}
+                              today={today}
+                              materials={account.state?.materials ?? []}
+                              original={account.state?.originalMaterials}
+                              entries={visibleEntries}
+                              onOpen={() => void navigate('course')}
+                            />
+                          }
                           nextAction={!practiceLaunch ? nextPracticeAction : undefined}
                           liveNow={liveNow}
                           accountId={user.id}
@@ -1589,9 +1624,7 @@ function App() {
                       <div className="card studio-time-summary">{practiceSummary}</div>
                     )}
                     <WelcomePanel
-                      onPractice={(tool) =>
-                        tool ? openPractice({ tool }) : navigate('tools')
-                      }
+                      onPractice={(tool) => (tool ? openPractice({ tool }) : navigate('tools'))}
                       onSignIn={() => setAuthOpen(true)}
                       onGuide={() => navigate('course')}
                       onEvents={() => navigate('events')}
@@ -2001,54 +2034,25 @@ function App() {
 }
 
 function Overview({
-  entries,
   profile,
   user,
-  demo,
   navigate,
   openLog,
   onPractice,
   todayPlan,
   today,
-  practiceTime,
   practiceSummary,
 }: {
   today: string;
-  practiceTime: number;
   practiceSummary: React.ReactNode;
   todayPlan?: React.ReactNode;
-  entries: PracticeSession[];
   profile: Profile;
   user: User | null;
-  demo: boolean;
   navigate: (page: Page) => void;
   openLog: (initial?: Partial<PracticeSession>) => void;
   onPractice: () => void;
 }) {
-  const practiceEntries = entries.filter(
-    (e) => e.context !== 'class' && e.date <= today && e.minutes > 0,
-  );
-  const summary = summarizePractice(practiceEntries, today, profile.dailyGoalMinutes);
-  const days = Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
-  const weeklyEntries = practiceEntries.filter((e) => days.includes(e.date));
-  const weekMinutes = weeklyEntries.reduce((n, e) => n + e.minutes, 0);
-  const dayMinutes = practiceTime;
-  const dailyGoal = profile.dailyGoalMinutes || 30;
-  const activeDays = new Set(weeklyEntries.map((e) => e.date)).size;
-  const speeds = weeklyEntries
-    .filter((e) => e.effectiveWpm !== undefined)
-    .map((e) => e.effectiveWpm!);
-  const latestSpeed = speeds.length ? Math.max(...speeds) : null;
-  const streak = summary.currentStreak;
-  const level = levels.find((l) => l.id === profile.level) ?? levels[0];
   const name = profile.displayName?.split(' ')[0] || profile.callsign;
-  const chartMax = Math.max(
-    dailyGoal,
-    ...days.map((day) =>
-      practiceEntries.filter((e) => e.date === day).reduce((n, e) => n + e.minutes, 0),
-    ),
-    30,
-  );
   return (
     <>
       <div className="page-heading">
@@ -2127,221 +2131,7 @@ function Overview({
           </button>
         </section>
       </div>
-      <details className="overview-progress">
-        <summary>Recent progress and history</summary>
-        <section className="stats-grid" aria-label="Practice summary">
-          <Stat
-            icon={Clock3}
-            label="PRACTICE IN 7 DAYS"
-            value={String(Math.round(weekMinutes * 10) / 10)}
-            unit="min"
-            sub={`${weeklyEntries.length} sessions in the last 7 days`}
-          />
-          <Stat
-            icon={Flame}
-            label="CURRENT STREAK"
-            value={String(streak)}
-            unit={streak === 1 ? 'day' : 'days'}
-            sub={streak ? 'Keep the frequency alive' : 'Every new habit starts with one'}
-            orange
-          />
-          <Stat
-            icon={CalendarDays}
-            label="DAYS YOU SHOWED UP"
-            value={String(activeDays)}
-            unit="/ 7"
-            sub="Small steps. Real progress."
-          />
-          <Stat
-            icon={Signal}
-            label="BEST EFFECTIVE SPEED"
-            value={latestSpeed === null ? '—' : String(latestSpeed)}
-            unit="wpm"
-            sub="From this week’s practice"
-          />
-        </section>
-        <div className="overview-bottom-grid">
-          <section className="card weekly-card">
-            <div className="section-heading">
-              <div>
-                <h2>The shape of your practice</h2>
-                <p>A little consistency goes a long way.</p>
-              </div>
-              <span className="chip">
-                <CalendarDays size={13} /> Last 7 days
-              </span>
-            </div>
-            {entries.some((entry) => entry.id.startsWith('lcwo-estimate:')) && (
-              <p className="lcwo-estimate-note">
-                Practice totals include explicitly estimated LCWO group time. Inspect source results
-                in Practice log for the per-result assumption and overlap checks.
-              </p>
-            )}
-            <div className="chart-legend">
-              <span>
-                <i className="legend-dot green-dot" /> Practice time
-              </span>
-              <span>
-                <i className="legend-dash" /> Personal target · {dailyGoal} min
-              </span>
-            </div>
-            <div className="practice-chart">
-              <div className="chart-y-axis">
-                <span>{chartMax}m</span>
-                <span>{Math.round(chartMax / 2)}m</span>
-                <span>0</span>
-              </div>
-              <div className="chart-plot">
-                <div className="chart-gridline line-top" />
-                <div className="chart-gridline line-middle" />
-                <div className="chart-gridline line-bottom" />
-                <div
-                  className="chart-goal"
-                  style={{ bottom: `${(dailyGoal / chartMax) * 100}%` }}
-                />
-                {days.map((day) => {
-                  const minutes = practiceEntries
-                    .filter((e) => e.date === day)
-                    .reduce((n, e) => n + e.minutes, 0);
-                  return (
-                    <div
-                      className={`chart-column ${day === today ? 'today-column' : ''}`}
-                      key={day}
-                    >
-                      <div className="bar-area">
-                        <div
-                          className={`chart-bar ${day === today ? 'today-bar' : ''}`}
-                          style={{
-                            height: `${Math.max(minutes ? 3 : 0, (minutes / chartMax) * 100)}%`,
-                          }}
-                          title={`${prettyDate(day)}: ${minutes} minutes`}
-                        >
-                          <span>{Math.round(minutes * 10) / 10}m</span>
-                        </div>
-                      </div>
-                      <span className="chart-day">
-                        {day === today
-                          ? 'Today'
-                          : new Date(`${day}T12:00:00`).toLocaleDateString(undefined, {
-                              weekday: 'short',
-                            })}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="chart-bottom">
-              <span>
-                <TrendingUp size={15} />{' '}
-                {activeDays >= 5
-                  ? 'You’re building a habit worth keeping.'
-                  : 'A few minutes today is a step forward.'}
-              </span>
-              {demo && <span className="sample-label">SAMPLE DATA</span>}
-            </div>
-          </section>
-          <section className="card course-preview">
-            <div className="section-heading">
-              <h2>Your academy path</h2>
-              <BookOpen size={18} />
-            </div>
-            <span className="level-tag">{level.label.toUpperCase()}</span>
-            <h3>One sound at a time.</h3>
-            <p>{level.description}</p>
-            <div className="course-mini-path">
-              <span className="path-stop" />
-              <span />
-              <span className="path-stop" />
-              <span />
-              <span className="path-stop" />
-              <span />
-              <span className="path-stop" />
-            </div>
-            <div className="course-preview-caption">
-              <span>Build the foundation</span>
-              <span>Find your fluency</span>
-            </div>
-            <a
-              className="resource-link"
-              href="https://cwops.org/cw-academy/cw-academy-student-resources/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span>
-                Official student resources<small>Curriculum, tools & assignments</small>
-              </span>
-              <ExternalLink size={16} />
-            </a>
-            <button className="text-button" onClick={() => navigate('course')}>
-              Explore the academy guide <ArrowRight size={14} />
-            </button>
-          </section>
-        </div>
-        <section className="card recent-card">
-          <div className="section-heading">
-            <div>
-              <h2>Recent practice</h2>
-              <p>Every session is a small step forward.</p>
-            </div>
-            <button className="text-button" onClick={() => navigate('logbook')}>
-              View practice log <ArrowRight size={15} />
-            </button>
-          </div>
-          {entries.length ? (
-            <div className="recent-list">
-              {entries
-                .slice()
-                .sort((a, b) => b.date.localeCompare(a.date))
-                .slice(0, 3)
-                .map((entry) => (
-                  <SessionRow key={entry.id} entry={entry} />
-                ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={BookOpen}
-              title="Your story starts with one session."
-              description="Log a few minutes of listening, sending, or time on the air."
-              action={
-                <button className="button outline" onClick={() => openLog()}>
-                  <Plus size={15} /> Log your first practice
-                </button>
-              }
-            />
-          )}
-        </section>
-      </details>
     </>
-  );
-}
-function Stat({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  sub,
-  orange = false,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  unit: string;
-  sub: string;
-  orange?: boolean;
-}) {
-  return (
-    <div className="stat-card">
-      <div className="stat-top">
-        <span>{label}</span>
-        <Icon size={18} className={orange ? 'text-orange' : ''} />
-      </div>
-      <div className="stat-value">
-        {value}
-        <span>{unit}</span>
-      </div>
-      <p>{sub}</p>
-    </div>
   );
 }
 function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: React.ReactNode }) {
@@ -2355,7 +2145,9 @@ function SessionRow({ entry, actions }: { entry: PracticeSession; actions?: Reac
         <strong>
           {kind.label}
           {entry.kind === 'on-air' && onAirCategoryLabel(entry.metadata?.onAirCategory) && (
-            <span className="lesson-label">{onAirCategoryLabel(entry.metadata?.onAirCategory)}</span>
+            <span className="lesson-label">
+              {onAirCategoryLabel(entry.metadata?.onAirCategory)}
+            </span>
           )}
           {entry.context === 'class' && <span className="lesson-label">Class</span>}
           {getPracticePurpose(entry) === 'review' && (
@@ -2708,8 +2500,17 @@ function Course({
           Visit CW Academy <ExternalLink size={15} />
         </a>
       </div>
-      {user && <MaterialLibrary key={`${user.id}:${getDeviceScopeToken(user.id)}`} scope={user.id} profile={profile}
-        materials={materials} original={originalMaterials} onChange={onPlanChange} onPractice={onMaterialPractice} />}
+      {user && (
+        <MaterialLibrary
+          key={`${user.id}:${getDeviceScopeToken(user.id)}`}
+          scope={user.id}
+          profile={profile}
+          materials={materials}
+          original={originalMaterials}
+          onChange={onPlanChange}
+          onPractice={onMaterialPractice}
+        />
+      )}
       {user && (
         <Plan
           generation={generation}
@@ -3207,8 +3008,11 @@ function SessionModal({
   const metadataFromForm = (value: typeof form) => {
     const metadata: Record<string, unknown> = { ...initial.metadata, scratchpad: value.scratchpad };
     delete metadata.onAirCategory;
-    if (value.onAirCategory && !manualDraft.externalKind &&
-      supportsOnAirObservations({ ...initial, kind: value.kind }))
+    if (
+      value.onAirCategory &&
+      !manualDraft.externalKind &&
+      supportsOnAirObservations({ ...initial, kind: value.kind })
+    )
       metadata.onAirCategory = value.onAirCategory;
     delete metadata.assessment;
     if (value.performanceRating || value.cwtEvent) {
@@ -3443,7 +3247,9 @@ function SessionModal({
                 >
                   <option value="">Unspecified</option>
                   {ON_AIR_CATEGORIES.map((category) => (
-                    <option key={category.id} value={category.id}>{category.label}</option>
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
                   ))}
                 </select>
               </label>
