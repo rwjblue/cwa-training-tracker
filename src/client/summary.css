@@ -102,6 +102,9 @@
   outline: 2px solid var(--green);
   outline-offset: 5px;
 }
+.summary-chart-day.has-activity-tooltip {
+  z-index: 3;
+}
 .summary-day-total {
   position: absolute;
   top: -24px;
@@ -122,11 +125,56 @@
   flex-direction: column-reverse;
   width: 100%;
   max-width: 38px;
-  border-radius: 4px 4px 0 0;
-  overflow: hidden;
 }
 .summary-bar-segment {
   flex-shrink: 0;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  cursor: help;
+}
+.summary-bar-segment:last-child {
+  border-radius: 4px 4px 0 0;
+}
+.summary-bar-segment:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.summary-activity-tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(220px, calc(100vw - 72px));
+  padding-bottom: 8px;
+  text-align: left;
+  pointer-events: auto;
+}
+.summary-activity-tooltip.tooltip-left {
+  left: 0;
+  transform: none;
+}
+.summary-activity-tooltip.tooltip-right {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.summary-tooltip-content {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fffefa;
+  box-shadow: 0 3px 12px #203b3233;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.summary-tooltip-content strong {
+  font-weight: 650;
 }
 .summary-chart-date {
   position: absolute;

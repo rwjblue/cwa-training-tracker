@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -42,6 +42,24 @@ export default function Summary({
   openCourse: () => void;
   renderSession: (entry: PracticeSession) => ReactNode;
 }) {
+  const tooltipId = useId();
+  const [hoveredActivity, setHoveredActivity] = useState<string>();
+  const [focusedActivity, setFocusedActivity] = useState<string>();
+  const activeActivity = hoveredActivity ?? focusedActivity;
+  const dismissTooltip = () => {
+    setHoveredActivity(undefined);
+    setFocusedActivity(undefined);
+  };
+  useEffect(() => {
+    const dismissOutside = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest('.summary-chart-day')) {
+        setHoveredActivity(undefined);
+        setFocusedActivity(undefined);
+      }
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    return () => document.removeEventListener('pointerdown', dismissOutside);
+  }, []);
   const summary = summarizeRecentPractice(entries, today);
   const dailyGoal = profile.dailyGoalMinutes || 30;
   const chartMax = Math.max(dailyGoal, ...summary.days.map((day) => day.minutes), 30);
@@ -72,8 +90,10 @@ export default function Summary({
           icon={Flame}
           label="CURRENT STREAK"
           value={String(summary.currentStreak)}
-          unit={summary.currentStreak === 1 ? 'practice day' : 'practice days'}
-          sub="Single days off keep your streak."
+          unit={summary.currentStreak === 1 ? 'day' : 'days'}
+          sub={
+            summary.currentStreak ? 'Keep the frequency alive' : 'Every new habit starts with one'
+          }
           orange
         />
         <SummaryStat
@@ -123,7 +143,13 @@ export default function Summary({
               Personal target · {dailyGoal} min
             </li>
           </ul>
-          <figure className="summary-chart" aria-labelledby="summary-chart-heading">
+          <figure
+            className="summary-chart"
+            aria-labelledby="summary-chart-heading"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') dismissTooltip();
+            }}
+          >
             <div className="summary-chart-visual">
               <div className="summary-y-axis" aria-hidden="true">
                 <span>{minutesLabel(chartMax)}m</span>
@@ -138,32 +164,60 @@ export default function Summary({
                   className="chart-goal"
                   style={{ bottom: `${(dailyGoal / chartMax) * 100}%` }}
                 />
-                {summary.days.map((day) => {
+                {summary.days.map((day, dayIndex) => {
                   const description = `${summaryDate(day.date)}: ${minutesLabel(day.minutes)} minutes${day.activities.length ? `. ${day.activities.map((activity) => `${activity.label}: ${minutesLabel(activity.minutes)} minutes`).join('; ')}` : '. No practice logged'}`;
+                  const selectedIndex = day.activities.findIndex(
+                    (activity) => `${day.date}:${activity.id}` === activeActivity,
+                  );
+                  const selectedActivity = day.activities[selectedIndex];
+                  const tooltipHeight = day.activities
+                    .slice(0, selectedIndex + 1)
+                    .reduce((total, activity) => total + activity.minutes, 0);
                   return (
                     <div
-                      className="summary-chart-day"
+                      className={`summary-chart-day${selectedActivity ? ' has-activity-tooltip' : ''}`}
                       key={day.date}
-                      role="img"
+                      role="group"
                       tabIndex={0}
                       aria-label={description}
-                      title={description}
+                      onPointerLeave={() => setHoveredActivity(undefined)}
                     >
                       <span className="summary-day-total" aria-hidden="true">
                         {minutesLabel(day.minutes)}m
                       </span>
-                      <div className="summary-bar-area" aria-hidden="true">
+                      <div className="summary-bar-area">
                         <div
                           className="summary-stacked-bar"
                           style={{ height: `${(day.minutes / chartMax) * 100}%` }}
                         >
-                          {day.activities.map((activity) => (
-                            <div
-                              key={activity.id}
-                              className={`summary-bar-segment activity-${activity.id}`}
-                              style={{ height: `${(activity.minutes / day.minutes) * 100}%` }}
-                            />
-                          ))}
+                          {day.activities.map((activity) => {
+                            const activityKey = `${day.date}:${activity.id}`;
+                            return (
+                              <button
+                                key={activity.id}
+                                type="button"
+                                className={`summary-bar-segment activity-${activity.id}`}
+                                style={{ height: `${(activity.minutes / day.minutes) * 100}%` }}
+                                aria-label={`${activity.label}: ${minutesLabel(activity.minutes)} minutes on ${summaryDate(day.date)}`}
+                                aria-describedby={
+                                  activeActivity === activityKey ? tooltipId : undefined
+                                }
+                                onPointerEnter={(event) => {
+                                  if (event.pointerType !== 'touch')
+                                    setHoveredActivity(activityKey);
+                                }}
+                                onFocus={() => {
+                                  setHoveredActivity(undefined);
+                                  setFocusedActivity(activityKey);
+                                }}
+                                onBlur={() => setFocusedActivity(undefined)}
+                                onClick={(event) => {
+                                  event.currentTarget.focus();
+                                  setFocusedActivity(activityKey);
+                                }}
+                              />
+                            );
+                          })}
                         </div>
                       </div>
                       <span
@@ -176,6 +230,22 @@ export default function Summary({
                               weekday: 'short',
                             })}
                       </span>
+                      {selectedActivity && (
+                        <div
+                          id={tooltipId}
+                          role="tooltip"
+                          className={`summary-activity-tooltip${dayIndex < 2 ? ' tooltip-left' : dayIndex > 4 ? ' tooltip-right' : ''}`}
+                          style={{ bottom: `${(tooltipHeight / chartMax) * 100}%` }}
+                        >
+                          <div className="summary-tooltip-content">
+                            <strong>{selectedActivity.label}</strong>{' '}
+                            <span>
+                              {minutesLabel(selectedActivity.minutes)} minutes ·{' '}
+                              {summaryDate(day.date)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
