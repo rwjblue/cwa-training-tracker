@@ -126,7 +126,7 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   // Return through real public navigation; inspecting the calendar must pause
   // and retain this manual block rather than launch or save a new exercise.
   await page.goto('/#overview');
-  await activate(page.getByRole('button', { name: 'Sending practice', exact: false }));
+  await activate(page.getByRole('link', { name: 'Sending practice', exact: false }));
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
   await page.clock.runFor(2000);
   await openDisclosure(page, 'Browse other views');

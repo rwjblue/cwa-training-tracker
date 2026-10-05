@@ -27,7 +27,7 @@ test(`measured practice review retains raw facts, validates corrections and retr
   expect((await scopedRequest(context, 'POST', '/api/entries', initial)).status()).toBe(201);
   await page.reload();
   await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   const edit = page.getByRole('button', { name: 'Edit Sending on 2026-09-30', exact: true });
   await edit.tap();
   const dialog = page.getByRole('dialog');

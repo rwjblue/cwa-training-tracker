@@ -20,7 +20,7 @@ async function startListening(page: Page) {
 async function navigateToLog(page: Page) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.click();
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await expect(page).toHaveURL(/#logbook$/);
 }
 

@@ -22,7 +22,12 @@ test(`assigned instructions remain directly available with optional scratchpad p
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   await signIn(page);
   for (const [level, exerciseId, prompt] of [

@@ -33,7 +33,12 @@ test(`actual recording passes retain source evidence and separate learner comple
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   await page.addInitScript(() => {
     const observations: unknown[] = [];

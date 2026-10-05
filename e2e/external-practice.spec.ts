@@ -11,7 +11,12 @@ const external = (page: Page) => page.getByRole('combobox', { name: /^External r
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  await page.getByRole('button', { name, exact: true }).press('Enter');
+  await page
+    .getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    })
+    .press('Enter');
 }
 async function settled(page: Page) {
   await dialog(page).evaluate(async (node) => {

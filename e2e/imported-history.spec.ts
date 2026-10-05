@@ -203,7 +203,7 @@ test('imported results, original reports, and device drafts remain readable priv
   await expectAccessible(page, 'imported-history-mobile');
 
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await page.getByText('Estimated LCWO practice', { exact: true }).click();
   await expect(page.getByText(/This is an estimate, not measured audio time/)).toBeVisible();
   await page.getByText('Imported results & context', { exact: true }).click();

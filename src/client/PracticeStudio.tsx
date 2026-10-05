@@ -88,6 +88,11 @@ import {
   StudioSaveCoordinator,
 } from './studio-session';
 import './practice-studio.css';
+import SharePracticeLink from './SharePracticeLink';
+import { readListeningShare } from './listening-share';
+import { freeShareRoute, readFreeShare } from './free-share';
+import { publicRecordingHash } from './curriculum-links';
+import { selectRecordingVariant } from './recording-variants';
 import { getDeviceScopeToken, isDeviceScopeCurrent, subscribeDeviceScope } from './device-scope';
 
 const duration = (seconds: number) =>
@@ -128,12 +133,14 @@ export default function PracticeStudio({
   onRunnerProgressChange,
   onRunnerResultReadyChange,
   onCurrentPracticeChange,
+  onPublicRouteChange,
   practiceSummary,
   practiceNavigation,
 }: {
   profile?: Profile;
   liveNow?: number;
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
+  onPublicRouteChange?: (hash: string) => void;
   practiceSummary?: React.ReactNode;
   practiceNavigation?: React.ReactNode;
   onLog: (initial?: Partial<PracticeSession>) => void;
@@ -171,6 +178,17 @@ export default function PracticeStudio({
   const inspecting = useRef(!active);
   const activity = practiceActivityForLaunch(launch, tasks);
   const assigned = Boolean(activity);
+  const publicSetup =
+    !launch?.material &&
+    (!launch?.task || Boolean(launch.publicRoute?.startsWith('#practice/lesson/')));
+  const publicSetupChanged = publicSetup
+    ? (hash: string) => {
+        const path = launch?.publicRoute?.split('?')[0];
+        onPublicRouteChange?.(
+          path?.startsWith('#practice/lesson/') ? `${path}?${hash.split('?')[1] ?? ''}` : hash,
+        );
+      }
+    : undefined;
   const extraReview = launch?.purpose === 'review';
   const liveTask =
     activity?.type === 'live-event'
@@ -198,7 +216,16 @@ export default function PracticeStudio({
     activity?.type === 'audio'
       ? recordingChoiceContext
         ? resolveTaskRecordingChoice(notesScope, recordingChoiceContext).recording
-        : preferredRecording(activity.url, activity.characterWpm)
+        : launch?.publicRoute && !launch.task
+          ? selectRecordingVariant(
+              activity.url,
+              activity.characterWpm,
+              'assigned',
+              launch.publicRecordingUrl
+                ? officialRecordingIdentity(launch.publicRecordingUrl)?.speedWpm
+                : undefined,
+            )
+          : preferredRecording(activity.url, activity.characterWpm)
       : undefined,
   );
   const recordingUrl =
@@ -210,6 +237,19 @@ export default function PracticeStudio({
         activity.characterWpm)
       : undefined;
   const selectedRecordingSpeeds = recordingSpeeds(recordingUrl);
+  useEffect(() => {
+    if (!active || !recordingUrl) return;
+    const hash = publicRecordingHash(recordingUrl);
+    if (!hash) return;
+    if (launch?.publicRoute?.startsWith('#practice/lesson/')) {
+      const [path, query] = launch.publicRoute.split('?');
+      const params = new URLSearchParams(query);
+      if (activity?.type === 'audio' && recordingUrl !== activity.url)
+        params.set('recording', hash.split('/').at(-1)!);
+      else params.delete('recording');
+      onPublicRouteChange?.(`${path}${params.size ? `?${params}` : ''}`);
+    } else onPublicRouteChange?.(hash);
+  }, [active, recordingUrl, onPublicRouteChange, launch, activity]);
   const guidance = launch?.task ? listeningGuidance(launch.task, recordingUrl) : undefined;
   const [publicRunner, setPublicRunner] = useState(launch?.tool === 'runner');
   const [runnerUnsaved, setRunnerUnsaved] = useState(false);
@@ -252,13 +292,23 @@ export default function PracticeStudio({
   const [freeTrack, setFreeTrack] = useState<MorseTrack | null>(null);
   const [freeWord, setFreeWord] = useState(-1);
   const preparedFree = useRef('');
-  const [preferences, setPreferences] = useState(() => ({
-    ...loadPracticePreferences(),
-    wordList: wordContent.selection,
-    ...(launch?.tool && launch.tool !== 'copy' && launch.tool !== 'runner'
-      ? { tool: launch.tool }
-      : {}),
-  }));
+  const [initialPublicSettings] = useState(() => {
+    const saved = {
+      ...loadPracticePreferences(),
+      wordList: wordContent.selection,
+      ...(launch?.tool && launch.tool !== 'copy' && launch.tool !== 'runner'
+        ? { tool: launch.tool }
+        : {}),
+    };
+    return launch?.tool === 'free'
+      ? readFreeShare(launch.publicRoute, saved)
+      : {
+          preferences: launch?.publicRoute
+            ? readListeningShare(launch.publicRoute, saved).preferences
+            : saved,
+        };
+  });
+  const [preferences, setPreferences] = useState(initialPublicSettings.preferences);
   const { tool, mode, characterWpm, effectiveWpm, tone, volume, groupLength, wordLength } =
     preferences;
   const activeListeningPreferences = listeningPreferences(preferences);
@@ -271,13 +321,21 @@ export default function PracticeStudio({
   const isListening =
     activity?.type === 'audio' || (!assigned && !isCopy && !isRunner && !isSending);
   const [text, setText] = useState(() => {
-    const initial = loadPracticePreferences();
+    if ('text' in initialPublicSettings && typeof initialPublicSettings.text === 'string')
+      return initialPublicSettings.text;
+    const initial = initialPublicSettings.preferences;
     return initial.mode === 'custom' ? '' : generatePractice(initial.mode, initial);
   });
+  useEffect(() => {
+    if (active && !assigned && !isCopy && !isRunner && tool === 'free')
+      onPublicRouteChange?.(freeShareRoute(preferences, text));
+  }, [active, assigned, isCopy, isRunner, tool, preferences, text, onPublicRouteChange]);
   const [remembered, setRemembered] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() =>
+    'error' in initialPublicSettings ? String(initialPublicSettings.error ?? '') : '',
+  );
   const timer = usePracticeClock();
   const currentTimer = useRef(timer);
   currentTimer.current = timer;
@@ -437,7 +495,16 @@ export default function PracticeStudio({
       activity?.type === 'audio'
         ? recordingChoiceContext
           ? resolved?.recording
-          : preferredRecording(activity.url, activity.characterWpm)
+          : launch?.publicRoute && !launch.task
+            ? selectRecordingVariant(
+                activity.url,
+                activity.characterWpm,
+                'assigned',
+                launch.publicRecordingUrl
+                  ? officialRecordingIdentity(launch.publicRecordingUrl)?.speedWpm
+                  : undefined,
+              )
+            : preferredRecording(activity.url, activity.characterWpm)
         : undefined,
     );
     setPublicRunner(launch.tool === 'runner');
@@ -1140,7 +1207,9 @@ export default function PracticeStudio({
             {launch?.material
               ? 'Material practice'
               : assigned
-                ? 'Lesson practice'
+                ? launch?.publicTitle && !launch.task
+                  ? launch.publicTitle
+                  : 'Lesson practice'
                 : publicPracticeTool.label}
           </h1>
           <p>
@@ -1159,7 +1228,9 @@ export default function PracticeStudio({
                 ? 'Private material · class time'
                 : 'Private material · practice'
               : assigned
-                ? 'From your plan'
+                ? launch?.task
+                  ? 'From your plan'
+                  : 'Public practice'
                 : 'No sign-in needed'}
           </span>
           {activity?.type === 'audio' && finishPracticeControl}
@@ -1167,6 +1238,12 @@ export default function PracticeStudio({
       </div>
       {activity?.type !== 'audio' && finishPracticeControl && (
         <div className="trainer-round-actions">{finishPracticeControl}</div>
+      )}
+      {launch?.publicRoute && <SharePracticeLink />}
+      {launch?.publicSourceUrl && !launch.task && (
+        <a className="text-button" href={launch.publicSourceUrl} target="_blank" rel="noreferrer">
+          Official instructions <ArrowRight size={14} />
+        </a>
       )}
       {launch?.task && (
         <div className={`studio-task-context ${activity?.type === 'audio' ? 'is-recording' : ''}`}>
@@ -1220,6 +1297,8 @@ export default function PracticeStudio({
       {isCopy ? (
         <CopyTrainer
           ref={copyTrainer}
+          publicRoute={publicSetup ? launch?.publicRoute : undefined}
+          onPublicRouteChange={publicSetupChanged}
           active={active}
           key={`${accountId ?? 'guest'}:${launch?.id ?? 'public-copy'}`}
           accountId={accountId}
@@ -1240,6 +1319,8 @@ export default function PracticeStudio({
       ) : isRunner ? (
         <MorseRunnerStudio
           ref={runner}
+          publicRoute={publicSetup ? launch?.publicRoute : undefined}
+          onPublicRouteChange={publicSetupChanged}
           entries={entries}
           tasks={tasks}
           today={today}
@@ -1661,6 +1742,9 @@ export default function PracticeStudio({
                   <SendingScales
                     key={launch?.id ?? 'public-sending'}
                     sections={activity?.type === 'sending' ? activity.sections : undefined}
+                    active={active}
+                    publicRoute={publicSetup ? launch?.publicRoute : undefined}
+                    onPublicRouteChange={publicSetupChanged}
                   />
                 ) : assigned ? (
                   <div className="assigned-offline">
@@ -1675,6 +1759,8 @@ export default function PracticeStudio({
                 ) : tool !== 'free' ? (
                   <ListeningTrainer
                     ref={trainer}
+                    publicRoute={launch?.publicRoute}
+                    onPublicRouteChange={onPublicRouteChange}
                     active={active}
                     key={tool}
                     preferences={activeListeningPreferences}

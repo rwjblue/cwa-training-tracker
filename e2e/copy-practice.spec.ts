@@ -177,7 +177,7 @@ test.describe('unfinished copy cancellation', () => {
     expect(retained.attempt.status).toBe('active');
     expect(retained.answer).toBe('Unfinished copy');
     await page.reload();
-    await openPracticeTool(page, 'Copy practice');
+    await expect(page).toHaveURL(/#practice\/copy\?recipe=/);
     await expect(page.getByText(/Recovered on this device/)).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(
       'Unfinished copy',
@@ -277,8 +277,7 @@ test.describe('guest code-group comparison', () => {
     ).toHaveText('0:00');
     await page.getByRole('button', { name: 'Pause answering', exact: true }).click();
     await page.reload();
-    await expect(page).toHaveURL(/#tools$/);
-    await openPracticeTool(page, 'Copy practice');
+    await expect(page).toHaveURL(/#practice\/copy\?recipe=/);
     await expect(page.getByText(/Recovered on this device/)).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(answer);
     await expect(page.getByRole('button', { name: 'Check copy', exact: true })).toBeEnabled();
@@ -343,7 +342,7 @@ test.describe('guest code-group comparison', () => {
       expect(Math.abs(hz - copyToneHz(entry.metadata.copyAttempt, 0, index))).toBeLessThan(1);
     });
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-    await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+    await page.getByRole('link', { name: 'Practice log', exact: true }).click();
     await page.getByText('Code groups result', { exact: true }).click();
     await expect(page.locator('.session-copy-result')).toContainText(`${score.accuracy}%`);
     await page.locator('.session-copy-result').getByText('Scoring details', { exact: true }).tap();
@@ -353,7 +352,7 @@ test.describe('guest code-group comparison', () => {
     await expectAccessible(page, 'copy-history-mobile');
 
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-    await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+    await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
     await page.getByRole('button', { name: 'Practice report', exact: true }).click();
     await expect(page.getByRole('dialog')).toContainText('Code groups · completed');
     await expect(page.getByRole('dialog')).toContainText(
@@ -551,8 +550,7 @@ test('a recovered word round finishes through native audio and retries an uncert
     draft,
   });
   await page.reload();
-  await expect(page).toHaveURL(/#tools$/);
-  await openPracticeTool(page, 'Copy practice');
+  await expect(page).toHaveURL(/#practice\/copy\?recipe=/);
   await expect(page.getByText(/Recovered on this device/)).toBeVisible();
   await page.getByRole('button', { name: 'Play audio', exact: true }).click();
   await expect
@@ -616,14 +614,14 @@ test('a recovered word round finishes through native audio and retries an uncert
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     retainedNotes,
   );
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
   await page.getByRole('button', { name: 'Course settings', exact: true }).click();
   await page
     .getByRole('combobox', { name: 'Your course level', exact: true })
     .selectOption('fundamental');
   await page.getByLabel(/^First class date/).fill('2026-10-08');
   await page.getByRole('button', { name: 'Save preferences', exact: true }).click();
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
   await page.getByRole('button', { name: 'Whole course', exact: true }).click();
   const assigned = page
     .getByRole('listitem')
@@ -969,7 +967,7 @@ test.describe('copy review inspection and recovery', () => {
       'aria-pressed',
       'true',
     );
-    await page.getByRole('button', { name: 'Today', exact: true }).click();
+    await page.getByRole('link', { name: 'Today', exact: true }).click();
     await assigned.getByRole('button', { name: 'Practice', exact: true }).click();
     await openDisclosure(page, 'View round settings');
     await expect(option).toBeDisabled();

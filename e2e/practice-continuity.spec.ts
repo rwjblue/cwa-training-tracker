@@ -182,7 +182,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   // Editing an unrelated timer result cannot acknowledge/reset this owner.
   await navigateView(page, 'Today', activate);
 
-  await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
+  await activate(page.getByRole('link', { name: 'Practice log', exact: true }));
   await activate(page.getByRole('button', { name: 'Edit Sending on 2026-09-30', exact: true }));
   await page
     .getByRole('dialog')
@@ -345,7 +345,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await page.clock.resume();
   const historyMenu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await historyMenu.isVisible()) await activate(historyMenu);
-  await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
+  await activate(page.getByRole('link', { name: 'Practice log', exact: true }));
   await activate(page.getByRole('button', { name: 'Edit Sending on 2026-10-06', exact: true }));
   await openDisclosure(page, 'External results and exact timing');
   await page.getByRole('combobox', { name: 'External result', exact: true }).selectOption('words');
@@ -373,7 +373,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await expect.poll(readNotes).toBe(null);
   const { plan } = await (await context.request.get('/api/plan')).json();
   expect(plan.find((item: { id: string }) => item.id === task.id).done).toBe(false);
-  await activate(page.getByRole('button', { name: 'Today', exact: true }));
+  await activate(page.getByRole('link', { name: 'Today', exact: true }));
   await activate(row.getByRole('button', { name: 'Practice', exact: true }));
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();

@@ -46,7 +46,7 @@ function taskRow(page: Page, plan: Locator, task: PlannedTask) {
 }
 
 async function chooseCourse(page: Page, level: CourseLevel, firstClassDate = '2026-10-08') {
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
   await page.getByRole('button', { name: 'Course settings', exact: true }).click();
   await page.getByRole('combobox', { name: 'Your course level', exact: true }).selectOption(level);
   await page.getByRole('combobox', { name: 'Practice timezone', exact: true }).selectOption('UTC');
@@ -73,7 +73,7 @@ async function chooseCourse(page: Page, level: CourseLevel, firstClassDate = '20
     classDays: [1, 4],
   });
   await expect(page.getByRole('button', { name: 'Save preferences', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
   const plan = page.getByRole('region', {
     name: `Your ${courses[level].label} course plan.`,
     exact: true,
@@ -296,11 +296,11 @@ test('published course overviews are available without an account at desktop and
     await page.setViewportSize(viewport);
     for (const level of ['beginner', 'fundamental', 'intermediate', 'advanced'] as const) {
       const course = courses[level];
-      const selection = levels.getByRole('button').filter({
+      const selection = levels.getByRole('link').filter({
         has: page.getByRole('heading', { name: course.label, exact: true }),
       });
       await selection.click();
-      await expect(selection).toHaveAttribute('aria-pressed', 'true');
+      await expect(selection).toHaveAttribute('aria-current', 'page');
       const overview = page.getByRole('region', {
         name: `${course.label} curriculum`,
         exact: true,

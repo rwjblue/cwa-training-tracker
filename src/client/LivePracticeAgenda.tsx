@@ -15,9 +15,22 @@ import {
 } from './event-preferences';
 import './live-practice-agenda.css';
 
-export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void }) {
+export default function LivePracticeAgenda({
+  onReturn,
+  publicRoute,
+  onPublicRouteChange,
+}: {
+  onReturn?: () => void;
+  publicRoute?: string;
+  onPublicRouteChange?: (hash: string) => void;
+}) {
   const [now, setNow] = useState(Date.now);
-  const [mode, setMode] = useState(loadEventTimeMode);
+  const routeMode = () =>
+    publicRoute?.includes('time=utc') ? ('utc' as const) : ('local' as const);
+  const [mode, setMode] = useState(() => (publicRoute ? routeMode() : loadEventTimeMode()));
+  useEffect(() => {
+    if (publicRoute) setMode(routeMode());
+  }, [publicRoute]);
   const [preferenceFailed, setPreferenceFailed] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
   const feedInput = useRef<HTMLInputElement>(null);
@@ -42,7 +55,10 @@ export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void
     window.addEventListener('pageshow', refresh);
     const storage = (event: StorageEvent) => {
       if (event.key === EVENT_TIME_MODE_KEY || event.key === null) {
-        setMode(loadEventTimeMode());
+        // An addressable display mode stays authoritative when another tab
+        // changes its device default. Otherwise the visible mode and shared
+        // URL would describe different selections.
+        if (!publicRoute) setMode(loadEventTimeMode());
         setPreferenceFailed(false);
       }
     };
@@ -53,9 +69,10 @@ export default function LivePracticeAgenda({ onReturn }: { onReturn?: () => void
       window.removeEventListener('pageshow', refresh);
       window.removeEventListener('storage', storage);
     };
-  }, []);
+  }, [publicRoute]);
   const chooseMode = (next: EventTimeMode) => {
     setMode(next);
+    onPublicRouteChange?.(next === 'utc' ? '#events?time=utc' : '#events');
     setPreferenceFailed(!saveEventTimeMode(next));
   };
   const copyFeed = async () => {

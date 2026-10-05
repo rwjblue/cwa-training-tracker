@@ -19,7 +19,7 @@ test('optional daily words count actual replay separately from recall and retire
 }) => {
   test.setTimeout(90_000);
   await page.goto('/');
-  await page.getByRole('button', { name: /^Word listening Build recognition/ }).click();
+  await page.getByRole('link', { name: /^Word listening Build recognition/ }).click();
   await navigateView(page, 'Overview');
   const daily = page.getByRole('region', { name: 'Optional daily word listening', exact: true });
   await expect(daily).toContainText('Public practice needs no account.');

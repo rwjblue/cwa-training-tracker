@@ -4283,6 +4283,23 @@ body {
   }
 }
 @media (max-width: 800px) {
+  .topbar {
+    gap: 12px;
+  }
+  .topbar-start {
+    flex: 1;
+    min-width: 0;
+  }
+  .topbar-start .mobile-menu,
+  .topbar-end {
+    flex-shrink: 0;
+  }
+  .breadcrumb {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .breadcrumb .workspace-label {
     display: none;
   }
@@ -4738,4 +4755,8 @@ body {
   .modal .manual-practice-timing {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.nav-item {
+  text-decoration: none;
 }

@@ -238,7 +238,7 @@ test('familiar review rotates native material and saves exact private evidence w
 
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await activate(menu);
-  await activate(page.getByRole('button', { name: 'Practice log', exact: true }));
+  await activate(page.getByRole('link', { name: 'Practice log', exact: true }));
   await expect(page.getByText('Extra review', { exact: true })).toHaveCount(3);
   await expectResponsive(page, 'familiar-review-history');
   await page.setViewportSize({ width: 1440, height: 1000 });

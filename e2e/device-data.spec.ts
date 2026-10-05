@@ -18,7 +18,10 @@ async function navigate(page: Page, name: string, touch: boolean) {
     if (touch) await menu.tap();
     else await menu.click();
   }
-  const button = page.getByRole('button', { name, exact: true });
+  const button = page.getByRole(
+    ['Your account', 'This device'].includes(name) ? 'button' : 'link',
+    { name, exact: true },
+  );
   await expect(button).toBeEnabled();
   if (touch) await button.tap();
   else {

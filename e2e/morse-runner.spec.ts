@@ -145,7 +145,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await retained.getByRole('button', { name: 'View/save result', exact: true }).focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(page.getByRole('region', { name: 'Your next practice', exact: true })).toContainText(
     'The stopped engine cannot be resumed',
   );
@@ -160,7 +160,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await expectAccessible(page, 'runner-retained-report-mobile');
 
   await report.getByRole('button', { name: 'Return to practice', exact: true }).tap();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   expect(page.frames()).toContain(frame);
   await expect(runner.locator('#clock')).toHaveText(stoppedClock!);
   await expect(page.getByRole('button', { name: 'Stop run', exact: true })).toBeDisabled();
@@ -201,7 +201,7 @@ test('assigned Morse Runner uses the real engine and saves one linked run', asyn
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
   await expect(row.getByText('Started', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
   const retryAcknowledgement = page.waitForResponse(
     (response) =>

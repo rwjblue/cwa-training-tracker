@@ -30,7 +30,7 @@ export async function navigateView(
   await activate(
     page
       .getByRole('navigation', { name: 'Main navigation', exact: true })
-      .getByRole('button', { name, exact: true }),
+      .getByRole('link', { name, exact: true }),
   );
 }
 
@@ -44,7 +44,7 @@ export async function openPracticeTool(
   await activate(
     page
       .getByRole('region', { name: 'Practice tools', exact: true })
-      .getByRole('button', { name, exact: true }),
+      .getByRole('link', { name, exact: true }),
   );
 }
 

@@ -7,7 +7,12 @@ test.use({ hasTouch: true, timezoneId: 'Pacific/Auckland' });
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  const button = page.getByRole('button', { name, exact: true });
+  const button =
+    name === 'Your account'
+      ? page.getByRole('button', { name, exact: true })
+      : page
+          .getByRole('navigation', { name: 'Main navigation', exact: true })
+          .getByRole('link', { name, exact: true });
   await expect(button).toBeEnabled();
   await button.focus();
   await button.press('Enter');

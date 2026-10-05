@@ -99,7 +99,9 @@ test('safe stop describes a changed server log and refreshes a second open page'
   );
   await expect(status).toHaveCount(0);
   await expect(review).toHaveCount(0);
-  await expect(page.getByRole('status')).toContainText('The server log changed elsewhere');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'The server log changed elsewhere' }),
+  ).toBeVisible();
   await expect(
     observer.getByText('Current history from another device', { exact: true }),
   ).toBeVisible();
@@ -114,7 +116,13 @@ test('safe stop describes a changed server log and refreshes a second open page'
 });
 async function navigate(page: Page, name: string, mobile: boolean) {
   if (mobile) await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();
-  await activate(page, page.getByRole('button', { name, exact: true }), mobile);
+  const control =
+    name === 'Your account'
+      ? page.getByRole('button', { name, exact: true })
+      : page
+          .getByRole('navigation', { name: 'Main navigation', exact: true })
+          .getByRole('link', { name, exact: true });
+  await activate(page, control, mobile);
 }
 async function manual(page: Page, notes: string, mobile: boolean) {
   await activate(

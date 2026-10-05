@@ -15,7 +15,13 @@ async function keyboard(control: Locator) {
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  await keyboard(page.getByRole('button', { name, exact: true }));
+  const control =
+    name === 'Your account'
+      ? page.getByRole('button', { name, exact: true })
+      : page
+          .getByRole('navigation', { name: 'Main navigation', exact: true })
+          .getByRole('link', { name, exact: true });
+  await keyboard(control);
 }
 async function open(page: Page) {
   await expect(page.getByRole('button', { name: 'Open your account', exact: true })).toBeVisible();

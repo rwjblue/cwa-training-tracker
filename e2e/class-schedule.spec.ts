@@ -15,13 +15,18 @@ test('private class times, exceptions, retry and class logging through real cont
     if (mobile) await control.tap();
     else {
       await control.focus();
-      await page.keyboard.press('Space');
+      await page.keyboard.press((await control.getAttribute('href')) ? 'Enter' : 'Space');
     }
   };
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   const responsive = async (label: string) => {
     for (const width of [1440, 390]) {

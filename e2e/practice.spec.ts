@@ -110,7 +110,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(page.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('1:23');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await page.clock.fastForward(120_000);
   await expect(
     page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
@@ -162,7 +162,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await expect(page.getByText('Waiting to upload', { exact: true })).toBeVisible();
   let releaseSave!: () => void;
   const heldSave = new Promise<void>((resolve) => {
@@ -208,7 +208,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
     page.getByRole('region', { name: 'Practice upload status', exact: true }),
   ).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(scratchpad).toHaveValue('Notes for the next session');
   const afterSave = (await (await context.request.get('/api/entries')).json()).entries;
   expect(afterSave).toHaveLength(1);
@@ -234,7 +234,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(entries).toHaveLength(2);
   expect(entries.find((entry: { source: string }) => entry.source === 'manual').minutes).toBe(7);
   await page.clock.resume();
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await page.getByRole('button', { name: `Edit Head copy on ${timed.date}`, exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Edit practice', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Save changes', exact: true }).focus();

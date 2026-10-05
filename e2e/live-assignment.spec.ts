@@ -41,7 +41,12 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   await navigate('Academy guide');
   await activate(page.getByRole('button', { name: 'Add exercise', exact: true }));
@@ -253,7 +258,12 @@ test('retained manual work follows event edits and every timer checks current el
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   await navigate('Academy guide');
   await activate(page.getByRole('button', { name: 'This week', exact: true }));

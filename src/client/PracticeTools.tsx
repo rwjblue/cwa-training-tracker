@@ -2,6 +2,7 @@ import { ArrowRight, BookOpen, Headphones, Radio, Signal } from 'lucide-react';
 import type { PracticeLaunch } from './practice-launch';
 import { practiceTools } from './practice-tools';
 import './practice-tools.css';
+import { isPlainNavigation } from './app-route';
 
 const icons = {
   words: Headphones,
@@ -35,12 +36,17 @@ export default function PracticeTools({
         {practiceTools.map(({ tool, label, description }) => {
           const Icon = icons[tool];
           return (
-            <button
+            <a
+              href={`#practice/${tool}`}
               className="practice-tool-card"
               key={tool}
               aria-label={label}
-              disabled={disabled}
-              onClick={() => onPractice(tool)}
+              aria-disabled={disabled}
+              onClick={(event) => {
+                if (!isPlainNavigation(event)) return;
+                event.preventDefault();
+                if (!disabled) onPractice(tool);
+              }}
             >
               <Icon size={24} strokeWidth={1.7} aria-hidden="true" />
               <h2>{label}</h2>
@@ -48,7 +54,7 @@ export default function PracticeTools({
               <span className="practice-tool-action">
                 Open tool <ArrowRight size={16} />
               </span>
-            </button>
+            </a>
           );
         })}
       </div>

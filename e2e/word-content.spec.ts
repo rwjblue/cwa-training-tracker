@@ -10,7 +10,12 @@ const list = (page: Page) => page.getByRole('combobox', { name: 'Word list', exa
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  await page.getByRole('button', { name, exact: true }).click();
+  await page
+    .getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    })
+    .click();
 }
 async function openWords(page: Page) {
   await openPracticeTool(page, 'Word listening');

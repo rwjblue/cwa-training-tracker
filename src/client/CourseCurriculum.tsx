@@ -1,6 +1,12 @@
-import { ExternalLink } from 'lucide-react';
-import { curriculumForLevel } from '../shared/curriculum';
+import { ArrowRight, ExternalLink } from 'lucide-react';
+import {
+  curriculumForLevel,
+  publicCurriculumExercises,
+  sessionSyllabusUrl,
+} from '../shared/curriculum';
 import { COURSE_LEVELS, type CourseLevel } from '../shared/training';
+import { publicLaunchFromHash, publicLessonHash } from './curriculum-links';
+import type { PracticeLaunch } from './practice-launch';
 import './course-curriculum.css';
 
 const practice: Record<CourseLevel, { summary: string; scheduling?: string }> = {
@@ -27,10 +33,25 @@ const practice: Record<CourseLevel, { summary: string; scheduling?: string }> = 
 };
 
 /** Public course discovery uses the same published catalog as the private plan. */
-export default function CourseCurriculum({ level }: { level: CourseLevel }) {
+export default function CourseCurriculum({
+  level,
+  session = 1,
+  onSessionChange,
+  onPractice,
+}: {
+  level: CourseLevel;
+  session?: number;
+  onSessionChange?: (session: number) => void;
+  onPractice?: (options: Omit<PracticeLaunch, 'id'>) => void;
+}) {
   const course = curriculumForLevel(level)!;
   const details = COURSE_LEVELS.find((course) => course.id === level)!;
   const guidance = practice[level];
+  const selectedSession = Number.isInteger(session) && session >= 1 && session <= 16 ? session : 1;
+  const exercises = publicCurriculumExercises(level).filter(
+    ({ session }) => session === selectedSession,
+  );
+  const syllabus = sessionSyllabusUrl(level, selectedSession) ?? course.sourceUrl;
   return (
     <section className="card curriculum-overview" aria-labelledby="curriculum-overview-title">
       <div className="section-heading">
@@ -62,6 +83,77 @@ export default function CourseCurriculum({ level }: { level: CourseLevel }) {
       <a className="text-button" href={course.resourcesUrl} target="_blank" rel="noreferrer">
         Official practice resources <ExternalLink size={14} />
       </a>
+      <nav className="curriculum-sessions" aria-label={`${details.label} sessions`}>
+        {Array.from({ length: 16 }, (_, index) => index + 1).map((number) => (
+          <a
+            key={number}
+            href={`#course?level=${level}&session=${number}`}
+            aria-current={selectedSession === number ? 'page' : undefined}
+            onClick={(event) => {
+              if (
+                !onSessionChange ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
+              event.preventDefault();
+              onSessionChange(number);
+            }}
+          >
+            <span className="sr-only">Session </span>
+            {number}
+          </a>
+        ))}
+      </nav>
+      <div className="curriculum-session-heading">
+        <h3>Session {selectedSession} practice</h3>
+        <a href={syllabus} target="_blank" rel="noreferrer">
+          Official session instructions <ExternalLink size={14} />
+        </a>
+      </div>
+      <p className="curriculum-public-guidance">
+        Explore these exercises without an account. Your practice and progress stay private. Follow
+        the official session instructions for the full assignment.
+      </p>
+      <ol className="curriculum-exercises">
+        {exercises.map((exercise) => {
+          const hash = publicLessonHash(level, exercise.id)!;
+          const launch = publicLaunchFromHash(hash)!;
+          return (
+            <li key={exercise.id}>
+              <a
+                className="curriculum-exercise-link"
+                href={hash}
+                onClick={(event) => {
+                  if (
+                    !onPractice ||
+                    event.button !== 0 ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  onPractice(launch);
+                }}
+              >
+                <span>
+                  <small>
+                    Preparation day {exercise.day}
+                    {exercise.optional ? ' · Optional' : ''}
+                  </small>
+                  <strong>{exercise.title}</strong>
+                </span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </a>
+            </li>
+          );
+        })}
+      </ol>
       <details className="curriculum-scheduling">
         <summary>How assignments fit your schedule</summary>
         {guidance.scheduling && <p>{guidance.scheduling}</p>}

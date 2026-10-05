@@ -39,14 +39,14 @@ test('guests choose from the public tool library without starting a default sess
     'Free practice',
     'Morse Runner',
   ]) {
-    await expect(library.getByRole('button', { name, exact: true })).toBeVisible();
-    await expect(library.getByRole('button', { name, exact: true })).toBeEnabled();
+    await expect(library.getByRole('link', { name, exact: true })).toBeVisible();
+    await expect(library.getByRole('link', { name, exact: true })).toBeEnabled();
   }
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   await expectResponsive(page, 'guest-practice-tools');
 
   await openPracticeTool(page, 'Word listening', (control) => control.tap());
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(
     page.getByRole('heading', { name: 'Word listening', exact: true, level: 1 }),
   ).toBeVisible();
@@ -54,13 +54,13 @@ test('guests choose from the public tool library without starting a default sess
   await expect(
     page
       .getByRole('navigation', { name: 'Main navigation', exact: true })
-      .getByRole('button', { name: 'Practice tools', exact: true }),
+      .getByRole('link', { name: 'Practice tools', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
   await page.getByRole('button', { name: 'All practice tools', exact: true }).tap();
   await expect(page).toHaveURL(/#tools$/);
   await expect(library).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(
     page.getByRole('heading', { name: 'Word listening', exact: true, level: 1 }),
   ).toBeVisible();
@@ -112,7 +112,7 @@ test('tool library inspection retains a lesson and guards its replacement with t
   await expect(
     page
       .getByRole('navigation', { name: 'Main navigation', exact: true })
-      .getByRole('button', { name: 'Academy guide', exact: true }),
+      .getByRole('link', { name: 'Academy guide', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
   const audio = page.getByLabel('Assigned recording', { exact: true });
   const native = await audio.elementHandle();
@@ -169,7 +169,7 @@ test('tool library inspection retains a lesson and guards its replacement with t
       : route.continue(),
   );
   await navigateView(page, 'Practice tools', activate);
-  const sending = library.getByRole('button', { name: 'Sending practice', exact: true });
+  const sending = library.getByRole('link', { name: 'Sending practice', exact: true });
   const refused = page.waitForResponse(
     (response) => response.url().endsWith('/api/entries') && response.request().method() === 'POST',
   );
@@ -197,7 +197,7 @@ test('tool library inspection retains a lesson and guards its replacement with t
   );
   await activate(sending);
   await saved;
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(
     page.getByRole('heading', { name: 'Sending practice', exact: true, level: 1 }),
   ).toBeVisible();

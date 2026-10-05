@@ -25,12 +25,17 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   await page.setViewportSize({ width, height: 1000 });
   const activate = async (control: Locator) => {
     await control.focus();
-    await page.keyboard.press('Space');
+    await page.keyboard.press((await control.getAttribute('href')) ? 'Enter' : 'Space');
   };
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   const scratchpad = page.getByRole('textbox', { name: 'Scratchpad', exact: true });
   const saveNotes = page.getByRole('button', { name: 'Save notes', exact: true });

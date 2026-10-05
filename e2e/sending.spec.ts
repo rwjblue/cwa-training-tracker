@@ -17,8 +17,8 @@ test('sending scales stay in the studio and save assigned practice without openi
 
   // The sending material and its source are useful before creating an account.
   await page.goto('/');
-  await page.getByRole('button', { name: /Sending practice/ }).click();
-  await expect(page).toHaveURL(/#practice$/);
+  await page.getByRole('link', { name: /Sending practice/ }).click();
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(text).toBeVisible();
   await expect(warmUp).toBeVisible();
   await expect(drill).toBeVisible();
@@ -69,7 +69,7 @@ test('sending scales stay in the studio and save assigned practice without openi
     has: page.getByRole('heading', { name: task.title, exact: true }),
   });
   await row.getByRole('button', { name: 'Practice', exact: true }).click();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(warmUp).toHaveAttribute('aria-pressed', 'true');
   await expect(drill).toBeVisible();
   await expect(exercise).toHaveCount(0);
@@ -85,7 +85,7 @@ test('sending scales stay in the studio and save assigned practice without openi
   const pagesBeforePractice = context.pages().length;
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   expect(context.pages()).toHaveLength(pagesBeforePractice);
   await page.clock.fastForward(37_000);
   await drill.click();

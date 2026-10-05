@@ -1,5 +1,6 @@
 import { ArrowRight, BookOpen, Headphones, Radio, ShieldCheck, Signal } from 'lucide-react';
 import './welcome-panel.css';
+import { isPlainNavigation } from './app-route';
 
 interface WelcomePanelProps {
   onPractice: (tool?: 'words' | 'qso' | 'free' | 'copy' | 'sending') => void;
@@ -44,7 +45,16 @@ export default function WelcomePanel({
           <span>No sign-in needed</span>
         </div>
         <div className="welcome-tool-grid">
-          <button className="welcome-tool" onClick={() => onPractice('copy')}>
+          <a
+            className="welcome-tool"
+            href="#practice/copy"
+            onClick={(event) => {
+              if (isPlainNavigation(event)) {
+                event.preventDefault();
+                onPractice('copy');
+              }
+            }}
+          >
             <span className="welcome-tool-icon">
               <Signal size={23} />
             </span>
@@ -56,8 +66,17 @@ export default function WelcomePanel({
             <span className="welcome-tool-action">
               Start copy practice <ArrowRight size={15} />
             </span>
-          </button>
-          <button className="welcome-tool" onClick={() => onPractice('sending')}>
+          </a>
+          <a
+            className="welcome-tool"
+            href="#practice/sending"
+            onClick={(event) => {
+              if (isPlainNavigation(event)) {
+                event.preventDefault();
+                onPractice('sending');
+              }
+            }}
+          >
             <span className="welcome-tool-icon welcome-tool-orange">
               <Radio size={23} />
             </span>
@@ -68,8 +87,17 @@ export default function WelcomePanel({
             <span className="welcome-tool-action">
               Practice sending <ArrowRight size={15} />
             </span>
-          </button>
-          <button className="welcome-tool" onClick={() => onPractice('words')}>
+          </a>
+          <a
+            className="welcome-tool"
+            href="#practice/words"
+            onClick={(event) => {
+              if (isPlainNavigation(event)) {
+                event.preventDefault();
+                onPractice('words');
+              }
+            }}
+          >
             <span className="welcome-tool-icon">
               <Signal size={23} />
             </span>
@@ -78,8 +106,17 @@ export default function WelcomePanel({
             <span className="welcome-tool-action">
               Listen to words <ArrowRight size={15} />
             </span>
-          </button>
-          <button className="welcome-tool" onClick={() => onPractice('qso')}>
+          </a>
+          <a
+            className="welcome-tool"
+            href="#practice/qso"
+            onClick={(event) => {
+              if (isPlainNavigation(event)) {
+                event.preventDefault();
+                onPractice('qso');
+              }
+            }}
+          >
             <span className="welcome-tool-icon welcome-tool-orange">
               <Radio size={23} />
             </span>
@@ -88,8 +125,17 @@ export default function WelcomePanel({
             <span className="welcome-tool-action">
               Practice a QSO <ArrowRight size={15} />
             </span>
-          </button>
-          <button className="welcome-tool" onClick={() => onPractice('free')}>
+          </a>
+          <a
+            className="welcome-tool"
+            href="#practice/free"
+            onClick={(event) => {
+              if (isPlainNavigation(event)) {
+                event.preventDefault();
+                onPractice('free');
+              }
+            }}
+          >
             <span className="welcome-tool-icon welcome-tool-blue">
               <Headphones size={23} />
             </span>
@@ -98,7 +144,7 @@ export default function WelcomePanel({
             <span className="welcome-tool-action">
               Open listening room <ArrowRight size={15} />
             </span>
-          </button>
+          </a>
         </div>
       </section>
 

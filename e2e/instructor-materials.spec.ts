@@ -12,7 +12,12 @@ async function keyboard(control: Locator) {
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  await keyboard(page.getByRole('button', { name, exact: true }));
+  await keyboard(
+    page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    }),
+  );
 }
 async function arrange(page: Page, context: Parameters<typeof accountRequest>[0], ip: string) {
   if ('setExtraHTTPHeaders' in context)
@@ -113,7 +118,7 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await keyboard(page.getByRole('button', { name: 'Open instructor materials', exact: true }));
   await keyboard(page.getByRole('button', { name: 'Read Synthetic preparation', exact: true }));
   await keyboard(page.getByRole('button', { name: 'Use for practice', exact: true }));
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(page.getByRole('region', { name: 'Material text' })).toContainText(first.text);
   await expectResponsive(page, 'material-practice');
   await timed(page, 65);

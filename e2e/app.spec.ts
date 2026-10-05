@@ -37,9 +37,10 @@ test('public practice is useful without signing in and fits a phone', async ({ p
     true,
   );
   await page.reload();
-  await expect(page).toHaveURL(/#tools$/);
-  await openPracticeTool(page, 'Free practice');
+  await expect(page).toHaveURL(/#practice\/free\?mode=custom(?:&|$)/);
   await expect(page.getByRole('heading', { name: 'The listening room' })).toBeVisible();
+  await expect(page.getByLabel('Practice text', { exact: true })).toHaveValue('');
+  expect(page.url()).not.toContain('CQ');
   expect(failures).toEqual([]);
 });
 
@@ -59,7 +60,7 @@ test('email login, private records, backup controls, and passkeys work together'
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const savedEntry = (await (await context.request.get('/api/entries')).json()).entries[0];
   expect(savedEntry.minutes).toBe(15);
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await page.reload();
   await expect(page.getByText('Browser integration practice', { exact: true })).toBeVisible();
   await page
@@ -177,7 +178,7 @@ test('email login, private records, backup controls, and passkeys work together'
   await expect(importDialog).toHaveCount(0);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
   expect((await (await context.request.get('/api/plan')).json()).plan).toHaveLength(1);
-  await page.getByRole('button', { name: 'Practice log', exact: true }).click();
+  await page.getByRole('link', { name: 'Practice log', exact: true }).click();
   await page.reload();
   await expect(page.getByText('Browser integration practice', { exact: true })).toBeVisible();
 

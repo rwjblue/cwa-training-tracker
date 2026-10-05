@@ -154,7 +154,7 @@ test('next assignment preserves native work through inspection and exact retry b
   expect(saved.minutes * 60).toBeLessThan(6);
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   await activate(menu);
-  await activate(page.getByRole('button', { name: 'Academy guide', exact: true }));
+  await activate(page.getByRole('link', { name: 'Academy guide', exact: true }));
   await activate(page.getByRole('button', { name: 'This week', exact: true }));
   await activate(
     page.getByRole('checkbox', { name: `Mark ${audioTask.title} complete`, exact: true }),
@@ -168,7 +168,7 @@ test('next assignment preserves native work through inspection and exact retry b
     )
     .toBe(true);
   await activate(menu);
-  await activate(page.getByRole('button', { name: 'Today', exact: true }));
+  await activate(page.getByRole('link', { name: 'Today', exact: true }));
   await expect(next).toContainText('Next manual exercise');
   await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
   await expect(
@@ -257,7 +257,12 @@ test('blocked resources, live preparation, class phase and all-complete states s
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   const next = page.getByRole('region', { name: 'Your next practice', exact: true });
   await expect(next).toContainText('Ask your advisor for the recording');

@@ -16,7 +16,12 @@ const count = (page: Page) => page.getByRole('spinbutton', { name: /^QSO count/ 
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  await page.getByRole('button', { name, exact: true }).press('Enter');
+  await page
+    .getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    })
+    .press('Enter');
 }
 
 test('private monitoring and worked CWT observations retain exact judgments through edit, retry, report and file restore', async ({

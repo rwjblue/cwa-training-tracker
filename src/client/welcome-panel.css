@@ -211,3 +211,7 @@
     gap: 16px;
   }
 }
+
+.welcome-tool {
+  text-decoration: none;
+}

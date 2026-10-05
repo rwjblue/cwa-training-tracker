@@ -24,7 +24,14 @@ async function activate(page: Page, control: Locator, mobile: boolean) {
 async function navigate(page: Page, name: string, mobile: boolean) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await activate(page, menu, mobile);
-  await activate(page, page.getByRole('button', { name, exact: true }), mobile);
+  await activate(
+    page,
+    page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    }),
+    mobile,
+  );
 }
 async function retainedResults(page: Page, scope: string) {
   return page.evaluate(
@@ -64,7 +71,7 @@ async function retainedResults(page: Page, scope: string) {
     await page.goto('/#tools');
     await expect(page.getByText('Tuning in to your workspace…', { exact: true })).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Practice log', exact: true, includeHidden: true }),
+      page.getByRole('link', { name: 'Practice log', exact: true, includeHidden: true }),
     ).toBeDisabled();
     finishAccountSelection();
     await openPracticeTool(page, 'Morse Runner', (control) => activate(page, control, mobile));
@@ -81,7 +88,13 @@ async function retainedResults(page: Page, scope: string) {
     await expect(
       page.getByRole('heading', { name: 'Finished Runner results to review', exact: true }),
     ).toBeVisible();
-    await expect(page.locator('iframe')).toHaveCount(0);
+    // Reload opens the shared setup paused; the saved terminal result never
+    // restores an engine run. Inspection keeps that fresh setup hidden.
+    await expect(page.locator('iframe')).toBeHidden();
+    await expect(runner.locator('#clock')).toHaveText('00:00:00');
+    await expect(
+      page.getByRole('button', { name: 'Stop run', exact: true, includeHidden: true }),
+    ).toHaveCount(0);
     await activate(
       page,
       page.getByRole('button', { name: 'Discard retained Runner result', exact: true }),

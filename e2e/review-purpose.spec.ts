@@ -16,7 +16,14 @@ async function activate(page: Page, control: Locator, mobile: boolean) {
 
 async function navigate(page: Page, name: string, mobile: boolean) {
   if (mobile) await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();
-  await activate(page, page.getByRole('button', { name, exact: true }), mobile);
+  await activate(
+    page,
+    page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    }),
+    mobile,
+  );
 }
 
 async function inspect(page: Page, label: string) {

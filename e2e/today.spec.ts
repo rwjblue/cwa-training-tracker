@@ -53,7 +53,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   });
   expect(future.ok()).toBe(true);
   await page.reload();
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
   await expect(
     panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true, level: 4 }),
   ).toBeVisible();
@@ -71,7 +71,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await expectAccessible(page, 'today-desktop');
 
   await panel.getByRole('button', { name: 'Practice', exact: true }).click();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await page.addStyleTag({
     content: '*,*::before,*::after{animation:none!important;transition:none!important}',
   });
@@ -81,14 +81,14 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await page.getByRole('button', { name: 'Start timer', exact: true }).click();
   await page.clock.fastForward(420_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
   await expect(page).toHaveURL(/#overview$/);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   await page
     .getByRole('region', { name: 'Current practice block', exact: true })
     .getByRole('button', { name: 'Return to practice', exact: true })
     .click();
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await page.getByRole('button', { name: 'Review & save 07:00', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'sending',
@@ -239,7 +239,7 @@ test('course dates populate Today with playable assignments and preserve linked 
     has: page.getByRole('heading', { name: assigned.title, exact: true }),
   });
   await openPracticeTool(page, 'Free practice');
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   const audio = page.getByLabel('Assigned recording', { exact: true });
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveCount(1);
@@ -515,7 +515,7 @@ test('an exercise without a time target completes through a zero-time review and
     if (new URL(request.url()).pathname === '/api/entries' && request.method() === 'POST')
       entryWrites += 1;
   });
-  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
   await expect(panel.getByRole('checkbox')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Practice', exact: true }).click();
   await openDisclosure(page, 'Session options and logging');
@@ -790,7 +790,7 @@ test.describe('earlier work dismissal', () => {
       panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }),
     ).toHaveCount(0);
     await page.getByRole('button', { name: 'Open navigation', exact: true }).tap();
-    await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+    await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
     const oldRow = page.getByRole('listitem').filter({
       has: page.getByRole('heading', { name: 'Earlier sending practice', exact: true }),
     });
@@ -805,7 +805,7 @@ test.describe('earlier work dismissal', () => {
     await expect(oldRow.getByText('Dismissed from Today', { exact: true })).toHaveCount(0);
     await expect(oldRow.getByRole('checkbox')).not.toBeChecked();
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-    await page.getByRole('button', { name: 'Today', exact: true }).click();
+    await page.getByRole('link', { name: 'Today', exact: true }).click();
     await page.reload();
     await panel.locator('summary').filter({ hasText: 'Earlier unfinished work' }).click();
     await expect(

@@ -35,7 +35,12 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   const emailA = `choice-a-${crypto.randomUUID()}@example.test`;
   await signIn(page, { email: emailA });
@@ -348,7 +353,7 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   await expect(
     page
       .getByRole('region', { name: 'Practice tools', exact: true })
-      .getByRole('button', { name: 'Word listening', exact: true }),
+      .getByRole('link', { name: 'Word listening', exact: true }),
   ).toBeEnabled();
   await signIn(page, { email: `choice-b-${crypto.randomUUID()}@example.test` });
   const taskB = await configure();

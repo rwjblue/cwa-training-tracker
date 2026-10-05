@@ -32,7 +32,12 @@ const definition = {
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  const control = page.getByRole('button', { name, exact: true });
+  const control =
+    name === 'Your account'
+      ? page.getByRole('button', { name, exact: true })
+      : page
+          .getByRole('navigation', { name: 'Main navigation', exact: true })
+          .getByRole('link', { name, exact: true });
   await expect(control).toBeEnabled();
   await control.focus();
   await control.press('Enter');

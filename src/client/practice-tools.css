@@ -80,3 +80,7 @@
     flex-wrap: wrap;
   }
 }
+
+.practice-tool-card {
+  text-decoration: none;
+}

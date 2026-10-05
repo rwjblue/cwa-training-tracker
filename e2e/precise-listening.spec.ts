@@ -21,7 +21,12 @@ async function sound(page: Page) {
 async function navigate(page: Page, name: string) {
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.tap();
-  await page.getByRole('button', { name, exact: true }).click();
+  await page
+    .getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+      name,
+      exact: true,
+    })
+    .click();
 }
 async function start(page: Page) {
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).click();
@@ -135,8 +140,8 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await expectResponsive(page, 'precise-story-controls');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
-  await expect(page).toHaveURL(/#tools$/);
-  await openPracticeTool(page, 'Stories', (control) => control.tap());
+  await expect(page).toHaveURL(/#practice\/stories\?/);
+  await expect(page.getByRole('heading', { name: 'Stories', exact: true, level: 1 })).toBeVisible();
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('60');
   await expect(exact(page, 'Effective speed')).toHaveValue('51');

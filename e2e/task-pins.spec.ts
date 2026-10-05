@@ -66,7 +66,12 @@ test('Today pins preserve original work through dismissal, retry, backup, timezo
   const navigate = async (name: string) => {
     const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
     if (await menu.isVisible()) await activate(menu);
-    await activate(page.getByRole('button', { name, exact: true }));
+    await activate(
+      page.getByRole(['Your account', 'This device'].includes(name) ? 'button' : 'link', {
+        name,
+        exact: true,
+      }),
+    );
   };
   const today = page.getByRole('region', { name: 'What should I do today?', exact: true });
   const pinned = today.getByRole('region', { name: 'Added to today', exact: true });

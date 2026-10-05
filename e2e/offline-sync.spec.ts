@@ -23,7 +23,13 @@ test(`finished results and account edits survive offline reopen (desktop keyboar
 
   await signIn(page);
   const navigate = async (name: string) => {
-    const button = page.getByRole('button', { name, exact: true });
+    const button = page.getByRole(
+      ['Your account', 'This device'].includes(name) ? 'button' : 'link',
+      {
+        name,
+        exact: true,
+      },
+    );
     await button.click();
   };
   const task = {

@@ -185,8 +185,7 @@ import {
   PRACTICE_UPLOADED_EVENT,
 } from './practice-autosave';
 
-type Page =
-  'summary' | 'overview' | 'tools' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
+import { readAppRoute, launchHash, courseHash, isPlainNavigation, type Page } from './app-route';
 // Choose once per page load so navigation keeps the decoration still.
 const sidebarLetters = Object.keys(MORSE).filter((letter) => /^[A-Z]$/.test(letter));
 const sidebarLetter = sidebarLetters[Math.floor(Math.random() * sidebarLetters.length)];
@@ -321,22 +320,13 @@ const sampleEntries: PracticeSession[] = [
 ];
 
 function App() {
-  const readPage = (): Page => {
-    const value = window.location.hash.slice(1);
-    return [
-      'summary',
-      'overview',
-      'tools',
-      'practice',
-      'logbook',
-      'course',
-      'settings',
-      'events',
-    ].includes(value)
-      ? (value as Page)
-      : 'overview';
-  };
+  const readPage = () => readAppRoute(window.location.hash).page;
   const [page, setPage] = useState<Page>(readPage);
+  const [routeHash, setRouteHash] = useState(() => readAppRoute(window.location.hash).hash);
+  const acceptedHash = useRef(routeHash);
+  const currentPracticeHash = useRef('#practice');
+  const initialPublicRoute = useRef(readAppRoute(window.location.hash));
+  const initialLocationHash = useRef(window.location.hash);
   const currentPage = useRef(page);
   currentPage.current = page;
   const studioUnsaved = useRef(false);
@@ -445,7 +435,10 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [demo, setDemo] = useState(true);
   const notify = (message: string) => setToast(message);
-  const replaceStudio = (launch?: PracticeLaunch) => {
+  const replaceStudio = (requested?: PracticeLaunch) => {
+    const publicRoute = launchHash(requested);
+    const launch =
+      requested && publicRoute !== '#practice' ? { ...requested, publicRoute } : requested;
     practiceNavigation.current.invalidate();
     beforeLeaveStudio.current = undefined;
     beforeInspectStudio.current = undefined;
@@ -454,6 +447,7 @@ function App() {
     setCurrentUnsaved(false);
     setCurrentRunnerResult(undefined);
     currentLaunch.current = launch;
+    currentPracticeHash.current = launchHash(launch);
     setPracticeLaunch(launch);
     setCurrentRunnerProgress(undefined);
     setCurrentPractice(undefined);
@@ -484,8 +478,29 @@ function App() {
     if (host && !host.hidden && !host.inert) host.focus();
   }, [page, practiceLaunch?.id, sessionEditor, scope, deviceToken]);
   useEffect(() => {
-    if (!booting && page === 'practice' && !practiceLaunch) showPage('tools', true);
-  }, [booting, page, practiceLaunch]);
+    if (booting) return;
+    if (page !== 'practice') {
+      const initial = initialPublicRoute.current;
+      // Discard unsupported initial parameters only while this is still the
+      // requested initial view. Identity redirects and later navigation own
+      // their destinations and must not be replaced by boot normalization.
+      if (
+        window.location.hash === initialLocationHash.current &&
+        currentPage.current === initial.page &&
+        acceptedHash.current === initial.hash &&
+        !(initial.page === 'settings' && !user)
+      )
+        writeHash(initial.hash, true);
+      return;
+    }
+    if (practiceLaunch) return;
+    const initial = initialPublicRoute.current;
+    initialPublicRoute.current = { page: 'tools', hash: '#tools' };
+    if (initial.launch) {
+      replaceStudio({ id: crypto.randomUUID(), ...initial.launch });
+      showPage('practice', true, initial.hash);
+    } else showPage('tools', true);
+  }, [booting, page, practiceLaunch, user]);
   useEffect(() => {
     setDeviceOpen(false);
     setLifecycleReview(null);
@@ -682,11 +697,13 @@ function App() {
   }, [toast]);
   useEffect(() => {
     const changed = async () => {
-      const next = readPage();
-      if (!(await navigateView.current(next, true))) {
-        const url = new URL(window.location.href);
-        url.hash = currentPage.current;
-        window.history.replaceState(window.history.state, '', url);
+      const hash = window.location.hash;
+      if (hash === acceptedHash.current || traversal.current === hash) return;
+      traversal.current = hash;
+      try {
+        if (!(await navigateRoute.current(hash, true))) writeHash(acceptedHash.current, true);
+      } finally {
+        if (traversal.current === hash) traversal.current = undefined;
       }
     };
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -705,8 +722,7 @@ function App() {
   }, []);
   useEffect(() => {
     if (!booting && !user && page === 'settings') {
-      setPage('overview');
-      window.location.hash = 'overview';
+      showPage('overview', true);
     }
   }, [booting, user, page]);
   const confirmLeaveStudio = async () => {
@@ -732,15 +748,19 @@ function App() {
     studioUnsaved.current = false;
     return true;
   };
-  const showPage = (next: Page, traversed = false) => {
+  const writeHash = (hash: string, replace = false) => {
+    const url = new URL(window.location.href);
+    url.hash = hash;
+    if (window.location.hash !== url.hash)
+      window.history[replace ? 'replaceState' : 'pushState'](window.history.state, '', url);
+  };
+  const showPage = (next: Page, traversed = false, hash?: string) => {
     setStartNewTask(false);
     currentPage.current = next;
-    const url = new URL(window.location.href);
-    url.hash = next;
-    if (window.location.hash !== url.hash) {
-      if (traversed) window.history.replaceState(window.history.state, '', url);
-      else window.history.pushState(window.history.state, '', url);
-    }
+    const nextHash = hash ?? (next === 'practice' ? currentPracticeHash.current : `#${next}`);
+    acceptedHash.current = nextHash;
+    writeHash(nextHash, traversed);
+    setRouteHash(nextHash);
     setPage(next);
     setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -786,11 +806,14 @@ function App() {
     next: Page,
     traversed = false,
     inspection?: 'week' | 'report',
+    hash?: string,
   ): Promise<boolean> => {
     if (next === 'practice' && !currentLaunch.current) next = 'tools';
     if (next === currentPage.current && (next !== 'practice' || currentLaunch.current)) {
       setMenuOpen(false);
-      if (traversed && window.location.hash.slice(1) !== next) showPage(next, true);
+      const targetHash = hash ?? (next === 'practice' ? currentPracticeHash.current : `#${next}`);
+      if (targetHash !== acceptedHash.current || window.location.hash !== targetHash)
+        showPage(next, traversed, targetHash);
       if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
       return true;
     }
@@ -805,13 +828,12 @@ function App() {
       },
       () => {
         if (inspection) setCourseInspection({ id: crypto.randomUUID(), view: inspection });
-        showPage(next, traversed);
+        showPage(next, traversed, hash);
       },
       ownerId,
     );
   };
-  const navigateView = useRef(navigate);
-  navigateView.current = navigate;
+  const traversal = useRef<string | undefined>(undefined);
   const finishPractice = () =>
     runPracticeTransition('finish', confirmLeaveStudio, () => {
       replaceStudio();
@@ -826,12 +848,38 @@ function App() {
       notify('Practice discarded. No result was saved.');
     });
   };
-  const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
-    const intent = `replace:${options.material?.id ?? options.task?.id ?? 'public'}:${options.tool ?? 'default'}:${options.purpose ?? 'assigned'}`;
+  const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}, traversed = false) => {
+    const intent = `replace:${launchHash(options)}:${options.material?.id ?? options.task?.id ?? 'public'}:${options.tool ?? 'default'}:${options.purpose ?? 'assigned'}`;
     return runPracticeTransition(intent, confirmLeaveStudio, () => {
-      replaceStudio({ id: crypto.randomUUID(), ...options });
-      showPage('practice');
+      const publicRoute = launchHash(options);
+      replaceStudio({
+        id: crypto.randomUUID(),
+        ...options,
+        ...(publicRoute !== '#practice' ? { publicRoute } : {}),
+      });
+      showPage('practice', traversed);
     });
+  };
+  const followRoute = async (hash: string, traversed = false) => {
+    const route = readAppRoute(hash);
+    if (route.launch && route.hash !== currentPracticeHash.current)
+      return openPractice(route.launch, traversed);
+    return navigate(
+      route.page,
+      traversed,
+      undefined,
+      route.hash === '#practice' ? undefined : route.hash,
+    );
+  };
+  const navigateRoute = useRef(followRoute);
+  navigateRoute.current = followRoute;
+  const publicRouteChanged = (ownerId: string, hash: string) => {
+    if (currentLaunch.current?.id !== ownerId || !isDeviceScopeCurrent(scope, deviceToken)) return;
+    currentPracticeHash.current = hash;
+    if (currentPage.current !== 'practice') return;
+    acceptedHash.current = hash;
+    writeHash(hash, true);
+    setRouteHash(hash);
   };
   const openLog = (
     initial: Partial<PracticeSession> = {},
@@ -1203,12 +1251,14 @@ function App() {
     { page: 'logbook', label: 'Practice log', icon: BookOpen },
     { page: 'course', label: 'Academy guide', icon: CalendarDays },
   ];
-  const lessonPractice = Boolean(practiceLaunch?.task);
+  const lessonPractice = Boolean(practiceLaunch?.task || practiceLaunch?.publicTitle);
   const coursePractice = lessonPractice || Boolean(practiceLaunch?.material);
   const practiceLabel = practiceLaunch?.material
     ? 'Material practice'
     : lessonPractice
-      ? 'Lesson practice'
+      ? practiceLaunch?.task
+        ? 'Lesson practice'
+        : (practiceLaunch?.publicTitle ?? 'Lesson practice')
       : practiceTool(practiceLaunch?.tool).label;
   const navigationPage = page === 'practice' ? (coursePractice ? 'course' : 'tools') : page;
   return (
@@ -1231,10 +1281,15 @@ function App() {
         />
       )}
       <aside id="workspace-navigation" className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <button
+        <a
           className="brand"
-          onClick={() => navigate('overview')}
-          disabled={navigationBusy || booting}
+          href="#overview"
+          onClick={(event) => {
+            if (!isPlainNavigation(event)) return;
+            event.preventDefault();
+            if (!navigationBusy && !booting) void navigate('overview');
+          }}
+          aria-disabled={navigationBusy || booting}
           aria-label="CW Academy Companion home"
         >
           <img
@@ -1246,21 +1301,26 @@ function App() {
           <span>
             CW Academy<small>COMPANION</small>
           </span>
-        </button>
+        </a>
         <div className="sidebar-label">YOUR PRACTICE SPACE</div>
         <nav aria-label="Main navigation">
           {navItems.map((item) => (
-            <button
+            <a
               key={item.page}
               className={`nav-item ${navigationPage === item.page ? 'active' : ''}`}
-              onClick={() => navigate(item.page)}
-              disabled={navigationBusy || booting}
+              href={`#${item.page}`}
+              onClick={(event) => {
+                if (!isPlainNavigation(event)) return;
+                event.preventDefault();
+                if (!navigationBusy && !booting) void navigate(item.page);
+              }}
+              aria-disabled={navigationBusy || booting}
               aria-current={navigationPage === item.page ? 'page' : undefined}
             >
               <item.icon size={19} strokeWidth={1.7} />
               <span>{item.label}</span>
               {navigationPage === item.page && <span className="nav-dot" />}
-            </button>
+            </a>
           ))}
         </nav>
         <div className="sidebar-note">
@@ -1668,6 +1728,7 @@ function App() {
                   <React.Suspense fallback={<p role="status">Opening your practice…</p>}>
                     <PracticeStudio
                       profile={profile}
+                      onPublicRouteChange={(hash) => publicRouteChanged(practiceLaunch.id, hash)}
                       liveNow={liveNow}
                       key={practiceLaunch.id}
                       active={page === 'practice' && !navigationBusy && !sessionEditor}
@@ -1809,6 +1870,8 @@ function App() {
               {page === 'events' && (
                 <LivePracticeAgenda
                   key={`${scope}:${deviceToken}`}
+                  publicRoute={routeHash}
+                  onPublicRouteChange={(hash) => showPage('events', true, hash)}
                   onReturn={practiceLaunch ? () => void navigate('practice') : undefined}
                 />
               )}
@@ -1860,6 +1923,9 @@ function App() {
                   materials={account.state?.materials ?? []}
                   originalMaterials={account.state?.originalMaterials}
                   onMaterialPractice={openPractice}
+                  publicRoute={routeHash}
+                  onPublicNavigate={(hash) => void followRoute(hash)}
+                  onPublicPractice={openPractice}
                   generation={account.state?.generation ?? 0}
                   reports={account.state?.reports ?? []}
                   lcwo={lcwo.data}
@@ -2527,7 +2593,13 @@ function Course({
   pendingTaskIds,
   inspection,
   returnToPractice,
+  publicRoute,
+  onPublicNavigate,
+  onPublicPractice,
 }: {
+  publicRoute: string;
+  onPublicNavigate: (hash: string) => void;
+  onPublicPractice: (options: Omit<PracticeLaunch, 'id'>) => void;
   materials: InstructorMaterial[];
   originalMaterials?: OriginalMaterialInventory;
   onMaterialPractice: (launch: Omit<PracticeLaunch, 'id'>) => Promise<boolean>;
@@ -2552,7 +2624,8 @@ function Course({
   user: User | null;
   onSettings: () => void;
 }) {
-  const [selectedLevel, setSelectedLevel] = useState<CourseLevel>(profile.level);
+  const publicSelection = readAppRoute(publicRoute);
+  const selectedLevel = publicSelection.level ?? profile.level;
   const meetings = courseMeetings(profile);
   const nextMeeting = meetings.find((m) => m.date >= dateInTimezone(new Date(), profile.timezone));
   return (
@@ -2641,11 +2714,17 @@ function Course({
       </div>
       <div className="course-levels" role="group" aria-label="Explore academy levels">
         {levels.map((level, index) => (
-          <button
+          <a
             key={level.id}
             className={`course-level ${selectedLevel === level.id ? 'selected' : ''}`}
-            onClick={() => setSelectedLevel(level.id)}
-            aria-pressed={selectedLevel === level.id}
+            href={courseHash(level.id, 1)}
+            onClick={(event) => {
+              if (isPlainNavigation(event)) {
+                event.preventDefault();
+                onPublicNavigate(courseHash(level.id, 1));
+              }
+            }}
+            aria-current={selectedLevel === level.id ? 'page' : undefined}
           >
             <span>
               0{index + 1}
@@ -2658,10 +2737,15 @@ function Course({
                 <Check size={13} /> Exploring this level
               </span>
             )}
-          </button>
+          </a>
         ))}
       </div>
-      <CourseCurriculum level={selectedLevel} />
+      <CourseCurriculum
+        level={selectedLevel}
+        session={publicSelection.session}
+        onSessionChange={(session) => onPublicNavigate(courseHash(selectedLevel, session))}
+        onPractice={onPublicPractice}
+      />
       <div className="section-heading outside-heading">
         <div>
           <h2>Eight weeks of showing up</h2>

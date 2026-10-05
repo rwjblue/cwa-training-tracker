@@ -7,7 +7,7 @@ test('private homework supports completion, reporting, and deletion without losi
   context,
 }) => {
   await signIn(page);
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Know what to practice next.' })).toBeVisible();
   await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
   await page.getByLabel('Exercise title', { exact: true }).fill('Practice a clear exchange');
@@ -39,7 +39,7 @@ test('private homework supports completion, reporting, and deletion without losi
   expect(pendingTask.done).toBe(false);
 
   // Completion is server-confirmed and removes this row from the pending view.
-  await page.getByRole('button', { name: 'Academy guide', exact: true }).click();
+  await page.getByRole('link', { name: 'Academy guide', exact: true }).click();
   await page
     .getByRole('checkbox', { name: 'Mark Practice a clear exchange complete', exact: true })
     .click();

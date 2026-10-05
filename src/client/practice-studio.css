@@ -844,3 +844,14 @@
     gap: 8px;
   }
 }
+
+.practice-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.practice-share [role="status"] {
+  font-size: 12px;
+}
