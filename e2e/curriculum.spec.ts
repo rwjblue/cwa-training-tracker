@@ -152,7 +152,9 @@ test('all course plans launch their tools and retain progress across levels and 
   await tool.close();
   await page.clock.fastForward(65_000);
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
   const beginnerEntries = await readEntries(context.request);
   expect(beginnerEntries).toHaveLength(1);
   expect(beginnerEntries[0]).toMatchObject({
@@ -161,7 +163,6 @@ test('all course plans launch their tools and retain progress across levels and 
     metadata: { plannedTaskId: beginner.id, elapsedSeconds: 65 },
   });
   await page.clock.resume();
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
 
   const fundamentalPlan = await chooseCourse(page, 'fundamental');
   const fundamentalTasks = await readPlan(context.request);
@@ -196,11 +197,23 @@ test('all course plans launch their tools and retain progress across levels and 
   await page.getByRole('checkbox', { name: 'Character E', exact: true }).check();
   await confirmation.check();
   await expect(startCopy).toBeEnabled();
-  // Completion is a learner action and does not require inventing a copy result.
+  // Completion can retain an explicit zero-time review without inventing a Copy result.
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
-  expect(await readEntries(context.request)).toEqual(beginnerEntries);
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:00');
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
+  const fundamentalEntries = await readEntries(context.request);
+  expect(fundamentalEntries).toHaveLength(2);
+  expect(fundamentalEntries.find((entry) => entry.id === beginnerEntries[0].id)).toEqual(
+    beginnerEntries[0],
+  );
+  expect(
+    fundamentalEntries.find((entry) => entry.metadata?.plannedTaskId === fundamental.id),
+  ).toMatchObject({
+    minutes: 0,
+    metadata: { elapsedSeconds: 0 },
+  });
 
   const advancedPlan = await chooseCourse(page, 'advanced');
   const advancedTasks = await readPlan(context.request);
@@ -224,10 +237,12 @@ test('all course plans launch their tools and retain progress across levels and 
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
   const entries = await readEntries(context.request);
-  expect(entries).toHaveLength(2);
+  expect(entries).toHaveLength(3);
   const recorded = entries.find((entry) => entry.metadata?.plannedTaskId === advanced.id)!;
   expect(recorded).toMatchObject({
     kind: 'head-copy',
@@ -238,7 +253,6 @@ test('all course plans launch their tools and retain progress across levels and 
   });
   expect(recorded.metadata!.elapsedSeconds).toBeGreaterThanOrEqual(1);
   expect(recorded.metadata!.elapsedSeconds).toBeLessThanOrEqual(4);
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
 
   let restoredPlan = await chooseCourse(page, 'beginner');
   await restoredPlan.getByRole('checkbox', { name: 'Show completed', exact: true }).check();

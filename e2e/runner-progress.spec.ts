@@ -313,18 +313,22 @@ async function expectTotal(region: Locator, label: string, value: string) {
       page.getByRole('button', { name: 'Complete exercise', exact: true }),
       mobile,
     );
-    await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole('button', { name: 'Save and complete exercise', exact: true }),
+    ).toBeVisible();
     expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
       beforeComplete,
     );
-    await activate(
-      page,
-      page.getByRole('button', { name: 'Reopen exercise', exact: true }),
-      mobile,
-    );
+    await activate(page, dialog.getByRole('button', { name: 'Cancel', exact: true }), mobile);
     await expect(
       page.getByRole('button', { name: 'Complete exercise', exact: true }),
     ).toBeVisible();
+    expect(
+      (await (await context.request.get('/api/plan')).json()).plan.find(
+        (item: PlannedTask) => item.id === task.id,
+      ).done,
+    ).toBe(false);
     expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
       beforeComplete,
     );

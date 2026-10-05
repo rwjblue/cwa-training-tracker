@@ -81,6 +81,7 @@ import { MediaSessionController } from './media-session';
 import {
   loadStudioNotes,
   saveStudioNotes,
+  studioCompletionSession,
   studioSession,
   studioNotesSession,
   STUDIO_AUTOSAVE_SECONDS,
@@ -108,6 +109,8 @@ export default function PracticeStudio({
   active = true,
   onBack,
   onFinish,
+  onCancel,
+  onCompleteReview,
   onBrowseTools,
   onUnsavedChange,
   accountId,
@@ -121,6 +124,7 @@ export default function PracticeStudio({
   onTaskCompletion,
   onBeforeLeaveChange,
   onBeforeInspectChange,
+  onBeforeDiscardChange,
   onRunnerProgressChange,
   onRunnerResultReadyChange,
   onCurrentPracticeChange,
@@ -140,6 +144,8 @@ export default function PracticeStudio({
   active?: boolean;
   onBack?: () => void;
   onFinish?: () => void;
+  onCancel?: () => void;
+  onCompleteReview?: (entry: PracticeSession, task: PlannedTask) => void;
   onBrowseTools?: () => void;
   onUnsavedChange?: (unsaved: boolean) => void;
   accountId?: string;
@@ -155,6 +161,7 @@ export default function PracticeStudio({
   onRunnerProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
   onRunnerResultReadyChange?: (resultId: string | undefined) => void;
   onBeforeInspectChange?: (handler: (() => Promise<void>) | undefined) => void;
+  onBeforeDiscardChange?: (handler: (() => Promise<boolean>) | undefined) => void;
 }) {
   const notesScope = accountId ?? 'guest';
   const [deviceToken] = useState(() => getDeviceScopeToken(notesScope));
@@ -343,6 +350,7 @@ export default function PracticeStudio({
   }, [active, saveFailed, savingNavigation]);
   const beforeLeaveRef = useRef<() => Promise<boolean>>(async () => true);
   const beforeInspectRef = useRef<() => Promise<void>>(async () => {});
+  const beforeDiscardRef = useRef<() => Promise<boolean>>(async () => false);
   const canPractice = () =>
     currentDevice() && visible.current && !inspecting.current && !navigationLocked.current;
   const identity = () =>
@@ -437,7 +445,6 @@ export default function PracticeStudio({
     setPublicCopy(
       launch.tool === 'copy' || (!launch.tool && Boolean(loadCopyDraft(accountId ?? 'guest'))),
     );
-    setCopyUnsaved(false);
     setTimerMinutes(launch.task?.targetMinutes);
     setCompletionError('');
     const nextTool = launch.tool;
@@ -609,33 +616,33 @@ export default function PracticeStudio({
   const changeCompletion = (done: boolean) => {
     if (!currentDevice()) return;
     const task = launch?.task;
-    if (!task || !onTaskCompletion || completionFlight.current || navigationFlight.current) return;
+    if (
+      !task ||
+      !(done ? onCompleteReview : onTaskCompletion) ||
+      completionFlight.current ||
+      navigationFlight.current
+    )
+      return;
     setSavingCompletion(true);
     setCompletionError('');
     navigationLocked.current = true;
-    completionFlight.current = (async () => {
-      let saveBlocked = false;
+    completionFlight.current = Promise.resolve().then(async () => {
       try {
-        // Completion is a learner decision. Keep only time actually measured here;
-        // copy and simulator results retain their own save flow and active drafts.
-        if (done && !isCopy && !isRunner) {
+        if (done) {
           pauseTimer();
-          try {
-            const outcome = await saveCoordinator.current.flush(captureSession(1), onAutoSave);
-            if (!currentDevice()) return false;
-            if (outcome === 'saved') changeScratchpad('');
-            resetTimer();
-            setSaveFailed(false);
-            setError('');
-          } catch (error) {
-            saveBlocked = true;
-            saveRetryIntent.current = 'completion';
-            setSaveFailed(true);
-            throw error;
-          }
+          const entry = isCopy
+            ? copyTrainer.current?.reviewForCompletion()
+            : isRunner
+              ? await runner.current?.reviewForCompletion()
+              : captureSession(0);
+          if (!currentDevice()) return false;
+          // Completion can be declared with no new time. Review that zero-time
+          // entry too, so difficulty, rating and notes have the same save flow.
+          onCompleteReview!(studioCompletionSession(sessionInput(), entry)!, task);
+          return true;
         }
         if (!currentDevice()) return false;
-        await onTaskCompletion(task, done);
+        await onTaskCompletion!(task, false);
         if (!currentDevice()) return false;
         return true;
       } catch (error) {
@@ -645,12 +652,50 @@ export default function PracticeStudio({
         );
         return false;
       } finally {
-        navigationLocked.current = saveBlocked;
+        navigationLocked.current = false;
         if (currentDevice()) setSavingCompletion(false);
         completionFlight.current = undefined;
       }
-    })();
+    });
   };
+  const discardPractice = async (): Promise<boolean> => {
+    if (!currentDevice() || completionFlight.current || navigationFlight.current) return false;
+    if (
+      (copyUnsaved || runnerUnsaved || running || seconds > 0 || scratchpad.length > 0) &&
+      !window.confirm(
+        'Cancel this practice? Unsaved time, answers and scratchpad notes will be discarded without saving.',
+      )
+    )
+      return false;
+    navigationLocked.current = true;
+    setSavingNavigation(true);
+    try {
+      pauseTimer();
+      if (isCopy && !(copyTrainer.current?.discard() ?? false)) return false;
+      if (isRunner && !(await runner.current?.discard())) return false;
+      if (!currentDevice()) return false;
+      if (scratchpad && !saveStudioNotes(notesScope, notesContext, '', undefined, deviceToken)) {
+        setError(
+          'Your scratchpad could not be removed from this device. Enable browser storage, then retry canceling.',
+        );
+        return false;
+      }
+      resetTimer();
+      changeScratchpad('');
+      setSaveFailed(false);
+      setError('');
+      onUnsavedChange?.(false);
+      return true;
+    } finally {
+      navigationLocked.current = false;
+      if (currentDevice()) setSavingNavigation(false);
+    }
+  };
+  beforeDiscardRef.current = discardPractice;
+  useEffect(() => {
+    onBeforeDiscardChange?.(() => beforeDiscardRef.current());
+    return () => onBeforeDiscardChange?.(undefined);
+  }, [onBeforeDiscardChange]);
   beforeLeaveRef.current = beforeLeave;
   useEffect(() => {
     onBeforeLeaveChange?.(() => beforeLeaveRef.current());
@@ -1048,14 +1093,27 @@ export default function PracticeStudio({
       )}
     </div>
   );
-  const finishPracticeControl = onFinish && (
-    <button
-      className="button outline"
-      disabled={savingNavigation || savingCompletion}
-      onClick={onFinish}
-    >
-      Finish practice <ArrowRight size={14} />
-    </button>
+  const finishPracticeControl = (onFinish || onCancel) && (
+    <>
+      {onFinish && (
+        <button
+          className="button outline"
+          disabled={savingNavigation || savingCompletion}
+          onClick={onFinish}
+        >
+          Finish practice <ArrowRight size={14} />
+        </button>
+      )}
+      {onCancel && (
+        <button
+          className="text-button danger-text"
+          disabled={savingNavigation || savingCompletion}
+          onClick={onCancel}
+        >
+          Cancel practice
+        </button>
+      )}
+    </>
   );
   const SessionPanel = 'details';
   const publicPracticeTool = practiceTool(publicCopy ? 'copy' : publicRunner ? 'runner' : tool);

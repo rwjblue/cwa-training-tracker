@@ -71,12 +71,16 @@ export function clearCopyDraft(
   attemptId: string,
   deviceToken = getDeviceScopeToken(scope),
 ) {
-  if (!isDeviceScopeCurrent(scope, deviceToken)) return;
+  if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
   try {
-    if (loadCopyDraft(scope)?.attempt.id === attemptId)
-      localStorage.removeItem(copyStorageKey(scope));
+    const key = copyStorageKey(scope);
+    const raw = localStorage.getItem(key);
+    if (!raw || (JSON.parse(raw) as CopyDraft).attempt?.id !== attemptId) return true;
+    localStorage.removeItem(key);
+    return localStorage.getItem(key) === null;
   } catch {
     /* Practice remains usable when browser storage is unavailable. */
+    return false;
   }
 }
 

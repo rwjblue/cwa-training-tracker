@@ -1,4 +1,3 @@
-import { ON_AIR_CATEGORIES, onAirCategoryLabel } from '../shared/on-air-practice';
 import type { InstructorMaterial, OriginalMaterialInventory } from '../shared/instructor-material';
 import MaterialLibrary from './MaterialLibrary';
 import MaterialPreparation from './MaterialPreparation';
@@ -31,6 +30,7 @@ import {
 } from '../shared/practice-time';
 import PracticeTimeSummary from './PracticeTimeSummary';
 import Summary from './Summary';
+import { ON_AIR_CATEGORIES, onAirCategoryLabel } from '../shared/on-air-practice';
 import DailyWordListening from './DailyWordListening';
 import { dailyWordListening } from '../shared/daily-word-listening';
 import { useLearnerDate } from './useLearnerDate';
@@ -349,6 +349,7 @@ function App() {
   }>();
   const beforeLeaveStudio = useRef<(() => Promise<boolean>) | undefined>(undefined);
   const beforeInspectStudio = useRef<(() => Promise<void>) | undefined>(undefined);
+  const beforeDiscardStudio = useRef<(() => Promise<boolean>) | undefined>(undefined);
   const practiceNavigation = useRef(new PracticeNavigation());
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
@@ -438,6 +439,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [sessionEditor, setSessionEditor] = useState<Partial<PracticeSession> | null>(null);
   const [sessionEditorOwner, setSessionEditorOwner] = useState<string>();
+  const [sessionCompletionTask, setSessionCompletionTask] = useState<PlannedTask>();
   const [sessionEditorIsExisting, setSessionEditorIsExisting] = useState(false);
   const [toast, setToast] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -447,6 +449,7 @@ function App() {
     practiceNavigation.current.invalidate();
     beforeLeaveStudio.current = undefined;
     beforeInspectStudio.current = undefined;
+    beforeDiscardStudio.current = undefined;
     studioUnsaved.current = false;
     setCurrentUnsaved(false);
     setCurrentRunnerResult(undefined);
@@ -814,6 +817,15 @@ function App() {
       replaceStudio();
       showPage('overview');
     });
+  const cancelPractice = () => {
+    const discard = beforeDiscardStudio.current;
+    if (!discard) return Promise.resolve(false);
+    return runPracticeTransition('discard', discard, () => {
+      replaceStudio();
+      showPage('tools');
+      notify('Practice discarded. No result was saved.');
+    });
+  };
   const openPractice = async (options: Omit<PracticeLaunch, 'id'> = {}) => {
     const intent = `replace:${options.material?.id ?? options.task?.id ?? 'public'}:${options.tool ?? 'default'}:${options.purpose ?? 'assigned'}`;
     return runPracticeTransition(intent, confirmLeaveStudio, () => {
@@ -821,7 +833,12 @@ function App() {
       showPage('practice');
     });
   };
-  const openLog = (initial: Partial<PracticeSession> = {}, ownerId?: string, newResult = false) => {
+  const openLog = (
+    initial: Partial<PracticeSession> = {},
+    ownerId?: string,
+    newResult = false,
+    completeTask?: PlannedTask,
+  ) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     if (
       !user &&
@@ -835,6 +852,7 @@ function App() {
     const latest =
       !newResult && initial.id ? entries.find((entry) => entry.id === initial.id) : undefined;
     setSessionEditorIsExisting(Boolean(latest));
+    setSessionCompletionTask(completeTask);
     setSessionEditorOwner(ownerId);
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
@@ -1501,6 +1519,13 @@ function App() {
                         </button>
                       </>
                     )}
+                    <button
+                      className="button outline"
+                      disabled={navigationBusy || booting}
+                      onClick={() => void cancelPractice()}
+                    >
+                      Discard practice
+                    </button>
                     {page !== 'tools' && (
                       <button
                         className="button outline"
@@ -1638,17 +1663,25 @@ function App() {
                   aria-label="Current practice session"
                   tabIndex={-1}
                   hidden={page !== 'practice'}
-                  inert={page !== 'practice' || navigationBusy}
+                  inert={page !== 'practice' || navigationBusy || Boolean(sessionEditor)}
                 >
                   <React.Suspense fallback={<p role="status">Opening your practice…</p>}>
                     <PracticeStudio
                       profile={profile}
                       liveNow={liveNow}
                       key={practiceLaunch.id}
-                      active={page === 'practice' && !navigationBusy}
+                      active={page === 'practice' && !navigationBusy && !sessionEditor}
                       onLog={(initial?: Partial<PracticeSession>) =>
                         openLog(initial, practiceLaunch.id)
                       }
+                      onCompleteReview={(entry: PracticeSession, task: PlannedTask) =>
+                        openLog(entry, practiceLaunch.id, false, task)
+                      }
+                      onCancel={() => void cancelPractice()}
+                      onBeforeDiscardChange={(handler: (() => Promise<boolean>) | undefined) => {
+                        if (currentLaunch.current?.id === practiceLaunch.id)
+                          beforeDiscardStudio.current = handler;
+                      }}
                       onCurrentPracticeChange={onCurrentPracticeChange}
                       practiceSummary={practiceSummary}
                       practiceNavigation={
@@ -1948,8 +1981,45 @@ function App() {
             setSessionEditor(null);
             setSessionEditorOwner(undefined);
           }}
+          onPracticeSaved={
+            sessionCompletionTask
+              ? (entry, destination) => {
+                  if (
+                    !isDeviceScopeCurrent(scope, deviceToken) ||
+                    (activeAccount.current ?? 'guest') !== scope ||
+                    currentLaunch.current?.id !== sessionEditorOwner
+                  )
+                    return;
+                  clearSavedStudioNotes(scope, entry, undefined, deviceToken);
+                  if (destination === 'history') acceptSavedPractice(entry, sessionEditorOwner);
+                  else {
+                    setSavedPracticeEntry(entry);
+                    setSavedOwnerId(sessionEditorOwner);
+                    setSavedPracticeVersion((version) => version + 1);
+                    const attempt = savedCopyAttempt(entry);
+                    if (attempt) clearCopyDraft(scope, attempt.id);
+                  }
+                }
+              : undefined
+          }
+          onCompleteExercise={
+            sessionCompletionTask
+              ? async () => {
+                  if (
+                    !isDeviceScopeCurrent(scope, deviceToken) ||
+                    (activeAccount.current ?? 'guest') !== scope ||
+                    currentLaunch.current?.id !== sessionEditorOwner
+                  )
+                    throw new Error(
+                      'This practice changed. Reopen the current exercise before completing it.',
+                    );
+                  await updateTaskStatus([sessionCompletionTask], { done: true });
+                }
+              : undefined
+          }
           canStartNextRun={
             !sessionEditorIsExisting &&
+            !sessionCompletionTask &&
             Boolean(nextRunnerLaunchForResult(sessionEditor, tasks)) &&
             (!currentLaunch.current || currentLaunch.current.id === sessionEditorOwner)
           }
@@ -1975,8 +2045,9 @@ function App() {
                 : undefined;
             if (matchingOwner)
               clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
-            if (destination === 'history') acceptSavedPractice(entry, sessionEditorOwner);
-            else {
+            if (!sessionCompletionTask && destination === 'history')
+              acceptSavedPractice(entry, sessionEditorOwner);
+            else if (!sessionCompletionTask) {
               setSavedPracticeEntry(entry);
               setSavedOwnerId(sessionEditorOwner);
               setSavedPracticeVersion((version) => version + 1);
@@ -1994,7 +2065,8 @@ function App() {
               showPage('practice');
             } else if (
               !wasExisting &&
-              !(entry.metadata?.practiceTool === 'copy' && currentPage.current === 'practice') &&
+              (sessionCompletionTask ||
+                !(entry.metadata?.practiceTool === 'copy' && currentPage.current === 'practice')) &&
               (currentPage.current === 'practice' || entry.metadata?.plannedTaskId)
             ) {
               if (matchingOwner) {
@@ -2004,17 +2076,19 @@ function App() {
               } else void navigate('overview');
             }
             notify(
-              (nextRunner
-                ? destination === 'history'
-                  ? 'Run logged. Your next run is ready; press Run when you are ready.'
-                  : user
-                    ? 'Run saved on this device and waiting to upload. Your next run is ready.'
-                    : 'Run saved on this device. Your next run is ready.'
-                : destination === 'history'
-                  ? 'Practice logged. A little progress adds up.'
-                  : user
-                    ? 'Practice saved on this device. Waiting to upload.'
-                    : 'Practice saved on this device. Find it in your logbook.') +
+              (sessionCompletionTask
+                ? 'Practice saved and exercise completed.'
+                : nextRunner
+                  ? destination === 'history'
+                    ? 'Run logged. Your next run is ready; press Run when you are ready.'
+                    : user
+                      ? 'Run saved on this device and waiting to upload. Your next run is ready.'
+                      : 'Run saved on this device. Your next run is ready.'
+                  : destination === 'history'
+                    ? 'Practice logged. A little progress adds up.'
+                    : user
+                      ? 'Practice saved on this device. Waiting to upload.'
+                      : 'Practice saved on this device. Find it in your logbook.') +
                 resultCleanupError,
             );
           }}
@@ -2866,6 +2940,8 @@ function SessionModal({
   scope,
   generation,
   canStartNextRun = false,
+  onCompleteExercise,
+  onPracticeSaved,
   onClose,
   onSaved,
 }: {
@@ -2876,6 +2952,8 @@ function SessionModal({
   generation?: number;
   onClose: () => void;
   canStartNextRun?: boolean;
+  onCompleteExercise?: () => Promise<void>;
+  onPracticeSaved?: (entry: PracticeSession, destination: 'history' | 'device') => void;
   onSaved: (
     entry: PracticeSession,
     destination: 'history' | 'device',
@@ -2885,6 +2963,14 @@ function SessionModal({
   const sessionHelpId = useId();
   const saveButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false);
+  const savedForCompletion = useRef<
+    | {
+        entry: PracticeSession;
+        destination: 'history' | 'device';
+      }
+    | undefined
+  >(undefined);
+  const [completionPending, setCompletionPending] = useState(false);
   const mounted = useRef(true);
   const saveController = useRef<AbortController | undefined>(undefined);
   const [capturedDeviceToken] = useState(() => getDeviceScopeToken(scope));
@@ -3060,6 +3146,22 @@ function SessionModal({
       canStartNextRun && submitter instanceof HTMLButtonElement && submitter.value === 'runner-next'
         ? 'runner-next'
         : 'finish';
+    if (savedForCompletion.current) {
+      saving.current = true;
+      setError('');
+      setBusy(true);
+      try {
+        await onCompleteExercise?.();
+        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
+          onSaved(savedForCompletion.current.entry, savedForCompletion.current.destination, action);
+      } catch (failure) {
+        if (mounted.current) setError(`Practice is saved. ${(failure as Error).message}`);
+      } finally {
+        saving.current = false;
+        if (mounted.current) setBusy(false);
+      }
+      return;
+    }
     const minutes = practiceMinutesFromInput(form.minutes, initial.minutes);
     if (minutes === null) {
       setError('Enter time as minutes:seconds or minutes, from 0:00 to 1440:00.');
@@ -3159,8 +3261,20 @@ function SessionModal({
           AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]),
           { accountId: scope, generation: capturedGeneration },
         );
-        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
-          onSaved(result.entry, 'history', 'finish');
+        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken)) {
+          if (onCompleteExercise) {
+            savedForCompletion.current = { entry: result.entry, destination: 'history' };
+            setCompletionPending(true);
+            onPracticeSaved?.(result.entry, 'history');
+            try {
+              await onCompleteExercise();
+            } catch (failure) {
+              throw new Error(`Practice is saved. ${(failure as Error).message}`);
+            }
+          }
+          if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
+            onSaved(result.entry, 'history', 'finish');
+        }
       } else {
         const result = await autoSavePractice(
           scope,
@@ -3168,8 +3282,20 @@ function SessionModal({
           capturedDeviceToken,
           retainedRunner?.origin,
         );
-        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
-          onSaved(result.entry, result.destination, action);
+        if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken)) {
+          if (onCompleteExercise) {
+            savedForCompletion.current = result;
+            setCompletionPending(true);
+            onPracticeSaved?.(result.entry, result.destination);
+            try {
+              await onCompleteExercise();
+            } catch (failure) {
+              throw new Error(`Practice is saved. ${(failure as Error).message}`);
+            }
+          }
+          if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken))
+            onSaved(result.entry, result.destination, action);
+        }
       }
     } catch (err) {
       if (mounted.current) setError((err as Error).message);
@@ -3200,6 +3326,13 @@ function SessionModal({
           It does not add to the assignment’s required practice.
         </p>
       )}
+      {onCompleteExercise && (
+        <p className="field-hint">
+          {completionPending
+            ? 'Your practice is already saved. Retry to mark the exercise complete.'
+            : 'Saving this review will also mark the exercise complete.'}
+        </p>
+      )}
       {draftError && (
         <p className="alert error" role="alert">
           {draftError}
@@ -3219,7 +3352,7 @@ function SessionModal({
       >
         <fieldset
           className="session-form-fields"
-          disabled={busy || (!isExisting && Boolean(frozenEntry.current))}
+          disabled={busy || completionPending || (!isExisting && Boolean(frozenEntry.current))}
         >
           <div className="form-grid">
             <label className="field">
@@ -3588,7 +3721,15 @@ function SessionModal({
             Cancel
           </button>
           <button ref={saveButton} className="button dark" disabled={busy} type="submit">
-            {busy ? 'Saving…' : isExisting ? 'Save changes' : 'Save practice'}
+            {busy
+              ? 'Saving…'
+              : completionPending
+                ? 'Retry completing exercise'
+                : onCompleteExercise
+                  ? 'Save and complete exercise'
+                  : isExisting
+                    ? 'Save changes'
+                    : 'Save practice'}
             <Check size={16} />
           </button>
           {canStartNextRun && (

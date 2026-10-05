@@ -60,6 +60,8 @@ const time = (seconds: number) =>
 export interface MorseRunnerStudioHandle {
   pauseForInspection(): Promise<void>;
   finishForNavigation(): Promise<boolean>;
+  discard(): Promise<boolean>;
+  reviewForCompletion(): Promise<PracticeSession | undefined>;
 }
 
 interface Props {
@@ -298,7 +300,39 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
     return saved || current.current.elapsedSeconds < 1 || retainResult(current.current);
   };
-  useImperativeHandle(ref, () => ({ pauseForInspection, finishForNavigation }));
+  const discard = async () => {
+    await pauseForInspection();
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return false;
+    try {
+      clearRunnerResult(scope, `runner:${current.current.runId}`, deviceToken);
+      finished.current = undefined;
+      setResultRetained(false);
+      callbacks.current.onUnsavedChange(false);
+      callbacks.current.onResultReadyChange?.(undefined);
+      return true;
+    } catch (error) {
+      setRetentionError((error as Error).message);
+      return false;
+    }
+  };
+  const reviewForCompletion = async () => {
+    await stop();
+    if (!isDeviceScopeCurrent(scope, deviceToken)) return undefined;
+    if (savedEntry?.id === `runner:${current.current.runId}`) return savedEntry;
+    if (current.current.elapsedSeconds < 1) return undefined;
+    retainResult(current.current);
+    if (!finished.current)
+      throw new Error(
+        'The acknowledged Runner result is unavailable. Retry before completing this exercise.',
+      );
+    return finished.current;
+  };
+  useImperativeHandle(ref, () => ({
+    pauseForInspection,
+    finishForNavigation,
+    discard,
+    reviewForCompletion,
+  }));
   useLayoutEffect(() => {
     if (active) inspected.current = false;
     else void pauseForInspection();

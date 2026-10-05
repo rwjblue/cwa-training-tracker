@@ -5,6 +5,7 @@ import {
   loadStudioNotes,
   clearSavedStudioNotes,
   studioNotesSession,
+  studioCompletionSession,
   saveStudioNotes,
   studioSession,
   StudioSaveCoordinator,
@@ -92,6 +93,60 @@ it('saves raw word listening separately from recall with public optional purpose
     evidence: { wordListeningSeconds: 480, measurement: { seconds: 600, recallSeconds: 120 } },
   });
   expect(saved.metadata?.plannedTaskId).toBeUndefined();
+});
+
+it('reviews explicit completion at zero time without inventing heard evidence', () => {
+  const next = input(0);
+  next.scratchpad = '';
+  next.generatedListening = undefined;
+  next.launch = {
+    id: 'launch:zero',
+    ...practiceLaunchForTask({
+      id: 'listening:zero',
+      title: 'Assigned listening exercise',
+      kind: 'listening',
+      done: false,
+      notes: '',
+      createdAt: '2026-09-29T12:00:00Z',
+      exercise: { type: 'audio', url: 'https://example.test/recording.mp3' },
+    }),
+  };
+  expect(studioSession(next)).toBeUndefined();
+  expect(studioSession(next, 0)).toMatchObject({
+    minutes: 0,
+    source: 'timer',
+    metadata: { elapsedSeconds: 0, plannedTaskId: 'listening:zero', practicePurpose: 'assigned' },
+  });
+  expect(studioSession(next, 0)?.metadata?.recordings).toBeUndefined();
+});
+
+it('keeps recovered results attributed to their original exercise during completion review', () => {
+  const next = input(30);
+  const task = {
+    id: 'task:current',
+    title: 'Current exercise',
+    kind: 'icr' as const,
+    done: false,
+    notes: '',
+    createdAt: '2026-09-29T12:00:00Z',
+  };
+  next.launch = { id: 'current-launch', ...practiceLaunchForTask(task) };
+  const sameTask = studioSession(next)!;
+  expect(studioCompletionSession(next, sameTask)).toBe(sameTask);
+  const differentTask = {
+    ...sameTask,
+    metadata: { ...sameTask.metadata, plannedTaskId: 'task:recovered' },
+  };
+  const publicRound = { ...sameTask, metadata: { ...sameTask.metadata } };
+  delete publicRound.metadata.plannedTaskId;
+  for (const recovered of [differentTask, publicRound]) {
+    const original = structuredClone(recovered);
+    expect(() => studioCompletionSession(next, recovered)).toThrow('Save or discard it');
+    expect(recovered).toEqual(original);
+  }
+  next.launch.purpose = 'review';
+  expect(studioCompletionSession(next, sameTask)).toBe(sameTask);
+  expect(studioCompletionSession(next)?.metadata?.plannedTaskId).toBe(task.id);
 });
 
 function playedWords(characterWpm = 20, effectiveWpm = 10): GeneratedListeningSummary {
@@ -821,17 +876,40 @@ it('labels actual Story exposure and retains exact source evidence after an unpl
   expect(studioSession(value)?.notes).toBe('Story listening');
 });
 
-
 it('uses the exact immutable instructor material header and keeps class time separate without generating heard evidence', () => {
-  const material: InstructorMaterial = { version: 1, id: 'instructor:old', course: { level: 'beginner', firstClassDate: '2026-09-28' },
-    session: 2, title: 'Synthetic material', text: 'Private original body', usage: 'preparation', createdAt: '2026-09-28T00:00:00.000Z' };
-  const captured = { ...input(90), launch: { id: 'material-owner', material, materialContext: 'class' as const,
-    activity: { type: 'timer' as const }, tool: 'sending' as const } };
+  const material: InstructorMaterial = {
+    version: 1,
+    id: 'instructor:old',
+    course: { level: 'beginner', firstClassDate: '2026-09-28' },
+    session: 2,
+    title: 'Synthetic material',
+    text: 'Private original body',
+    usage: 'preparation',
+    createdAt: '2026-09-28T00:00:00.000Z',
+  };
+  const captured = {
+    ...input(90),
+    launch: {
+      id: 'material-owner',
+      material,
+      materialContext: 'class' as const,
+      activity: { type: 'timer' as const },
+      tool: 'sending' as const,
+    },
+  };
   const result = studioSession(captured)!;
-  expect(result).toMatchObject({ kind: 'sending', lesson: 2, context: 'class', minutes: 1.5, source: 'timer',
-    metadata: { instructorMaterial: materialReference(material), elapsedSeconds: 90 } });
+  expect(result).toMatchObject({
+    kind: 'sending',
+    lesson: 2,
+    context: 'class',
+    minutes: 1.5,
+    source: 'timer',
+    metadata: { instructorMaterial: materialReference(material), elapsedSeconds: 90 },
+  });
   expect(result.metadata?.generatedListening).toBeUndefined();
   expect(result.metadata?.instructorMaterial).not.toHaveProperty('text');
   expect(result.metadata?.materialCompleted).toBeUndefined();
-  expect(studioSession({ ...captured, measured: { ...captured.measured, seconds: 0 } })).toBeUndefined();
+  expect(
+    studioSession({ ...captured, measured: { ...captured.measured, seconds: 0 } }),
+  ).toBeUndefined();
 });

@@ -90,7 +90,8 @@ export function studioSession(
     ...identity,
     date: dateInTimezone(identity.createdAt, timezone),
     kind:
-      (launch?.material ? 'sending' : undefined) ?? launch?.task?.kind ??
+      (launch?.material ? 'sending' : undefined) ??
+      launch?.task?.kind ??
       (tool === 'sending' ? 'sending' : tool === 'words' ? 'head-copy' : 'listening'),
     lesson: launch?.material?.session ?? launch?.task?.lesson,
     ...(launch?.material ? { context: launch.materialContext ?? 'practice' } : {}),
@@ -184,6 +185,19 @@ export function studioNotesSession(input: StudioSessionInput): PracticeSession |
     return undefined;
   // Selected/prepared content is not heard evidence for a notes-only record.
   return studioSession({ ...input, generatedListening: undefined }, 0);
+}
+
+/** A recovered result cannot complete a different exercise currently being viewed. */
+export function studioCompletionSession(
+  input: StudioSessionInput,
+  candidate?: PracticeSession,
+): PracticeSession | undefined {
+  const entry = candidate ?? studioSession(input, 0);
+  if (entry && entry.metadata?.plannedTaskId !== input.launch?.task?.id)
+    throw new Error(
+      'This recovered round belongs to another exercise. Save or discard it before completing this exercise.',
+    );
+  return entry;
 }
 
 /** One immutable body and one in-flight request cover repeated navigation and retry. */

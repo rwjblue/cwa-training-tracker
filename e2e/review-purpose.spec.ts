@@ -303,9 +303,13 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
     page.getByRole('button', { name: 'Complete exercise', exact: true }),
     mobile,
   );
-  await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
-  expect(await entries(context)).toHaveLength(2);
-  await activate(page, page.getByRole('button', { name: 'Back to Today', exact: true }), mobile);
+  await activate(
+    page,
+    review.getByRole('button', { name: 'Save and complete exercise', exact: true }),
+    mobile,
+  );
+  await expect(review).toHaveCount(0);
+  expect(await entries(context)).toHaveLength(3);
   await today.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
   await activate(page, row.getByRole('button', { name: 'Extra review', exact: true }), mobile);
   await minute(page, mobile);
@@ -326,7 +330,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await activate(page, page.getByRole('button', { name: 'Reopen exercise', exact: true }), mobile);
   await expect(page.getByText('EXTRA REVIEW', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Complete exercise', exact: true })).toBeVisible();
-  expect(await entries(context)).toHaveLength(3);
+  expect(await entries(context)).toHaveLength(4);
   await activate(page, page.getByRole('button', { name: 'Back to Today', exact: true }), mobile);
 
   await navigate(page, 'Academy guide', mobile);
@@ -350,7 +354,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await activate(page, review.getByRole('button', { name: 'Save practice', exact: true }), mobile);
   await expect(review).toHaveCount(0);
   const saved = await entries(context);
-  expect(saved).toHaveLength(4);
+  expect(saved).toHaveLength(5);
   expect(
     saved.filter(
       (entry: { metadata: { practicePurpose: string } }) =>
@@ -384,7 +388,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   const path = await file.path();
   expect(path).toBeTruthy();
   const backup = JSON.parse(await readFile(path!, 'utf8'));
-  expect(backup.sessions).toHaveLength(4);
+  expect(backup.sessions).toHaveLength(5);
   expect(
     backup.sessions.map((entry: { id: string; metadata: unknown }) => ({
       id: entry.id,
@@ -407,7 +411,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
     mobile,
   );
   await expect(importing).toHaveCount(0);
-  await expect(page.getByRole('status').filter({ hasText: '4 duplicates skipped' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: '5 duplicates skipped' })).toBeVisible();
   expect(await entries(context)).toEqual(saved);
   await navigate(page, 'Practice log', mobile);
   await expect(page.getByText('Extra review', { exact: true })).toHaveCount(3);

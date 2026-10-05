@@ -117,9 +117,10 @@ test('Today brings personal assignments forward and keeps logging separate from 
   await expect(panel.getByRole('checkbox')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Practice', exact: true }).click();
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:00');
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
   await expect
     .poll(
@@ -130,12 +131,24 @@ test('Today brings personal assignments forward and keeps logging separate from 
     )
     .toBe(true);
   const afterCompletion = (await (await context.request.get('/api/entries')).json()).entries;
-  expect(afterCompletion).toEqual(entries);
+  expect(afterCompletion).toHaveLength(2);
+  expect(afterCompletion.find((entry: { id: string }) => entry.id === entries[0].id)).toEqual(
+    entries[0],
+  );
+  expect(afterCompletion.find((entry: { id: string }) => entry.id !== entries[0].id)).toMatchObject(
+    {
+      minutes: 0,
+      metadata: { plannedTaskId: firstTask.id, elapsedSeconds: 0 },
+    },
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await panel.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
+  const completedPlan = panel.locator('details').filter({
+    has: page.locator('summary').filter({ hasText: 'Completed in this plan' }),
+  });
+  await completedPlan.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
   await expect(
-    panel.getByRole('heading', { name: 'Today’s sending warm-up', exact: true, level: 4 }),
+    completedPlan.getByRole('heading', { name: 'Today’s sending warm-up', exact: true, level: 4 }),
   ).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -417,11 +430,13 @@ test('course dates populate Today with playable assignments and preserve linked 
     });
   });
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
   await expect(
     page.getByRole('region', { name: 'Account sync status', exact: true }),
   ).toContainText('Waiting to sync.');
-  expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   const savedBeforeCompletion = (await (await context.request.get('/api/entries')).json()).entries;
   expect(savedBeforeCompletion).toHaveLength(2);
   const recent = savedBeforeCompletion.find((entry: { id: string }) => entry.id !== entries[0].id);
@@ -438,8 +453,6 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(page.getByRole('region', { name: 'Account sync status', exact: true })).toHaveCount(
     0,
   );
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   await expect(row).toHaveCount(0);
   await expect(panel.getByText('1/4 done', { exact: true })).toBeVisible();
   await page.reload();
@@ -481,7 +494,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
 });
 
-test('an exercise without a time target can be completed and reopened without logging practice', async ({
+test('an exercise without a time target completes through a zero-time review and reopens without adding time', async ({
   page,
   context,
 }) => {
@@ -533,11 +546,12 @@ test('an exercise without a time target can be completed and reopened without lo
     });
   });
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:00');
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(
     page.getByRole('region', { name: 'Account sync status', exact: true }),
   ).toContainText('Waiting to sync.');
-  await page.getByRole('button', { name: 'Back to Today', exact: true }).click();
   await expect(page).toHaveURL(/#overview$/);
   releaseCompletion();
   await failedCompletion;
@@ -545,7 +559,12 @@ test('an exercise without a time target can be completed and reopened without lo
     page.getByRole('region', { name: 'Account sync status', exact: true }),
   ).toContainText('Upload failed');
   expect((await (await context.request.get('/api/plan')).json()).plan[0].done).toBe(false);
-  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
+  const zeroTimeEntries = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(zeroTimeEntries).toHaveLength(1);
+  expect(zeroTimeEntries[0]).toMatchObject({
+    minutes: 0,
+    metadata: { plannedTaskId: original.id, elapsedSeconds: 0 },
+  });
   await page.unroute('**/api/account-operations');
   page.on('request', (request) => {
     if (
@@ -565,7 +584,9 @@ test('an exercise without a time target can be completed and reopened without lo
     id: original.id,
     done: true,
   });
-  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
+    zeroTimeEntries,
+  );
   await page.reload();
   await expect(panel.getByRole('heading', { name: 'Today’s plan is complete.' })).toBeVisible();
   await panel.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
@@ -586,8 +607,10 @@ test('an exercise without a time target can be completed and reopened without lo
     id: original.id,
     done: false,
   });
-  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
-  expect(entryWrites).toBe(0);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
+    zeroTimeEntries,
+  );
+  expect(entryWrites).toBe(1);
 });
 
 test.describe('earlier work dismissal', () => {
@@ -858,16 +881,18 @@ test('completion retries a failed measured sending save without discarding time 
     }),
   );
   await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Could not confirm completion.');
-  await expect(page.locator('.timer-readout')).toHaveText('00:04');
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:04');
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Practice storage temporarily unavailable.');
+  await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:04');
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
   expect((await (await context.request.get('/api/plan')).json()).plan[0].done).toBe(false);
   await page.unroute('**/api/entries');
   await page.evaluate(() => {
     document.documentElement.dataset.blockPracticeSave = 'false';
   });
-  await page.getByRole('button', { name: 'Retry saving session', exact: true }).click();
-  await expect(page.getByText('Exercise completed', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0]).toMatchObject({
@@ -879,6 +904,6 @@ test('completion retries a failed measured sending save without discarding time 
   expect(bodies).toHaveLength(2);
   expect(bodies[1]).toEqual(bodies[0]);
   expect(dialogs).toEqual([]);
-  await expect(page).toHaveURL(/#practice$/);
+  await expect(page).toHaveURL(/#overview$/);
   await page.clock.resume();
 });

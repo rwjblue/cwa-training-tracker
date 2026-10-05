@@ -294,10 +294,20 @@ test(`actual recording passes retain source evidence and separate learner comple
   await expect(count('This block')).toHaveText('0');
   await expect(count('Minimum remaining')).toHaveText('0');
   await activate(page.getByRole('button', { name: 'Complete exercise', exact: true }));
+  await expect(dialog.getByLabel(/^Time practiced/)).toHaveValue('0:00');
+  await activate(dialog.getByRole('button', { name: 'Save and complete exercise', exact: true }));
+  await expect(dialog).toHaveCount(0);
+  const completedEntries = (await (await context.request.get('/api/entries')).json()).entries;
+  expect(completedEntries).toHaveLength(2);
+  expect(completedEntries.find((item: { id: string }) => item.id !== saved.id).minutes).toBe(0);
+  await page.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
+  await activate(taskItem().getByRole('button', { name: 'Extra review', exact: true }));
   await expect(page.getByRole('button', { name: 'Reopen exercise', exact: true })).toBeVisible();
   await activate(page.getByRole('button', { name: 'Reopen exercise', exact: true }));
   await expect(page.getByRole('button', { name: 'Complete exercise', exact: true })).toBeVisible();
-  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(entries);
+  expect((await (await context.request.get('/api/entries')).json()).entries).toEqual(
+    completedEntries,
+  );
   await activate(page.getByRole('button', { name: 'Finish practice', exact: true }));
   await activate(taskItem().getByRole('button', { name: 'Extra review', exact: true }));
   await expect(count('Previously saved')).toHaveText('3');
@@ -309,10 +319,13 @@ test(`actual recording passes retain source evidence and separate learner comple
   await activate(dialog.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(dialog).toHaveCount(0);
   const all = (await (await context.request.get('/api/entries')).json()).entries;
-  expect(all).toHaveLength(2);
-  expect(all.find((item: { id: string }) => item.id !== saved.id).metadata.practicePurpose).toBe(
-    'review',
-  );
+  expect(all).toHaveLength(3);
+  expect(
+    all.find(
+      (item: { metadata: { practicePurpose?: string } }) =>
+        item.metadata.practicePurpose === 'review',
+    ).metadata.practicePurpose,
+  ).toBe('review');
   await expect(taskItem()).toContainText('3 listening passes saved');
 
   await navigate('Practice log');

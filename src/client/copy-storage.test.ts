@@ -227,6 +227,18 @@ describe('native copy recovery', () => {
     expect(loadCopyPreferences('account', 'words')?.mode).toBe('words');
   });
 
+  it('acknowledges discard only after the owned recovery draft is removed', () => {
+    const current = draft('cancel-me');
+    expect(saveCopyDraft('guest', current)).toBe(true);
+    const remove = localStorage.removeItem.bind(localStorage);
+    localStorage.removeItem = () => {};
+    expect(clearCopyDraft('guest', current.attempt.id)).toBe(false);
+    expect(loadCopyDraft('guest')?.attempt.id).toBe(current.attempt.id);
+    localStorage.removeItem = remove;
+    expect(clearCopyDraft('guest', current.attempt.id)).toBe(true);
+    expect(loadCopyDraft('guest')).toBeUndefined();
+  });
+
   it('validates frozen retries and refuses pending evidence from a different result', () => {
     const current = draft();
     current.attempt = submitCopyAnswer(current.attempt, current.attempt.targets[0], {

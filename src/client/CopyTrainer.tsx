@@ -20,7 +20,7 @@ import {
   validateCopyRecipe,
   type CopyRecipe,
 } from '../shared/copy-practice';
-import { copyAttemptSessionFields } from '../shared/copy-report';
+import { copyAttemptSessionFields, savedCopyAttempt } from '../shared/copy-report';
 import {
   dateInTimezone,
   validatePracticeSession,
@@ -79,6 +79,8 @@ interface Props {
 
 export interface CopyTrainerHandle {
   pauseForInspection(): void;
+  discard(): boolean;
+  reviewForCompletion(): PracticeSession | undefined;
 }
 
 const CopyTrainer = forwardRef<CopyTrainerHandle, Props>(function CopyTrainer(props, ref) {
@@ -218,7 +220,54 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
     inspected.current = true;
     pause();
   };
-  useImperativeHandle(ref, () => ({ pauseForInspection }));
+  const discard = () => {
+    if (!hasControl() || savingRef.current) return false;
+    pause();
+    const current = draftRef.current;
+    if (current && !clearCopyDraft(scope, current.attempt.id, deviceToken)) {
+      setError(
+        'This round could not be removed from this device. Enable browser storage, then retry canceling.',
+      );
+      return false;
+    }
+    player.current.clear();
+    prepared.current = '';
+    autoDeadline.current = undefined;
+    write(undefined);
+    clock.current = new CopyClock();
+    onUnsavedChange?.(false);
+    return true;
+  };
+  const reviewForCompletion = () => {
+    if (!hasControl())
+      throw new Error('Continue Copy practice in this tab before completing the exercise.');
+    if (savingRef.current)
+      throw new Error('Wait for this round to finish saving, then complete the exercise.');
+    pause();
+    const current = snapshot();
+    if (!current) return undefined;
+    if (savedRef.current && saveReceipt) return saveReceipt.entry;
+    if (current.pending) return current.pending;
+    // Review an ended snapshot without ending the retained round. Canceling the
+    // review keeps its exact unsubmitted answer and paused recovery draft.
+    const attempt = {
+      ...current.attempt,
+      status: current.attempt.status === 'active' ? ('abandoned' as const) : current.attempt.status,
+    };
+    const fields = copyAttemptSessionFields(attempt);
+    return validatePracticeSession({
+      ...fields,
+      date: dateInTimezone(attempt.createdAt, current.timezone ?? legacyTimezone),
+      kind: current.task?.kind ?? 'icr',
+      lesson: current.task?.lesson,
+      notes: [current.task?.title, current.notes].filter(Boolean).join('\n'),
+      metadata: {
+        ...fields.metadata,
+        ...taskPracticeMetadata(current.task?.id, current.purpose),
+      },
+    });
+  };
+  useImperativeHandle(ref, () => ({ pauseForInspection, discard, reviewForCompletion }));
   useLayoutEffect(() => {
     if (studioActive) inspected.current = false;
     else pauseForInspection();
@@ -309,6 +358,15 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
   }, [scope]);
   useEffect(() => {
     if (currentDevice() && savedEntry?.id === `copy:${draftRef.current?.attempt.id}`) {
+      const attempt = savedCopyAttempt(savedEntry);
+      if (attempt && draftRef.current) {
+        savedRef.current = true;
+        setSaved(true);
+        const acknowledged = { ...draftRef.current, attempt, pending: savedEntry };
+        draftRef.current = acknowledged;
+        setDraft(acknowledged);
+        clearCopyDraft(scope, attempt.id, deviceToken);
+      }
       setSaveReceipt({ entry: savedEntry, destination: 'history' });
     }
   }, [savedEntry]);
@@ -821,12 +879,12 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
       {roundTask && (
         <p className="copy-help" role="status">
           {draft ? 'This round is ' : 'Your next round is '}
-            <strong>{roundPurpose === 'review' ? 'extra review' : 'assigned practice'}</strong>
-            {' for '}
-            {roundTask.title}.{' '}
-            {roundPurpose === 'review'
-              ? 'Saved time counts toward daily practice without adding required assignment credit.'
-              : 'Saved time contributes to assignment progress. Completing the exercise remains your choice.'}
+          <strong>{roundPurpose === 'review' ? 'extra review' : 'assigned practice'}</strong>
+          {' for '}
+          {roundTask.title}.{' '}
+          {roundPurpose === 'review'
+            ? 'Saved time counts toward daily practice without adding required assignment credit.'
+            : 'Saved time contributes to assignment progress. Completing the exercise remains your choice.'}
         </p>
       )}
       {blocked && (

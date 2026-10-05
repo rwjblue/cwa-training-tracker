@@ -6,6 +6,7 @@ import {
   openPracticeTool,
   accountRequest,
   expectAccessible,
+  expectResponsive,
   scopedRequest,
   signIn,
 } from './helpers';
@@ -157,6 +158,56 @@ async function startWithoutMovingCopyField(
   await expect(answer).toHaveValue(firstCopy);
   await original.dispose();
 }
+
+test.describe('unfinished copy cancellation', () => {
+  test.use({ hasTouch: true });
+  test('canceling recovered Copy discards the device draft without saving', async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openCopy(page);
+    await configureShortGroups(page);
+    await startWithoutMovingCopyField(page, 'Start code groups', 'Unfinished copy');
+    await page.getByRole('button', { name: 'Pause audio', exact: true }).click();
+    const { user } = await (await context.request.get('/api/me')).json();
+    const key = `cwa:copy:v1:${encodeURIComponent(user.id)}`;
+    const retained = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), key);
+    expect(retained.attempt.status).toBe('active');
+    expect(retained.answer).toBe('Unfinished copy');
+    await page.reload();
+    await openPracticeTool(page, 'Copy practice');
+    await expect(page.getByText(/Recovered on this device/)).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(
+      'Unfinished copy',
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectResponsive(page, 'copy-recovered-cancel-mobile');
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.getByRole('button', { name: 'Cancel practice', exact: true }).tap();
+    await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue(
+      'Unfinished copy',
+    );
+    expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeTruthy();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Cancel practice', exact: true }).tap();
+    await expect(page).toHaveURL(/#tools$/);
+    await expect(
+      page.getByRole('region', { name: 'Current practice block', exact: true }),
+    ).toHaveCount(0);
+    expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBeNull();
+    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+    await page.reload();
+    await openPracticeTool(page, 'Copy practice');
+    await expect(page.getByText(/Recovered on this device/)).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Start code groups', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Your copy', exact: true })).toHaveValue('');
+    expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  });
+});
 
 test.describe('guest code-group comparison', () => {
   test.use({ hasTouch: true });
