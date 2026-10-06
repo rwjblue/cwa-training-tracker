@@ -94,9 +94,10 @@ manual releases. Cloudflare skips superseded queued builds, but a running build
 can finish while another push arrives.
 
 Select a user-owned build token scoped to this Cloudflare account and the
-required zone. Cloudflare's generated token needs **D1 Edit** added for remote
-migrations, alongside the permissions required to deploy the Worker and its
-custom domain. Keep `AUTH_SECRET` in Cloudflare; the build does not need a copy.
+required zone. Verify that it includes **D1 Edit** for remote migrations,
+alongside the permissions required to deploy the Worker and its custom domain.
+An existing build token with those permissions can be reused without creating
+a new credential. Keep `AUTH_SECRET` in Cloudflare; the build does not need a copy.
 Do not copy local Wrangler OAuth credentials into build variables or GitHub.
 Use one production deployment system to avoid duplicate releases. See
 [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
