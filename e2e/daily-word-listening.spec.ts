@@ -18,6 +18,8 @@ test('optional daily words count actual replay separately from recall and retire
   context,
 }) => {
   test.setTimeout(90_000);
+  // Let clocks advance naturally throughout native playback; control recall only.
+  await page.clock.install();
   await page.goto('/');
   await page.getByRole('link', { name: /^Word listening Build recognition/ }).click();
   await navigateView(page, 'Overview');
@@ -136,6 +138,7 @@ test('optional daily words count actual replay separately from recall and retire
   await activate(page.getByRole('button', { name: 'Start recall timer', exact: true }));
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
   await activate(page.getByRole('button', { name: 'Pause recall', exact: true }));
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   await navigateView(page, 'Today', activate);
   await expect(daily).toContainText('Ten-minute listening goal reached');
   const currentListening = daily
@@ -157,11 +160,13 @@ test('optional daily words count actual replay separately from recall and retire
   await openDisclosure(review, 'Measured results and practice evidence');
   const rawListening = await review.getByText(/^Measured word listening:/).innerText();
   await activate(review.getByRole('button', { name: 'Cancel', exact: true }));
-  // Native audio and this short observed recall both use real advancing clocks.
+  // Audio is paused. Advance recall explicitly instead of waiting on display polling.
   await openDisclosure(page, 'Session options and logging');
   await activate(page.getByRole('button', { name: 'Resume recall timer', exact: true }));
+  await page.clock.runFor(2000);
   await expect(page.getByText('Includes 00:02 of focused recall.', { exact: true })).toBeVisible();
   await activate(page.getByRole('button', { name: 'Pause recall', exact: true }));
+  await page.clock.resume();
   await navigateView(page, 'Today', activate);
   await expect(
     page.getByRole('region', { name: 'Today’s practice time', exact: true }),
