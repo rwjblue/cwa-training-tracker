@@ -71,7 +71,7 @@ test('Today opens a focused listening workspace and a concise save review at bot
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1);
   await page.getByRole('button', { name: 'Stop playback', exact: true }).tap();
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const review = page.getByRole('dialog');
   await expect(review.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Keep playback and notes together.',

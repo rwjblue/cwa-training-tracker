@@ -105,7 +105,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
 
   await activate(page.getByRole('button', { name: 'Return to practice', exact: true }));
   await assertTime('5:00', '0:02', '5:02');
-  await activate(page.getByRole('button', { name: /Review & save/ }));
+  await activate(page.getByRole('button', { name: /^Save(?: \d|$)/ }));
   await activate(page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }));
   await assertTime('5:00', '0:02', '5:02');
   mobile = true;
@@ -123,7 +123,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
       });
     return route.continue();
   });
-  await activate(page.getByRole('button', { name: /Review & save/ }));
+  await activate(page.getByRole('button', { name: /^Save(?: \d|$)/ }));
   await activate(
     page.getByRole('dialog').getByRole('button', { name: 'Save practice', exact: true }),
   );
@@ -162,7 +162,7 @@ test('daily time moves once through inspection, queued save, retry and local mid
   await page.setViewportSize({ width: 390, height: 844 });
   await activate(page.getByRole('button', { name: 'Return to practice', exact: true }));
   await expect(summary).toContainText('Retained block: 0:06 on 2026-10-01');
-  await activate(page.getByRole('button', { name: /Review & save/ }));
+  await activate(page.getByRole('button', { name: /^Save(?: \d|$)/ }));
   await expect(page.getByRole('dialog').getByLabel('Practice date', { exact: true })).toHaveValue(
     date,
   );

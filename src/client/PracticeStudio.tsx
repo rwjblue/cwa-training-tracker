@@ -1077,8 +1077,8 @@ export default function PracticeStudio({
           <p id="notes-save-help" className="field-hint">
             Save nonempty notes at zero time{' '}
             {accountId ? 'to your private history' : 'on this device'}. This adds no practice time
-            or passes and does not complete an exercise. Use Finish practice or Review &amp; save
-            for measured practice.
+            or passes and does not complete an exercise. Use Finish practice or Save for measured
+            practice.
           </p>
         </details>
       )}
@@ -1375,8 +1375,8 @@ export default function PracticeStudio({
                     ? 'A delay interrupted the timer.'
                     : 'The timer could not measure the interval reliably.'}{' '}
                 The unobserved interval was not counted. Resume recall when you are ready. If you
-                practiced during the interruption, choose Correct measured time in Review &amp;
-                save. Recall is included in total practice time.
+                practiced during the interruption, choose Correct measured time in Save. Recall is
+                included in total practice time.
               </span>
             </div>
           )}
@@ -1391,9 +1391,38 @@ export default function PracticeStudio({
               aria-label={isSending ? 'Sending practice controls' : undefined}
             >
               <button
-                className="button dark"
+                className="button outline"
+                disabled={seconds < 1}
+                onClick={logTimedSession}
+                aria-label={
+                  isSending ? `Save ${seconds > 0 ? duration(seconds) : 'session'}` : undefined
+                }
+              >
+                Save <ArrowRight size={14} />
+              </button>
+              {launch?.task && onTaskCompletion && (
+                <button
+                  className="button dark studio-quick-completion"
+                  disabled={launch.task.done}
+                  onClick={() => changeCompletion(true)}
+                >
+                  <CheckCheck size={17} />
+                  {savingCompletion ? 'Completing…' : launch.task.done ? 'Completed' : 'Complete'}
+                </button>
+              )}
+              <button
+                className="button dark studio-practice-toggle"
                 disabled={
                   (activity?.type === 'audio' && !recordingUrl) || (!running && !liveAvailable)
+                }
+                aria-label={
+                  activity?.type === 'audio' && !recordingUrl
+                    ? 'Recording unavailable'
+                    : (activity?.type === 'audio' ? playing || recordingPending : running)
+                      ? 'Pause practice'
+                      : seconds > 0
+                        ? 'Resume practice'
+                        : 'Start practice'
                 }
                 onClick={() =>
                   (activity?.type === 'audio' ? playing || recordingPending : running)
@@ -1406,13 +1435,24 @@ export default function PracticeStudio({
                 ) : (
                   <Play size={14} />
                 )}
-                {activity?.type === 'audio' && !recordingUrl
-                  ? 'Recording unavailable'
-                  : (activity?.type === 'audio' ? playing || recordingPending : running)
-                    ? 'Pause practice'
-                    : seconds > 0
-                      ? 'Resume practice'
-                      : 'Start practice'}
+                <span className="studio-practice-label">
+                  {activity?.type === 'audio' && !recordingUrl
+                    ? 'Recording unavailable'
+                    : (activity?.type === 'audio' ? playing || recordingPending : running)
+                      ? 'Pause practice'
+                      : seconds > 0
+                        ? 'Resume practice'
+                        : 'Start practice'}
+                </span>
+                <span className="studio-practice-label-compact" aria-hidden="true">
+                  {activity?.type === 'audio' && !recordingUrl
+                    ? 'Unavailable'
+                    : (activity?.type === 'audio' ? playing || recordingPending : running)
+                      ? 'Pause'
+                      : seconds > 0
+                        ? 'Resume'
+                        : 'Start'}
+                </span>
               </button>
               <span aria-label={isSending ? `${duration(seconds)} elapsed` : undefined}>
                 <strong>{duration(seconds)}</strong>{' '}
@@ -1420,18 +1460,6 @@ export default function PracticeStudio({
                   {running ? 'timing' : seconds > 0 ? 'unsaved' : 'elapsed'}
                 </span>
               </span>
-              <button
-                className="button outline"
-                disabled={seconds < 1}
-                onClick={logTimedSession}
-                aria-label={
-                  isSending
-                    ? `Review & save ${seconds > 0 ? duration(seconds) : 'session'}`
-                    : undefined
-                }
-              >
-                Review &amp; save <ArrowRight size={14} />
-              </button>
             </div>
             <div
               className={`practice-layout ${assigned ? 'is-assigned' : ''} ${isSending ? 'is-sending' : ''}`}
@@ -1995,7 +2023,7 @@ export default function PracticeStudio({
                     <p className="studio-playback-help">
                       {isSending
                         ? 'Use your key to send the displayed patterns. Start practice counts your time here; changing sections keeps the same session running.'
-                        : 'Start practice times this exercise. Review and save your elapsed time when you finish.'}
+                        : 'Start practice times this exercise. Save your elapsed time when you finish.'}
                     </p>
                   </details>
                 )}
@@ -2008,8 +2036,8 @@ export default function PracticeStudio({
                   <p className="sending-save-help">
                     Inspect other views without saving. Finish practice or switch tools to save at
                     least one measured second{' '}
-                    {accountId ? 'to your private history' : 'on this device'}. Review &amp; save
-                    lets you check the measured entry first.
+                    {accountId ? 'to your private history' : 'on this device'}. Save lets you check
+                    the measured entry first.
                   </p>
                 )}
               </section>
@@ -2113,14 +2141,13 @@ export default function PracticeStudio({
                         disabled={seconds < 1}
                         onClick={logTimedSession}
                       >
-                        Review &amp; save {seconds > 0 ? duration(seconds) : 'session'}{' '}
-                        <ArrowRight size={14} />
+                        Save {seconds > 0 ? duration(seconds) : 'session'} <ArrowRight size={14} />
                       </button>
                       <p className="studio-save-help">
                         Inspect other views without saving. Finish practice or switch tools to save
                         at least one measured second{' '}
-                        {accountId ? 'to your private history' : 'on this device'}. Review &amp;
-                        save lets you check the measured entry first.
+                        {accountId ? 'to your private history' : 'on this device'}. Save lets you
+                        check the measured entry first.
                       </p>
                     </>
                   )}

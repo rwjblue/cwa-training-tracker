@@ -97,7 +97,7 @@ test('word selection, stepping and rewind retain state and save only actual hear
   expect(await position(page)).toBe(0);
   await third.tap();
   await settle(page, true);
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).tap();
   await settle(page, true);
   expect(await position(page)).toBeCloseTo(selected, 3);
@@ -122,7 +122,7 @@ test('word selection, stepping and rewind retain state and save only actual hear
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   expect(await media(page).getAttribute('src')).toBe(source);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const saved = page.waitForResponse(
     (r) => new URL(r.url()).pathname === '/api/entries' && r.request().method() === 'POST',
   );

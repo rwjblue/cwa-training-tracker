@@ -256,7 +256,7 @@ test(`actual recording passes retain source evidence and separate learner comple
   await expectResponsive(page, `listening-passes-${viewport.width}`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(dialog).toContainText('2 completed passes');
@@ -266,7 +266,7 @@ test(`actual recording passes retain source evidence and separate learner comple
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(count('This block')).toHaveText('3');
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await dialog
     .getByRole('textbox', { name: /^Notes\b/ })
     .fill('Observed passes with two exact speed files.');
@@ -320,7 +320,7 @@ test(`actual recording passes retain source evidence and separate learner comple
   await expect(progress).toContainText('without required assignment credit');
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
   await expect(count('This block')).toHaveText('1', { timeout: 10_000 });
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(dialog.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(dialog).toHaveCount(0);
   const all = (await (await context.request.get('/api/entries')).json()).entries;

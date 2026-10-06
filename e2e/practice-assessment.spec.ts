@@ -233,7 +233,7 @@ test('guest finished generated listening supports explicit ratings without on-ai
         .evaluate((audio: HTMLAudioElement) => audio.currentTime),
     )
     .toBeGreaterThan(1.25);
-  await page.getByRole('button', { name: 'Review & save', exact: true }).press('Enter');
+  await page.getByRole('button', { name: 'Save', exact: true }).press('Enter');
   await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(rating(page)).toHaveValue('');
   await page.getByRole('combobox', { name: 'Activity', exact: true }).selectOption('on-air');

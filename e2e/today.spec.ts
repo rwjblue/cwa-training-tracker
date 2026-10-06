@@ -89,7 +89,7 @@ test('Today brings personal assignments forward and keeps logging separate from 
     .getByRole('button', { name: 'Return to practice', exact: true })
     .click();
   await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
-  await page.getByRole('button', { name: 'Review & save 07:00', exact: true }).click();
+  await page.getByRole('button', { name: 'Save 07:00', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'sending',
   );
@@ -304,7 +304,7 @@ test('course dates populate Today with playable assignments and preserve linked 
     `Session ${assigned.lesson} · WD101-10`,
   );
   let listened = await audio.evaluate((element: HTMLAudioElement) => element.currentTime);
-  await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await openDisclosure(page, 'Speed, rating and on-air observations');
   await expect(page.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
   await expect(page.getByLabel('Effective WPM', { exact: true })).toHaveValue('10');
@@ -347,7 +347,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   await page.clock.fastForward(65_000);
   await page.getByRole('button', { name: 'Start recall timer', exact: true }).click();
   await page.clock.runFor(2_000);
-  await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(dialog.getByLabel('Character WPM', { exact: true })).toHaveValue('25');
@@ -368,7 +368,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   );
 
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);

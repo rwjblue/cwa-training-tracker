@@ -133,7 +133,7 @@ test('familiar review rotates native material and saves exact private evidence w
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(1.2);
   await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Extra review.');
   await dialog.evaluate(async (element) => {
@@ -159,7 +159,7 @@ test('familiar review rotates native material and saves exact private evidence w
   });
   await page.setViewportSize({ width: 390, height: 844 });
   mobile = true;
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(dialog.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(page).toHaveURL(/#overview$/);
   await expect(

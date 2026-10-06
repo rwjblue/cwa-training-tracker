@@ -152,7 +152,7 @@ test('optional daily words count actual replay separately from recall and retire
   const listened = await daily.getByLabel('Word listening only').innerText();
 
   await activate(daily.getByRole('button', { name: 'Continue word listening', exact: true }));
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const review = page.getByRole('dialog');
   await openDisclosure(review, 'Measured results and practice evidence');
   const rawListening = await review.getByText(/^Measured word listening:/).innerText();
@@ -172,7 +172,7 @@ test('optional daily words count actual replay separately from recall and retire
 
   await activate(daily.getByRole('button', { name: 'Continue word listening', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Your word list/ })).toHaveValue('E E');
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(review.getByText(/^Measured word listening:/)).toHaveText(rawListening);
   await activate(review.getByRole('button', { name: 'Cancel', exact: true }));
   mobile = true;
@@ -186,7 +186,7 @@ test('optional daily words count actual replay separately from recall and retire
       return route.fulfill({ status: 503, json: { error: 'Synthetic word save unavailable' } });
     return route.continue();
   });
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await review.evaluate(async (element) => {
     await Promise.all(
       element.getAnimations({ subtree: true }).map((animation) => animation.finished),

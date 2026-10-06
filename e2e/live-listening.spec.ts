@@ -102,7 +102,7 @@ test('native word speed edits preserve heard timing, paused position and continu
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
   await expectResponsive(page, 'live-word-retimed');
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const review = page.getByRole('dialog');
   await expect(review).toContainText('20 character / 10 effective WPM');
   await expect(review).toContainText('60 character / 60 effective WPM');
@@ -114,7 +114,7 @@ test('native word speed edits preserve heard timing, paused position and continu
   await expect(page.getByRole('textbox', { name: /^Your word list/ })).toHaveValue(
     'PARIS E PARIS E',
   );
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const saved = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === '/api/entries' &&
@@ -288,7 +288,7 @@ test('explicit keyboard and native rewinds retain a mixed word prefix near the l
     );
   }
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
-  await page.getByRole('button', { name: 'Review & save', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Save', exact: true }).first().click();
   const review = page.getByRole('dialog');
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/entries') && response.request().method() === 'POST',

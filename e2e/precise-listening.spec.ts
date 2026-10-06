@@ -235,7 +235,7 @@ test('native 55/60 WPM listening survives canceled review and exact save retry i
   await expect
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.ended))
     .toBe(true);
-  await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('55 character / 55 effective WPM');
   await expect(dialog).toContainText('60 character / 60 effective WPM');
@@ -249,7 +249,7 @@ test('native 55/60 WPM listening survives canceled review and exact save retry i
       return route.fulfill({ status: 503, json: { error: 'Synthetic precise save unavailable' } });
     return route.continue();
   });
-  await page.getByRole('button', { name: 'Review & save', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await dialog.getByRole('button', { name: 'Save practice', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Practice upload status' })).toContainText(

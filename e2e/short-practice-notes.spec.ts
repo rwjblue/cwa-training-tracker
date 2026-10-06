@@ -213,7 +213,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
     .poll(() => audio.evaluate((el: HTMLAudioElement) => el.currentTime), { timeout: 20_000 })
     .toBeGreaterThan(12);
   await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await page.keyboard.press('Escape');
   await expect(scratchpad).toHaveValue(shortNotes);
   await activate(page.getByRole('button', { name: 'Finish practice', exact: true }));

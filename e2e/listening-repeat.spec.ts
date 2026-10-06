@@ -110,13 +110,13 @@ test('native repeated rounds use fresh source order and count only actual bounda
   // completed measurements. New round is an explicit learner action.
   await page.getByRole('button', { name: 'New round', exact: true }).tap();
   expect(await list(page)).toEqual(ordered);
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const review = page.getByRole('dialog');
   await review.evaluate((e) =>
     Promise.all(e.getAnimations({ subtree: true }).map((a) => a.finished)),
   );
   await review.getByRole('button', { name: 'Cancel', exact: true }).tap();
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const saved = page.waitForResponse(
     (r) => new URL(r.url()).pathname === '/api/entries' && r.request().method() === 'POST',
   );

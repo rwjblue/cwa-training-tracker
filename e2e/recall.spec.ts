@@ -171,7 +171,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(position + 0.5);
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const dialog = page.getByRole('dialog');
   await expect(dialog).toHaveCSS('opacity', '1');
   await expect(dialog.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
@@ -184,7 +184,7 @@ test(`interrupted recall stays separate from playback and survives corrected sav
   const measured = await dialog.getByText(/^Measured \d+\.\d{2} seconds/).textContent();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(dialog.getByText(/^Measured \d+\.\d{2} seconds/)).toHaveText(measured!);
   await openDisclosure(dialog, 'Adjust measured time');
   await dialog.getByRole('checkbox', { name: 'Correct measured time', exact: true }).check();

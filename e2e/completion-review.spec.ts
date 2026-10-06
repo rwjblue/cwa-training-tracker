@@ -27,7 +27,7 @@ test('completion reviews ratings, retains a rejected save and retries completion
   await row.getByRole('button', { name: 'Practice', exact: true }).click();
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
   await page.clock.runFor(2000);
-  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await page.getByRole('button', { name: 'Complete', exact: true }).click();
   const review = page.getByRole('dialog', { name: 'Save practice', exact: true });
   await expect(review).toBeVisible();
   await openDisclosure(review, 'Speed, rating and on-air observations');
@@ -37,7 +37,7 @@ test('completion reviews ratings, retains a rejected save and retries completion
   const entries = async () => (await (await context.request.get('/api/entries')).json()).entries;
   expect((await plan()).find((item: { id: string }) => item.id === task.id).done).toBe(false);
   expect(await entries()).toHaveLength(0);
-  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await page.getByRole('button', { name: 'Complete', exact: true }).click();
   await openDisclosure(review, 'Speed, rating and on-air observations');
   await review.getByRole('combobox', { name: /^Performance rating/ }).selectOption('good');
   await page.evaluate(() => {
@@ -132,7 +132,7 @@ test('canceling a failed completion keeps saved work and starts a fresh timed bl
       return native.call(this, key, value);
     };
   });
-  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await page.getByRole('button', { name: 'Complete', exact: true }).click();
   const review = page.getByRole('dialog', { name: 'Save practice', exact: true });
   await review.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
   await expect(review.getByRole('alert')).toContainText('Practice is saved.');
@@ -145,7 +145,7 @@ test('canceling a failed completion keeps saved work and starts a fresh timed bl
   await page.evaluate(() => Object.assign(window, { failCompletionStorage: false }));
   await page.getByRole('button', { name: 'Start practice', exact: true }).click();
   await page.clock.runFor(1000);
-  await page.getByRole('button', { name: 'Complete exercise', exact: true }).click();
+  await page.getByRole('button', { name: 'Complete', exact: true }).click();
   await review.getByRole('button', { name: 'Save and complete exercise', exact: true }).click();
   await expect(review).toHaveCount(0);
   const saved = await entries();

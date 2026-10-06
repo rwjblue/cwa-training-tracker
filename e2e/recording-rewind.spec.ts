@@ -89,7 +89,7 @@ test('compact recording rewind clamps early positions and saves only actual rehe
 
   await expectResponsive(page, 'recording-rewind');
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const dialog = page.getByRole('dialog');
   const receipt = page.waitForResponse(
     (response) =>

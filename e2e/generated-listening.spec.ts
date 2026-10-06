@@ -66,7 +66,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await page.getByRole('textbox', { name: /^Your word list/ }).fill(custom);
   await speed(page, 20, 10);
   await listen();
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Your word list/ })).toHaveValue(custom);
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('common-30');
@@ -92,7 +92,7 @@ test(`generated listening saves only applied setups and retains exact content at
   const retained = page.getByRole('region', { name: 'Current practice block', exact: true });
   await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
   expect(await audio.evaluate((element: HTMLAudioElement) => element.paused)).toBe(true);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const review = page.getByRole('dialog');
   const reviewTitle = review.getByRole('heading', {
     name: 'Save practice',
@@ -242,7 +242,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await listen();
   await speed(page, 25, 15);
   await expect.poll(() => page.locator('.trainer-catalog').innerText()).toBe(transcript);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   for (const call of calls) await expect(review).toContainText(call);
   await activate(review.getByRole('button', { name: 'Cancel', exact: true }));
   await expect.poll(() => page.locator('.trainer-catalog').innerText()).toBe(transcript);
@@ -257,7 +257,7 @@ test(`generated listening saves only applied setups and retains exact content at
   await page.getByRole('combobox', { name: 'QSO scenario', exact: true }).selectOption('pota');
   await listen();
   await speed(page, 30, 20);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(review).toContainText('20 character / 10 effective WPM');
   await expect(review).toContainText('25 character / 15 effective WPM');
   await expect(review).not.toContainText('30 character / 20 effective WPM');

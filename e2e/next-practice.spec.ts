@@ -116,7 +116,7 @@ test('next assignment preserves native work through inspection and exact retry b
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Retained next-block notes',
   );
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
@@ -133,7 +133,7 @@ test('next assignment preserves native work through inspection and exact retry b
       });
     return route.continue();
   });
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(page.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);

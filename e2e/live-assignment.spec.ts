@@ -107,7 +107,7 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
   await page.setViewportSize({ width: 390, height: 844 });
   mobile = true;
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const workedTime = await page.getByRole('textbox', { name: /^Time practiced/ }).inputValue();
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeEnabled();
@@ -130,7 +130,7 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await page.clock.setFixedTime(new Date('2026-10-07T14:00:00Z'));
   await page.clock.fastForward(60001);
   await expect(opportunity).toContainText('No CWT window remains before the deadline.');
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Time practiced/ })).toHaveValue(workedTime);
   await openDisclosure(page, 'Speed, rating and on-air observations');
   await page.getByRole('combobox', { name: /^Performance rating/ }).selectOption('good');
@@ -276,7 +276,7 @@ test('retained manual work follows event edits and every timer checks current el
   await page.clock.runFor(2200);
   await openDisclosure(page, 'Session options and logging');
   await activate(page.getByRole('button', { name: 'Pause timer', exact: true }));
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const workedTime = await page.getByRole('textbox', { name: /^Time practiced/ }).inputValue();
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
   const editEvent = async (event: string) => {
@@ -339,7 +339,7 @@ test('retained manual work follows event edits and every timer checks current el
   await expect(page.getByRole('alert')).toContainText('not currently eligible');
   await expect(page.getByRole('button', { name: 'Pause timer', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toHaveCount(0);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(page.getByRole('textbox', { name: /^Time practiced/ })).toHaveValue(workedTime);
   await activate(page.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCount(0);

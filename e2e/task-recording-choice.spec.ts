@@ -276,14 +276,14 @@ test(`remembered native recording choices stay scoped and preserve played facts 
   await openDisclosure(page, 'Choose a recording speed');
   await speed.selectOption(url(25)); // Selected, remembered, but never heard.
   await pausedAtZero(25);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const review = page.getByRole('dialog');
   await expect(review).toContainText('18 WPM');
   await expect(review).toContainText('13 WPM');
   await page.keyboard.press('Escape');
   await expect(review).toHaveCount(0);
   await pausedAtZero(25);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const receipt = page.waitForResponse(
     (response) =>
       response.url().endsWith('/api/entries') &&

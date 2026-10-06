@@ -109,7 +109,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect(retained).toContainText(assigned.title);
   // A separate manual log shares the task, but does not own the paused Studio.
   await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const reviewedDuration = await page.getByLabel(/^Time practiced/).inputValue();
   const reviewedMeasurement = await page
     .getByRole('dialog')
@@ -152,7 +152,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);
   await expect(scratchpad).toHaveValue(notes);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue(reviewedDuration);
   await expect(page.getByRole('dialog').getByText(/^Measured \d+\.\d{2} seconds/)).toHaveText(
     reviewedMeasurement!,
@@ -197,12 +197,12 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(position + 0.3);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(page.getByRole('button', { name: 'Cancel', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(2);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   await expectAccessible(page, `retained-review-${viewport.width}`);
 
@@ -319,7 +319,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await activate(retained.getByRole('button', { name: 'Return to practice', exact: true }));
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toBeVisible();
   await expect(scratchpad).toHaveValue(notes);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('0:12');
   await openDisclosure(page, 'External results and exact timing');
   await page.getByRole('combobox', { name: 'External result', exact: true }).selectOption('words');
@@ -376,7 +376,7 @@ test(`assigned external Finish retains measured time and clears saved scratchpad
   await activate(page.getByRole('link', { name: 'Today', exact: true }));
   await activate(row.getByRole('button', { name: 'Practice', exact: true }));
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Review & save', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
   await expect(page.getByText('00:00 elapsed', { exact: true })).toBeVisible();
   await expect(scratchpad).toHaveValue('');
 });

@@ -142,7 +142,7 @@ test('tool library inspection retains a lesson and guards its replacement with t
   expect(await audio.evaluate((el: HTMLAudioElement) => el.currentTime)).toBe(position);
   expect(await audio.evaluate((el: HTMLAudioElement) => el.paused)).toBe(true);
   await expect(scratchpad).toHaveValue(notes);
-  await activate(page.getByRole('button', { name: 'Review & save', exact: true }));
+  await activate(page.getByRole('button', { name: 'Save', exact: true }));
   const measurement = await page
     .getByRole('dialog')
     .getByText(/^Measured \d+\.\d{2} seconds/)
@@ -223,6 +223,6 @@ test('tool library inspection retains a lesson and guards its replacement with t
   await expect(
     page
       .getByRole('group', { name: 'Sending practice controls', exact: true })
-      .getByRole('button', { name: 'Review & save session', exact: true }),
+      .getByRole('button', { name: 'Save session', exact: true }),
   ).toBeDisabled();
 });

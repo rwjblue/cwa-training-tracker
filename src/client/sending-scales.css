@@ -192,26 +192,6 @@
   .sending-reading.is-large .sending-group {
     font-size: 27px;
   }
-  .studio-quick-actions.is-sending {
-    display: grid;
-    grid-template-columns: auto minmax(42px, 1fr) auto;
-    gap: 8px;
-    padding: 10px;
-  }
-  .studio-quick-actions.is-sending > .button {
-    width: auto;
-    padding: 10px 8px;
-    min-height: 44px;
-    justify-content: center;
-    gap: 6px;
-  }
-  .studio-quick-actions.is-sending > span {
-    font-size: 13px;
-    text-align: center;
-  }
-  .sending-timer-status {
-    display: none;
-  }
   .timer-card.is-sending {
     padding: 12px 16px;
   }

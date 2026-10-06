@@ -55,7 +55,7 @@ async function timed(page: Page, seconds: number) {
   await page.clock.fastForward(seconds * 1000);
   await keyboard(page.getByRole('button', { name: 'Pause practice', exact: true }));
   await page.clock.resume();
-  await keyboard(page.getByRole('button', { name: /Review & save/ }));
+  await keyboard(page.getByRole('button', { name: /^Save(?: \d|$)/ }));
 }
 test('private paste/link/file authoring retains exact revisions through reader, practice/class, cancellation and save retry', async ({
   page,
@@ -126,7 +126,7 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await dialog.getByRole('checkbox', { name: /completed this material/ }).check();
   await page.keyboard.press('Escape');
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
-  await keyboard(page.getByRole('button', { name: /Review & save/ }));
+  await keyboard(page.getByRole('button', { name: /^Save(?: \d|$)/ }));
   await page
     .getByRole('dialog')
     .getByRole('checkbox', { name: /completed this material/ })

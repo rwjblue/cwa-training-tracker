@@ -64,9 +64,7 @@ async function minute(page: Page, mobile: boolean) {
   await activate(page, page.getByRole('button', { name: 'Start timer', exact: true }), mobile);
   await page.clock.fastForward(60_000);
   await activate(page, page.getByRole('button', { name: 'Pause timer', exact: true }), mobile);
-  await expect(
-    page.getByRole('button', { name: 'Review & save 01:00', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save 01:00', exact: true })).toBeEnabled();
 }
 
 const mobile = false;
@@ -152,11 +150,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
     name: 'Save practice',
     exact: true,
   });
-  await activate(
-    page,
-    page.getByRole('button', { name: 'Review & save 01:00', exact: true }),
-    mobile,
-  );
+  await activate(page, page.getByRole('button', { name: 'Save 01:00', exact: true }), mobile);
   await expect(review).toContainText('Extra review.');
   await expect(review).toContainText('does not add to the assignment’s required practice');
   await expect(review.getByLabel(/^Time practiced/)).toHaveValue('1:00');
@@ -188,11 +182,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
     'Review notes remain with this minute.',
   );
-  await activate(
-    page,
-    page.getByRole('button', { name: 'Review & save 01:00', exact: true }),
-    mobile,
-  );
+  await activate(page, page.getByRole('button', { name: 'Save 01:00', exact: true }), mobile);
 
   const bodies: string[] = [];
   page.on('request', (request) => {
@@ -283,11 +273,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await activate(page, row.getByRole('button', { name: 'Practice', exact: true }), mobile);
   await expect(page.getByRole('heading', { name: 'Lesson practice', exact: true })).toBeVisible();
   await minute(page, mobile);
-  await activate(
-    page,
-    page.getByRole('button', { name: 'Review & save 01:00', exact: true }),
-    mobile,
-  );
+  await activate(page, page.getByRole('button', { name: 'Save 01:00', exact: true }), mobile);
   await expect(review.getByText('Extra review.', { exact: true })).toHaveCount(0);
   await activate(page, review.getByRole('button', { name: 'Save practice', exact: true }), mobile);
   await expect(review).toHaveCount(0);
@@ -320,11 +306,7 @@ test(`extra review retains purpose without required credit (desktop)`, async ({
   await today.locator('summary').filter({ hasText: 'Completed in this plan' }).click();
   await activate(page, row.getByRole('button', { name: 'Extra review', exact: true }), mobile);
   await minute(page, mobile);
-  await activate(
-    page,
-    page.getByRole('button', { name: 'Review & save 01:00', exact: true }),
-    mobile,
-  );
+  await activate(page, page.getByRole('button', { name: 'Save 01:00', exact: true }), mobile);
   await expect(review).toContainText('Extra review.');
   await activate(page, review.getByRole('button', { name: 'Save practice', exact: true }), mobile);
   await expect(review).toHaveCount(0);

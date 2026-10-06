@@ -91,23 +91,17 @@ test('sending scales stay in the studio and save assigned practice without openi
   await drill.click();
   await expect(drill).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Pause practice', exact: true })).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Review & save 00:37', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save 00:37', exact: true })).toBeEnabled();
   await page.clock.fastForward(23_000);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
   await page.clock.fastForward(120_000);
   await warmUp.click();
   await drill.click();
-  await expect(
-    page.getByRole('button', { name: 'Review & save 01:00', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save 01:00', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Resume practice', exact: true }).click();
   await page.clock.fastForward(17_000);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Review & save 01:17', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save 01:17', exact: true })).toBeEnabled();
   expect(popups).toEqual([]);
   expect(context.pages()).toHaveLength(pagesBeforePractice);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
@@ -118,38 +112,44 @@ test('sending scales stay in the studio and save assigned practice without openi
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectAccessible(page, 'sending-desktop');
 
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const controls = page.getByRole('group', { name: 'Sending practice controls', exact: true });
   await expect(page.getByRole('button', { name: 'Resume practice', exact: true })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Review & save 01:17', exact: true })).toHaveCount(
-    1,
-  );
-  // Read down the page while retaining compact, reachable controls above the targets.
-  await text.getByText('<BT> <BT> <BT> <BT> <BT>', { exact: true }).scrollIntoViewIfNeeded();
-  const controlsBox = await controls.boundingBox();
-  expect(controlsBox).not.toBeNull();
-  expect(controlsBox!.height).toBeLessThanOrEqual(80);
-  expect(controlsBox!.y).toBe(0);
-  expect(controlsBox!.y + controlsBox!.height).toBeLessThan(844);
-  for (const button of [
-    controls.getByRole('button', { name: 'Resume practice', exact: true }),
-    controls.getByRole('button', { name: 'Review & save 01:17', exact: true }),
-  ]) {
-    const box = await button.boundingBox();
-    expect(box!.height).toBeGreaterThanOrEqual(44);
-    expect(
-      await button.evaluate((element) => {
-        const box = element.getBoundingClientRect();
-        return element.contains(
-          document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
-        );
-      }),
-    ).toBe(true);
+  await expect(page.getByRole('button', { name: 'Save 01:17', exact: true })).toHaveCount(1);
+  // All actions stay in one compact row while reading at desktop and narrow phone widths.
+  for (const width of [1280, 768, 390, 375, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await text.getByText('<BT> <BT> <BT> <BT> <BT>', { exact: true }).scrollIntoViewIfNeeded();
+    const controlsBox = await controls.boundingBox();
+    expect(controlsBox).not.toBeNull();
+    expect(controlsBox!.height).toBeLessThanOrEqual(80);
+    expect(controlsBox!.y).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    let previousRight = controlsBox!.x;
+    for (const button of [
+      controls.getByRole('button', { name: 'Save 01:17', exact: true }),
+      controls.getByRole('button', { name: 'Complete', exact: true }),
+      controls.getByRole('button', { name: 'Resume practice', exact: true }),
+    ]) {
+      const box = await button.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.x).toBeGreaterThanOrEqual(previousRight);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(controlsBox!.x + controlsBox!.width);
+      previousRight = box!.x + box!.width;
+      expect(
+        await button.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return element.contains(
+            document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+          );
+        }),
+      ).toBe(true);
+    }
   }
   await expectAccessible(page, 'sending-mobile');
 
-  await page.getByRole('button', { name: 'Review & save 01:17', exact: true }).click();
+  await page.getByRole('button', { name: 'Save 01:17', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Activity', exact: true })).toHaveValue(
     'sending',
   );

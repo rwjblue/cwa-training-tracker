@@ -102,19 +102,15 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
     page.getByRole('region', { name: 'Optional daily word listening', exact: true }),
   ).toContainText('Total listening: 0:00 / 10:00.');
   await page.getByRole('button', { name: 'Return to practice', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save 01:23', exact: true })).toBeEnabled();
   expect((await (await context.request.get('/api/entries')).json()).entries).toEqual([]);
-  await page.getByRole('button', { name: 'Review & save 01:23', exact: true }).click();
+  await page.getByRole('button', { name: 'Save 01:23', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Save practice', exact: true })).toBeFocused();
   await expect(page.getByLabel(/^Time practiced/)).toHaveValue('1:23');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await page.clock.fastForward(120_000);
-  await expect(
-    page.getByRole('button', { name: 'Review & save 01:23', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save 01:23', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Resume timer', exact: true }).click();
   await page.clock.fastForward(42_000);
   await page.getByRole('button', { name: 'Pause timer', exact: true }).click();
@@ -190,9 +186,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
   await openPracticeTool(page, 'Word listening');
   await openDisclosure(page, 'Session options and logging');
-  await expect(
-    page.getByRole('button', { name: 'Review & save session', exact: true }),
-  ).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save session', exact: true })).toBeDisabled();
   const scratchpad = page.getByRole('textbox', { name: 'Scratchpad', exact: true });
   await expect(scratchpad).toHaveValue('');
   await scratchpad.fill('Notes for the next session');
@@ -218,9 +212,7 @@ test('timer waits for explicit save, preserves seconds and pauses, and allows ma
   expect(timed.metadata.scratchpad).toBe('Copied the final call.');
   expect(timed.source).toBe('morse');
   await openDisclosure(page, 'Session options and logging');
-  await expect(
-    page.getByRole('button', { name: 'Review & save session', exact: true }),
-  ).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save session', exact: true })).toBeDisabled();
   await openDisclosure(page, 'Session options and logging');
   await expect(page.getByRole('button', { name: 'Start timer', exact: true })).toBeEnabled();
 

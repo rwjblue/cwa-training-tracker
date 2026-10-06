@@ -276,7 +276,7 @@ test('actual Story save keeps native time, canceled review and exact retry priva
   await pause(page);
   const heard = await media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime);
   await selector(page).selectOption('story-radio');
-  await page.getByRole('button', { name: 'Review & save', exact: true }).press('Enter');
+  await page.getByRole('button', { name: 'Save', exact: true }).press('Enter');
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('The trail marker (short)');
   await expect(dialog).not.toContainText('The quiet band (medium)');
@@ -308,7 +308,7 @@ test('actual Story save keeps native time, canceled review and exact retry priva
     };
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Review & save', exact: true }).tap();
+  await page.getByRole('button', { name: 'Save', exact: true }).tap();
   await dialog.evaluate((element) =>
     Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)),
   );
