@@ -219,6 +219,7 @@ test('public course sessions and exact recording speeds override a recipient dev
     settings: { ...DEFAULT_PROFILE, level: 'advanced', useGravatar: false },
     plan: [],
   };
+  let courseBoot = Promise.resolve();
   const writes: string[] = [];
   page.on('request', (request) => {
     if (request.url().startsWith(`${e2eOrigin}/api/`) && request.method() !== 'GET')
@@ -226,9 +227,10 @@ test('public course sessions and exact recording speeds override a recipient dev
   });
   await page.route('**/api/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/account-state', (route) => route.fulfill({ json: { state } }));
-  await page.route('**/api/entries', (route) =>
-    route.fulfill({ json: { accountId: user.id, generation: 0, revision: 0, entries: [] } }),
-  );
+  await page.route('**/api/entries', async (route) => {
+    await courseBoot;
+    await route.fulfill({ json: { accountId: user.id, generation: 0, revision: 0, entries: [] } });
+  });
   await page.route('**/api/lcwo', (route) => route.fulfill({ json: { state, data: null } }));
   await page.goto('/#course');
   await expect(page).toHaveURL(/#course\?level=advanced&session=1$/);
@@ -236,6 +238,33 @@ test('public course sessions and exact recording speeds override a recipient dev
     page.getByRole('heading', { name: 'Advanced curriculum', exact: true }),
   ).toBeVisible();
   const bareShare = page.url();
+  // Opening navigation during a canonical Course reload must survive late
+  // account hydration without moving focus away from the selected link.
+  await page.setViewportSize({ width: 390, height: 844 });
+  let completeBoot = () => {};
+  courseBoot = new Promise<void>((resolve) => {
+    completeBoot = resolve;
+  });
+  try {
+    await page.reload();
+    const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
+    await menu.click();
+    const courseLink = page
+      .getByRole('navigation', { name: 'Main navigation', exact: true })
+      .getByRole('link', { name: 'Academy guide', exact: true });
+    await courseLink.focus();
+    await expect(courseLink).toBeFocused();
+    completeBoot();
+    await expect(courseLink).toBeEnabled();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    await expect(courseLink).toBeFocused();
+    await expect(page).toHaveURL(bareShare);
+    await courseLink.press('Enter');
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  } finally {
+    completeBoot();
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   const recipient = await browser.newContext({
     baseURL: e2eOrigin,
     viewport: { width: 390, height: 844 },

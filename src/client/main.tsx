@@ -490,8 +490,14 @@ function App() {
         acceptedHash.current === initial.hash &&
         !(initial.page === 'settings' && !user)
       ) {
-        if (initial.page === 'course') showPage('course', true, initial.hash);
-        else writeHash(initial.hash, true);
+        if (initial.page === 'course') {
+          // Hydration only publishes the displayed selection. Keep navigation
+          // and focus owned by any interaction that started during loading.
+          const hash = courseHash(initial.level ?? profile.level, initial.session ?? 1);
+          acceptedHash.current = hash;
+          writeHash(hash, true);
+          setRouteHash(hash);
+        } else writeHash(initial.hash, true);
       }
       return;
     }
