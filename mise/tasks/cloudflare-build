@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Prepare Workers Builds and require GitHub verification"
+set -euo pipefail
+
+: "${WORKERS_CI_COMMIT_SHA:?Run this task inside Cloudflare Workers Builds}"
+
+curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 https://mise.run |
+  MISE_VERSION=v2026.9.1 sh
+cloudflare_mise="$HOME/.local/bin/mise"
+"$cloudflare_mise" trust mise.toml
+"$cloudflare_mise" install
+"$cloudflare_mise" exec -- npm ci
+"$cloudflare_mise" exec -- node scripts/cloudflare-deployment.ts wait-for-ci

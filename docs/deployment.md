@@ -57,35 +57,47 @@ npx wrangler rollback <version-id>
 npx wrangler d1 time-travel info DB
 ```
 
-The checked-in CI workflow verifies pull requests and main commits. Deployment
-is manual through mise until a scoped deployment credential is deliberately
-configured in your GitHub environment. No token is needed for tests or a
-Wrangler dry run.
+The checked-in GitHub Actions workflow verifies pull requests and main commits.
+No deployment credential is needed for its tests or Wrangler dry run.
 
-## Choosing push-to-deploy
+## Cloudflare push-to-deploy
 
-Automatic deployment is not configured yet. For this repository, prefer a
-production deployment job after the existing GitHub Actions verification job
-succeeds. That keeps type checks, unit/Worker tests, browser journeys, and the
-Wrangler dry run ahead of each release. Run it only for pushes to `main`, never
-for pull requests, and serialize production deployments so migrations and
-Worker releases cannot race. Use a GitHub production environment for deployment
-credentials and restrict its allowed branch to `main`.
+Connect the existing `cwa-training-tracker` Worker to
+`rwjblue/cwa-training-tracker` using the Cloudflare GitHub app. Grant access only
+to this repository, choose `main` as the production branch, and disable preview
+builds until they have separate database, email, and secret bindings. Cloudflare
+Workers Builds supports the following custom commands:
 
-This approach does not require installing the Cloudflare GitHub app. It needs
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the deployment environment.
-Limit the API credential to the necessary account/zone and Worker deployment,
-D1 migration, and configured email-binding permissions. Keep the existing
-`AUTH_SECRET` in Cloudflare; CI does not need a copy of that runtime secret.
-Use the repository's pinned Node version and mise tasks. See Cloudflare's
-[GitHub Actions guide](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/).
+| Setting                   | Value                              |
+| ------------------------- | ---------------------------------- |
+| Root directory            | `/`                                |
+| Build command             | `bash mise/tasks/cloudflare-build` |
+| Deploy command            | `$HOME/.local/bin/mise run deploy` |
+| `NODE_VERSION`            | `24.21.0`                          |
+| `SKIP_DEPENDENCY_INSTALL` | `1`                                |
 
-Cloudflare Workers Builds is an alternative. Connect the existing
-`cwa-training-tracker` Worker to this repository using the Cloudflare GitHub app,
-granting access only to this repository and selecting `main` as the production
-branch. Configure validation in its build command and D1 migrations before its
-deploy command; do not rely on a separate GitHub workflow to gate a build that
-starts independently on push. Keep preview builds disabled until they have
-separate database, email, and secret bindings. Choose one production deployment
-system to avoid duplicate releases. See
-[Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/).
+The build task installs pinned Mise, installs the repository's pinned Node and
+dependencies, and waits up to fourteen minutes for the GitHub `Verify` workflow
+for that exact commit. It requires a successful `main` push run, including the
+fast checks and every browser shard. A failed, canceled, missing, or timed-out
+verification stops the build before migrations. API errors also stop the build;
+the public GitHub API needs no credential, but a rate-limited build must be
+retried after the quota resets. This explicit gate connects the two systems;
+Cloudflare does not automatically wait for GitHub Actions checks.
+
+The deploy task then runs its checks, tests, build, and Wrangler dry run before
+applying remote D1 migrations and publishing the Worker. In Workers Builds it
+checks the current `main` revision before migrations and again before publishing,
+rejecting a build that has already been superseded. These checks are not a
+deployment mutex; keep migrations backward compatible and avoid overlapping
+manual releases. Cloudflare skips superseded queued builds, but a running build
+can finish while another push arrives.
+
+Select a user-owned build token scoped to this Cloudflare account and the
+required zone. Cloudflare's generated token needs **D1 Edit** added for remote
+migrations, alongside the permissions required to deploy the Worker and its
+custom domain. Keep `AUTH_SECRET` in Cloudflare; the build does not need a copy.
+Do not copy local Wrangler OAuth credentials into build variables or GitHub.
+Use one production deployment system to avoid duplicate releases. See
+[Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
+and the [Builds API reference](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/).

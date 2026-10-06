@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 #MISE description="Validate, migrate, and deploy production"
 set -euo pipefail
+
+require_current_build() {
+  if [[ -n "${WORKERS_CI:-}" || -n "${WORKERS_CI_COMMIT_SHA:-}" ]]; then
+    node scripts/cloudflare-deployment.ts require-current
+  fi
+}
+
 npm run check
 npm test
 npm run build
 npx wrangler deploy --dry-run
+require_current_build
 npx wrangler d1 migrations apply DB --remote
+require_current_build
 npx wrangler deploy
