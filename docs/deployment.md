@@ -62,11 +62,11 @@ No deployment credential is needed for its tests or Wrangler dry run.
 
 ## Cloudflare push-to-deploy
 
-Connect the existing `cwa-training-tracker` Worker to
-`rwjblue/cwa-training-tracker` using the Cloudflare GitHub app. Grant access only
-to this repository, choose `main` as the production branch, and disable preview
-builds until they have separate database, email, and secret bindings. Cloudflare
-Workers Builds supports the following custom commands:
+The existing `cwa-training-tracker` Worker is connected to
+`rwjblue/cwa-training-tracker` through the Cloudflare GitHub app. Production
+builds run on pushes to `main`. Preview builds are disabled until they have
+separate database, email, and secret bindings. The configured commands and
+build variables are:
 
 | Setting                   | Value                              |
 | ------------------------- | ---------------------------------- |
