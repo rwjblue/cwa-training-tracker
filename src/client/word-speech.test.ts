@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import index from '../../public/audio/cw-training/words/index.json';
 import manifest from '../../data/cw-training/word-speech.json';
+import comparison from '../../public/audio/cw-training/words/comparison/index.json';
 import { WORD_LISTS } from './word-content';
 import { DEFAULT_PRACTICE_PREFERENCES } from './practice-preferences';
 import { decodeWordWav, loadWordSpeech } from './word-speech';
@@ -33,6 +34,22 @@ describe('prerecorded spoken rounds', () => {
         samples.some((sample) => Math.abs(sample) > 0.1),
         word,
       ).toBe(true);
+    }
+  });
+
+  it('keeps comparison samples paired with the selected pack and intact original answers', () => {
+    expect(comparison.voiceId).toBe(manifest.generator.voice);
+    expect(comparison.model).toBe(manifest.generator.model);
+    expect(new Set(comparison.words.map((entry) => entry.word)).size).toBe(comparison.words.length);
+    for (const entry of comparison.words) {
+      const authored = manifest.words.find((answer) => answer.word === entry.word)!;
+      expect(authored.pronunciation).toBe(entry.pronunciation);
+      expect(entry.newUrl).toBe(index.clips[entry.word as keyof typeof index.clips].url);
+      const original = readFileSync(`public${entry.oldUrl}`);
+      expect(createHash('sha256').update(original).digest('hex')).toBe(entry.oldSha256);
+      expect(decodeWordWav(Uint8Array.from(original).buffer).length).toBeGreaterThan(
+        MORSE_SAMPLE_RATE * 0.1,
+      );
     }
   });
 

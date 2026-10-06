@@ -1,11 +1,14 @@
 {
-  "version": 1,
+  "version": 2,
   "generator": {
-    "engine": "kokoro-onnx",
-    "model": "kokoro-v1.0.onnx",
-    "voice": "af_heart",
-    "language": "en-us",
-    "speed": 1
+    "engine": "elevenlabs",
+    "model": "eleven_v4",
+    "voice": "hpp4J3VqNfWAUOO0d1Us",
+    "language": "en",
+    "voiceSettings": {
+      "stability": 0.75,
+      "similarity_boost": 0.75
+    }
   },
   "words": [
     {
@@ -66,8 +69,7 @@
     {
       "word": "AS",
       "pronunciation": "as",
-      "path": "public/audio/cw-training/words/as.wav",
-      "phonemes": "\u02c8\u00e6z"
+      "path": "public/audio/cw-training/words/as.wav"
     },
     {
       "word": "AT",
@@ -504,5 +506,12 @@
       "pronunciation": "years",
       "path": "public/audio/cw-training/words/yrs.wav"
     }
-  ]
+  ],
+  "provenance": {
+    "generatedAt": "2026-10-06",
+    "voiceName": "Bella \u2014 Professional, Bright, Warm",
+    "voiceDescription": "Standard American, crisp diction, deliberate pace; selected for clear educational answers.",
+    "voiceCatalog": "https://api.elevenlabs.io/v1/voices",
+    "usageTerms": "https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform"
+  }
 }

@@ -1,498 +1,696 @@
 {
   "clips": {
     "73": {
-      "inputHash": "a5e0ffdef168c982e1248d5ef7a347daff7e8caef7706bace44f9d296b8739b5",
-      "sha256": "9af00dfb0f16d69062eab51a14ed71d20fc4948cb54a71b023ea9ed607b2cc39",
+      "inputHash": "44e6721b44548d5d162a70565a8b9324bbcf166cf7488738aa93ce5e0a4658e6",
+      "requestId": "nsD6rk8wtp5Zvm0TbBr8",
+      "sha256": "d8fcf65b7832b795119e804c60bc11ad4e6318a8ab0c1a32e55934935ca392af",
+      "sourceSha256": "3cb395d40f3e58f3cd68a298a5cdf3719f34682d00e01f9ae315cf5a853c9f65",
       "url": "/audio/cw-training/words/73.wav"
     },
     "88": {
-      "inputHash": "c5be952b9aee1e8ae2b898a3710b082f7276b78642f79ed94d51e9698d97c545",
-      "sha256": "caf7f64516db19c0ed994413015c6f7c78372980ab3565f41c828ecd5faf2fe1",
+      "inputHash": "b26ef600093bc88f0c9e3100c5a35431021f110fa3924df3b3f1fd45c398b645",
+      "requestId": "mvnuWG5DpRlCxdYBEw7G",
+      "sha256": "d34dd906e747b88fe5aa51512b88b6d154a12d5f8d094c6ff5a76545793eadc5",
+      "sourceSha256": "20102a256ef9fd2cc02a3a706a6ded9864469983d423f98cedb96a530673df7d",
       "url": "/audio/cw-training/words/88.wav"
     },
     "A": {
-      "inputHash": "103d944fc8adfd4adcc27198b35d565e686b5fe8aa6928d7664439e2c0d5ba66",
-      "sha256": "1f972acf29564d19b37e5e5f5286e24f54c7d6d5ab0d3a4c6438d91b2d2a2dc2",
+      "inputHash": "b84489febb5d26d14f3d674c43828b85fd98807961a49a57cdf55dba5c616529",
+      "requestId": "B64hYS22nxQS3QpKoK7F",
+      "sha256": "2e1979353b18e1d949a99bc5aa52f859c653766f32b7ef9ab1853d6e81ec0ba5",
+      "sourceSha256": "cee787d562313d3d4e00d5bcc5fbabda03c1994ed1ffb7f5211d34c21fac4380",
       "url": "/audio/cw-training/words/a.wav"
     },
     "ABT": {
-      "inputHash": "bc2b5266bb2da8b7679205b1ed5d038aed90459db322d26adbe3fbf0438782f8",
-      "sha256": "51514b295619e30669e7751044949cbf4d036c016d9a473494f906456cadd3db",
+      "inputHash": "d488f37633a0e3709632191c8687b90608f5816116a35d3ba67c9817d14bec97",
+      "requestId": "mQQkYpplCa9RjvTPLBFd",
+      "sha256": "ea5ca6381f63e46bff27644bb55b1689e15a1bea236b4fe972425774743921d9",
+      "sourceSha256": "8dcf0dfc06a4254e297e781ac26d8467b3af2340eaac50c738a481db44776f89",
       "url": "/audio/cw-training/words/abt.wav"
     },
     "AGE": {
-      "inputHash": "c8d9ca8c3582c9683dcc6385578fef3115ed5e7fa99cf40fd7d518e26439afb1",
-      "sha256": "e09586c5fe3aa1806e6b5944e0294ccc1b093687a3e16464835fd88d61c73ee5",
+      "inputHash": "88e6b2e3c9ce52dab6b284fadeed2c8c0969d4a3aa6915548eed23a86a0e6983",
+      "requestId": "Mprr8XgFzx9tZQlflzN9",
+      "sha256": "2800610f6b653a395e137d35d16613fc2db4b0cb5b71675f0094244f7518bd04",
+      "sourceSha256": "aa6b569805bdd8ced1742f2b466c6590f05b2e42d4674ac8efef0efeb6cd1fe3",
       "url": "/audio/cw-training/words/age.wav"
     },
     "AGN": {
-      "inputHash": "3d7ae8bbc4905a0d578eaed9a7a9c5043b0c979d39b9a0ae686bed5aa7cfb2ae",
-      "sha256": "a4c8d52f7f062fedb971c03bf16d8ac5364cc39fd7c9f780e6f18c90dd4d69ab",
+      "inputHash": "f52d58b58ef4c6bde652f8ad067898555d7c7b0f3a7e9b85e891548efaaa275e",
+      "requestId": "FIACZjXXw17fFi0WKPzc",
+      "sha256": "72d14ebd24f81fb5faa0d373dd08e63331998c63e3e38391b1113628e7aa38c3",
+      "sourceSha256": "10a1dc48a1b351863ad2079f3d342ddefeabde1dfd369bacb16d0863c3ec89af",
       "url": "/audio/cw-training/words/agn.wav"
     },
     "AN": {
-      "inputHash": "6570de96bce80de5a5e1a4cb2411f559c64364a05fcef477f472635bf41305b7",
-      "sha256": "ee957cda36ae09599a86d4cd03da7f6496402469c338014f825e3a85bfca88f0",
+      "inputHash": "6eb7e0e2f5c87290f4540df6c80c7b6ffac0ec0ad1a5e8ecc436835651640a7e",
+      "requestId": "Vu0O93fl3nGJ3O2XicQw",
+      "sha256": "645f01c3e36e0e0421ce355a4c8c20c4fb1848f11f85bbf965be7ba669515cef",
+      "sourceSha256": "63af7741743d8c7bc9b3fdac5be44f080ae2cdd1bd7b967030a6ba45e97dbcdf",
       "url": "/audio/cw-training/words/an.wav"
     },
     "AND": {
-      "inputHash": "51f5ae0585d7f548c841161384c3e1b9d3b5dfd9502f4d9a0f9353d86572fc18",
-      "sha256": "39522769d8c682900f9646c4513fd77867ddc61f2a7dbdf17423c4fc0ef36ae1",
+      "inputHash": "d77446b7b5e1526fc7f743fb479429a4824c550d23eb76358530cd9b79287829",
+      "requestId": "hILpJ9uFFSa3FCD25hB9",
+      "sha256": "421f4142166825ec48ed03e0412a77f2e07191ebfd7889189f232e9b23946ecc",
+      "sourceSha256": "380233323cd4c3d0afaec70111a4b2c88f16a27161995cde75c5780268f0868d",
       "url": "/audio/cw-training/words/and.wav"
     },
     "ANT": {
-      "inputHash": "7954c4e699f94cd1d614543d6cf783c309f4febccdc7b19c3141f46e728eb399",
-      "sha256": "6c513754437e451dfc0fdab812ee71365765d80a4c87cfce1ce41b1d54e59167",
+      "inputHash": "de4de130cc7aae3137e93301e72338497747eef5bb592902c3640cff6216e4d5",
+      "requestId": "YnepO2TGQkJ3rTU5gP8J",
+      "sha256": "a6b5cb1c31b8ba44ff739dd9a4043776ce5dec423ac74885870648e6f9ad4ffa",
+      "sourceSha256": "a9bef336c1aac40345f5004f78f29e840d2019eadbae0fb295ad98b8e8ea46c3",
       "url": "/audio/cw-training/words/ant.wav"
     },
     "AR": {
-      "inputHash": "725cc5f3c67618ef2c1d19253d04afb5054620bbf345df17ef4910bd04488251",
-      "sha256": "a071de5f7334b829470fd60ca28225d96aeaafba419d6a9fdaabf5295bf9d6c1",
+      "inputHash": "2d626b2d95d60084cbb62cf8fff32717aec8b70b0cc6d84e65a4ebd948bd9fd6",
+      "requestId": "kr2tOwK3tVAi0o5xxeSt",
+      "sha256": "eaa8ddd4e26957fde280dc389a41ea3bb8d7c7623236eda8c1daff4073319360",
+      "sourceSha256": "6767360177648e944c28271beaadf69dd5d95df1e27c3a47e7b0aaa83e32f993",
       "url": "/audio/cw-training/words/ar.wav"
     },
     "ARE": {
-      "inputHash": "4d5ff058dafd316318a44dc1f3221e010b481c818ae1621e748277f854cbe41e",
-      "sha256": "70a8884761cc8c843a8c7cfc043a89cc970ccace3ba28dc28ed5cf68e85d055b",
+      "inputHash": "66dfa890cf34eb9ff023c8c94fc0b799a86654ba8850aa1545d387b3405b0264",
+      "requestId": "XM56FT3lyj0EzsaCwOUI",
+      "sha256": "1f0289ee53f664c208010a17bf829c9025e46a91c84f2a17f4ca37887b8f63a7",
+      "sourceSha256": "5452138fba1bee4d4e502142eebcd659e21437f5049a6bc6b6b75031af97abb8",
       "url": "/audio/cw-training/words/are.wav"
     },
     "AS": {
-      "inputHash": "4880ebdcd9df44f7bc82cdfd200a90fac9c5765aff373a0dd0446babcfe0c7ad",
-      "sha256": "94e6bcbae22b384c6ed26a205f77bb8205fdd3111a7630af4975bf737f4d58cd",
+      "inputHash": "a8239f7a723feb736026a55cfbd338c462ac2b397f39d13c5d0813f957e24724",
+      "requestId": "BH1fSAZi1IgvGYpQtSal",
+      "sha256": "c708565df335612b83b8f1b33c50a1155433c09ada4349118531b5504b857be5",
+      "sourceSha256": "eb5248668acc7919ca5aab79d070a915c8cff1d24e6434f7809ceadea2e8324c",
       "url": "/audio/cw-training/words/as.wav"
     },
     "AT": {
-      "inputHash": "cf9ea0269d26bfcf8102b9b3dcd06c626e81eb1e1d16aea4108ffd300c797f90",
-      "sha256": "5df0b7b97e48260d307c8892e66f94aedd30f8c04ee7686f533479620567ef37",
+      "inputHash": "208ac6c1e7794117494036c94781b8d6bfb53d350beb40b1d0e35ff5ab894b7b",
+      "requestId": "MwXm7A8ZBLrTvOHp7a6K",
+      "sha256": "71768fa6818f094e2d2d151bd5b574a2d478799897249be22789eedd85d2d1b2",
+      "sourceSha256": "7f929cef47c3adc102922f21d6870dcf7f454d7f2c022bb4377dd59547fea6c3",
       "url": "/audio/cw-training/words/at.wav"
     },
     "BE": {
-      "inputHash": "afa1be9314d56f8108b655696cdf0781a227df4a263c215df69921d54203adf0",
-      "sha256": "d4bbe3fe103e1d1ae7dcd7a25d70d9d8dcf1c8e81eac85b747d9d0b0aefa917b",
+      "inputHash": "d9022a906b88d1c9d06fe2fe3d9218ed9f87084a2475131e1b6db358dd9710fd",
+      "requestId": "8JbYNalD4NSQJFjesvuV",
+      "sha256": "51ed2dd3898b5064135a9be793f92844c868d44f46c850ac9c225d4ea976bb40",
+      "sourceSha256": "d2ea48ffdaa32a95b72ff90a92c86af40bedbc4ad3d6f7c7cdb22280ad23050c",
       "url": "/audio/cw-training/words/be.wav"
     },
     "BEAM": {
-      "inputHash": "7a63cf2bd050ed4ba421e60dc29105306e1e6b796ae7791ecc912f5f21c1c716",
-      "sha256": "648bf7e523a86b65180e0bef0a6d3ca46d79032f459b3d4332d9d84102aeaedb",
+      "inputHash": "605cc4e345ee192f935426f771a1f866aa2f9cc56f1f1e8c2e668ce95a16a57d",
+      "requestId": "lx0RQDSe2cfqknWmN2kS",
+      "sha256": "96dc281bda680a06fcedd11520bf1b462e0e9c53a2538f5350306328aca02751",
+      "sourceSha256": "08913300f9fb227831df5d1f35b2b665adaf87c13769f05e3d5fb3e9b9ffe4ed",
       "url": "/audio/cw-training/words/beam.wav"
     },
     "BK": {
-      "inputHash": "5a6de91a229ee182eee8e0ef604604c0886e6f4f20fbef0aa4c3fdbe75675ab3",
-      "sha256": "773e4185f55c2020afda50b093944a45e30d78fab612ab5970723f96086a0380",
+      "inputHash": "dff0b4a076d128513eebe982489182ac8883e09b39fa12da9b5ed45f40ca4184",
+      "requestId": "yUFzhZuOoc5yxjeoqJVt",
+      "sha256": "ff1b67f3668d7391aea531e8426088102b7bd3d5bcd6288592b3e084dc63b9f2",
+      "sourceSha256": "6c8011af257eea5c1899f4c0a20895e6910c3fc354dc2bf3d9996ed2aa7da1a0",
       "url": "/audio/cw-training/words/bk.wav"
     },
     "BT": {
-      "inputHash": "b22499db640e7e1a554aaa7a96ca1358cde8b0a630e987d475271d0e1af5051e",
-      "sha256": "59dc42faf048064f06562fab45d4f04faa301eb7ada96ec7b3f63cd78ad69e0f",
+      "inputHash": "488cf03369a8184948158763ada0610f9c231bf942c91b8d4f67ae22f62465ff",
+      "requestId": "kxOR8HRH8J0WFpgM44M2",
+      "sha256": "33761daffb6bedbd30260832b22569b5d320cbfc2cdeed767cfff097325e8b03",
+      "sourceSha256": "0963d9592a30d3d499e397033cd0c8449c4a9b65637f8ffd9f62b184ba4a5dd2",
       "url": "/audio/cw-training/words/bt.wav"
     },
     "BUT": {
-      "inputHash": "a5e721300f26a8de9fc5fdb2f855c03ede756de8febd37387bc6cae6665f6030",
-      "sha256": "b7ce39f06db18a8579b5e9619bf5e028c66fd556177b0ab0208deb2d97c70e66",
+      "inputHash": "1224db4701cc22e9d8aeac6e78234145b5a8142517a0140e214a3fcfa7b4a5e0",
+      "requestId": "oUJtCaPIe2syBDPX0Fof",
+      "sha256": "e5796e16ca4ce1fea927104ccb6f8fc39ea41a8f7081771cabf3c1ba2c44b2e5",
+      "sourceSha256": "d24cc445cb10f889d29a66735a56cfedfa79eb27c918b335ec73dfc47b743a0b",
       "url": "/audio/cw-training/words/but.wav"
     },
     "BY": {
-      "inputHash": "22866982f6fc8baed90499f86646130cf543db4c2aefb3a998dccb0525c0784a",
-      "sha256": "8b9a1f9d5dbad9aff0152412d92d1471dcd5ddad2fb0dc75cb7b24504b3a9371",
+      "inputHash": "55a81d6900a0193eb77388665847da0afcc72ff75f7e5d8e931ad841d7471681",
+      "requestId": "UsPk63Feu9IAbwBT5LqY",
+      "sha256": "b07aa83a43bd17e0b42601b895ec30ca236f4188644685005a837ea35ec4ab1d",
+      "sourceSha256": "ba5da20e84908b9d6e4fb4824f90d12f78ffeedb7227802711de2a2b502bbe78",
       "url": "/audio/cw-training/words/by.wav"
     },
     "CALL": {
-      "inputHash": "e98431a88a3850747fccb2b9bc26ab852f2a4165e51bbf2cc2f35d837d035367",
-      "sha256": "85ff4354341040a5b864c681d8041ff00415ed32ab498f8e9055953acb276376",
+      "inputHash": "8ae230a3fa6a8b8a17b64c97e1c3cbd4ef7a6c4b31177fb93a4f4f24038c130b",
+      "requestId": "wOQtjklEuxg667MVkQRG",
+      "sha256": "7d08dc473457666a5adb8755b1a76ed4f287c188d8e8abeee0456583b333fb03",
+      "sourceSha256": "0370dc05fdf0cea6b6b3063eb0a7771ae30fcc48a3be52d76fc150433b6d5778",
       "url": "/audio/cw-training/words/call.wav"
     },
     "CL": {
-      "inputHash": "c9c4e2f9bf5346fa6c22d96587cf23622ad3c994911b956c34a468c99edf20a0",
-      "sha256": "b8fcc983941f68728d10fa189eda854b78cd276b938e2c83959d641019145a47",
+      "inputHash": "8bdaab4071124374fe865e5b7d8a8fa249307cc2cf4da047d8eb9370ee2be9c5",
+      "requestId": "JoBGjVUaFCbrWZIgfUb0",
+      "sha256": "36fa76034b50fd48f13ea76929a0a16362c38ce85b976b0353f38cbde6079e7e",
+      "sourceSha256": "6086edf05862c878d56395d923cc8d2ea753fc4e928bd281b6c38eb212df5e53",
       "url": "/audio/cw-training/words/cl.wav"
     },
     "CPY": {
-      "inputHash": "6e7afdd734673428c2a687ba69053c6785db6eacb483124b7b462df9952026d6",
-      "sha256": "a12dd3f897a1c0aa8054ec48e8d8f0f8d382930a7af4f15de10189f6ca05da4a",
+      "inputHash": "e5649e14ef9aca03579effb43bf5bc0ccd6882a32afd26778c0ffdbcf55d843d",
+      "requestId": "quusRTQiGImLUzvHycxn",
+      "sha256": "22296006445106dc9094a1a73b8e87c31df32b8bb4cf5eddc5c6d82ccb50ca98",
+      "sourceSha256": "b341837a97bbae807d5ec0c5765b4755a3a92466bcca1b7365c54b833246ea0a",
       "url": "/audio/cw-training/words/cpy.wav"
     },
     "CQ": {
-      "inputHash": "d04b14925c32ce5e3e2922dcd4ddc002ad88912ea2a93bdcda65d24c4d266a20",
-      "sha256": "c4a0466944bf9b5892a4d64b9dcb973dcb4ca5a379db466940579bed6059a0df",
+      "inputHash": "c3813d959b01517a4e62cf5bd7e86bf3140358d1cf194d519962151313c07b6e",
+      "requestId": "quHWomAsIPNDgA7F5j2l",
+      "sha256": "6fd3521d73d56910a6b0a33914d61582ab94987756fab59d583a009ae3c0a5b9",
+      "sourceSha256": "315d4ca3d1fc7af04e3df43a819c3f09a73edbc69f025313e2aa08ab07c4a0b2",
       "url": "/audio/cw-training/words/cq.wav"
     },
     "CW": {
-      "inputHash": "9e5e8609c1aecd53498defd9d3632fdae969c4208c505636ac51b592db3cee6f",
-      "sha256": "8dc4fe38aaed0cbbde79601f86bf99f8d205b3a1a646af9bf1b9bf5cc4930a10",
+      "inputHash": "e5d100b8ccc0a99029b7ab88d1a4e8b9caf0c8e56e82e0280093985417caa006",
+      "requestId": "MoCeK1wbn0xYgKsLcoM5",
+      "sha256": "2060759824e6a417194cb8aa11af0a27e91974413fbe255f4fcc6cec47d6fc4a",
+      "sourceSha256": "76bb895030d4804586db8c21a112e4ee3b01e92ba11c5d5a0d11c5f28d96910f",
       "url": "/audio/cw-training/words/cw.wav"
     },
     "DE": {
-      "inputHash": "8305e7cb63eef3cf0d51982bb661c73c43104eee0312837fdd72aae4ce2cf3d7",
-      "sha256": "34071a5626d81c61fcf927dbf965bf8cb34de94f83c21a3a309cc09b6eaaedeb",
+      "inputHash": "5dee98cd348b51c127ea88f79d093e4be6aa45654ee38b6699b5d3dd20096e67",
+      "requestId": "EuPnB6sRGZAweZGH5ZEz",
+      "sha256": "1b158720e94337d16c4755bb29d981cb9b860cc9ad5047181eac48b437dcc171",
+      "sourceSha256": "09c4ba53319152ff665886c6ae81dc31120faf0b2cbb618d9fbd71098d93091d",
       "url": "/audio/cw-training/words/de.wav"
     },
     "DIPOLE": {
-      "inputHash": "2662404bd3d355f899f6fdb9f2e772bc5e206b18011d4b48ce00cd8b3dc0de5f",
-      "sha256": "895331edcfad19b210f02c89a1ab2776b25c7491ea833533a5c9042a289c21ae",
+      "inputHash": "d0f6bee3613ec6815c8566329434e7c131f39c300d648e5aefcd273c7ebd6e62",
+      "requestId": "absRcZSorlhezXhp1W8v",
+      "sha256": "fdebc547434f2ae525889bf9b1ee0675056c7de8046cc623252c8e2f34a90d0e",
+      "sourceSha256": "7a08252045ca30db65438a1d504d40b0bc544b9a34d81b239d720514b521147d",
       "url": "/audio/cw-training/words/dipole.wav"
     },
     "DX": {
-      "inputHash": "72e928767ae5420dee531437928b6dc4948034b15514b8fcb507178ce9f5a5bb",
-      "sha256": "6a5afb7b5b71d8ac867443c2eeea9fdeaf3e539dc96a11a2972a1454f2fdc45d",
+      "inputHash": "eb425531842e61457b5f3f34d4c38c4ec7b084cd31d4266fe39a4ecf20987dd8",
+      "requestId": "8zo98joCViEpbOMFASvB",
+      "sha256": "0a1bde4d274f180d8f31b9956d924a9ae4391fbe08a1862bb7ebb1dd64470ffc",
+      "sourceSha256": "73e07f6683b59cc1e4e877f8da9b0fb5f52e0bdd91843f1136c05eccd9f3b692",
       "url": "/audio/cw-training/words/dx.wav"
     },
     "EL": {
-      "inputHash": "fe697d8b3778113feb13b7e6b62160de4832422711a9d85379a59730532eb981",
-      "sha256": "2cb4dfb5db02183ca522d2c6a81be57d5b83b031fb1bf8f87ebcd76d755da324",
+      "inputHash": "ff76df9c638464f5e4e262cddf9c90de722a2a642f5cf4a582c7a21bfce8b575",
+      "requestId": "esoX4tuc2C6TBPgATwNF",
+      "sha256": "aed55645024ca3f874132598a83e1e14ab401239b48804cf790c8471240279a3",
+      "sourceSha256": "49c931a18e860bbb2cc7c63c66a6a26b1a65e6082bb3845e7722fef31e2244a8",
       "url": "/audio/cw-training/words/el.wav"
     },
     "ES": {
-      "inputHash": "58b1ec832fed8695d2005da1a6703453968da03b79808f71a056ab5561b28f87",
-      "sha256": "edbb1281ea0455026d5dea0f8002ba1b3556fb42a521eab6212eb373787b0c2f",
+      "inputHash": "db0d004fde106f149b36bf868b4f6ca5c8ffe530673a874ef221e7a419e11763",
+      "requestId": "aEEdYVE4Zd8i8WBaCRpb",
+      "sha256": "d4d47e2425deb7c4bd1b525ed9380d69d00d1a0eb0314a8dd8d882dcbd9f57c4",
+      "sourceSha256": "1936c271143d14f72ffad0c0a327f8838dc9bfe3f69c617d6c78fc7b19069fe6",
       "url": "/audio/cw-training/words/es.wav"
     },
     "FB": {
-      "inputHash": "ff59378dc088f92f4745e02be4aa5a964b30abdea552af1d789e728fc4f55c90",
-      "sha256": "07c9732c60679ccc0c5ca6cc44db39abc830039c8e68efcc6b967b6ad529ed18",
+      "inputHash": "1dab96f132788f60ba5faeda7a6f6ac2d5a8dd1d94787b810090c4c074a09a14",
+      "requestId": "rn06s5FlsKETyP5EhepA",
+      "sha256": "9e87e64ac299b789a3042e66e02bc2c17ab944aaee37dcc03dda126f0ef52691",
+      "sourceSha256": "42d55fec8ec5a80ad2e1e897ae9f984a8e66075eb913041734b0477e3371f265",
       "url": "/audio/cw-training/words/fb.wav"
     },
     "FOR": {
-      "inputHash": "44e597c6487906161208ce24854f8382e015273a4a8c7b3b0cc62c5f41cb8fb3",
-      "sha256": "640bd0e959692ea090ca2ff6292bc198913d04e9af4a841aad981994db02611b",
+      "inputHash": "ef038bea82e51a27fc7ee9bfcf3c6c71b5260460e771fa919187df96efc4b08d",
+      "requestId": "h05szHP69CcskQ0yszxp",
+      "sha256": "438e557bb8be5b1c402ff28cedf90c926c02d9145108f894171dd14c594e798e",
+      "sourceSha256": "5c49f951394fa8896f418e35e266abf3f11f9c47a052390b7667fa390859c728",
       "url": "/audio/cw-training/words/for.wav"
     },
     "FROM": {
-      "inputHash": "701a5012e8c12b2fbfb81425cd46c40c048c709d4e1f40119579427073076ac8",
-      "sha256": "8f699531c150143a11643b6e173fdd3c7a2f92906a4434a98a790e83564875e0",
+      "inputHash": "ce281028707dffeb9c6e2f508941c30e41b4e6e887f6cbb10d74da68e0ce3924",
+      "requestId": "D9ifQv4vypDIe4jQaey0",
+      "sha256": "d5f96db833dd800acc404e3fd51ba0d5fa32a942fbe1894a7c4b50f96536732a",
+      "sourceSha256": "4853d67497701fd83d29fd1aa27bf9f5e6d49e1ddb5e111228d05859284e7edc",
       "url": "/audio/cw-training/words/from.wav"
     },
     "HAS": {
-      "inputHash": "e74aa83010251fbbd5d661a114bf856dfe5db1fb82cd3ed6a191e74b600ca7e4",
-      "sha256": "6308079e6e540c9a6182870624112b37338586303efbc9e2ad7c4bacccc09a7b",
+      "inputHash": "46efe4abbd6f45f4f7968a419871fe1d0f13d6ecc8081908a63430e52ae39519",
+      "requestId": "OTPCkZokK24R39SQPFDN",
+      "sha256": "7096f1a55dc3b63c6903b6daf889eef89de401ec7ab449bd2ac0e2edec57d34d",
+      "sourceSha256": "0802b771d668cb673b4663bc26ead876965ffe84b945bd38a2de3455902db9bd",
       "url": "/audio/cw-training/words/has.wav"
     },
     "HAVE": {
-      "inputHash": "50052b298d2c599d8bf16006f385cc067a2f4856fcfe84df75cdb39626e03eea",
-      "sha256": "6f57b31d822b320097eb3aeda953dfd788a9a0c7933e20e697656785b519b9ef",
+      "inputHash": "1284000b73569fc47620a933f42b71a3c71fa0341f7a15552da22e743fab4059",
+      "requestId": "FWi0js8uDufNi5Mvgle0",
+      "sha256": "c997bf51989176ee8520843b2c56b626ff38903f596fd97b7fb41142d991b9d2",
+      "sourceSha256": "ab42a67db889d69d4852c3de3fcf8c29d57e5bccf54caf4130b49eb3c411b419",
       "url": "/audio/cw-training/words/have.wav"
     },
     "HE": {
-      "inputHash": "3df439f26febf2f63df7fea9ecf894a500aeb911baeac568add9b39ffb29d872",
-      "sha256": "fe7a12751913a4dd47459ec46b2f8bcd8a16ab910c433c81ed0d31029c95e8dc",
+      "inputHash": "6dae245913e2282776e42460b8e7433db1ad395f4cccdbbc4292fa4b9039ac4d",
+      "requestId": "lO868lccfPNo3k1CNr3D",
+      "sha256": "8b2fbd7d13f8ac4d87bacfb5d2859dd63fb5bdcc889f02bba7f534ba62417d43",
+      "sourceSha256": "b2d665987d162615a17acd6b2464cd92c8886ba4c524056130a45e062b7efbd3",
       "url": "/audio/cw-training/words/he.wav"
     },
     "HI": {
-      "inputHash": "61b20d07ba8265bfd2bd9de43016af683a370567cf9d4547493ecf7adaa60105",
-      "sha256": "73756ab8ae908c398036bf6f5b50f0f8f1ee5b35c251e35f1a03f699985aee54",
+      "inputHash": "16fec4b9f275c70e53325f3b2e1fea7fc4783991620b34df2dc884d98ee322fb",
+      "requestId": "OsaT2ZVbTJeuhdWZxUR0",
+      "sha256": "6fcbf02b84781f9823fc78515fdaf6cc7c1ceb38765ceaa5875e4296fbb5da77",
+      "sourceSha256": "5c8d6983717a963959fb56dfd6b1eec9f4628b250ff63056e09b59c4860ea0f0",
       "url": "/audio/cw-training/words/hi.wav"
     },
     "HIS": {
-      "inputHash": "00d7ef7e8a798c427870ee027a5d30ead00d8207f3f7af9d12ed267ad84d812c",
-      "sha256": "cbc244e3e18af42532d6560edf9523f3e4391957734275b9cd417598b8eef371",
+      "inputHash": "5c5ca0d0075dc5356dee675ced7824e500932bf59a8f1644a9e3af8707721d25",
+      "requestId": "NthHw8BxUM8SfkSA1MW2",
+      "sha256": "1c0c62e6db4f0521278ad6defe08b80ce5c2a630dde3eb9cc6e97a63e7a6a710",
+      "sourceSha256": "5fda42c9137b33679a5e738b8ea19328870779a751fe493ca47276dd5defa058",
       "url": "/audio/cw-training/words/his.wav"
     },
     "HR": {
-      "inputHash": "ec9081c75903465eedf2bd263c92acfa9d8f79f8c2f3b2608699ca10f865083f",
-      "sha256": "b58f1d9ba21092583656ea0e835254dc966de039ee09040fa63157d7a8e5389a",
+      "inputHash": "8b640cd51d6c334ff5158e96db2472a778d95d5fa6a08c61ffad1e39783d9ac6",
+      "requestId": "LBpQoKkBhC2zOjrQUQa7",
+      "sha256": "d281174c0e9a72d90a2f9e18bbcb9cf46b6683103c4a01335baf1146d9f049d3",
+      "sourceSha256": "15daa138043f3564677339faed3233cdb3da4d375903445640608dce1f53bf97",
       "url": "/audio/cw-training/words/hr.wav"
     },
     "HW?": {
-      "inputHash": "74467e747b25d16913c4e963310f1d44efedf79bcb6b125ae05f87fde0ab07f4",
-      "sha256": "a01ff929478a8af60e854b610c1fb353c47e58c26913a7276bee0a9cee775157",
+      "inputHash": "f985b52f61d26b81712241b00a3e5642c7345b8a67a67adc69d1a06755f0c90d",
+      "requestId": "PDi5NfaznbHN3cPpCcy6",
+      "sha256": "4fb61c64c416eaf4372816e19156cb61cbc61c86ff3885a6f3cfa2318a0a50b8",
+      "sourceSha256": "e7d90cf9f5debc777f331a6b8b175503a4fe279dd1ea6b90186fb71c1b4da995",
       "url": "/audio/cw-training/words/hw-question.wav"
     },
     "I": {
-      "inputHash": "fb1d5e8317be6384bd8f865376b132fa865096bb6195e6468243fe1230904539",
-      "sha256": "7d13fbd9897763eb7467399a988a59785f664f44a9ccf5783aba0cf88ad69367",
+      "inputHash": "b35d026c6ebc3016520b7ae3546a3a8e0f91f7d033ba0a82c6bdc87e93005d98",
+      "requestId": "PyHQG5sUMITHjRPuUNSp",
+      "sha256": "be3c48eb43eed22983f953e23cef7dd772a235401b455fc31e552f3f9fc31d96",
+      "sourceSha256": "b09315a8a39adc966773200223f8c942541b2e11ad80f6a5938490c35d38ea1f",
       "url": "/audio/cw-training/words/i.wav"
     },
     "IN": {
-      "inputHash": "552fb8145460ebb843e10a23ee838b2f863000733c706ff7cc1dc80efb1b236b",
-      "sha256": "65b1757957dfdb2199aa3415805fcc75e5ccd18924e3074a71437e14fa45ac1d",
+      "inputHash": "78c8a439b8c656d5a081fd193b68852acc4a80b2c6faf32d5b59342483963120",
+      "requestId": "wVULl2Ha8iWQ0mptItkB",
+      "sha256": "3e9a0cee3e1709ab2ae4682c427d8b4ae2183458f9b1302b8e21855e62e168ab",
+      "sourceSha256": "92ec3d57c33a4bf35af65de1b34b2b51340d3002bdda37a5c838bf8df7e6d1d7",
       "url": "/audio/cw-training/words/in.wav"
     },
     "IS": {
-      "inputHash": "6a63c03b9ab4cde0b1a43f509a36d2bdbdf3971eb795adce2be3633ba7cca284",
-      "sha256": "ef7197616ae518e82e661ee84014901bf8d0b9a6810bbc9c6f5baa37ba7f8f76",
+      "inputHash": "fb27803292d9ec40ed317e7a0a14874b7323cb29d902cf739a2295498f46aef6",
+      "requestId": "cY9iJYRjjmW7R4K6Mcn5",
+      "sha256": "878719c773539cb6c817964164978860dbc897bdf25f381e5cdbf03df5ac1ee9",
+      "sourceSha256": "39f0d29a6f305e1bb5f9e1a9ca64ea6acbe69d66281bcabd6978ce5f7594ed48",
       "url": "/audio/cw-training/words/is.wav"
     },
     "IT": {
-      "inputHash": "cbb931e44198377bbd85ec007abcc75ca4abf88eac1fd1a885afb7301ee3a047",
-      "sha256": "d45fc26fe23beb277e0a36d215576b374d9e4a995908999571d192888ea15acd",
+      "inputHash": "7f92380fc20ca8bfd07c8d9a2afa22e69cea0b4e7ddf2436c8a94918b2fbe48d",
+      "requestId": "26kufT29K0C14nypT9ZG",
+      "sha256": "803be2892d4311be9f699e2b5dc97da3ed6aff9dae3636353acfd50286944490",
+      "sourceSha256": "43f956e52f59738bdac0265296ee122745a62d1449005f231b9ccf2583f4de3f",
       "url": "/audio/cw-training/words/it.wav"
     },
     "K": {
-      "inputHash": "4b4df4b3730aba574d34eae0f396f422087be915a8a28dccf0551ea5466a6e27",
-      "sha256": "76a76eec881c64565446460be2bb321bfa282e5de54591ba5f7199a7d684f2ee",
+      "inputHash": "dba6204ba0e34617eeb6b0a5c826393b25a6ba8502a5cfd3c194e9ebe53e7c8d",
+      "requestId": "gMuyCrrcz2ToxsT4JVnh",
+      "sha256": "e7696dcdd380eb2ff9fedcf17d7117d6da90acc8904ca5ab5212fd7dae6181cb",
+      "sourceSha256": "71327e3c5eca4917632a13c4c57ee1c55b34e44426c780729ab954b30881be85",
       "url": "/audio/cw-training/words/k.wav"
     },
     "KN": {
-      "inputHash": "9edc32a7394fb6f526223879d16fc20b2fbdc5670303f42184cdd5ccf1cbc12b",
-      "sha256": "4db1fb03000f5de74fae25f13424d53860f47a4f99ab8f2c4080e54fca6c9cc1",
+      "inputHash": "a56c335090c0950e906de02f8589b03e4fa0638c816fc45f34b80385d3f757c2",
+      "requestId": "CoWiPgxsefv0S7cZYSCZ",
+      "sha256": "406036ad2c764dc787cf257c7974ba6a237af800d2305d4c26e054c1a0bd2734",
+      "sourceSha256": "42c18b1f78df2c729ecd01b1eadaa0ae7a5a7ccfba4e7c08bf97a799a30b6d5b",
       "url": "/audio/cw-training/words/kn.wav"
     },
     "LID": {
-      "inputHash": "923a00623a72d24f5e81eeb52c9742a6bd2f72d930b2cb4192291a7bbe22bf98",
-      "sha256": "a81cc615b993ce099d28112c36acc4b80e1cac645f2ab93afc9ac83e0b80a376",
+      "inputHash": "0404ee2c9c6a8df82f27ca4c275b7072e8d52fb04c4522919a951c3410f14a08",
+      "requestId": "WLvnh6y5GSiE4AiLncbP",
+      "sha256": "35bde724cc75ba3550a1bced1048c7e775d885897bce56cc7ff5812659c883ce",
+      "sourceSha256": "ea42f34353d6b814cca9e9449d409a2a2d01174fd7b7ef84a51d16a1879008e1",
       "url": "/audio/cw-training/words/lid.wav"
     },
     "LOOP": {
-      "inputHash": "63b14f49249a3a04e14d4589665e33a92fdc1ecfbee6634e776ccc4036bc5ef8",
-      "sha256": "e4f3e4d13b3f6df47da9722153650f1178429cb25230076a83904b1690f04ccd",
+      "inputHash": "7c3fa6d868d5c9c133893a2fae382fe539bace1d949d94401794310ca17e806a",
+      "requestId": "fBmk8DMWVzj7pEuS070k",
+      "sha256": "4dfd5feaa8aa254aa1dd50ae1dd30b5a77593f35237bd4c7092f502665a03f74",
+      "sourceSha256": "5c4e2d10ffcf8562748c05f6928fdcd5863de91100ff258cbafe737b90a82c9c",
       "url": "/audio/cw-training/words/loop.wav"
     },
     "NAME": {
-      "inputHash": "2e260fef3396e8061ad316a67059ec1dd9e28e83a72f6698ef17dd04f661cd4b",
-      "sha256": "7eb3d444b4838b172106894cbfa43af541477a4cfd6d91d1d35ee81a11b4b286",
+      "inputHash": "bddbb838b156778778ca91e39fa125a76bc5fbfdf799b4aae597e1024ce6dee3",
+      "requestId": "UewrMdH3EK9e3LiR1qQA",
+      "sha256": "05d42c4d949ea35fa70d9a0f875192918485cd2d9f1b8b419cefbda09c6d1ffd",
+      "sourceSha256": "96fe22f4f293e758b2233a878e419ec3768f3e9b020c37077ec0a43078f6c52b",
       "url": "/audio/cw-training/words/name.wav"
     },
     "NOT": {
-      "inputHash": "ea38690bd89800a3a78b0ff5f75398e12d11a6b54e67d6f334a4f30fe4c517a8",
-      "sha256": "9fa6743951f5a4b19071de2e85a504a6e453d57789bbe32cbe0f63d0a8c2500f",
+      "inputHash": "f49a0772eee071c0aaae445ef578b8300a15d7abe0fc0ef5c4413704fa79c2f9",
+      "requestId": "OIH797EssV40GtySh1Dv",
+      "sha256": "e13280299954c0e87c9999197086f4f4e75cfd99362557c6dd031b4e2384a92c",
+      "sourceSha256": "7b8965bc4cde2988699587fd973c9d0ad7d3079c8fe4c2505f05549d0e4382cf",
       "url": "/audio/cw-training/words/not.wav"
     },
     "NR": {
-      "inputHash": "ad8a4772e02f39503734018e27a9eaeba1614b5c4e3ef3e990bf9ad2a13d3a82",
-      "sha256": "3c0c5cda04c9e74022fc7d2990cf479ae247650622c17770fa2fc850b6675f30",
+      "inputHash": "d65d1c48203fa6e00bbd417d287cc05dde016a376949c0968f8da82e0def72f9",
+      "requestId": "4BkrzFcF9JK8C3m5OzUQ",
+      "sha256": "6191a505f61506ebf89dcc2985a92ff2b1ccb59707a8ef983c24e212a6d52746",
+      "sourceSha256": "2b063b5c99ac188e3da946eae670463369d745ebd3e495667ece510cdbe2b734",
       "url": "/audio/cw-training/words/nr.wav"
     },
     "OF": {
-      "inputHash": "f7b53c7546f80d5ad007ef9b4da5e134414928fa33238e87551f34127e333dce",
-      "sha256": "9a1026dca12f4a23443e3c266afd17787a42b66e33c5c8888f680f3f35aecbb6",
+      "inputHash": "d246e09433946727fae0edb1cd6b9d33c55e8682269b9429d810f6e37843e001",
+      "requestId": "KT6EgglDO92BJHvaTKMF",
+      "sha256": "057df88235666923a8d9f93412b522dc53e131f72b3406b9a16bcea0a5114552",
+      "sourceSha256": "42e94f6ea522ea6ebf55abba1b05ce113e70159acbc2cc3ebd99ee82e2af16ec",
       "url": "/audio/cw-training/words/of.wav"
     },
     "OM": {
-      "inputHash": "d0105d6553fc0d59acb2a85b9a89312a5bac82da83df2bb5ebf565fd711f2983",
-      "sha256": "9cc11acafa7af98055df332564ed1ba1678905331bf9c18275c1322563047194",
+      "inputHash": "2a0f7ebfae0bf3ad80fd188a2de25e232714b6822c1392e74381668cceede7d3",
+      "requestId": "NbTo4fKyxLxquH7k5KGn",
+      "sha256": "839e8abc734f49e1705386eb31438d73418c21e1a471cd2ea00f814723a6c0d5",
+      "sourceSha256": "3f10aedec26c32aab5bdcd60f7159227ba48d1fe7fb13832f08c02b272c2cebf",
       "url": "/audio/cw-training/words/om.wav"
     },
     "ON": {
-      "inputHash": "24ce068938600d061379cfc041a6f33951b467bdd0cc71c65bc2b1781647dd84",
-      "sha256": "2522e2da0fafdfd17ecca79bb3df598c7399351e517f43b93f0033a0e535435c",
+      "inputHash": "70042a2afe3dd6ce9d3f625f5b76e7c17c778b82391aa98947f6add629769893",
+      "requestId": "1RA8iqIhp1AI0pifIyvO",
+      "sha256": "b6739e4823bc24ddfd318ffee0c042977525b992aab21c858bc2622beadfa46b",
+      "sourceSha256": "44051383c6c66d7770bb5de48edb817b811a285bbf4c6306f544e0461d93595b",
       "url": "/audio/cw-training/words/on.wav"
     },
     "OP": {
-      "inputHash": "23f02363e4486c9877403bb1f98d51c69aee90a9bf0056a31cee97a6c70dc8e0",
-      "sha256": "6dc149fe05db29270e5854a947ea174b8991095c015b415609c549b1a6eb73bb",
+      "inputHash": "672a163963c0d8228a3f5dbcb0bc19ce6c20da0c6933e1596f99c606618aa25a",
+      "requestId": "9hCNPxZ9CsOi1hzookUr",
+      "sha256": "073f9b5af5ce65ba43e1520d787d00b44c2dc85156244d29284c8e158151e259",
+      "sourceSha256": "a605b455198d241e0324736d3b0c621dc99d92a38f90e61b980602ac6afa3600",
       "url": "/audio/cw-training/words/op.wav"
     },
     "OR": {
-      "inputHash": "8718bafa44a307a2384987772b3719b4178c91708c1a601d3117c2d7d82e2bf6",
-      "sha256": "3ae6eba5377995edd5c217a6afa59f68c25934619252e1047180e1c82998885f",
+      "inputHash": "0469f7cd9e4b7b3b6b41dde5623e4a6b1ac69af25a29a3dc08c7766b924d2825",
+      "requestId": "xQ2cB1MRuJqvHzo4BMMx",
+      "sha256": "2e1d748d6bcccb2c31d277713e2f217e81e31150766140460bf8349fe5bd5a03",
+      "sourceSha256": "60163286f73fbe99a07edd88caefdc10cd4ca5bcc8e4422a4d56dd949a54239b",
       "url": "/audio/cw-training/words/or.wav"
     },
     "PKT": {
-      "inputHash": "391f742cc0f8d84ffd1b90564e16610f5484e93dca688e362537c4c6c933f966",
-      "sha256": "996c84667248b1f902511acf822a64bf9aeef42331c9e79a65d545bb1fa60ba0",
+      "inputHash": "aca48a5cba97e47169f04bda8bb2f1f80d2df2153c61044923aa0cdf487da60d",
+      "requestId": "rbAf8EYrIbW3YHxBOnK4",
+      "sha256": "b763401b150b448e0acce83299c5366d3ce18093ff5b30f1cec9f6e29bccf8af",
+      "sourceSha256": "b089a23462f1f12a74a09601b1c72452844902127196ff01c96f444ae22b56b9",
       "url": "/audio/cw-training/words/pkt.wav"
     },
     "PSE": {
-      "inputHash": "7e8d273034df0441feedd09e5dae41e32c3e4a41daf3398bdf1a7de8d233cd44",
-      "sha256": "9ebc29aed97668a655e8dfa13a1f74e95c505bc688b40b18ed34b9981dee7664",
+      "inputHash": "4c60aaca6d990a15695ee53e56d863b783a5df243cb8636d233280cda673a9ed",
+      "requestId": "kObeVWJIDETlUqaW1siQ",
+      "sha256": "78515de28692deb702f509fefd6f56dec86c1b4238b363431db4d03de52ca8f1",
+      "sourceSha256": "d094dbf8eaf5c55c08324c3c5163f1abf935b385ca037356bb9ab3c05434647b",
       "url": "/audio/cw-training/words/pse.wav"
     },
     "PWR": {
-      "inputHash": "6700ae04a86b5ad9125b02edf21c5b62b63082ec9e6dfc0f2dd5fa839231831e",
-      "sha256": "80903d9ccb155a27c1e0b66e0a29b412dc32b94d20cbb7420e61a8416ba868d0",
+      "inputHash": "bbe458e1c6380e67d5948cb2e1c8f8e1cf9c2ebecd37fee007ccc4bc11cc60b7",
+      "requestId": "CJwuVzDMUMRiTa7TlKHM",
+      "sha256": "67a3b6438a1a3f00b28d87096a6a7a40a4ee21a793fcdfde1fca4c04e3ecec8e",
+      "sourceSha256": "9929603c6ef0cc5cfcd1361f67a5a1526ff134ae17b612967e3d820e5a9ca0b1",
       "url": "/audio/cw-training/words/pwr.wav"
     },
     "QRL": {
-      "inputHash": "515fe9f581b4b70793fbcc7b22948ddd883636681a55e0b977d7687122baba31",
-      "sha256": "30413cf1b52f35c2012c859493b1ae2600816998758411965eea6979d5bd19ea",
+      "inputHash": "dcf283343d77ee125f7d23f8bfcf5acc8dfb4bd8a576d63ed70aaaa9e42a5771",
+      "requestId": "esQymc3N1QrHOMY7of63",
+      "sha256": "39be0205874a8f5caace0e4ce1a32303976bb8d3fc3e6f9b254fd5ced7b0a481",
+      "sourceSha256": "246cd6b2bad6be7f0063f92addffebdfe87d651f5d26623ada6181d6c43740a2",
       "url": "/audio/cw-training/words/qrl.wav"
     },
     "QRM": {
-      "inputHash": "944fed485cdae7fb6923462e1a5939ac283be38d74ee373ef9fe69ed160e5752",
-      "sha256": "8558036c09f24f0eec5f97605e24ecc8322d91a157b5b9ac52193dda517f039b",
+      "inputHash": "af6d968f10f17ce0e0b6cb2de3913cecb14fa5b45939010c58031bb3a4fa0632",
+      "requestId": "8PQwKL8cKg6oLGpup8Ac",
+      "sha256": "21a23582a110802c44acac872e7859e34543bd8cae2e79d97ffddb526a292bc9",
+      "sourceSha256": "1593fe0364acc21ca402a128b879d3e0eeef8d39aa4d7f29a37c8d34a30b7da4",
       "url": "/audio/cw-training/words/qrm.wav"
     },
     "QRN": {
-      "inputHash": "bc0222f947d3ed3e4dcd317da9c46430a6e91f81b72e623cc63f21191fdfbd8a",
-      "sha256": "e0f8c6958f1509e5c281624fa8c3955498efd17fb6fa64c7af5aed9f7750de2a",
+      "inputHash": "94634eda8ffe25c4a7c957dcc7927ca06f0e900e5bf0d9d321d8611a12cda534",
+      "requestId": "0dgEgoASjzybqOIGTKB5",
+      "sha256": "9cd5ec6e89439178384a7eddba81b6a55999ef3e5dda4232a842e659d97ee5ed",
+      "sourceSha256": "126ead1543e0f54a1b29ab06d4370584a0a7fd492131d203b88051dfd3a7b45e",
       "url": "/audio/cw-training/words/qrn.wav"
     },
     "QRP": {
-      "inputHash": "5e9cfebbe8e0fd57df173873abfe1ca6c901a7b75dd88446a50eda85eed09502",
-      "sha256": "a2c04054c665d0b329b86b475f4d8990d02ed75ef2f4cc577ff61cceed7e51a0",
+      "inputHash": "042fd9248d3056929aa4f5e732fb2d21e904cd4c9b4f55cbb63dcba9823ec066",
+      "requestId": "YM6KYiIwR4nRSc3ObRG8",
+      "sha256": "90381b0c2b82f4de077d5cf52282eb5f2db2d81e4b0e2a4d9f515ff804a67edb",
+      "sourceSha256": "43e6e2b4f9388cf322934ba47e2d2b9c152e4ce15e098c11f50370bb9f37a43f",
       "url": "/audio/cw-training/words/qrp.wav"
     },
     "QRS": {
-      "inputHash": "f4bc17fa82664456ab66aaba31c25a8656eec4d399a9015d1704491405f2b86b",
-      "sha256": "e2d93e7e40b36eca6e34d065bef97533b62a5e647bb3602c885baa37e9fa920b",
+      "inputHash": "7a4283b6091a41c1995cc21d072c7682f6507a987d0c888ff5c433ea89aa3c74",
+      "requestId": "8AIjTy7PHFFwW2789my7",
+      "sha256": "0acb8f8500ea173cbe2e61ee2604437a4a5e7660876b03bc15295b4569904844",
+      "sourceSha256": "f52a05e5556db614ef9afe40742bdc675b27f175b84c3a2995296ba177543f97",
       "url": "/audio/cw-training/words/qrs.wav"
     },
     "QRT": {
-      "inputHash": "f486aea98d1d4e5dfe4df9d1497fb4c113bf80e9ddfcafefc20ae02dd000ad52",
-      "sha256": "cb5d7900d36053dcc85ec7b3e3c9cc51d15a4980dc5c5afc0b8c2a98a5867fd1",
+      "inputHash": "ce8db7ebc3c48f551bcc9f0ce0ee244ba7c89b88e241e472780958b2de948da8",
+      "requestId": "aBKsmmCN9sPOfK3fr8pG",
+      "sha256": "96ef37694e93cba4c4c983cdbdcece35432abe8a9f6a1dce7d3ceaa4948366b4",
+      "sourceSha256": "4dde3bd050532b8b6a9afb038f5b908ee9feec01c0567aa04addd1e1e09e381c",
       "url": "/audio/cw-training/words/qrt.wav"
     },
     "QRX": {
-      "inputHash": "d5ae82784f716a852f3e3024c43294d5a878b59a1f856fbf1dbdea0988fdef0a",
-      "sha256": "e0ab141c730aa6b0e391cb0fe87009419995d8387508f8a590777000abd64f6c",
+      "inputHash": "7833c2022bd6a6f6c2975418d04244e77cd075ea537c4e48da0af82620cfb4a0",
+      "requestId": "beYz3BiP8GJhOSIsX0zS",
+      "sha256": "d8b41a9f2276fee8bed9d313e16091e783528a9b84d9e535ea9466f368757039",
+      "sourceSha256": "278674a7ea342c40d6cef782c755f600e2767864b994691fd2ed72a1afa75db2",
       "url": "/audio/cw-training/words/qrx.wav"
     },
     "QRZ": {
-      "inputHash": "81f75bd9d5f7a4b3c8196084e6b3909a7e1f1a2b76954196f5c94fc76df297fe",
-      "sha256": "3e1890fd042f3d001c9b3fc1235b0e3d1a243ae6ec271495cd9c458da7586400",
+      "inputHash": "a33bae6bb01f444ba399183583910de1c8983ae9af683b525e1f8d8dbfae6e4b",
+      "requestId": "9N9eT6BvaZuKC9l5hVke",
+      "sha256": "8d01c2fc527db22dead28181de7a855cc0cab669965434ebb2f9d4c04a9a9be7",
+      "sourceSha256": "714fab1f964e0f56a8a2d7b76d217d5af037e25c26a4f68f9ff2a1dffb50fa85",
       "url": "/audio/cw-training/words/qrz.wav"
     },
     "QSB": {
-      "inputHash": "ec06a32e45cba95d136bc3ce85781ab0f0157c1b2d5fa4d2be9baa8721abe2f1",
-      "sha256": "8daa38399658189b07376e74194c706993c3dd85ab70fc37c30d8af803e3bace",
+      "inputHash": "7619f4c23d566ce533be1f3a6550efa4eb83b8aa3589303a534e103915ac83be",
+      "requestId": "2YWNtPwhheQWJoOz1FTI",
+      "sha256": "d923097e5e51a4e8cc24bedceae06467195dd955089ca75fc855facf960ef09e",
+      "sourceSha256": "ef3174aafb05e94c8b91cdc57e6422812ee04a294dd55514f28cb9da3c93075f",
       "url": "/audio/cw-training/words/qsb.wav"
     },
     "QSL": {
-      "inputHash": "bad55f5be1682d2ecd61c4d7c52adfc446ad8d99bfeec14274f61702ebf52051",
-      "sha256": "fecd7f61bf7d5a75707c49f5b921307ed0170ece10a2a7ec96809a77dd78f5ff",
+      "inputHash": "62230746584740f505477a0754500877da695aedeeee8248665b1c4ebad9da4e",
+      "requestId": "hq1AOD9ZADAcAgOF3qMl",
+      "sha256": "213658d68286eae64002fa75b4ffd0dceb62cd785ec3c75b2d30ee605bc8c8d3",
+      "sourceSha256": "4e17dc07f2dbc30eadf9b6038d9a7d916bb575099078b8aace873eb5d926abc5",
       "url": "/audio/cw-training/words/qsl.wav"
     },
     "QSO": {
-      "inputHash": "1000a3d5bbf1889d2887f0950de3e85dacacbd9210e0cd28628e22763a62342e",
-      "sha256": "a5b1ad4af5464fa3c6571596da5ce9b26c739d2aaeeff618a9c01d789a89662d",
+      "inputHash": "9c1ea7cde4e38482093d8271658c79acfd9f00e5d2be50fa39ebb0d168a52af2",
+      "requestId": "RKp0czkCwDpjdOGT3qhQ",
+      "sha256": "36d57b1780aea0c112e4dc949435fb9b43e984ae347e5f8c1323fe1dd57ea2da",
+      "sourceSha256": "13a28245b5fbf2a33a9e21ee8c671574d1eb0ef577fb58473a404b49c8c92646",
       "url": "/audio/cw-training/words/qso.wav"
     },
     "QSY": {
-      "inputHash": "3677629d63ae5fa2bb581efc3351edaa22127666f0733f7c8342cb3366ab747c",
-      "sha256": "17cb9d22217dcfa916a86a4c80c705274ae6e386754961d412201594f6f7889f",
+      "inputHash": "9cc53810a04517d3c771ea437b7e931edbe3d14a665d810beb2cd931f4c014f5",
+      "requestId": "1l4ymVgF9HsKRopFfLFM",
+      "sha256": "3044c22b7739c47c0084551535c488fbd5840ab448cefe386b218b173e7f9845",
+      "sourceSha256": "e4b66912d66e828b3cf505293ff5f93c7173ec2f48dcab84e381343fd2018f22",
       "url": "/audio/cw-training/words/qsy.wav"
     },
     "QTH": {
-      "inputHash": "c078325e8879c652dbb62728e1c893c626825828526a57b9b0fbb03ea10b3dee",
-      "sha256": "d28bc80a54d624a182dc0b65daa9772432643b75c1b556d94294cbbc6b90a7a2",
+      "inputHash": "e0b2a2000745cea1544b408a8fae3b809d3e029c9597fc9e6b680e1fcfe71eff",
+      "requestId": "2GZUSXTVs4XFCKhtgeSC",
+      "sha256": "3c31dfdc214244b2797c416b6194649d3b1cbf27d34fc9de767ea252e7762923",
+      "sourceSha256": "b76a6f95c4331720194d035d49a2214fb77b4d12fb4a9a35331176b81d358817",
       "url": "/audio/cw-training/words/qth.wav"
     },
     "RIG": {
-      "inputHash": "5ee38d15bd72dbdb36bc539e54655e08ffd91ebff86e61645d8a12a142759d6f",
-      "sha256": "718befd8eb05e7d6c33748ea47a76c239ca1dac5fc0e9b8253a7124f4709e428",
+      "inputHash": "2797e714ff5736820cb4223cb12107b81458e9e1708be333882c721abf57b6f6",
+      "requestId": "Z18o4KTa4Yu2w23kv7Aa",
+      "sha256": "0075aeaead6f071a9242b970f0cca6efce1f42c289916cbde6a9f6f70dc75be3",
+      "sourceSha256": "ecea3330c8322b840774516400de8efc5d8b8621a83e15565e29462aed7d108d",
       "url": "/audio/cw-training/words/rig.wav"
     },
     "RPT": {
-      "inputHash": "7ac2da4b4a5597de32688eec9c2580b28b91e4f962460994a5dd1f6230a3964a",
-      "sha256": "ec052799ead113a8bd14118315e15f510025f60875ded4d0b8d7e0ea2e85a125",
+      "inputHash": "835e9a50d9602dbe71e9f9830a78871758c3d3d783fa54aadd2133614a028e28",
+      "requestId": "cgcQAGVtiQPa1DYlVcM8",
+      "sha256": "22fbb3e0587323620e649d1dcc33bf204ff499a5260038463901a2bc653a8398",
+      "sourceSha256": "cb61a00e9a2150fa84fe06f37bc57d72f317f5b325461d643525a1c3469f02da",
       "url": "/audio/cw-training/words/rpt.wav"
     },
     "RR": {
-      "inputHash": "d1069878bb61ec77267e1e65e3874ab6c86532c9741c992a399a7adaa5fa3d1a",
-      "sha256": "d025145044665ec2a83770a4c75da13fa664c74d335cc292220b8bf5a31e20c1",
+      "inputHash": "57feb63129606432daed73a69a94886a8560df3bdffc8893a636276d4021ff2d",
+      "requestId": "gqLwSssTxJ6Oiz9tbXex",
+      "sha256": "988dd1b714d6d9a692bb90f49183778932be4467a578b49c7452446a382dec13",
+      "sourceSha256": "8f15ee5136a586b3ceb8c1b71c39164fb251b87eebe8976f4e1acc2a871abac3",
       "url": "/audio/cw-training/words/rr.wav"
     },
     "RST": {
-      "inputHash": "cfec6822c5e2744a7e6834e7ded56ecce3c1622bca0601da0747712105de9b41",
-      "sha256": "7901f751c8ccafa935e40fb59cfc8ebbec168eac862abd84ff28ba773bc7c6b0",
+      "inputHash": "9a0268809bbe87ac3c01c45f2f0e5738f4a4068d5d90cacd111053f3f6b4e0d1",
+      "requestId": "NflpzDqRgFzQYdUtQOEg",
+      "sha256": "91f7d2904976d92a30455f3df0f6515d280f8ee0363d6c04b3841d1bae48281c",
+      "sourceSha256": "3c8f741ab16585b81d5467fe0c3c6f9655192dafc017b0ac469a60842a93bb63",
       "url": "/audio/cw-training/words/rst.wav"
     },
     "RUNS": {
-      "inputHash": "060a579e2b1956d17f33fe17b9511cdcddad494d5d34dfface312d5a43dfb498",
-      "sha256": "147cefd6e4ecbc1befaa628ac57096dad3f69fdc027f7c19f7b8c455f89acfea",
+      "inputHash": "e6818b2c5892a695fd6641a5182ed4169e07a3241e633356877a520bff219e90",
+      "requestId": "9ERyVsujj4tV7PHxim2u",
+      "sha256": "d3a0fa27a32ccf4247abb77ec0d2743c83e1353501132ee6f39fbc4b75db2e1f",
+      "sourceSha256": "d94ac15de033223e27476087619625d96e0232707cc047c09bad96e4eb560221",
       "url": "/audio/cw-training/words/runs.wav"
     },
     "SK": {
-      "inputHash": "a385264e492d20fc57aca73690b7199ae560d5e14b03a16212b96291a59854ee",
-      "sha256": "12b5f8254399d26fa604bb3787f78ec2be3efe2e6c8521b8822ddd1e361bb81e",
+      "inputHash": "a5519738d3139a78b9dfb8b6e75eedb5c2a262312b5653bad0c4140121d2be06",
+      "requestId": "Jz6ahGi6l2H9D7bTvKeX",
+      "sha256": "43243d4d13b744ea246ffbc10b495e8f29d9f44c2828722d1c60bf56b21ec13f",
+      "sourceSha256": "2171f467677c75982c95a37a87c0bcc4e0ae418e22e814b0b7323c4732f49ee7",
       "url": "/audio/cw-training/words/sk.wav"
     },
     "TEMP": {
-      "inputHash": "35617edb5d13e059414ae64173be009874af35ab1fbb9b0c5656c93c481ed429",
-      "sha256": "173e644ba9895145fdde6fccbd0eb660b7ba5f82711ff17d3766bb44f3b1a262",
+      "inputHash": "da071ebd5657e3f19e47d9ee45da361a01d762cc72c75a406c1898112b9c7fdb",
+      "requestId": "P9loyjmB23eGbhm1xoje",
+      "sha256": "cee7182078e4f1c5a4c72b4d719076bb701990e54b381fa7acc3cd6642b42229",
+      "sourceSha256": "7daedc5f2a3b9856676577e0c81b9b8f68a9dd1ed09305be943f72dddb40db62",
       "url": "/audio/cw-training/words/temp.wav"
     },
     "TEST": {
-      "inputHash": "f0e1d69835684b7e36fdd2fe359125f73383ca9c68bc27fb6b701f4656da5db4",
-      "sha256": "73bf843399292c1f2460814e8e70226fdb89cef6ee65d834948e55acd047e383",
+      "inputHash": "bbb31d4802044f395b6574163ea4e1a543c89eb4f8293fd15d3b63cd06558563",
+      "requestId": "14o1aDilepcvAPTorBbs",
+      "sha256": "b5cdf9dc2a2a6480cab4ff566f378cc1ade380885bfa878f40a1119aff6d21db",
+      "sourceSha256": "71e09a15f9961504faf6cfb1ed6f5cf5787f5c979a496135192857f3dbe429fa",
       "url": "/audio/cw-training/words/test.wav"
     },
     "THAT": {
-      "inputHash": "901ab7bd720949a0d845d086cfd44d28343fee8b4041c928a278a3a55a9577df",
-      "sha256": "0ce90ad89f9863cbcacbbafd378b26bb69155ea78936c7494fcd49911ce739e3",
+      "inputHash": "1072b7f9a69db3dd1ed792a9e4cf1828e7f16ef89a0c6a3f2bff4b2f3cbf93aa",
+      "requestId": "cAD67ZWQ9DeatEl1jdnI",
+      "sha256": "e6f6c0149f21cd4c2143db0255322db550e17159454274342ccc9fc2c341985d",
+      "sourceSha256": "43301111ccfc0e49cd86f42ff6f3413f975fa8de7bdccb7564199d852aeba68f",
       "url": "/audio/cw-training/words/that.wav"
     },
     "THE": {
-      "inputHash": "9916b3588dc27e8ec1415cc0b36e2a30a60c21f7ac3c9caa0ff681ef9242a1d7",
-      "sha256": "1f1c27703f85f545861035646bf827590e57beef480c6e80005571ef5a854239",
+      "inputHash": "09f6ad0a1f5d40eb8f339cb6bb4fe009ee83e02832bcbf789c8bb554c1a4fe66",
+      "requestId": "Jh9lL8T3kCXAEJJzrHMv",
+      "sha256": "caf86d49e3677990fab5f3a6417591a9aef84271f972e41ddfb417d1795d8138",
+      "sourceSha256": "071a9ea2be32dad48abdf8ca8e87b569c38ff4c7938de56ca2a180a9e1312f7c",
       "url": "/audio/cw-training/words/the.wav"
     },
     "THEY": {
-      "inputHash": "7f43345885ffed7dd09ed0b086fbb119fe4326c25af69006b84b453438c6514d",
-      "sha256": "99f60bc34ed88d3311d3b213c2a22001de8139d705124fb0c8b61cf7160b87ac",
+      "inputHash": "e7fdd0ec7c3ebee5d58e49200eeee27f129589e40d824c81c80e636ccda9a916",
+      "requestId": "q8NUIBHQY4sWcQFxUAkp",
+      "sha256": "bf0c7bde822d7ef4167e6add811e4318c71b2ec23128f4b0935fec607f4ef786",
+      "sourceSha256": "357370b82ad1f5656a337dd6072f42a0ea4582ff491a4e610ec01ba1c0508de8",
       "url": "/audio/cw-training/words/they.wav"
     },
     "THIS": {
-      "inputHash": "495e486a3ddb07a17e6b24eaeae16a32ac8e021a2f91a1e8d74ee73c701b8d10",
-      "sha256": "97e83b7c89f3d36b00878bde4ee83ea6e91e1de47d21ebb1da4a6e44f2a5c614",
+      "inputHash": "2b3b191a5224f15a6e5449aee9de0ee5297c378b8d9d1a0f2f7e426a79073e5d",
+      "requestId": "AV9gRrwUpnvvToo8ZInS",
+      "sha256": "a2d59d2d2a981c93c828f0303aea5545a57a25ab9cb0caad9413b8c6653f47c9",
+      "sourceSha256": "031caa04d64363528cc3020232f08750d25d76ef3c0bef1b9a7b5c7914a6cfb1",
       "url": "/audio/cw-training/words/this.wav"
     },
     "TKS": {
-      "inputHash": "1314a31728b18a0dc769f5e7411d992198de9f0d45e624512f763634dbe44e24",
-      "sha256": "ff59eb9eedc661e784de3ca2c74ceb109588363a94a1ab2c2a2798874d873638",
+      "inputHash": "649549d4df1c2fbb861ebd3d378d89425d5e636d52a62e2027700a58e439588a",
+      "requestId": "GwXLYw2aATNfewAb86Dq",
+      "sha256": "9950f13011bd685e02d1156f8ca4d1a293af2759547988b263f72341d732f1f2",
+      "sourceSha256": "a289ee5b02c6dc5cead8845d41b18c591761ed772d4c6961514b2dce1d45f9e7",
       "url": "/audio/cw-training/words/tks.wav"
     },
     "TNX": {
-      "inputHash": "e65f5211cf32d8a140fc81f3e4057a679df7fb9786e114bd53fc880b0b04eb60",
-      "sha256": "d1b9026acab9257c76bad17c1734cc1c5caa97db3f8caa544f860d6c25d4b82e",
+      "inputHash": "582563a2979ed44d5874375900307aae5d8b85d39b225ae014e3cf9e26dc2dbb",
+      "requestId": "x3FhOSpMST7kqtFEGl8N",
+      "sha256": "c39fe6afd2638d339de561fab76b8652cd98a428b900545c3c16a62c3a0fff4b",
+      "sourceSha256": "fa8c68b4b4801594d0c1793905fd5c2a378666d31a55fc7c7df8bd731c08be47",
       "url": "/audio/cw-training/words/tnx.wav"
     },
     "TO": {
-      "inputHash": "b937a1d27fd1ddfc729c16a95d3b3d9a0242d1d9ae511a09b8b19c7bfda43322",
-      "sha256": "972d0fb113ad2d98738b5aabcafc38370cb9c49f36fdc9416f3b96803c921055",
+      "inputHash": "a8b1ffd1b4db6a11db32f38e6764937f03cb1ffc0ed7df05cf4aeb8da3e574ef",
+      "requestId": "6TVoI4XkFvgjXpfMvAR4",
+      "sha256": "27595fa484a1d40ab76d628575554c6667ae058cd172c37482c0d0c947b36195",
+      "sourceSha256": "de7822823d97cbe9fa4bff8886a6f38664eb01b87d93c0f777e7e66ca1f8e756",
       "url": "/audio/cw-training/words/to.wav"
     },
     "TU": {
-      "inputHash": "24d2236b2934b449846e424b738ba0a67afb11ebb2477eb2a70d99d4965aedef",
-      "sha256": "65ef770b0071b55dbed12ce783bfc5c740263e6d5664c7e45311784b5e076610",
+      "inputHash": "5005beada7da823cbc7ef4b026f1251d2f166314a4225602c03f8c4a1844c4bd",
+      "requestId": "ixGOaotxjrwOWWNi8wv6",
+      "sha256": "df0ad04e5c51fa5cea13c165d7166c6867931e6c8fd4e9b65548fbbf3bf36bf3",
+      "sourceSha256": "fa300f0de034356dfe0114f5c53743b622dd701faf92371207beb3766b5beaae",
       "url": "/audio/cw-training/words/tu.wav"
     },
     "VERT": {
-      "inputHash": "8b45562e99ffed503ce7b0547c4cfcfc8b58f8be5b4495f70519776e3e76c6e8",
-      "sha256": "14b19671a45505d4f72b5c1698bc5e5fd0f6fc1888eb3da789c11d8ae90d1997",
+      "inputHash": "8c84eda3e06095f711c3d9d678fdc6c76cd438bfc8eead9ff9562830b2883abb",
+      "requestId": "zPdhUQwPLOXl8JRTkXib",
+      "sha256": "8cdd00202a2592ee5c6adf099a2113fc8efd58dabe5edb93604b37b9fa43b90f",
+      "sourceSha256": "c9c3c13c62d40ebd526e28f1ed546581006cc0587558a88c4da6a3d99794dcc1",
       "url": "/audio/cw-training/words/vert.wav"
     },
     "VVV": {
-      "inputHash": "844a7916a3a68220a745352ea0594ba7c6cbb20ab07bd7d907f4cd53160016c0",
-      "sha256": "da267c614e3c5c4e60f8c0341195e32eb755261972994c8c172102beebc685c2",
+      "inputHash": "12c21ec7ae65fd22651cbfa9b536ac8805174c5a4b09fd75849204d57136531d",
+      "requestId": "zv8z4VZXMVKBzXlrHga8",
+      "sha256": "27daa049546e9feb7c09739c5757a4a510d1e8e80cf36bd3b5361c7ee9600833",
+      "sourceSha256": "79f8d8f5d0647c348078c7352ebbc5e7990fd7996be20d3e2de231cc4c880c06",
       "url": "/audio/cw-training/words/vvv.wav"
     },
     "VY": {
-      "inputHash": "0d3bbfd724d6faa03ac171734c930c71fc068c6049880b4f0c6b89060057d5f6",
-      "sha256": "11932fa814afb8dc78f13af954d689d3ad705bc3016bd757580ffbb95ce29472",
+      "inputHash": "861a1d8185f5d5505316a371eb3e833713e4904b41a87a8b2b1c7b312ee8a6cb",
+      "requestId": "DClrgbMXtnyDBCaPXusy",
+      "sha256": "185194531e07203583f6a2dbe1a6066e324c4965c70bcee3d3af550e01c5f4b6",
+      "sourceSha256": "59c1b2acd3b6c458ac78d54c55c51882b3356be730d8fa8132fbdab4c0a4df96",
       "url": "/audio/cw-training/words/vy.wav"
     },
     "WAS": {
-      "inputHash": "6126d5d62c0b02868293e00db89c2c22054a099746281620c722a031f12c649a",
-      "sha256": "d37841d66aee6149e24cf83d770e59a5357ba2421fc58e51ef5127f383f012e8",
+      "inputHash": "c9638e5dc4c267a05457e3248fefeec9498c11ee4b4cf398b0266b13d862bd5d",
+      "requestId": "ClGtolJm9y0HWgiAHrXX",
+      "sha256": "e90686bcc70cd24684e7906b9e4f79b002cfc349b0e963a255f0cd78fe3adfa9",
+      "sourceSha256": "a6ab286433f4f1cfe3b9779b5bb4fd630036060b27dfc3a113eee357000710d6",
       "url": "/audio/cw-training/words/was.wav"
     },
     "WATT": {
-      "inputHash": "21f36adf3f5cd0cdbca76b97f8639bbd2111fbbc2c2b17688f9cbebf28155b63",
-      "sha256": "4a8d1f6304d158c0e7602a4b6c3b9591a382216ac91ee1a38bd9de6dfb2d6b6a",
+      "inputHash": "29286a8580936c31e7db6a9db18afa9a67f7ef13e98901cc19378795f92667c7",
+      "requestId": "HFfZzCLoFp8YHUHSLJ6X",
+      "sha256": "57337e56ea2177233621b975dc5d10574f9305517a51c3a3f1101011a290f341",
+      "sourceSha256": "d8543df8a149cbaaf668a74a5f68ebdb307ea991a0ab8ba73107473e3b617630",
       "url": "/audio/cw-training/words/watt.wav"
     },
     "WIRE": {
-      "inputHash": "c9e530c5586300b3f92a60cd80541ff38a8e91d25a911b47efcfb0a3d784ef27",
-      "sha256": "b4116c265d30f4c5e7d1321cc8aa863ca0c60e17004d60dd739a7a2b88802ba0",
+      "inputHash": "46e28ecb9e735cf5a57e979a3cb0c76ddd691e25b21db15f02295d4716a3b4da",
+      "requestId": "c01Kg5gKBrYXgTNP71k5",
+      "sha256": "f9dc509235e2eacad10a4b83a4dd782b5f84f32fbca066b7cbf13e9d3f1b2ffe",
+      "sourceSha256": "3f5076a329b4ed35183e774e23b28746b54b6b840bdc0048f8681a9f6789662f",
       "url": "/audio/cw-training/words/wire.wav"
     },
     "WITH": {
-      "inputHash": "c247d143d6f55b092e8ec5b332daecf9ed8ce4483d608358be838e3077d1ac6e",
-      "sha256": "f585cdc2d7e7e7e4027a37d476f9379361e3635efd9e0ec90f87a1188ccf5f54",
+      "inputHash": "42f5ed622eab193d8a4ad722eef0b4521e2ae7ca604013a93312e1caefbfca3a",
+      "requestId": "XYNYrNr9RH0bjt7HTsGG",
+      "sha256": "af32c7e7996443d4d2ded2580c886f2b794589321ce3cd13070f597b53e507bd",
+      "sourceSha256": "caf5a185e57bc5585bf97d618a974f46ad8250e857a5882dd8d1778b7fc5a111",
       "url": "/audio/cw-training/words/with.wav"
     },
     "WX": {
-      "inputHash": "a52794abd966bf6dd15330e4b99e2446f35546b7105be38ee530289e04348f83",
-      "sha256": "bfbda6d86e00af0910ac1f47fb3e0ddeccedb007dc55e43fdc3cd708bc391e98",
+      "inputHash": "82ea2f6fd5c94606b8314f0b1345de22af761f224426b80f61ad388b034d9b1c",
+      "requestId": "41FXemIKj9QKQn1D8txC",
+      "sha256": "8a6daf703823473461dec45cf6f147bfefad042fbda1bdf694005a482831883b",
+      "sourceSha256": "3f6132aae7f793575ea335134d818fd9cb669099ea60f515b71d4ec8e8126914",
       "url": "/audio/cw-training/words/wx.wav"
     },
     "XYL": {
-      "inputHash": "4b0a475f442287b7d38c82c860d6f43e5ceb0f83a6a64416c4092c4bc2bb66db",
-      "sha256": "41c927d092ad89c348172c1410b28edb0e91e39fb5c22af018064488f09f2343",
+      "inputHash": "534eee29a70c04fe4d8527c3ff388f3155d4c453bf4f2856b59999666fbd4bb8",
+      "requestId": "8Rf2OpwdUyBNe7hS8ty9",
+      "sha256": "fa9653f8c714b213c0afd02b61e6060e5fda6a20698f61ee8fa331059080dd65",
+      "sourceSha256": "ecbc33447d960006fdab9126a57bb4843927175d5ea006c018a48145910097f5",
       "url": "/audio/cw-training/words/xyl.wav"
     },
     "YAGI": {
-      "inputHash": "22a82430dcc47fa3d3013dd008a00cab1c4bb903fb72023649f37ae538527243",
-      "sha256": "d8e8c891566d5bcc31d413d89a15b5d58d4b2c9d41b1a4cf176f8d688fb79f56",
+      "inputHash": "13c63108be3cf89a617cdba0a3dda5560679e8515cbe0bdcb5c9395c5ed28621",
+      "requestId": "JFP1eoiXMvgWQj3zYhFC",
+      "sha256": "f51b65b90fdbaf74dc9ab67ac669b99ed0a5e43efa61e5f0a28fc1f490d21852",
+      "sourceSha256": "2387657ea6a99e2b3f0642581bd9ea30fbc2a6be672d259892a3de4aaf656a45",
       "url": "/audio/cw-training/words/yagi.wav"
     },
     "YL": {
-      "inputHash": "8bee488fb3f6befc8d342a81f7ab083afd354e3e93ada447bd95dce57feb953d",
-      "sha256": "c23dc24cac236688340e4ad6267748c38b99edb3317636014867e222a1c30087",
+      "inputHash": "b7ca4b2de222de1ee742a16ecb5fbbbf7c673d68dc95cdf232664abef41bd513",
+      "requestId": "uD3uuKGrltOA0DWdqR5c",
+      "sha256": "559e4f0ea83cc47170284ec542dd977bfd1bc2850400b62f25c30864d14a7938",
+      "sourceSha256": "0c367d35f0ee648c726c3d9808de21f0fd9db992b3042072c3f973640ac51ada",
       "url": "/audio/cw-training/words/yl.wav"
     },
     "YRS": {
-      "inputHash": "7ad4c852dff1283244f74230bd6f5dea0fefe979c68175b95658484f662b15ca",
-      "sha256": "6243f147edc8d8ab242224bafdbdc03b23ca8e25ce89719be0f6b186e72e4ccc",
+      "inputHash": "917442464709ff89fd96fc0838e42df18f8bd9da664676c54e898fb23005735f",
+      "requestId": "6vtLvs1UIEhbXBjzzXhm",
+      "sha256": "daaf3315977eedeb78809c3cb8c12683f9247d1d63c533e091c0e31262d6775d",
+      "sourceSha256": "3c44b10d8df42c75f1abc72b0d1be74dff551118e8c84b25f4f78986600ff12d",
       "url": "/audio/cw-training/words/yrs.wav"
     }
   },

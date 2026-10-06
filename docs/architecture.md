@@ -118,7 +118,7 @@ including gaps. The same word timeline provides highlighting and seeking;
 animation frames update only the visible interface. Native looping and Media
 Session controls do not depend on foreground JavaScript. Blob URLs and media
 listeners are released when tracks change or the player unmounts. Optional
-spoken answers use checked-in Kokoro-generated word WAVs, fetched four at a time
+spoken answers use checked-in ElevenLabs-generated word WAVs, fetched four at a time
 and cached by content hash. The renderer splices three Morse repetitions, the
 answer PCM, and all pauses into the same bounded WAV. Playback, native looping,
 seeking, and listening credit use the same media clock as Morse-only rounds.

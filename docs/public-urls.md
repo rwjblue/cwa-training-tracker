@@ -30,6 +30,12 @@ different device preferences. Their catalog ordering and generator interpretatio
 must remain compatible; golden compatibility checks protect these inputs. Volume
 is a listening setting, but actual output still depends on the receiver's device.
 
+On October 6, 2026, the prerelease word-answer assets changed from Kokoro to
+ElevenLabs Bella / Eleven v4. Earlier local smoke-test links now use that pack;
+preserving the earlier spoken timing was explicitly waived before public
+release. The current checked-in pack is the baseline for word recipe v1. Keep
+its approved audio compatible when evolving published recipes.
+
 Opening a shared link starts paused, without importing the sender's time, notes,
 answers, owner, private assignment or progress. Official curriculum and audio
 remain at their original public source. The app links to full official instructions.

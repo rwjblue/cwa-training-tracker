@@ -32,6 +32,19 @@ the fixes below from gaps that remain. **Present** means an active usable
 equivalent; **partial** means only the stated subset exists; **missing** means no
 active equivalent was found. P1/P2/P3 describe product priority, not security severity.
 
+### ElevenLabs spoken-answer pack · October 6, 2026
+
+All 99 public word answers now use checked-in Bella / Eleven v4 clips. The
+offline generator validates inputs, caches received responses, and skips
+unchanged answers; normal builds and native playback require no API key or
+speech service. A [comparison page](../public/audio/cw-training/words/compare.html)
+pairs twelve original Kokoro answers with the selected new voice. See
+[provenance and regeneration](spoken-audio.md). This prerelease replacement
+explicitly changes earlier local word-link audio; no legacy pack is selected by
+URLs. Native repetitions, independent volume controls, seeking, shuffle/repeat
+transitions and listening credit retain their existing playback path. Physical
+iPhone lock-screen verification remains outstanding.
+
 ## Already usable
 
 - **Daily curriculum and private journal:** Published Beginner v4.8, Fundamental

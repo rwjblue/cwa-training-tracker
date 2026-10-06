@@ -1,0 +1,91 @@
+{
+  "voiceName": "Bella",
+  "voiceId": "hpp4J3VqNfWAUOO0d1Us",
+  "model": "eleven_v4",
+  "words": [
+    {
+      "word": "A",
+      "pronunciation": "ay",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/a.wav",
+      "newUrl": "/audio/cw-training/words/a.wav",
+      "oldSha256": "1f972acf29564d19b37e5e5f5286e24f54c7d6d5ab0d3a4c6438d91b2d2a2dc2"
+    },
+    {
+      "word": "I",
+      "pronunciation": "eye",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/i.wav",
+      "newUrl": "/audio/cw-training/words/i.wav",
+      "oldSha256": "7d13fbd9897763eb7467399a988a59785f664f44a9ccf5783aba0cf88ad69367"
+    },
+    {
+      "word": "THE",
+      "pronunciation": "the",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/the.wav",
+      "newUrl": "/audio/cw-training/words/the.wav",
+      "oldSha256": "1f1c27703f85f545861035646bf827590e57beef480c6e80005571ef5a854239"
+    },
+    {
+      "word": "AS",
+      "pronunciation": "as",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/as.wav",
+      "newUrl": "/audio/cw-training/words/as.wav",
+      "oldSha256": "94e6bcbae22b384c6ed26a205f77bb8205fdd3111a7630af4975bf737f4d58cd"
+    },
+    {
+      "word": "CQ",
+      "pronunciation": "C Q",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/cq.wav",
+      "newUrl": "/audio/cw-training/words/cq.wav",
+      "oldSha256": "c4a0466944bf9b5892a4d64b9dcb973dcb4ca5a379db466940579bed6059a0df"
+    },
+    {
+      "word": "QTH",
+      "pronunciation": "Q T H",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/qth.wav",
+      "newUrl": "/audio/cw-training/words/qth.wav",
+      "oldSha256": "d28bc80a54d624a182dc0b65daa9772432643b75c1b556d94294cbbc6b90a7a2"
+    },
+    {
+      "word": "WX",
+      "pronunciation": "weather",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/wx.wav",
+      "newUrl": "/audio/cw-training/words/wx.wav",
+      "oldSha256": "bfbda6d86e00af0910ac1f47fb3e0ddeccedb007dc55e43fdc3cd708bc391e98"
+    },
+    {
+      "word": "DE",
+      "pronunciation": "this is",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/de.wav",
+      "newUrl": "/audio/cw-training/words/de.wav",
+      "oldSha256": "34071a5626d81c61fcf927dbf965bf8cb34de94f83c21a3a309cc09b6eaaedeb"
+    },
+    {
+      "word": "73",
+      "pronunciation": "seventy three",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/73.wav",
+      "newUrl": "/audio/cw-training/words/73.wav",
+      "oldSha256": "9af00dfb0f16d69062eab51a14ed71d20fc4948cb54a71b023ea9ed607b2cc39"
+    },
+    {
+      "word": "YAGI",
+      "pronunciation": "yah ghee",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/yagi.wav",
+      "newUrl": "/audio/cw-training/words/yagi.wav",
+      "oldSha256": "d8e8c891566d5bcc31d413d89a15b5d58d4b2c9d41b1a4cf176f8d688fb79f56"
+    },
+    {
+      "word": "DIPOLE",
+      "pronunciation": "dipole",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/dipole.wav",
+      "newUrl": "/audio/cw-training/words/dipole.wav",
+      "oldSha256": "895331edcfad19b210f02c89a1ab2776b25c7491ea833533a5c9042a289c21ae"
+    },
+    {
+      "word": "HW?",
+      "pronunciation": "how copy?",
+      "oldUrl": "/audio/cw-training/words/comparison/kokoro/hw-question.wav",
+      "newUrl": "/audio/cw-training/words/hw-question.wav",
+      "oldSha256": "a01ff929478a8af60e854b610c1fb353c47e58c26913a7276bee0a9cee775157"
+    }
+  ]
+}

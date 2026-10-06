@@ -1,28 +1,61 @@
 # Prerecorded word answers
 
 The public vocabulary has 99 unique answer clips: 70 common QSO words and
-30 common English words share AS. These are original generated speech, reused
-byte-for-byte from the personal trainer’s public assets; they are not CWops
-recordings or curriculum audio. No personal training data is included.
+30 common English words share AS. These are original ElevenLabs-generated
+answers, checked into the repository and served as static assets. They are not
+CWops recordings or curriculum audio. No personal training data is included.
 
 `data/cw-training/word-speech.json` records each pronunciation and the generator:
-Kokoro v1.0 via kokoro-onnx 0.6.1, voice af_heart, en-us, speed 1. Abbreviations
-have authored pronunciations (for example WX says “weather”). The generator
-pins model and voice-file SHA-256 digests; uv.lock pins Python dependencies.
-Model files remain in ignored `.tmp/cw-speech/` and are never served to browsers.
-The public index retains input fingerprints and clip hashes.
+Eleven v4 (`eleven_v4`), Bella (`hpp4J3VqNfWAUOO0d1Us`), English, stability 0.75
+and similarity 0.75. Bella was selected from the current public catalog for
+Standard American pronunciation, crisp diction, deliberate pacing and
+educational use. Abbreviations have authored pronunciations (for example WX
+says “weather” and DE says “this is”). The catalog date is October 6, 2026.
 
-With uv and ffmpeg installed, regenerate from the repository root:
+Only the offline generation task reads `ELEVENLABS_API_KEY`; browsers and the
+Worker never call ElevenLabs or receive the key. The public index retains input
+fingerprints and approved clip hashes. Saved files provide exact reproduction;
+repeating the same synthesis request does not guarantee identical audio.
+
+The original pack used Kokoro v1.0, af_heart, en-us, speed 1. Twelve original
+clips remain in `public/audio/cw-training/words/comparison/kokoro/` for review.
+Open [the comparison page](../public/audio/cw-training/words/compare.html) through
+a local preview at `/audio/cw-training/words/compare.html`. Each word has old and
+new native players and a **Play old then new** button. All clips start paused;
+starting another clip stops the previous comparison.
+
+Generate from the repository root with `ELEVENLABS_API_KEY` available in the
+environment. Mise loads the ignored `.env` file. ElevenLabs generation uses
+Python 3.11 or newer's standard library; it needs no local model, uv, ffmpeg or
+npm package.
 
 ```sh
-rtk proxy mise run generate-word-speech
+rtk proxy mise run generate-word-speech -- --provider elevenlabs --dry-run
+rtk proxy mise run generate-word-speech -- --provider elevenlabs
 rtk proxy mise run generate-word-speech -- --word WX --force
+rtk proxy mise run test-word-speech-generator
 ```
 
-Generation performs local inference, trims padding, normalizes the voice peak
-to 0.8, and writes mono 22050 Hz 16-bit PCM WAVs. The task skips unchanged clips.
-Only these compact answer assets (about 3 MB total) and their index are shipped;
-normal builds require no inference runtime.
+Generation requests raw `pcm_22050`, trims synthesis padding with 30 ms leading
+and 80 ms trailing margins, normalizes the voice peak to 0.8, and writes mono
+22050 Hz 16-bit PCM WAVs. The task validates every path before making a request
+and skips unchanged clips. Received raw responses and receipts stay in ignored
+`.tmp/cw-speech/elevenlabs/`; a rerun can finish processing them without paying
+for another request. Files and the index are replaced atomically after each
+completed clip. Dry run reports pending clips and request counts without API
+calls or file changes. **`--force` bypasses the response cache and incurs fresh
+generation charges.** Only explicit rate-limit rejections are retried, at most
+twice; ambiguous failures require inspecting usage before rerunning.
+
+Normal builds and playback need only the checked-in WAVs and index. Playback
+adds no ElevenLabs generation charges. Publishing and reuse follow
+[ElevenLabs' output terms](https://elevenlabs.io/docs/help-center/legal/can-i-publish-the-content-i-generate-on-the-platform);
+paid-plan outputs retain indefinite commercial use, while free-plan outputs
+have noncommercial and attribution requirements. Existing default voices are
+[scheduled to retire](https://elevenlabs.io/docs/help-center/product/voices/my-voices/what-are-default-voices)
+on December 31, 2026. That does not change saved WAVs; future regeneration may
+need a new voice and reviewed pack. The generator also retains Kokoro support
+for manifests using `engine: "kokoro-onnx"` (uv and ffmpeg required).
 
 The client loads unique answers four at a time and caches decoded PCM by content
 hash. Unsupported custom words fail before fetching. Failed downloads can be
@@ -46,6 +79,8 @@ they take effect at the next round boundary. New round also generates a fresh
 round. Actual media movement counts listening time, including answer and pause
 segments. Rounds exceeding 20 minutes are rejected.
 
+Offline generator tests cover API failures, bounded retries, cache recovery,
+unchanged/dry runs, validated paths and PCM conversion without paid requests.
 Automated tests check shipped clip hashes and format, timeline/WAV boundaries,
 volume, failure/retry, real browser progression and repeated rounds with device speech
 unavailable, and desktop/mobile fit. A physical iPhone test is still needed
