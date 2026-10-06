@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Test offline word speech generation without API calls or inference dependencies"
+set -euo pipefail
+python3 -B -m unittest discover -s scripts/cw-training/speech -p 'test_*.py'

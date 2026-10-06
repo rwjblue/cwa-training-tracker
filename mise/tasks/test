@@ -2,3 +2,4 @@
 #MISE description="Run domain and API regression tests"
 set -euo pipefail
 npm test
+mise run test-word-speech-generator

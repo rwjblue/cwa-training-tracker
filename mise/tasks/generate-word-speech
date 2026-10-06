@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
-#MISE description="Regenerate checked-in spoken word answers with local Kokoro inference"
+#MISE description="Generate checked-in spoken answers with the manifest's Kokoro or ElevenLabs provider"
 set -euo pipefail
-uv run --project scripts/cw-training/speech python scripts/cw-training/speech/generate.py "$@"
+speech_provider="$(python3 -B -c 'import json; from pathlib import Path; print(json.loads(Path("data/cw-training/word-speech.json").read_text())["generator"]["engine"])')"
+if [[ "$speech_provider" == "elevenlabs" ]]; then
+  python3 -B scripts/cw-training/speech/generate.py "$@"
+else
+  uv run --project scripts/cw-training/speech python -B scripts/cw-training/speech/generate.py "$@"
+fi
