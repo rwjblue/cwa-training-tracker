@@ -68,13 +68,14 @@ builds run on pushes to `main`. Preview builds are disabled until they have
 separate database, email, and secret bindings. The configured commands and
 build variables are:
 
-| Setting                   | Value                              |
-| ------------------------- | ---------------------------------- |
-| Root directory            | `/`                                |
-| Build command             | `bash mise/tasks/cloudflare-build` |
-| Deploy command            | `$HOME/.local/bin/mise run deploy` |
-| `NODE_VERSION`            | `24.21.0`                          |
-| `SKIP_DEPENDENCY_INSTALL` | `1`                                |
+| Setting                     | Value                                       |
+| --------------------------- | ------------------------------------------- |
+| Root directory              | `/`                                         |
+| Build command               | `bash mise/tasks/cloudflare-build`          |
+| Deploy command              | `$HOME/.local/bin/mise run deploy`          |
+| `NODE_VERSION`              | `24.21.0`                                   |
+| `SKIP_DEPENDENCY_INSTALL`   | `1`                                         |
+| `MISE_IGNORED_CONFIG_PATHS` | `~/.config/mise:~/.tool-versions:/etc/mise` |
 
 The build task installs pinned Mise, installs the repository's pinned Node and
 dependencies, and waits up to fourteen minutes for the GitHub `Verify` workflow
@@ -84,6 +85,10 @@ verification stops the build before migrations. API errors also stop the build;
 the public GitHub API needs no credential, but a rate-limited build must be
 retried after the quota resets. This explicit gate connects the two systems;
 Cloudflare does not automatically wait for GitHub Actions checks.
+
+The ignored config paths keep Cloudflare's global tool defaults out of Mise's
+tool selection. Both commands still use this repository's `mise.toml` and file
+tasks, without trying to reinstall unrelated image tools such as Hugo or Ruby.
 
 The deploy task then runs its checks, tests, build, and Wrangler dry run before
 applying remote D1 migrations and publishing the Worker. In Workers Builds it
