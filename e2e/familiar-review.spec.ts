@@ -197,6 +197,9 @@ test('familiar review rotates native material and saves exact private evidence w
   const next = page.getByRole('region', { name: 'Your next practice', exact: true });
   await expect(next).toContainText('Optional familiar review');
   await activate(reviews.getByRole('button', { name: `Review ${runnerTask.title}`, exact: true }));
+  // Finish navigation's smooth scroll before the native touch gesture in the frame.
+  await expect(page.locator('#current-practice')).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   const frame = page.frameLocator('iframe[title="Web Morse Runner practice simulator"]');
   await expect(frame.getByLabel('CW Speed', { exact: true })).toHaveValue('23');
   await expect(frame.getByLabel('Activity', { exact: true })).toHaveValue('1');
