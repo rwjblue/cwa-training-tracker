@@ -84,6 +84,8 @@ export function readListeningShare(
   if (volume !== undefined) updates.volume = volume;
   const variable = boolean('variable');
   if (tool === 'words') {
+    const voiceVolume = number('voice-volume', 0, 100);
+    if (voiceVolume !== undefined) updates.voiceVolume = voiceVolume;
     Object.assign(updates, sound);
     const list = params.get('list');
     if (list === 'common-qso' || list === 'common-30') updates.wordList = list;
@@ -189,6 +191,7 @@ export function listeningShareRoute(
     if (material.story) params.set('pitch', encodeNumbers([material.story.toneHz]));
   } else {
     params.set('list', material.words?.listId ?? p.wordList);
+    params.set('voice-volume', String(p.voiceVolume));
     params.set('variable', p.variableWordPitch ? '1' : '0');
     params.set('gap', String(p.wordGap));
     params.set('shuffle', p.shuffleWords ? '1' : '0');

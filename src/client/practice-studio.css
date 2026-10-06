@@ -870,3 +870,19 @@
 .practice-share [role='status'] {
   font-size: 12px;
 }
+
+.listening-sound-group {
+  min-width: 0;
+  margin: 24px 0 0;
+  padding: 18px;
+  border: 1px solid #dde4d6;
+  border-radius: 8px;
+}
+.listening-sound-group legend {
+  padding: 0 8px;
+  font-weight: 600;
+  color: #42593a;
+}
+.listening-sound-group input:disabled {
+  opacity: 0.5;
+}

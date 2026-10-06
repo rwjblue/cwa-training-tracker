@@ -33,11 +33,17 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   await sound(page);
   const variable = page.getByRole('checkbox', { name: 'Variable pitch', exact: true });
   await expect(variable).toBeChecked();
+  const sidetone = page.getByRole('slider', { name: 'Sidetone', exact: true });
+  await expect(sidetone).toHaveValue('450');
+  await expect(sidetone).toBeDisabled();
   await expect(
     page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true }),
-  ).toHaveValue('450');
+  ).toHaveCount(0);
   await variable.uncheck();
+  await expect(sidetone).toBeEnabled();
   await expect(page.getByText(/^Sound settings ·/)).toContainText('450 Hz');
+  await sidetone.press('End');
+  await expect(sidetone).toHaveValue('1000');
   await variable.check();
   await expect(page.getByRole('combobox', { name: 'Word list', exact: true })).toHaveValue(
     'common-qso',
@@ -53,14 +59,15 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   await sound(page);
   await exact(page, 'Character speed', 40);
   await exact(page, 'Effective speed', 40);
-  await exact(page, 'Sidetone', 975, 'Hz');
+  await expect(sidetone).toBeDisabled();
+  await expect(sidetone).toHaveValue('1000');
   await expect(page.getByText('40 / 40 WPM · 500–900 Hz variable', { exact: true })).toBeVisible();
   await listenAndPause(page);
   const original = await audio(page).evaluate((a: HTMLAudioElement) => a.src);
   const { bands: variableBands } = await morsePcmBands(page);
   expect(variableBands.length).toBeGreaterThan(0);
   expect(variableBands.every((hz) => hz >= 500 && hz <= 900)).toBe(true);
-  await exact(page, 'Sidetone', 1000, 'Hz');
+  await expect(sidetone).toBeDisabled();
   expect(await audio(page).evaluate((a: HTMLAudioElement) => a.src)).toBe(original);
   await page
     .getByRole('button', { name: 'Replay current word and start playback', exact: true })
@@ -73,6 +80,7 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   expect((await morsePcmBands(page)).bands).toEqual(variableBands);
   await variable.press('Space');
   await expect(variable).not.toBeChecked();
+  await expect(sidetone).toBeEnabled();
   await listenAndPause(page);
   expect((await morsePcmBands(page)).bands).toEqual([1000]);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -92,7 +100,8 @@ test('word pitch defaults on, reaches native audio, stays stable on replay/retim
   await expect(page.getByText('Loading prerecorded answers…')).toHaveCount(0);
   await listenAndPause(page);
   const spokenSource = await audio(page).evaluate((a: HTMLAudioElement) => a.src);
-  await exact(page, 'Sidetone', 975, 'Hz');
+  await expect(sidetone).toBeDisabled();
+  await expect(sidetone).toHaveValue('1000');
   expect(await audio(page).evaluate((a: HTMLAudioElement) => a.src)).toBe(spokenSource);
   await expectResponsive(page, 'word-variable-pitch');
   for (const width of [1440, 390]) {

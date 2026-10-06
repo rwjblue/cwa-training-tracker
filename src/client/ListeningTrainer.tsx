@@ -48,7 +48,6 @@ interface AppliedListeningTrack {
   readonly mixed?: boolean;
   readonly summary: GeneratedListeningSummary;
   readonly title: string;
-  readonly loop: boolean;
 }
 const EMPTY_WORDS: readonly string[] = [];
 const matchesWordSource = (
@@ -219,7 +218,6 @@ export default forwardRef<
     variablePitch ? null : p.tone,
     variablePitch,
     wordGap,
-    spokenAnswers && repeatList,
     spokenAnswers,
   ]);
   const materialOwner = useRef(content);
@@ -266,13 +264,7 @@ export default forwardRef<
     const pending = pendingRound.current;
     // A deliberate Play already queued this exact source for the next commit.
     // A source change still cancels it through the ordinary reset below.
-    if (
-      !spokenAnswers &&
-      pending &&
-      !pending.automatic &&
-      matchesWordSetup(pending.round, p, custom)
-    )
-      return;
+    if (pending && !pending.automatic && matchesWordSetup(pending.round, p, custom)) return;
     resetTransport();
     try {
       setWordRound(listeningWordRound(p.wordList, custom, p.shuffleWords));
@@ -294,9 +286,14 @@ export default forwardRef<
   useEffect(() => {
     if (previousWordSetup.current === wordSetupKey) return;
     previousWordSetup.current = wordSetupKey;
-    // A Morse-only installed round keeps its order; Shuffle chooses the next one.
-    // Preserve the existing fresh-recording behavior for spoken answers.
-    if (isWords && (spokenAnswers || !prepared.current)) resetWords();
+    // An installed round keeps its order; Shuffle chooses the next one.
+    if (
+      isWords &&
+      (!prepared.current ||
+        prepared.current.summary.mode !== 'words' ||
+        prepared.current.summary.spokenAnswers !== spokenAnswers)
+    )
+      resetWords();
   }, [activeShuffle, spokenAnswers]);
   useEffect(() => {
     if (qso.id === p.qsoScenario) return;
@@ -372,7 +369,7 @@ export default forwardRef<
         track = buildSpokenWordTrack(
           words,
           speech.clips,
-          { ...options, extraWordGap: wordGap },
+          { ...options, voiceVolume: p.voiceVolume / 100, extraWordGap: wordGap },
           wordListeningFrequencies(wordRound!, p),
         );
       } else if (isWords) {
@@ -389,7 +386,6 @@ export default forwardRef<
         resetKey,
         configurations: [{ at: 0, summary }],
         title: isWords ? listTitle : narrative.title,
-        loop: spokenAnswers && repeatList,
       });
       return { applied, error: '' };
     } catch (error) {
@@ -406,11 +402,11 @@ export default forwardRef<
     variablePitch ? null : p.tone,
     variablePitch,
     wordGap,
+    p.volume,
+    p.voiceVolume,
   ]);
   const { applied } = trackResult;
   const track = playingTrack ?? applied?.track ?? null;
-  const available = useRef(applied);
-  available.current = applied;
   const install = (
     next: AppliedListeningTrack,
     start: number,
@@ -432,7 +428,6 @@ export default forwardRef<
         callbacks.current.onPlayed?.(configuration.summary);
       }
     };
-    let lastPosition = start;
     try {
       if (audio.current) audio.current.dataset.wordListening = String(summary.mode === 'words');
       const installed = player.current.prepare(
@@ -441,33 +436,16 @@ export default forwardRef<
           title: next.title,
           canPlay: acceptsPlayback,
           onBeforeSeek: () => callbacks.current.onBeforeSeek?.(),
-          loop: next.loop,
           // An installed round may have a volume chosen in native controls.
-          volume:
-            player.current.track && player.current.supportsVolume && audio.current
+          volume: track.speech
+            ? player.current.track?.speech && player.current.supportsVolume && audio.current
+              ? audio.current.volume
+              : 1
+            : player.current.track && player.current.supportsVolume && audio.current
               ? audio.current.volume
               : volumeOwner.current,
           onProgress: (progress) => {
             if (!ownsPrepared()) return;
-            // A changed last item takes effect on the next deliberate native loop.
-            // Explicit seeks still retain the old prefix and never trigger replacement.
-            const wrapped =
-              next.mixed &&
-              next.loop &&
-              player.current.playedToEnd &&
-              lastPosition > track.duration - 0.5 &&
-              progress.position < 0.5 &&
-              progress.position < lastPosition &&
-              progress.state === 'playing';
-            lastPosition = progress.position;
-            if (
-              wrapped &&
-              available.current?.material === next.material &&
-              available.current.resetKey === next.resetKey
-            ) {
-              install(available.current, 0, true);
-              return;
-            }
             if (progress.state === 'playing' && !player.current.paused && !audio.current?.seeking)
               heardConfiguration(progress.position);
             if (progress.wordIndex >= 0) setComplete(false);
@@ -495,8 +473,7 @@ export default forwardRef<
             setComplete(true);
             setActiveWord(-1);
             const latest = preferencesOwner.current;
-            if (latest.tool === 'words' && !latest.spokenAnswers && latest.repeatList)
-              advanceWordRound(true);
+            if (latest.tool === 'words' && latest.repeatList) advanceWordRound(true);
           },
           onError,
         },
@@ -510,7 +487,6 @@ export default forwardRef<
         },
       );
       if (installed === false) return false;
-      lastPosition = installed;
       setDeviceVolume(!player.current.supportsVolume);
       setPlayingTrack(track);
       setMediaReady(true);
@@ -537,7 +513,7 @@ export default forwardRef<
   const advanceWordRound = (automatic = false) => {
     if (!canPlay()) return;
     const latest = preferencesOwner.current;
-    if (latest.tool !== 'words' || latest.spokenAnswers) return;
+    if (latest.tool !== 'words') return;
     retryRound.current = false;
     setContinuationError('');
     try {
@@ -581,7 +557,6 @@ export default forwardRef<
     if (retryRound.current) return advanceWordRound();
     if (
       isWords &&
-      !spokenAnswers &&
       !prepared.current &&
       !matchesWordSetup(wordRound, preferencesOwner.current, customOwner.current) &&
       // Only the explicitly imported round may differ from the selected next-
@@ -645,6 +620,9 @@ export default forwardRef<
   useEffect(() => {
     const pending = pendingRound.current;
     if (pending?.round === content) {
+      // Spoken rounds wait for their cached clips before installing the new WAV.
+      // Keep the owned intent cancellable by Pause, inspection or replacement.
+      if (spokenAnswers && !applied && !trackResult.error) return;
       pendingRound.current = null;
       if (!canPlay()) return;
       if (!applied) {
@@ -667,19 +645,44 @@ export default forwardRef<
       else stop();
       return;
     }
-    if (
-      previous.material !== applied.material ||
-      previous.resetKey !== applied.resetKey ||
-      spokenAnswers
-    ) {
+    if (previous.material !== applied.material || previous.resetKey !== applied.resetKey) {
       resetTransport();
       return;
     }
     if (
       previous.summary.characterWpm === applied.summary.characterWpm &&
       previous.summary.effectiveWpm === applied.summary.effectiveWpm
-    )
+    ) {
+      if (
+        (spokenAnswers || !player.current.supportsVolume) &&
+        (previous.track.volume !== applied.track.volume ||
+          previous.track.voiceVolume !== applied.track.voiceVolume)
+      ) {
+        try {
+          install(
+            {
+              ...previous,
+              track: {
+                ...previous.track,
+                volume: applied.track.volume,
+                voiceVolume: applied.track.voiceVolume,
+              },
+            },
+            player.current.position,
+            !player.current.paused,
+            { position: (current) => current },
+          );
+        } catch (error) {
+          stop();
+          onError((error as Error).message);
+        }
+      }
       return;
+    }
+    if (spokenAnswers) {
+      resetTransport();
+      return;
+    }
     try {
       const playing = !player.current.paused;
       const at = player.current.position;
@@ -720,10 +723,10 @@ export default forwardRef<
       stop();
       onError((error as Error).message);
     }
-  }, [applied]);
+  }, [applied, trackResult.error]);
   useEffect(() => {
-    if (audio.current) setDeviceVolume(!player.current.setVolume(p.volume / 100));
-  }, [p.volume]);
+    if (audio.current && !spokenAnswers) setDeviceVolume(!player.current.setVolume(p.volume / 100));
+  }, [p.volume, spokenAnswers]);
   useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
   const step = (delta: number) => {
     if (!canPlay()) return;
@@ -1117,13 +1120,12 @@ export default forwardRef<
             ? 'Story or narrator tone changes prepare a fresh paused recording.'
             : 'List, pitch, spacing and spoken-answer changes start a fresh round.'}
           {isWords &&
-            !spokenAnswers &&
             ' Shuffle applies to the next round; Repeat lets this round finish before continuing or stopping.'}
         </p>
         {deviceVolume && (
           <p className="field-hint">
-            This browser uses device volume controls during native playback. The app volume is
-            applied when preparing the next recording.
+            Device volume controls set the overall loudness. The app’s sound settings also apply to
+            the prepared recording.
           </p>
         )}
       </details>

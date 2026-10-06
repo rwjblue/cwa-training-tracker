@@ -22,6 +22,7 @@ export interface PracticePreferences {
   effectiveWpm: number;
   tone: number;
   volume: number;
+  voiceVolume: number;
   mode: PracticeMode;
   groupLength: number;
   wordLength: WordLength;
@@ -71,6 +72,7 @@ export const DEFAULT_PRACTICE_PREFERENCES: PracticePreferences = {
   effectiveWpm: 10,
   tone: 450,
   volume: 40,
+  voiceVolume: 40,
   mode: 'words',
   groupLength: 5,
   wordLength: 'mixed',
@@ -194,6 +196,13 @@ export function normalizePracticePreferences(value: unknown): PracticePreference
     ),
     tone: bounded(source.tone, defaults.tone, 300, 1000),
     volume: bounded(source.volume, defaults.volume, 0, 100),
+    // Existing overall volume becomes both gains until the learner separates them.
+    voiceVolume: bounded(
+      source.voiceVolume,
+      bounded(source.volume, defaults.voiceVolume, 0, 100),
+      0,
+      100,
+    ),
     mode: ['words', 'groups', 'numbers', 'callsigns', 'custom'].includes(String(source.mode))
       ? (source.mode as PracticeMode)
       : defaults.mode,

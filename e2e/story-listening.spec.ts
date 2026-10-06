@@ -136,9 +136,7 @@ test('public Stories share native sentence/word transport and retain independent
   expect((await morsePcmBands(page)).bands).toEqual(storyBands);
   await start(page);
   const playingSource = await media(page).evaluate((audio: HTMLAudioElement) => audio.src);
-  const preferredTone = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
-  await preferredTone.fill('1000');
-  await preferredTone.press('Enter');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toBeDisabled();
   expect(await media(page).evaluate((audio: HTMLAudioElement) => audio.src)).toBe(playingSource);
   await expect(media(page)).toHaveJSProperty('paused', false);
   await page.getByRole('slider', { name: 'Effective speed', exact: true }).press('ArrowRight');
@@ -183,6 +181,7 @@ test('public Stories share native sentence/word transport and retain independent
   await expectResponsive(page, 'story-native-retained');
   await variable.tap();
   await expect(variable).not.toBeChecked();
+  await page.getByRole('slider', { name: 'Sidetone', exact: true }).press('End');
   await start(page);
   await pause(page);
   expect((await morsePcmBands(page)).bands).toEqual([1000]);

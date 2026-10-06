@@ -9,7 +9,7 @@ and opening another tab.
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Overview, Summary, tool library | `#overview`, `#summary`, `#tools`                                                                                                                      |
 | Each practice tool              | `#practice/words`, `/qso`, `/stories`, `/copy`, `/sending`, `/free`, `/runner`                                                                         |
-| Word listening                  | Built-in list, exact order and occurrence pitches, speed, gap, shuffle/repeat/spoken-answer and text visibility settings                               |
+| Word listening                  | Built-in list, exact order and occurrence pitches, speed, gap, independent Morse/voice volumes, shuffle/repeat/spoken-answer and text visibility settings                               |
 | QSO practice                    | Scenario, versioned station recipe including fictional seasonal weather, exact station pitches, speed, text visibility and Listen/Check your copy view |
 | Stories                         | Stable story identity, narrator pitch, speed and text visibility                                                                                       |
 | Free practice                   | Generated set, content mode/length and sound settings; typed custom text is omitted                                                                    |

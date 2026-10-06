@@ -19,7 +19,7 @@ test('practice preferences persist and generated material follows exact selected
   await characterSpeed.press('End');
   await effectiveSpeed.press('End');
   await page.getByRole('slider', { name: 'Sidetone', exact: true }).press('Home');
-  await page.getByRole('slider', { name: 'Volume', exact: true }).press('Home');
+  await page.getByRole('slider', { name: 'Morse volume', exact: true }).press('Home');
   await page.getByRole('combobox', { name: 'Word length', exact: true }).selectOption('3');
   let words = (await page.getByLabel('Practice text', { exact: true }).inputValue()).split(' ');
   expect(words).toHaveLength(12);
@@ -31,7 +31,7 @@ test('practice preferences persist and generated material follows exact selected
   await expect(characterSpeed).toHaveValue('60');
   await expect(effectiveSpeed).toHaveValue('60');
   await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toHaveValue('300');
-  await expect(page.getByRole('slider', { name: 'Volume', exact: true })).toHaveValue('0');
+  await expect(page.getByRole('slider', { name: 'Morse volume', exact: true })).toHaveValue('0');
   await expect(page.getByRole('combobox', { name: 'Word length', exact: true })).toHaveValue('3');
   words = (await page.getByLabel('Practice text', { exact: true }).inputValue()).split(' ');
   expect(words.every((word) => word.length === 3)).toBe(true);

@@ -74,12 +74,14 @@ describe('prerecorded spoken rounds', () => {
       expect(data.getInt16(44 + (start - 1) * 2, true)).toBe(0);
       clip.samples.forEach((sample, i) =>
         expect(data.getInt16(44 + (start + i) * 2, true)).toBe(
-          Math.round(sample * options.volume * 32767),
+          Math.round(sample * 0.25 * options.volume * 32767),
         ),
       );
       expect(data.getInt16(44 + (start + clip.samples.length) * 2, true)).toBe(0);
     }
-    const muted = new Uint8Array(await renderMorseWav({ ...track, volume: 0 }).arrayBuffer());
+    const muted = new Uint8Array(
+      await renderMorseWav({ ...track, volume: 0, voiceVolume: 0 }).arrayBuffer(),
+    );
     expect(muted.slice(44).every((sample) => sample === 0)).toBe(true);
     expect(() => buildSpokenWordTrack(['UNKNOWN'], clips, options)).toThrow('prerecorded answer');
     expect(() =>
@@ -88,6 +90,49 @@ describe('prerecorded spoken rounds', () => {
     expect(() =>
       renderMorseWav({ ...track, speech: [{ at: track.duration, samples: clips.get('A')! }] }),
     ).toThrow('timing');
+  });
+
+  it('balances published speech with Morse and keeps both gains independent, including either mute', async () => {
+    const samples = decodeWordWav(
+      Uint8Array.from(readFileSync('public/audio/cw-training/words/a.wav')).buffer,
+    );
+    const clips = new Map([['A', samples]]);
+    const peaks: number[][] = [];
+    for (const [volume, voiceVolume] of [
+      [1, 1],
+      [0.4, 0.4],
+      [0, 0.4],
+      [0.4, 0],
+    ]) {
+      const track = buildSpokenWordTrack(['A'], clips, { ...options, volume, voiceVolume });
+      const data = new DataView(await renderMorseWav(track).arrayBuffer());
+      const peak = (start: number, end: number) => {
+        let value = 0;
+        for (
+          let frame = Math.round(start * MORSE_SAMPLE_RATE);
+          frame < Math.round(end * MORSE_SAMPLE_RATE);
+          frame++
+        )
+          value = Math.max(value, Math.abs(data.getInt16(44 + frame * 2, true)) / 32767);
+        return value;
+      };
+      peaks.push([
+        peak(0, track.words[0].answerStart!),
+        peak(track.words[0].answerStart!, track.words[0].end),
+      ]);
+    }
+    expect(peaks[0][0]).toBeCloseTo(0.2, 3);
+    expect(peaks[0][1]).toBeCloseTo(peaks[0][0], 2);
+    expect(peaks[1][0]).toBeCloseTo(peaks[0][0] * 0.4, 4);
+    expect(peaks[1][1]).toBeCloseTo(peaks[0][1] * 0.4, 4);
+    expect(peaks[2][0]).toBe(0);
+    expect(peaks[2][1]).toBe(peaks[1][1]);
+    expect(peaks[3][0]).toBe(peaks[1][0]);
+    expect(peaks[3][1]).toBe(0);
+    for (const voiceVolume of [-1, NaN, Infinity, 1.01])
+      expect(() =>
+        renderMorseWav(buildSpokenWordTrack(['A'], clips, { ...options, voiceVolume })),
+      ).toThrow('voice volume');
   });
 
   it('rejects malformed and truncated clips without opening an audio context', () => {

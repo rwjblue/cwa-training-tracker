@@ -31,7 +31,10 @@ export default function ListeningSoundSettings({
       </summary>
       <div className="studio-preferences-heading">
         <h3>Your listening preferences</h3>
-        <p>Words, QSO, and Stories remember separate speeds and pitch choices. Volume is shared.</p>
+        <p>
+          Words, QSO, and Stories remember separate speeds and pitch choices. Morse volume is shared
+          across tools; spoken answers have their own voice volume.
+        </p>
         <p>
           {remembered
             ? 'Sound defaults are saved on this device, including when you sign out. Word sources use the separate account or Guest device scope.'
@@ -42,27 +45,6 @@ export default function ListeningSoundSettings({
         <button type="button" className="button outline" onClick={onRetry}>
           Retry saving listening preferences
         </button>
-      )}
-      {['words', 'qso', 'stories'].includes(preferences.tool) && (
-        <div className="studio-preferences-heading">
-          <label>
-            <input
-              type="checkbox"
-              checked={variablePitch}
-              onChange={(event) => changePreferences({ [pitchPreference]: event.target.checked })}
-              aria-describedby={pitchHintId}
-            />{' '}
-            Variable pitch
-          </label>
-          <p id={pitchHintId}>
-            {preferences.tool === 'words'
-              ? 'Choose a random pitch from 500 to 900 Hz for each word. Replays and spoken-answer repeats keep that word’s pitch.'
-              : preferences.tool === 'qso'
-                ? 'Choose random pitches from 500 to 900 Hz for both stations, at least 35 Hz apart. Each station keeps its pitch until New QSO.'
-                : 'Choose one random pitch from 500 to 900 Hz for the whole story. Replays and speed changes keep that pitch.'}{' '}
-            Turn this off to use your selected sidetone.
-          </p>
-        </div>
       )}
       <div className="studio-preferences-heading studio-speed-presets">
         <label>
@@ -109,36 +91,79 @@ export default function ListeningSoundSettings({
           onChange={(v) => changePreferences({ effectiveWpm: v })}
           hint="Farnsworth spacing: 3 WPM through character speed."
         />
-        <PreciseRange
-          key={`${preferences.tool}-tone`}
-          label="Sidetone"
-          value={tone}
-          min={300}
-          max={1000}
-          step={1}
-          unit="Hz"
-          onChange={(v) => changePreferences({ tone: v })}
-          hint={
-            variablePitch
-              ? 'Used when Variable pitch is off. Choose from 300 to 1000 Hz, in 1 Hz steps.'
-              : 'Find a comfortable pitch from 300 to 1000 Hz, in 1 Hz steps.'
-          }
-        />
-        <PreciseRange
-          continuous
-          label="Volume"
-          value={volume}
-          min={0}
-          max={100}
-          unit="%"
-          onChange={(v) => changePreferences({ volume: v })}
-          hint={
-            volume === 0
-              ? 'Muted. Raise the volume when you’re ready to listen.'
-              : 'Start softly. Comfort comes first.'
-          }
-        />
       </div>
+      <fieldset className="listening-sound-group">
+        <legend>Sidetone · Morse audio</legend>
+        {['words', 'qso', 'stories'].includes(preferences.tool) && (
+          <div className="studio-preferences-heading">
+            <label>
+              <input
+                type="checkbox"
+                checked={variablePitch}
+                onChange={(event) => changePreferences({ [pitchPreference]: event.target.checked })}
+                aria-describedby={pitchHintId}
+              />{' '}
+              Variable pitch
+            </label>
+            <p id={pitchHintId}>
+              {preferences.tool === 'words'
+                ? 'Choose a random pitch from 500 to 900 Hz for each word. Replays and spoken-answer repeats keep that word’s pitch.'
+                : preferences.tool === 'qso'
+                  ? 'Choose random pitches from 500 to 900 Hz for both stations, at least 35 Hz apart. Each station keeps its pitch until New QSO.'
+                  : 'Choose one random pitch from 500 to 900 Hz for the whole story. Replays and speed changes keep that pitch.'}{' '}
+              Turn this off to use your selected sidetone.
+            </p>
+          </div>
+        )}
+        <div className="studio-controls">
+          <PreciseRange
+            key={`${preferences.tool}-tone`}
+            label="Sidetone"
+            disabled={variablePitch}
+            showExact={false}
+            value={tone}
+            min={300}
+            max={1000}
+            step={1}
+            unit="Hz"
+            onChange={(v) => changePreferences({ tone: v })}
+            hint={
+              variablePitch
+                ? 'Turn off Variable pitch to change the sidetone. Your selected value is remembered.'
+                : 'Find a comfortable pitch from 300 to 1000 Hz, in 1 Hz steps.'
+            }
+          />
+          <PreciseRange
+            showExact={false}
+            label="Morse volume"
+            value={volume}
+            min={0}
+            max={100}
+            unit="%"
+            onChange={(v) => changePreferences({ volume: v })}
+            hint={
+              volume === 0
+                ? 'Muted. Raise the volume when you’re ready to listen.'
+                : 'Start softly. Comfort comes first.'
+            }
+          />
+        </div>
+      </fieldset>
+      {preferences.tool === 'words' && (
+        <fieldset className="listening-sound-group">
+          <legend>Spoken answers</legend>
+          <PreciseRange
+            showExact={false}
+            label="Voice volume"
+            value={preferences.voiceVolume}
+            min={0}
+            max={100}
+            unit="%"
+            onChange={(value) => changePreferences({ voiceVolume: value })}
+            hint="Adjust the spoken answers independently of Morse. Both volumes start at a balanced level."
+          />
+        </fieldset>
+      )}
     </details>
   );
 }

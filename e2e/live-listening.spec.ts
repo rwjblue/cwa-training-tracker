@@ -73,15 +73,15 @@ test('native word speed edits preserve heard timing, paused position and continu
   ).toEqual(metadata);
   expect(await page.evaluate(() => navigator.mediaSession.playbackState)).toBe('paused');
   const volumeSource = (await state(page)).source;
-  await page.getByRole('slider', { name: 'Volume', exact: true }).press('Home');
+  await page.getByRole('slider', { name: 'Morse volume', exact: true }).press('Home');
   expect((await state(page)).volume).toBe(0);
   expect((await state(page)).source).toBe(volumeSource);
-  await page.getByRole('slider', { name: 'Volume', exact: true }).press('End');
+  await page.getByRole('slider', { name: 'Morse volume', exact: true }).press('End');
   expect((await state(page)).volume).toBe(1);
   await page.getByRole('button', { name: /^(Start|Resume) practice$/, exact: true }).click();
   await expect.poll(async () => (await state(page)).at).toBeGreaterThan(paused.at + 0.25);
   const playing = await state(page);
-  await page.getByRole('slider', { name: 'Volume', exact: true }).press('ArrowLeft');
+  await page.getByRole('slider', { name: 'Morse volume', exact: true }).press('ArrowLeft');
   expect((await state(page)).source).toBe(playing.source);
   expect((await state(page)).paused).toBe(false);
   await expect

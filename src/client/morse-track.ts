@@ -2,6 +2,9 @@ import { cleanMorseText, morseTimeline } from './audio';
 
 export const MORSE_SAMPLE_RATE = 22050;
 export const MAX_MORSE_SECONDS = 20 * 60;
+const MORSE_GAIN = 0.2;
+// Published speech peaks at 0.8. Match the Morse peak without raising the tone.
+const SPOKEN_ANSWER_GAIN = MORSE_GAIN / 0.8;
 
 export interface MorseWord {
   text: string;
@@ -18,6 +21,8 @@ export interface MorseTrack {
   tones: { at: number; duration: number; frequency: number }[];
   duration: number;
   volume: number;
+  /** Independent gain for prerecorded answers; native volume remains a master control. */
+  voiceVolume?: number;
   speech?: { at: number; samples: Float32Array }[];
 }
 export interface MorseTrackItem {
@@ -32,6 +37,7 @@ export interface MorseTrackOptions {
   frequency: number;
   /** Gain baked into the WAV, because iOS does not honor element.volume. */
   volume: number;
+  voiceVolume?: number;
   extraWordGap?: number;
   trailingGap?: number;
 }
@@ -121,6 +127,7 @@ export function renderMorseWav(track: MorseTrack): Blob {
   if (!Number.isFinite(track.duration) || track.duration <= 0 || track.duration > MAX_MORSE_SECONDS)
     throw tooLong();
   checkRange(track.volume, 0, 1, 'volume');
+  if (track.voiceVolume !== undefined) checkRange(track.voiceVolume, 0, 1, 'voice volume');
   const frames = Math.ceil(track.duration * MORSE_SAMPLE_RATE);
   const bytes = new ArrayBuffer(44 + frames * 2);
   const view = new DataView(bytes);
@@ -159,7 +166,11 @@ export function renderMorseWav(track: MorseTrack): Blob {
       const edge = Math.min(1, (i - start) / ramp, (end - 1 - i) / ramp);
       const envelope = (1 - Math.cos(Math.PI * edge)) / 2;
       const sample = Math.sin((2 * Math.PI * tone.frequency * (i - start)) / MORSE_SAMPLE_RATE);
-      view.setInt16(44 + i * 2, Math.round(sample * envelope * track.volume * 0.2 * 32767), true);
+      view.setInt16(
+        44 + i * 2,
+        Math.round(sample * envelope * track.volume * MORSE_GAIN * 32767),
+        true,
+      );
     }
   }
   for (const clip of track.speech ?? []) {
@@ -176,7 +187,12 @@ export function renderMorseWav(track: MorseTrack): Blob {
       if (!Number.isFinite(sample)) throw new Error('This recording has invalid spoken audio.');
       view.setInt16(
         44 + (start + i) * 2,
-        Math.round(Math.max(-1, Math.min(1, sample)) * track.volume * 32767),
+        Math.round(
+          Math.max(-1, Math.min(1, sample)) *
+            SPOKEN_ANSWER_GAIN *
+            (track.voiceVolume ?? track.volume) *
+            32767,
+        ),
         true,
       );
     }
@@ -207,6 +223,7 @@ export function buildSpokenWordTrack(
     speech: [],
     duration: 0,
     volume: options.volume,
+    voiceVolume: options.voiceVolume ?? options.volume,
   };
   for (const [itemIndex, text] of words.entries()) {
     const frequency = frequencies?.[itemIndex] ?? options.frequency;

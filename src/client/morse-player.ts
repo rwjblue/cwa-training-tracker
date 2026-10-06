@@ -160,8 +160,13 @@ export class MorsePlayer {
   ): number | false {
     this.disposed = false;
     this.ensureAudio();
-    const volume = options.volume ?? track.volume;
-    const wav = renderMorseWav({ ...track, volume: this.nativeVolume ? 1 : volume });
+    const volume = options.volume ?? (track.speech ? 1 : track.volume);
+    // Spoken rounds bake independent Morse/voice gains. Native controls act as
+    // a master volume, so neither source silences the other when its gain is zero.
+    const wav = renderMorseWav({
+      ...track,
+      volume: track.speech ? track.volume : this.nativeVolume ? 1 : volume,
+    });
     const url = URL.createObjectURL(wav);
     const playbackRate = replacement && this.recording ? this.audio!.playbackRate : 1;
     const previousPosition = this.position;

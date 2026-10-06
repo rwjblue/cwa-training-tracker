@@ -1,12 +1,13 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { openDisclosure, openPracticeTool, expectResponsive, signIn } from './helpers';
+import { openDisclosure, openPracticeTool, expectResponsive, signIn, setSidetone } from './helpers';
 
 test.use({ hasTouch: true, extraHTTPHeaders: { 'CF-Connecting-IP': '192.0.2.231' } });
 const media = (page: Page) => page.getByLabel('Practice audio', { exact: true });
 const exact = (page: Page, label: string, unit = 'WPM') =>
   page.getByRole('spinbutton', { name: `${label} exact (${unit})`, exact: true });
 async function setExact(page: Page, label: string, value: number, unit = 'WPM') {
+  if (label === 'Sidetone') return setSidetone(page, value);
   if (label === 'Extra word pause')
     await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await exact(page, label, unit).fill(String(value));
@@ -63,7 +64,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('5');
   await expect(exact(page, 'Effective speed')).toHaveValue('3');
-  await expect(exact(page, 'Sidetone', 'Hz')).toHaveValue('617');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toHaveValue('617');
   await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
   await expect(exact(page, 'Extra word pause', 'seconds')).toHaveValue('0.3');
   await setExact(page, 'Character speed', 51);
@@ -132,8 +133,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await setExact(page, 'Effective speed', 51);
   await setExact(page, 'Sidetone', 419, 'Hz');
   await page.setViewportSize({ width: 390, height: 844 });
-  await exact(page, 'Sidetone', 'Hz').fill('420');
-  await exact(page, 'Character speed').tap(); // Leaving a numeric field applies its exact value.
+  await page.getByRole('slider', { name: 'Sidetone', exact: true }).press('ArrowRight');
   await expect(
     page.getByText('Sound settings · 60/51 WPM · 420 Hz', { exact: true }),
   ).toBeVisible();
@@ -145,7 +145,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('60');
   await expect(exact(page, 'Effective speed')).toHaveValue('51');
-  await expect(exact(page, 'Sidetone', 'Hz')).toHaveValue('420');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toHaveValue('420');
   await openPracticeTool(page, 'QSO practice', (control) => control.tap());
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('20');
@@ -217,6 +217,7 @@ test('native 55/60 WPM listening survives canceled review and exact save retry i
   await sound(page);
   await setExact(page, 'Character speed', 55);
   await setExact(page, 'Effective speed', 55);
+  await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   await setExact(page, 'Sidetone', 617, 'Hz');
   await setExact(page, 'Extra word pause', 0.3, 'seconds');
   await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');

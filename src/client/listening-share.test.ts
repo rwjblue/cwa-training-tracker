@@ -100,6 +100,7 @@ describe('public listening URLs', () => {
           effectiveWpm: 14,
           tone: 987,
           volume: 52,
+          voiceVolume: 27,
           hideTrainerText: false,
         };
         const url = listeningShareRoute(p, { words });

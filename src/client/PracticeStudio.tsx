@@ -778,11 +778,10 @@ export default function PracticeStudio({
           key === 'characterWpm' ||
           key === 'effectiveWpm' ||
           key === 'volume' ||
+          key === 'voiceVolume' ||
           key === 'hideTrainerText' ||
           (key === 'tone' && usesVariableListeningPitch(preferences)) ||
-          (tool === 'words' &&
-            !preferences.spokenAnswers &&
-            (key === 'shuffleWords' || key === 'repeatList')),
+          (tool === 'words' && (key === 'shuffleWords' || key === 'repeatList')),
       );
     if (!('hideTrainerText' in changes) && !continuousListeningEdit) stopPlayback();
     setError('');

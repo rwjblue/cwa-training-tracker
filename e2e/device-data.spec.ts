@@ -169,10 +169,9 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
     .fill('Retained listening notes without invented time');
   await page.getByText(/^Sound settings ·/).click();
   const tone = page.getByRole('slider', { name: 'Sidetone', exact: true });
-  const exactTone = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
-  await exactTone.fill('700');
-  await exactTone.press('Enter');
-  await expect(tone).toHaveValue('700');
+  await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
+  await tone.press('End');
+  await expect(tone).toHaveValue('1000');
   await openPracticeTool(page, 'Copy practice');
   await openDisclosure(page, 'Round settings');
   await page.getByRole('combobox', { name: 'Target duration', exact: true }).selectOption('10');
@@ -203,7 +202,7 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
       (note: { text: string }) => note.text === 'Retained listening notes without invented time',
     ),
   ).toBe(true);
-  expect(backup.shared.practicePreferences.tone).toBe(700);
+  expect(backup.shared.practicePreferences.tone).toBe(1000);
   expect(file.bytes.toString()).not.toContain('cwa:account:active');
   expect(
     await page
@@ -260,7 +259,7 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
   expect(afterClear.results).toEqual([]);
   expect(afterClear.draft).toBeNull();
   expect(afterClear.guests).toEqual(guestKeys);
-  expect(afterClear.defaults.tone).toBe(700);
+  expect(afterClear.defaults.tone).toBe(1000);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(1);
   await clearer.close();
 
@@ -334,7 +333,7 @@ test(`device backup, reviewed restore and scoped clear (desktop keyboard)`, asyn
     await page.evaluate(
       () => JSON.parse(localStorage.getItem('cwa.practice.preferences.v1')!).tone,
     ),
-  ).toBe(700);
+  ).toBe(1000);
   const restored = await page.evaluate(
     (id) =>
       Object.entries(localStorage).filter(([key]) =>

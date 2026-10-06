@@ -25,6 +25,7 @@ describe('browser practice preferences', () => {
       effectiveWpm: 17,
       tone: 725,
       volume: 23,
+      voiceVolume: 67,
       groupLength: 8,
       wordLength: 4 as const,
       mode: 'numbers' as const,
@@ -62,11 +63,23 @@ describe('browser practice preferences', () => {
         tone: 1000,
       },
       volume: 0,
+      voiceVolume: 0,
       groupLength: 10,
       wordLength: 'mixed',
       mode: 'words',
     });
     expect(normalizePracticePreferences({ tone: 613 }).tone).toBe(613);
+  });
+
+  it('defaults and bounds voice volume independently of Morse volume', () => {
+    expect(normalizePracticePreferences({ volume: 0 }).voiceVolume).toBe(0);
+    expect(normalizePracticePreferences({ volume: 73 }).voiceVolume).toBe(73);
+    expect(normalizePracticePreferences({ volume: 0, voiceVolume: 65 }).voiceVolume).toBe(65);
+    expect(normalizePracticePreferences({ voiceVolume: 0 }).volume).toBe(40);
+    expect(normalizePracticePreferences({ voiceVolume: 110 }).voiceVolume).toBe(100);
+    expect(normalizePracticePreferences({ voiceVolume: -1 }).voiceVolume).toBe(0);
+    for (const voiceVolume of [NaN, Infinity, null, '80'])
+      expect(normalizePracticePreferences({ voiceVolume }).voiceVolume).toBe(40);
   });
 
   it('defaults old and invalid listening pitch choices to on while preserving independent opt-outs', () => {

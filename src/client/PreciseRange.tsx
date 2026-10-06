@@ -11,6 +11,8 @@ export default function PreciseRange({
   onChange,
   hint,
   continuous = false,
+  disabled = false,
+  showExact = true,
 }: {
   label: string;
   value: number;
@@ -21,6 +23,8 @@ export default function PreciseRange({
   onChange: (value: number) => void;
   hint: string;
   continuous?: boolean;
+  disabled?: boolean;
+  showExact?: boolean;
 }) {
   const id = React.useId();
   const slider = React.useRef<HTMLInputElement>(null);
@@ -46,7 +50,9 @@ export default function PreciseRange({
   }, []);
   React.useEffect(() => {
     const input = slider.current!;
-    const change = () => commit(Number(input.value));
+    const change = () => {
+      if (!input.disabled) commit(Number(input.value));
+    };
     input.addEventListener('change', change);
     return () => input.removeEventListener('change', change);
   }, [commit]);
@@ -84,6 +90,7 @@ export default function PreciseRange({
         ref={slider}
         id={id}
         type="range"
+        disabled={disabled}
         min={min}
         max={max}
         step={step}
@@ -95,7 +102,9 @@ export default function PreciseRange({
           setPreview(next);
           if (continuous) commit(next);
         }}
-        onBlur={(event) => commit(Number(event.target.value))}
+        onBlur={(event) => {
+          if (!event.target.disabled) commit(Number(event.target.value));
+        }}
         onPointerCancel={cancel}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
@@ -104,13 +113,14 @@ export default function PreciseRange({
           }
         }}
       />
-      {!continuous && (
+      {!continuous && showExact && (
         <>
           <label htmlFor={`${id}-exact`}>Exact value ({unit})</label>
           <input
             id={`${id}-exact`}
             className="precise-number"
             type="number"
+            disabled={disabled}
             aria-label={`${label} exact (${unit})`}
             aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`}
             aria-invalid={Boolean(error)}
@@ -139,9 +149,12 @@ export default function PreciseRange({
       <p id={`${id}-hint`}>
         {hint}{' '}
         {!continuous &&
+          !disabled &&
           (preview !== value
             ? `Preview only. Release to apply; active ${value} ${unit}.`
-            : 'Release the slider, or enter an exact value and press Enter or leave the field, to apply.')}
+            : showExact
+              ? 'Release the slider, or enter an exact value and press Enter or leave the field, to apply.'
+              : 'Release the slider to apply.')}
       </p>
       {error && (
         <p id={`${id}-error`} role="alert">

@@ -1467,6 +1467,7 @@ it('defaults old backups to variable listening pitch and preserves independent c
   seed('guest');
   const backup = captureDeviceBackup('guest', 'Guest');
   const {
+    voiceVolume: omittedVoiceVolume,
     variableWordPitch: omittedWordPitch,
     variableQsoPitch: omittedQsoPitch,
     variableStoryPitch: omittedStoryPitch,
@@ -1478,6 +1479,7 @@ it('defaults old backups to variable listening pitch and preserves independent c
     variableWordPitch: true,
     variableQsoPitch: true,
     variableStoryPitch: true,
+    voiceVolume: 40,
   });
   for (const choices of [
     { variableWordPitch: false, variableQsoPitch: true, variableStoryPitch: false },

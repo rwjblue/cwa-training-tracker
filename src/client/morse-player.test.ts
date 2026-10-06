@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MorsePlayer, type MorseProgress } from './morse-player';
-import { buildMorseTrack, renderMorseWav } from './morse-track';
+import { buildMorseTrack, buildSpokenWordTrack, renderMorseWav } from './morse-track';
 import { MediaSessionController } from './media-session';
 
 // Native media behavior is covered in Playwright. This small boundary fake lets us
@@ -151,6 +151,31 @@ describe('native media playback boundary', () => {
     expect(audio.volume).toBe(1);
     player.dispose();
   });
+  it.each([true, false])(
+    'retains independent spoken gains with native volume support %s',
+    async (nativeVolume) => {
+      const player = new MorsePlayer();
+      const audio = new MediaElement();
+      if (!nativeVolume) Object.defineProperty(audio, 'volume', { get: () => 1, set: () => {} });
+      attach(player, audio);
+      const wav = vi.spyOn(URL, 'createObjectURL');
+      const spoken = buildSpokenWordTrack(['T'], new Map([['T', new Float32Array([0.8, -0.8])]]), {
+        characterWpm: 40,
+        effectiveWpm: 40,
+        frequency: 600,
+        volume: 0,
+        voiceVolume: 0.6,
+      });
+      player.prepare(spoken);
+      expect(player.supportsVolume).toBe(nativeVolume);
+      expect(audio.volume).toBe(1);
+      expect(new Uint8Array(await (wav.mock.calls[0][0] as Blob).arrayBuffer())).toEqual(
+        new Uint8Array(await renderMorseWav(spoken).arrayBuffer()),
+      );
+      player.dispose();
+    },
+  );
+
   it('rechecks the still-playing native boundary after rendering and settles only an accepted replacement', async () => {
     const player = new MorsePlayer();
     const audio = new MediaElement();

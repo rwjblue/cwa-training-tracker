@@ -172,3 +172,17 @@ export async function signIn(
   await expect(page.getByRole('dialog', { name: 'Check your inbox.', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Open your account', exact: true })).toBeVisible();
 }
+
+/** Use the pitch slider's keyboard controls; no exact-value field is displayed. */
+export async function setSidetone(page: Page, value: number) {
+  const slider = page.getByRole('slider', { name: 'Sidetone', exact: true });
+  await expect(slider).toBeEnabled();
+  await slider.press('Home');
+  const pages = Math.floor((value - 300) / 70);
+  for (let i = 0; i < pages; i++) await slider.press('PageUp');
+  let current = Number(await slider.inputValue());
+  while (current !== value) {
+    await slider.press(current < value ? 'ArrowRight' : 'ArrowLeft');
+    current += current < value ? 1 : -1;
+  }
+}

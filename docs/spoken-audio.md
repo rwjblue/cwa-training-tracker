@@ -32,15 +32,23 @@ Changing lists invalidates pending loads and removes the previous source.
 
 Each word’s three Morse repetitions, Farnsworth/extra pauses, answer samples,
 and final pause are rendered before playback into one bounded native WAV.
-Volume is baked into both Morse and speech for iOS. The native audio element
-owns progression, pause/resume, seeking and looping; UI callbacks merely follow
-its position. Repeating preserves the round’s order, including a shuffle;
-New round makes a fresh shuffle. Actual media movement counts listening time,
-including answer and pause segments. Rounds exceeding 20 minutes are rejected.
+Morse and voice have independent volume sliders, both defaulting to 40%. Morse
+is rendered with a 0.2 gain; the published voice clips (roughly 0.8 peak) receive
+a 0.25 gain so their default peak matches Morse. Both gains are baked into the
+WAV for iOS, and native/device volume acts as an overall volume control. Changing
+either app slider preserves native position and playing/paused state.
+The native audio element owns progression, pause/resume and seeking within each
+round. At completion, Repeat prepares a fresh round using the current Shuffle
+preference in both Morse-only and spoken-answer modes. Common QSO words always
+start with VVV, and only the remaining words shuffle. With Shuffle off, source
+order is preserved. Shuffle and Repeat edits retain the current word and source;
+they take effect at the next round boundary. New round also generates a fresh
+round. Actual media movement counts listening time, including answer and pause
+segments. Rounds exceeding 20 minutes are rejected.
 
 Automated tests check shipped clip hashes and format, timeline/WAV boundaries,
-volume, failure/retry, real browser progression and looping with device speech
+volume, failure/retry, real browser progression and repeated rounds with device speech
 unavailable, and desktop/mobile fit. A physical iPhone test is still needed
 before claiming verified playback while locked: cross all three repetitions,
-the spoken answer, next word, and native loop seam; then use lock-screen
+the spoken answer, next word, and automatic round transition; then use lock-screen
 pause/resume and confirm the visible word follows the audio after unlocking.

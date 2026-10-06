@@ -234,9 +234,7 @@ test(`generated listening saves only applied setups and retains exact content at
   ];
   await speed(page, 20, 10);
   await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
-  const qsoPitch = page.getByRole('spinbutton', { name: 'Sidetone exact (Hz)', exact: true });
-  await qsoPitch.fill('1000');
-  await qsoPitch.press('Enter');
+  await page.getByRole('slider', { name: 'Sidetone', exact: true }).press('End');
   await expect(page.getByLabel('QSO station tones', { exact: true })).toContainText('950 Hz');
   await expect.poll(() => page.locator('.trainer-catalog').innerText()).toBe(transcript);
   await listen();

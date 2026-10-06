@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { expectResponsive, openPracticeTool } from './helpers';
+import { expectResponsive, openPracticeTool, setSidetone } from './helpers';
 import { morsePcmBands, observeMorsePcm } from './morse-pcm';
 
 test.use({ hasTouch: true });
@@ -28,7 +28,7 @@ test('public QSO random station cues survive native seek, replay and retiming an
   await expect(variable).toBeChecked();
   await exact(page, 'Character speed', 55);
   await exact(page, 'Effective speed', 55);
-  await exact(page, 'Sidetone', 1000, 'Hz');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toBeDisabled();
   const pair = page.getByLabel('QSO station tones', { exact: true });
   const tones = [...(await pair.innerText()).matchAll(/: (\d+) Hz/g)].map((match) =>
     Number(match[1]),
@@ -74,7 +74,7 @@ test('public QSO random station cues survive native seek, replay and retiming an
     .poll(() => audio(page).evaluate((element: HTMLAudioElement) => element.paused))
     .toBe(false);
   const replaySource = await audio(page).evaluate((element: HTMLAudioElement) => element.src);
-  await exact(page, 'Sidetone', 975, 'Hz');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toBeDisabled();
   expect(await audio(page).evaluate((element: HTMLAudioElement) => element.src)).toBe(replaySource);
   await expect(audio(page)).toHaveJSProperty('paused', false);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).press('Enter');
@@ -97,14 +97,15 @@ test('public QSO random station cues survive native seek, replay and retiming an
   await page.getByRole('button', { name: 'Listen', exact: true }).tap();
   await sound(page);
   const variableSource = await audio(page).evaluate((element: HTMLAudioElement) => element.src);
-  await exact(page, 'Sidetone', 925, 'Hz');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toBeDisabled();
   expect(await audio(page).evaluate((element: HTMLAudioElement) => element.src)).toBe(
     variableSource,
   );
-  await exact(page, 'Sidetone', 975, 'Hz');
+  await expect(page.getByRole('slider', { name: 'Sidetone', exact: true })).toBeDisabled();
   expect(await pair.innerText()).toBe(pairText);
   await variable.tap();
   await expect(variable).not.toBeChecked();
+  await setSidetone(page, 975);
   await expect(pair).toContainText('975 Hz');
   await expect(pair).toContainText('925 Hz');
   await expect(
@@ -117,7 +118,7 @@ test('public QSO random station cues survive native seek, replay and retiming an
     .toBe(false);
   await page.getByRole('button', { name: 'Pause practice', exact: true }).tap();
   expect((await morsePcmBands(page)).bands).toEqual([925, 975]);
-  await exact(page, 'Sidetone', 1000, 'Hz');
+  await page.getByRole('slider', { name: 'Sidetone', exact: true }).press('End');
   await expect(pair).toContainText('1000 Hz');
   await expect(pair).toContainText('950 Hz');
   await expect(pair).toContainText('lower to stay within the 1000 Hz limit');

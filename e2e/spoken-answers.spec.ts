@@ -58,12 +58,29 @@ import { openDisclosure, openPracticeTool, expectResponsive } from './helpers';
     await expect(media).toHaveAttribute('src', source!);
     await stop.click();
 
-    // A short real round crosses both word boundaries and the native loop seam.
+    // The QSO catalog generates a fresh spoken round and still opens with VVV.
+    await page.getByText('View word list', { exact: true }).click();
+    await page.getByRole('button', { name: 'Seek to word 70: DX', exact: true }).click();
+    await play.click();
+    await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
+    await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).check();
+    await expect(media).toHaveAttribute('src', source!);
+    await expect(media).toHaveJSProperty('paused', false);
+    await expect.poll(() => media.getAttribute('src'), { timeout: 15000 }).not.toBe(source);
+    await expect(page.getByText('WORD 1 OF 70 · LISTENING', { exact: true })).toBeVisible();
+    expect((await page.locator('.trainer-catalog').getByRole('button').allTextContents())[0]).toBe(
+      'VVV',
+    );
+    await stop.click();
+    await openDisclosure(page, 'Word options · pause, repeat and spoken answers');
+    await page.getByRole('checkbox', { name: 'Shuffle list', exact: true }).uncheck();
+
+    // A short real round crosses both word boundaries and the fresh-round seam.
     await page.getByRole('combobox', { name: 'Word list', exact: true }).selectOption('custom');
     await page.getByRole('textbox', { name: /^Your word list/ }).fill('A I');
     await expect(page.getByText('Loading prerecorded answers…')).toHaveCount(0);
     await play.click();
-    await expect(media).toHaveJSProperty('loop', true);
+    await expect(media).toHaveJSProperty('loop', false);
     const shortSource = await media.getAttribute('src');
     await stop.click();
     await page.getByRole('button', { name: 'Next', exact: true }).click();
@@ -79,7 +96,27 @@ import { openDisclosure, openPracticeTool, expectResponsive } from './helpers';
       .click();
     await expect(page.getByText('WORD 2 OF 2 · LISTENING', { exact: true })).toBeVisible();
     await expect(page.getByText('WORD 1 OF 2 · LISTENING', { exact: true })).toBeVisible();
-    await expect(media).toHaveAttribute('src', shortSource!);
+    await expect(media).not.toHaveAttribute('src', shortSource!);
+
+    await page.getByText(/^Sound settings ·/).click();
+    const morseVolume = page.getByRole('slider', { name: 'Morse volume', exact: true });
+    const voiceVolume = page.getByRole('slider', { name: 'Voice volume', exact: true });
+    await expect(morseVolume).toHaveValue('40');
+    await expect(voiceVolume).toHaveValue('40');
+    const beforeMix = await media.evaluate((a: HTMLAudioElement) => ({
+      source: a.src,
+      at: a.currentTime,
+    }));
+    await voiceVolume.press('Home');
+    await expect(morseVolume).toHaveValue('40');
+    await expect(media).toHaveJSProperty('paused', false);
+    expect(await media.evaluate((a: HTMLAudioElement) => a.src)).not.toBe(beforeMix.source);
+    expect(await media.evaluate((a: HTMLAudioElement) => a.currentTime)).toBeGreaterThanOrEqual(
+      beforeMix.at,
+    );
+    await morseVolume.press('End');
+    await expect(voiceVolume).toHaveValue('0');
+    await expect(media).toHaveJSProperty('paused', false);
 
     // This checks our hidden-page handler, not an emulated iOS lock screen.
     await page.evaluate(() => {
@@ -107,6 +144,10 @@ import { openDisclosure, openPracticeTool, expectResponsive } from './helpers';
     );
 
     await expectResponsive(page, 'spoken-answers-complete');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.screenshot({ path: `.tmp/spoken-sound-${width}.png`, fullPage: true });
+    }
     await page.getByRole('textbox', { name: /^Your word list/ }).fill('UNRECORDED');
     await expect(page.getByRole('alert')).toContainText('No prerecorded answer for UNRECORDED');
     await expect(media).not.toHaveAttribute('src');
