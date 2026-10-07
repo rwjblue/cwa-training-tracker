@@ -4497,7 +4497,32 @@ body {
   margin-bottom: 16px;
 }
 
+.practice-review-form .field {
+  min-width: 0;
+}
+
+.practice-review-form .field > input,
+.practice-review-form .field > select,
+.practice-review-form .field > textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 640px) {
+  .modal .practice-review-form .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-review-form .field > input,
+  .practice-review-form .field > select,
+  .practice-review-form .field > textarea {
+    font-size: 16px;
+  }
+
+  .practice-review-form .field > select {
+    height: 44px;
+  }
+
   .practice-review-form .review-actions {
     bottom: -22px;
     gap: 8px;
