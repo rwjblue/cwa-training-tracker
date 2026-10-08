@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createRunnerRun } from '../shared/runner';
+import type { PracticeEvidence } from '../shared/practice-evidence';
 import { finishedRunnerSession } from './runner-session';
 import {
   completeDeviceScopeMutation,
@@ -18,8 +19,19 @@ import {
   readRunnerReview,
 } from './runner-results';
 
-const entry = (id = 'synthetic-run') =>
-  finishedRunnerSession(
+const runnerTelemetryModule = '../../public/vendor/web-morse-runner/integration/telemetry.js';
+const { createRunnerTelemetry } = await import(runnerTelemetryModule);
+
+const entry = (id = 'synthetic-run') => {
+  const diagnostics = createRunnerTelemetry();
+  diagnostics.receive(
+    'cwa_receive',
+    { stationId: 1, call: 'K1ABC', part: 'call', startTime: 1, endTime: 2 },
+    0,
+  );
+  diagnostics.send({ type: 'send_msg', data: 'Qm' }, 3);
+  diagnostics.send({ type: 'send_his', data: 'K1ABC' }, 4);
+  return finishedRunnerSession(
     {
       ...createRunnerRun(id, {
         mode: 'SingleCall',
@@ -32,10 +44,12 @@ const entry = (id = 'synthetic-run') =>
       elapsedSeconds: 12.25,
       runStartedAt: '2026-10-01T03:59:59.000Z',
       runEndedAt: '2026-10-01T04:00:12.000Z',
+      telemetry: diagnostics.snapshot(12.25),
     },
     {},
     'America/New_York',
   );
+};
 let values: Map<string, string>;
 beforeEach(() => {
   values = new Map(
@@ -74,6 +88,11 @@ it('retains distinct acknowledged results before review without exposing an uplo
   expect(loadPracticeSaveOrigin('account-a', first.id).generation).toBe(3);
   expect(readRunnerResults('account-a').results[0].entry.date).toBe('2026-09-30');
   expect(readRunnerResults('account-a').results[0].reviewed).toBe(false);
+  expect(readRunnerResults('account-a').results[0].entry.metadata?.evidence).toHaveProperty(
+    'run.telemetry',
+    first.metadata?.runner &&
+      (first.metadata.runner as Extract<PracticeEvidence, { type: 'runner' }>['run']).telemetry,
+  );
 });
 
 it('retains canceled review edits and freezes the first submitted body across reopening', () => {
@@ -130,6 +149,28 @@ it('rejects foreign scope, changed facts and unknown-generation promotion', () =
       'account-a',
     ),
   ).toThrow(/review timestamp/);
+  for (const mutation of ['remove', 'change']) {
+    const changed = structuredClone(original);
+    const savedRun = changed.metadata!.runner as Extract<
+      PracticeEvidence,
+      { type: 'runner' }
+    >['run'];
+    const savedEvidence = changed.metadata!.evidence as Extract<
+      PracticeEvidence,
+      { type: 'runner' }
+    >;
+    if (mutation === 'remove') {
+      delete savedRun.telemetry;
+      delete savedEvidence.run.telemetry;
+    } else {
+      savedRun.telemetry!.incomplete = true;
+      savedEvidence.run.telemetry!.incomplete = true;
+    }
+    expect(() => retainRunnerReview('account-a', changed, false)).toThrow(/captured run facts/);
+    expect(() =>
+      retainFinishedRunnerResult('account-a', changed, { id: original.id, accountId: 'account-a' }),
+    ).toThrow(/different Runner result/);
+  }
 });
 
 it('reports refused or silent storage failures and never claims a retained receipt', () => {

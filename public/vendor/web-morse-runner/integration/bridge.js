@@ -1,7 +1,8 @@
 // Local adapter for the pinned upstream runtime. Keep this wire schema aligned
 // with src/shared/runner.ts; no lesson text or identity crosses it.
+import { createRunnerTelemetry } from "./telemetry.js";
 export const CHANNEL = "cw-training-runner";
-export const VERSION = 2;
+export const VERSION = 3;
 const conditionKeys = ["qrm", "qrn", "qsb", "flutter", "lids"];
 const setupIds = ["mode", "time", "activity", ...conditionKeys];
 const record = value => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -44,6 +45,9 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
   const originalStart = view.startContest.bind(view);
   const originalToggle = view.toggleNoRunFields.bind(view);
   const originalUpdate = view._config.update.bind(view._config);
+  const originalSend = view.sendMessage.bind(view);
+  const originalWipe = view.wipeFields.bind(view);
+  const telemetry = createRunnerTelemetry();
   let configured;
   let sequence = -1;
   let ready = false;
@@ -58,6 +62,9 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
   let audioStateChanged;
   let actualSettings;
   let lastWpm;
+  let finishing = false;
+  let finishFlush;
+  let flushTimeout;
 
   const send = (type, extra = {}) => {
     if (!configured) return;
@@ -66,7 +73,7 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
   };
   const syncControls = () => {
     for (const id of setupIds) doc.getElementById(id).disabled = !ready || used || terminal;
-    doc.getElementById("wpm").disabled = !ready || terminal || (used && !started);
+    doc.getElementById("wpm").disabled = !ready || terminal || finishing || (used && !started);
     const expert = doc.getElementById("expert_config");
     expert.disabled = true;
     expert.title = "Expert timing settings are not supported by the tracker's measured runs. Use the standalone runner for these options.";
@@ -82,6 +89,7 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
   };
   const cleanup = () => {
     win.clearTimeout(gestureExpiry);
+    win.clearTimeout(flushTimeout);
     win.clearInterval(heartbeat);
     win.clearInterval(view.timer_id);
     if (audioStateChanged && view.ctx) view.ctx.removeEventListener("statechange", audioStateChanged);
@@ -101,23 +109,40 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
     if (terminal) return;
     terminal = true;
     // Preserve the last engine reading; never fill an error gap with wall time.
-    try { elapsedSeconds = engineElapsed(); } catch { /* Keep last valid reading. */ }
-    send("error", { code });
+    if (!finishing) try { elapsedSeconds = engineElapsed(); } catch { /* Keep last valid reading. */ }
+    telemetry.markIncomplete();
+    send("error", { code, ...(started ? { telemetry: telemetry.snapshot(elapsedSeconds) } : {}) });
     cleanup();
   };
   const stop = reason => {
-    if (terminal || !configured) return;
+    if (terminal || finishing || !configured) return;
     try {
       elapsedSeconds = engineElapsed();
-      const summary = readRunnerSummary(view.log);
-      terminal = true;
-      send("results", { reason, summary });
-      cleanup();
-      view.clock.textContent = view.formatTimer(elapsedSeconds);
+      finishing = true;
+      view.running = false;
+      runButton.disabled = true;
+      enableSending(false);
+      syncControls();
+      const finish = () => {
+        if (terminal) return;
+        let summary;
+        try { summary = readRunnerSummary(view.log); }
+        catch { fail("engine"); return; }
+        terminal = true;
+        send("results", { reason, summary, ...(started ? { telemetry: telemetry.snapshot(elapsedSeconds) } : {}) });
+        cleanup();
+        view.clock.textContent = view.formatTimer(elapsedSeconds);
+      };
+      if (!started) { finish(); return; }
+      // Freeze credit at Stop, then drain observations emitted before the
+      // worklet acknowledges the barrier. Receipt timing never adds credit.
+      finishFlush = finish;
+      flushTimeout = win.setTimeout(() => { telemetry.markIncomplete(); finish(); }, 250);
+      view.ContestNode.port.postMessage({ type: "cwa_flush" });
     } catch { fail("engine"); }
   };
   const tick = () => {
-    if (!started || terminal) return;
+    if (!started || terminal || finishing) return;
     try {
       elapsedSeconds = engineElapsed();
       if (elapsedSeconds >= actualSettings.durationSeconds) stop("completed");
@@ -153,7 +178,23 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
   // Preserve upstream speed changes (including keyboard shortcuts), but keep
   // mode/duration fixed after Run so one continuous run has a coherent result.
   view.toggleNoRunFields = () => { originalToggle(); syncControls(); };
+  view.wipeFields = (...args) => {
+    if (started && !terminal && !finishing) {
+      try { telemetry.resetContact(engineElapsed()); }
+      catch { telemetry.markIncomplete(); }
+    }
+    return originalWipe(...args);
+  };
+  view.sendMessage = message => {
+    if (finishing || terminal) return;
+    if (started && !terminal && !finishing) {
+      try { telemetry.send(message, engineElapsed()); }
+      catch { telemetry.markIncomplete(); }
+    }
+    return originalSend(message);
+  };
   view._config.update = (...args) => {
+    if (finishing) return;
     // Number inputs briefly become empty while typing. Do not send invalid
     // speeds to the running audio engine during that intermediate state.
     if (started && !terminal && !integer(Number(doc.getElementById("wpm").value), 10, 60)) return;
@@ -191,12 +232,21 @@ export function installRunnerBridge(view, { window: win, document: doc, callsRea
         return;
       }
       started = true;
+      const originalMessage = view.ContestNode.port.onmessage;
+      view.ContestNode.port.onmessage = event => {
+        if (event.data?.type?.startsWith("cwa_")) {
+          if (event.data.type === "cwa_flush") { finishFlush?.(); return; }
+          if (!terminal) telemetry.receive(event.data.type, event.data.data, view.start_time);
+          return;
+        }
+        originalMessage.call(view.ContestNode.port, event);
+      };
       send("started", { settings: actualSettings });
       runButton.disabled = false;
       syncControls();
       enableSending(true);
       audioStateChanged = () => {
-        if (!terminal && view.ctx.state !== "running") fail("interrupted");
+        if (!terminal && !finishing && view.ctx.state !== "running") fail("interrupted");
       };
       view.ctx.addEventListener("statechange", audioStateChanged);
       view.ContestNode.addEventListener("processorerror", () => fail("engine"), { once: true });

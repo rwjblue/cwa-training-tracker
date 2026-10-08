@@ -45,8 +45,51 @@ reordered, duplicated, wrong-run, regressing, or post-terminal events.
 Starting again needs a fresh frame and run ID. A hidden page or interrupted
 audio context ends the current run instead of accumulating idle time.
 
-Results contain only QSO count, verified points and score, and NR/NIL error
-counts. Speed metadata retains the starting speed and at most 255 recent
+Results retain QSO count, verified points and score, and NR/NIL error counts.
+New runs also retain optional version 1 private diagnostics: standalone question-mark
+commands, repeat requests before/after sending a call, call sends and extra call
+sends within an exchange, completed caller transmissions and repeated
+transmissions, and caller-to-call-send delay aggregates. Run diagnostics appear
+beside terminal results and in saved practice evidence, history, reports and
+portable backups. Older runs omit diagnostics and remain unmeasured.
+
+The local `integration/contest-processor.js` worklet entrypoint installs
+observation hooks before upstream playback begins. They record caller identity,
+reply category, and first/last nonzero keyer samples on the AudioContext clock;
+trailing silence and padded buffers do not lengthen the measured transmission.
+The parent-facing adapter timestamps outgoing commands on that same clock.
+Delay is the idle gap from the matching caller's last sound to a send-call
+command, using only the first call-send response to each transmission so a
+resend cannot count the same wait again. Call-response delay uses replies
+containing the caller's call; combined
+call/exchange replies end after the whole reply. A send during reception has
+zero idle time and a separate overlap count. Typoed, unknown or ambiguous caller
+identities do not supply a delay sample. Caller transmissions are scheduled
+engine audio; local transmissions can mask them, and device output/input latency
+is not removed. Gap totals describe sampled responses rather than exclusive
+wall-clock wasted time. These timings do not isolate recognition from typing.
+
+Repeat-request classification describes whether a call has already been sent in
+the current exchange; it does not prove which information the learner missed.
+Extra call sends include corrections as well as deliberate resends.
+Partial calls containing `?` are retained in outgoing call events, but their
+question marks are not counted as standalone repeat requests. Automatic
+caller repeats are counted separately; repeating a call several times within
+one continuous transmission is one transmission. NR errors mean the engine
+confirmed the logged call but rejected the number; NIL can also mean an
+unfinished confirmation, so it is not a count of wrong calls. The data cannot
+establish first-try comprehension or reconstruct diagnostics for earlier runs.
+
+Aggregate counts cover the captured run, including abandoned exchanges, and
+are independent of logged QSO counts. At most 256 recent chronological send and
+receive events are retained, with total/omitted event counts. Stops freeze
+practice credit before draining queued observations through a worklet barrier.
+Diagnostic failure or a missing acknowledgement marks the data incomplete;
+score and accepted practice time remain available. Error results retain a
+partial diagnostic snapshot. No diagnostics or synthetic contact identities
+are encoded in public setup URLs.
+
+Speed metadata retains the starting speed and at most 255 recent
 changes, with a separate total count. Automatic notes are also bounded and
 identify omitted earlier changes. Imported recipes accept the same exact
 settings schema: Single Call or WPX, 10–60 WPM, 60–6000 seconds, activity

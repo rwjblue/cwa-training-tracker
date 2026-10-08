@@ -12,6 +12,11 @@ import {
 import { validatePracticeSession, validateTrainingExport } from './training';
 import { RUNNER_REVISION } from './runner';
 import type { GeneratedListeningEvidence } from './generated-listening';
+import {
+  isRunnerTelemetry,
+  RUNNER_MAX_TELEMETRY_EVENTS,
+  type RunnerTelemetry,
+} from './runner-telemetry';
 
 const timed = () => ({
   version: 1,
@@ -54,6 +59,59 @@ const session = (evidence: unknown) => ({
   notes: 'Synthetic',
   createdAt: '2026-09-30T12:00:00.000Z',
   metadata: { evidence },
+});
+
+const runnerTelemetry = (): RunnerTelemetry => ({
+  version: 1,
+  incomplete: false,
+  events: [
+    {
+      kind: 'receive',
+      elapsedSeconds: 2,
+      startSeconds: 1,
+      stationId: 1,
+      call: 'K1ABC',
+      part: 'call',
+    },
+    { kind: 'send', elapsedSeconds: 3, action: 'question', phase: 'call' },
+    {
+      kind: 'receive',
+      elapsedSeconds: 5,
+      startSeconds: 4,
+      stationId: 1,
+      call: 'K1ABC',
+      part: 'call',
+    },
+    { kind: 'send', elapsedSeconds: 6, action: 'call', phase: 'call', call: 'K1ABC' },
+    {
+      kind: 'receive',
+      elapsedSeconds: 8,
+      startSeconds: 7,
+      stationId: 1,
+      call: 'K1ABC',
+      part: 'exchange',
+    },
+    { kind: 'send', elapsedSeconds: 9, action: 'question', phase: 'exchange' },
+    { kind: 'send', elapsedSeconds: 10, action: 'call', phase: 'exchange', call: 'K1ABC' },
+  ],
+  eventCount: 7,
+  droppedEventCount: 0,
+  questionMarkCount: 2,
+  callSendCount: 2,
+  callRepeatRequestCount: 1,
+  exchangeRepeatRequestCount: 1,
+  repeatedCallSendCount: 1,
+  receivedCallCount: 2,
+  receivedExchangeCount: 1,
+  repeatedReceiveCount: 1,
+  responseDelay: { count: 2, totalSeconds: 3, maxSeconds: 2 },
+  callResponseDelay: { count: 1, totalSeconds: 1, maxSeconds: 1 },
+  overlappingResponseCount: 0,
+  unmatchedCallResponseCount: 0,
+});
+const measuredRunner = (telemetry: RunnerTelemetry = runnerTelemetry()) => ({
+  ...runner(),
+  run: { ...runner().run, telemetry },
 });
 
 const generated = (): GeneratedListeningEvidence => ({
@@ -708,6 +766,203 @@ describe('non-copy native evidence', () => {
     const raw = runner();
     raw.run.speedHistory.push({ elapsedSeconds: 12, wpm: 25 });
     expect(validatePracticeSession(session(raw)).characterWpm).toBeUndefined();
+  });
+  it('retains Runner diagnostics for unlogged contacts through normalization and portable history', () => {
+    const raw = measuredRunner();
+    const checked = validatePracticeSession(session(raw));
+    const evidence = sessionEvidence(checked.metadata);
+    expect(evidence).toEqual(raw);
+    expect(evidence).not.toBe(raw);
+    if (evidence?.type !== 'runner') throw new Error('Expected Runner evidence.');
+    expect(evidence.run.telemetry).not.toBe(raw.run.telemetry);
+    raw.run.telemetry.events.length = 0;
+    expect(evidence.run.telemetry?.events).toHaveLength(7);
+    const backup = validateTrainingExport({
+      format: 'cwa-training-tracker',
+      version: 1,
+      evidenceVersion: 1,
+      exportedAt: '2026-09-30T12:01:00Z',
+      sessions: [checked],
+    });
+    expect(sessionEvidence(backup.sessions[0].metadata)).toEqual(evidence);
+    const details = practiceSessionEvidenceDetails(checked.metadata).join(' ');
+    expect(details).toContain('Question marks: 2');
+    expect(details).toContain('Repeat requests before a call send: 1');
+    expect(details).toContain('Repeat requests after a call send: 1');
+    expect(details).toContain('Repeated caller transmissions: 1');
+    expect(details).toContain('Repeats within one transmission are not counted separately');
+    expect(details).toContain('Call response delay: 1.00s average, 1.00s total, 1.00s maximum');
+    expect(details).toContain('Response delay: 1.50s average, 3.00s total, 2.00s maximum');
+    expect(checked.qsoCount).toBe(0);
+  });
+  it('distinguishes old unmeasured Runner diagnostics from measured zero and overlapping responses', () => {
+    expect(validatePracticeEvidence(runner())).not.toHaveProperty('run.telemetry');
+    expect(practiceSessionEvidenceDetails(session(runner()).metadata).join(' ')).toContain(
+      'Runner diagnostics unmeasured',
+    );
+    const empty: RunnerTelemetry = {
+      ...runnerTelemetry(),
+      events: [],
+      eventCount: 0,
+      droppedEventCount: 0,
+      questionMarkCount: 0,
+      callSendCount: 0,
+      callRepeatRequestCount: 0,
+      exchangeRepeatRequestCount: 0,
+      repeatedCallSendCount: 0,
+      receivedCallCount: 0,
+      receivedExchangeCount: 0,
+      repeatedReceiveCount: 0,
+      responseDelay: { count: 0, totalSeconds: 0, maxSeconds: 0 },
+      callResponseDelay: { count: 0, totalSeconds: 0, maxSeconds: 0 },
+      overlappingResponseCount: 0,
+      unmatchedCallResponseCount: 0,
+    };
+    expect(validatePracticeEvidence(measuredRunner(empty))).toHaveProperty('run.telemetry', empty);
+    const details = practiceSessionEvidenceDetails(session(measuredRunner(empty)).metadata).join(
+      ' ',
+    );
+    expect(details).toContain('Question marks: 0');
+    expect(details).toContain('Call response delay: no matched call sends measured');
+    expect(details).not.toContain('unmeasured');
+    const overlapping = {
+      ...runnerTelemetry(),
+      responseDelay: { count: 2, totalSeconds: 0, maxSeconds: 0 },
+      callResponseDelay: { count: 1, totalSeconds: 0, maxSeconds: 0 },
+      overlappingResponseCount: 2,
+    };
+    expect(validatePracticeEvidence(measuredRunner(overlapping))).toHaveProperty(
+      'run.telemetry.overlappingResponseCount',
+      2,
+    );
+  });
+  it('retains bounded Runner events and identifies incomplete or omitted observations', () => {
+    const telemetry = runnerTelemetry();
+    telemetry.events = Array.from({ length: RUNNER_MAX_TELEMETRY_EVENTS }, (_, index) => ({
+      kind: 'send',
+      elapsedSeconds: index / 10,
+      action: 'cq',
+      phase: 'call',
+    }));
+    telemetry.eventCount = 1_000_000;
+    telemetry.droppedEventCount = telemetry.eventCount - telemetry.events.length;
+    telemetry.incomplete = true;
+    expect(isRunnerTelemetry(telemetry, 30.25)).toBe(true);
+    const checked = validatePracticeSession(session(measuredRunner(telemetry)));
+    const details = practiceSessionEvidenceDetails(checked.metadata).join(' ');
+    expect(details).toContain('Runner diagnostics are incomplete');
+    expect(details).toContain('Retained 256 of 1000000');
+    expect(details).toContain('999744 earlier events omitted');
+    expect(details).toContain('Aggregate counts include omitted events');
+    expect(JSON.stringify(checked.metadata).length).toBeLessThan(200_000);
+  });
+  it.each([
+    { version: 2 },
+    { incomplete: undefined },
+    { incomplete: 0 },
+    { privateAccountId: 'not-a-diagnostic-field' },
+    { eventCount: 6 },
+    { droppedEventCount: 1 },
+    { questionMarkCount: -1 },
+    { questionMarkCount: 1.5 },
+    { callSendCount: 1_000_001 },
+    { callRepeatRequestCount: NaN },
+    { exchangeRepeatRequestCount: Infinity },
+    { repeatedCallSendCount: 3 },
+    { receivedCallCount: 7 },
+    { repeatedReceiveCount: 8 },
+    { overlappingResponseCount: 3 },
+    { unmatchedCallResponseCount: 3 },
+    { responseDelay: { count: 3, totalSeconds: 3, maxSeconds: 2 } },
+    { responseDelay: { count: 0, totalSeconds: 1, maxSeconds: 0 } },
+    { responseDelay: { count: 2, totalSeconds: 61, maxSeconds: 2 } },
+    { responseDelay: { count: 2, totalSeconds: 3, maxSeconds: 4 } },
+    { responseDelay: { count: 2, totalSeconds: 3, maxSeconds: NaN } },
+    { responseDelay: { count: 2, totalSeconds: 3, maxSeconds: 2, typingSeconds: 1 } },
+    { callResponseDelay: { count: 3, totalSeconds: 3, maxSeconds: 2 } },
+    { responseDelay: { count: 0, totalSeconds: 0, maxSeconds: 0 } },
+    {
+      events: new Array(RUNNER_MAX_TELEMETRY_EVENTS + 1).fill({
+        kind: 'send',
+        elapsedSeconds: 1,
+        action: 'cq',
+        phase: 'call',
+      }),
+      eventCount: RUNNER_MAX_TELEMETRY_EVENTS + 1,
+    },
+    {
+      events: [{ kind: 'send', elapsedSeconds: 31, action: 'call', phase: 'call' }],
+      eventCount: 1,
+    },
+    {
+      events: [{ kind: 'send', elapsedSeconds: 1, action: 'call', phase: 'call', call: 'k1abc' }],
+      eventCount: 1,
+    },
+    {
+      events: [
+        { kind: 'send', elapsedSeconds: 1, action: 'question', phase: 'call', call: 'K1ABC' },
+      ],
+      eventCount: 1,
+    },
+    {
+      events: [{ kind: 'send', elapsedSeconds: 1, action: ['call'], phase: 'call' }],
+      eventCount: 1,
+    },
+    {
+      events: [
+        {
+          kind: 'receive',
+          elapsedSeconds: 1,
+          startSeconds: 2,
+          stationId: 1,
+          call: 'K1ABC',
+          part: 'call',
+        },
+      ],
+      eventCount: 1,
+    },
+    {
+      events: [
+        {
+          kind: 'receive',
+          elapsedSeconds: 1,
+          startSeconds: 0,
+          stationId: 1.5,
+          call: 'K1ABC',
+          part: 'call',
+        },
+      ],
+      eventCount: 1,
+    },
+    {
+      events: [
+        {
+          kind: 'receive',
+          elapsedSeconds: 1,
+          startSeconds: 0,
+          stationId: 1,
+          call: 'K1ABC',
+          part: 'call',
+          answer: 'private',
+        },
+      ],
+      eventCount: 1,
+    },
+    {
+      events: [
+        { kind: 'send', elapsedSeconds: 2, action: 'cq', phase: 'call' },
+        { kind: 'send', elapsedSeconds: 1, action: 'cq', phase: 'call' },
+      ],
+      eventCount: 2,
+    },
+  ])('rejects malformed or contradictory Runner diagnostics %j', (change) => {
+    const raw = runnerTelemetry();
+    expect(() =>
+      validatePracticeEvidence({
+        ...runner(),
+        run: { ...runner().run, telemetry: { ...raw, ...change } },
+      }),
+    ).toThrow(/Runner diagnostics/);
   });
   it.each([
     { elapsedSeconds: 61 },

@@ -48,6 +48,9 @@ import { finishedRunnerSession, captureRunnerPracticeAttribution } from '../clie
 import { timedClassMeetings, type ClassSchedule } from '../shared/class-schedule';
 import { createManualTiming } from '../shared/external-practice';
 
+const runnerTelemetryModule = '../../public/vendor/web-morse-runner/integration/telemetry.js';
+const { createRunnerTelemetry } = await import(runnerTelemetryModule);
+
 // Run production SQL against SQLite, including D1's transactional batch behavior.
 // The cast bridges only the D1 transport API; SQL and schema are not mocked.
 class SQLiteDatabase {
@@ -6449,6 +6452,14 @@ describe('start-attributed finished Runner results', () => {
     end = '2026-10-01T04:00:12.000Z',
     task?: PlannedTask,
   ): PracticeSession & { metadata: NonNullable<PracticeSession['metadata']> } => {
+    const diagnostics = createRunnerTelemetry();
+    diagnostics.receive(
+      'cwa_receive',
+      { stationId: 1, call: 'K1ABC', part: 'call', startTime: 1, endTime: 2 },
+      0,
+    );
+    diagnostics.send({ type: 'send_msg', data: 'Qm' }, 3);
+    diagnostics.send({ type: 'send_his', data: 'K1ABC' }, 4);
     const entry = finishedRunnerSession(
       {
         ...createRunnerRun(id, {
@@ -6468,6 +6479,7 @@ describe('start-attributed finished Runner results', () => {
         ],
         speedChangeCount: 1,
         summary: { qsoCount: 2, verifiedPoints: 1, score: 1, nrErrors: 0, nilErrors: 0 },
+        telemetry: diagnostics.snapshot(12.25),
       },
       captureRunnerPracticeAttribution(task, task ? 'review' : undefined),
       'America/New_York',
@@ -6496,6 +6508,11 @@ describe('start-attributed finished Runner results', () => {
       expect(saved.date).toBe(source.date);
       expect(saved.createdAt).toBe(source.createdAt);
       expect(saved.metadata?.evidence).toEqual(source.metadata.evidence);
+      expect(saved.metadata?.evidence).toHaveProperty('run.telemetry.responseDelay', {
+        count: 1,
+        totalSeconds: 2,
+        maxSeconds: 2,
+      });
       expect(saved).not.toHaveProperty('characterWpm');
       expect(saved.qsoCount).toBe(2);
       expect((await request('/api/entries', 'POST', source, owner.cookie)).status).toBe(200);
@@ -6523,6 +6540,30 @@ describe('start-attributed finished Runner results', () => {
         ).status,
       ).toBe(400);
     }
+    const savedRows = storedRows(owner.user.id);
+    for (const mutation of ['remove', 'change']) {
+      const changed = structuredClone(runs[0]);
+      const savedRun = changed.metadata.runner as Extract<
+        PracticeEvidence,
+        { type: 'runner' }
+      >['run'];
+      const savedEvidence = changed.metadata.evidence as Extract<
+        PracticeEvidence,
+        { type: 'runner' }
+      >;
+      if (mutation === 'remove') {
+        delete savedRun.telemetry;
+        delete savedEvidence.run.telemetry;
+      } else {
+        savedRun.telemetry!.incomplete = true;
+        savedEvidence.run.telemetry!.incomplete = true;
+      }
+      expect(
+        (await request(`/api/entries/${changed.id}`, 'PUT', changed, owner.cookie)).status,
+      ).toBe(400);
+      expect((await request('/api/entries', 'POST', changed, owner.cookie)).status).toBe(409);
+    }
+    expect(storedRows(owner.user.id)).toEqual(savedRows);
     expect(storedRows(owner.user.id)).toHaveLength(3);
     const exported = (await (
       await request('/api/export', 'GET', undefined, owner.cookie)
@@ -6595,6 +6636,13 @@ describe('start-attributed finished Runner results', () => {
           { elapsedSeconds: 13, wpm: 24 },
         ],
       }),
+      changeRun({
+        telemetry: {
+          ...(original.metadata.evidence as Extract<PracticeEvidence, { type: 'runner' }>).run
+            .telemetry,
+          questionMarkCount: -1,
+        },
+      }),
       {
         ...original,
         metadata: { ...original.metadata, runnerReviewedAt: '2026-10-01T03:00:00.000Z' },
@@ -6605,7 +6653,13 @@ describe('start-attributed finished Runner results', () => {
       expect(await rejected.json()).toMatchObject({ error: expect.any(String) });
       expect(storedRows(owner.user.id)).toEqual(prior);
     }
-    const malformed = { ...original, date: '2026-10-01' };
+    const malformed = changeRun({
+      telemetry: {
+        ...(original.metadata.evidence as Extract<PracticeEvidence, { type: 'runner' }>).run
+          .telemetry,
+        version: 2,
+      },
+    });
     expect(
       (
         await request(
@@ -6648,6 +6702,9 @@ describe('start-attributed finished Runner results', () => {
     delete (legacy.metadata!.runner as Record<string, unknown>).attribution;
     delete (legacy.metadata!.evidence as Extract<PracticeEvidence, { type: 'runner' }>).run
       .attribution;
+    delete (legacy.metadata!.runner as Record<string, unknown>).telemetry;
+    delete (legacy.metadata!.evidence as Extract<PracticeEvidence, { type: 'runner' }>).run
+      .telemetry;
     delete legacy.metadata!.runnerReviewedAt;
     legacy.id = 'historical-run-id';
     legacy.date = '2026-10-02';
@@ -6659,6 +6716,9 @@ describe('start-attributed finished Runner results', () => {
     expect(
       exported.sessions.find((entry) => entry.id === legacy.id)?.metadata?.evidence,
     ).not.toHaveProperty('run.attribution');
+    expect(
+      exported.sessions.find((entry) => entry.id === legacy.id)?.metadata?.evidence,
+    ).not.toHaveProperty('run.telemetry');
   });
 });
 

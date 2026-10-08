@@ -545,7 +545,7 @@ export class View {
             await this.ctx.resume()
         }
 
-        await this.ctx.audioWorklet.addModule(new URL("./contest-processor.js", import.meta.url))
+        await this.ctx.audioWorklet.addModule(new URL("../integration/contest-processor.js", import.meta.url))
         this.ContestNode = new AudioWorkletNode(
             this.ctx,
             "contest-processor",

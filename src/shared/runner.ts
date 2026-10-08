@@ -1,7 +1,8 @@
 import type { PracticeExercise } from './plan';
+import { isRunnerTelemetry, type RunnerTelemetry } from './runner-telemetry.ts';
 
 export const RUNNER_CHANNEL = 'cw-training-runner';
-export const RUNNER_PROTOCOL_VERSION = 2;
+export const RUNNER_PROTOCOL_VERSION = 3;
 export const RUNNER_MAX_SECONDS = 6_000;
 export const RUNNER_FRAME_URL = '/vendor/web-morse-runner/index.html';
 export const RUNNER_REVISION = '847e9089ef379a065d1cf6807c09f0724bbe072e';
@@ -46,8 +47,13 @@ export type RunnerEvent = RunnerEventEnvelope &
     | { type: 'ready' | 'progress' }
     | { type: 'started'; settings: RunnerSettings }
     | { type: 'speed'; wpm: number }
-    | { type: 'results'; reason: 'completed' | 'stopped'; summary: RunnerSummary }
-    | { type: 'error'; code: RunnerErrorCode }
+    | {
+        type: 'results';
+        reason: 'completed' | 'stopped';
+        summary: RunnerSummary;
+        telemetry?: RunnerTelemetry;
+      }
+    | { type: 'error'; code: RunnerErrorCode; telemetry?: RunnerTelemetry }
   );
 
 export interface RunnerRunState {
@@ -62,6 +68,8 @@ export interface RunnerRunState {
   /** Includes changes omitted from the bounded recent history. */
   speedChangeCount?: number;
   summary?: RunnerSummary;
+  /** Optional for runs recorded before private diagnostic collection was available. */
+  telemetry?: RunnerTelemetry;
   errorCode?: RunnerErrorCode;
   /** Parent receipt time of the engine's accepted start/terminal event, separate from practice block/save dates. */
   runStartedAt?: string;
@@ -189,19 +197,41 @@ export function parseRunnerEvent(value: unknown): RunnerEvent | undefined {
   }
   if (
     value.type === 'results' &&
-    exactKeys(value, [...eventKeys, 'reason', 'summary']) &&
+    exactKeys(value, [
+      ...eventKeys,
+      'reason',
+      'summary',
+      ...(value.telemetry === undefined ? [] : ['telemetry']),
+    ]) &&
     (value.reason === 'completed' || value.reason === 'stopped') &&
-    isRunnerSummary(value.summary)
+    isRunnerSummary(value.summary) &&
+    (value.telemetry === undefined || isRunnerTelemetry(value.telemetry, value.elapsedSeconds))
   ) {
-    return { ...base, type: 'results', reason: value.reason, summary: { ...value.summary } };
+    return {
+      ...base,
+      type: 'results',
+      reason: value.reason,
+      summary: { ...value.summary },
+      ...(value.telemetry ? { telemetry: structuredClone(value.telemetry) } : {}),
+    };
   }
   if (
     value.type === 'error' &&
-    exactKeys(value, [...eventKeys, 'code']) &&
+    exactKeys(value, [
+      ...eventKeys,
+      'code',
+      ...(value.telemetry === undefined ? [] : ['telemetry']),
+    ]) &&
     typeof value.code === 'string' &&
-    errorCodes.has(value.code)
+    errorCodes.has(value.code) &&
+    (value.telemetry === undefined || isRunnerTelemetry(value.telemetry, value.elapsedSeconds))
   ) {
-    return { ...base, type: 'error', code: value.code as RunnerErrorCode };
+    return {
+      ...base,
+      type: 'error',
+      code: value.code as RunnerErrorCode,
+      ...(value.telemetry ? { telemetry: structuredClone(value.telemetry) } : {}),
+    };
   }
   return undefined;
 }
@@ -279,6 +309,7 @@ export function reduceRunnerEvent(
           ? 'completed'
           : 'stopped',
       summary: event.summary,
+      ...(event.telemetry ? { telemetry: event.telemetry } : {}),
       ...(terminalTime ? { runEndedAt: terminalTime } : {}),
     };
   }
@@ -287,6 +318,7 @@ export function reduceRunnerEvent(
       ...next,
       status: 'error',
       errorCode: event.code,
+      ...(event.telemetry ? { telemetry: event.telemetry } : {}),
       ...(terminalTime ? { runEndedAt: terminalTime } : {}),
     };
   }

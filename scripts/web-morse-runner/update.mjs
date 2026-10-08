@@ -79,7 +79,7 @@ export function makeBundle(revision, sources) {
   }
   output["runtime/view.js"] = replaceOnce(sources["view.js"],
     'this.ctx.audioWorklet.addModule("contest-processor.js")',
-    'this.ctx.audioWorklet.addModule(new URL("./contest-processor.js", import.meta.url))', "AudioWorklet URL");
+    'this.ctx.audioWorklet.addModule(new URL("../integration/contest-processor.js", import.meta.url))', "AudioWorklet URL");
   output["runtime/call.js"] = replaceOnce(sources["call.js"],
     "fetch('calls.txt')", 'fetch(new URL("../data/synthetic-calls.txt", import.meta.url))', "calls URL");
   output["runtime/call.js"] = replaceOnce(output["runtime/call.js"],
@@ -116,7 +116,7 @@ export function makeBundle(revision, sources) {
   output["UPSTREAM.json"] = JSON.stringify({
     repository, revision, license: "Unlicense", sourceSha256: sourceHashes(sources),
     generatedSha256: Object.fromEntries(Object.entries(output).map(([path, text]) => [path, sha256(text)])),
-    patches: ["module-relative AudioWorklet URL", "local synthetic calls URL", "namespaced storage keys", "local bootstrap, theme, and attribution", "document language and accessible control labels", "Run disabled until bridge readiness"],
+    patches: ["module-relative AudioWorklet URL through local telemetry entrypoint", "local synthetic calls URL", "namespaced storage keys", "local bootstrap, theme, and attribution", "document language and accessible control labels", "Run disabled until bridge readiness"],
     excluded: ["upstream calls.txt (unverified provenance)", "Example_Calls/ (not required; third-party data)", "tests and documentation"],
   }, null, 2) + "\n";
   return output;

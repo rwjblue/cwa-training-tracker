@@ -138,6 +138,11 @@ iPhone lock-screen verification remains outstanding.
   Issue #17 adds receipt-gated Save & start next run with retained settings,
   deliberate assignment/review/class context and a fresh paused owner. Recovered
   Logbook continuation focuses the committed studio after dialog cleanup.
+  New native runs additionally retain versioned private send/repeat counts,
+  caller transmission boundaries, caller-to-Send timing and a bounded event
+  history through review, saved evidence and backups. Existing runs remain
+  unmeasured; these observations do not establish first-try comprehension.
+  See [diagnostic definitions and limits](morse-runner.md).
   [Runner](../src/client/MorseRunnerStudio.tsx).
 - **Sending scales reader:** Warm-up, Exercise and Drill now display native
   practice rows beside the timer, with adjustable text size and a prominent link

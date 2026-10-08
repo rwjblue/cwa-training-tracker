@@ -38,6 +38,7 @@ import {
   type RunnerPracticeAttribution,
 } from './runner-session';
 import { RunnerStopFlight } from './runner-stop-flight';
+import { runnerTelemetryDetails } from '../shared/runner-telemetry';
 import { getConfirmedAccountGeneration } from './account-outbox';
 import { getDeviceScopeToken, isDeviceScopeCurrent } from './device-scope';
 import { freezePracticeSaveOrigin, type PracticeSaveOrigin } from './practice-autosave';
@@ -647,6 +648,20 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
             <p>
               The engine did not return a score. Only its last confirmed practice time can be saved.
             </p>
+          )}
+          {run.telemetry && (
+            <details className="session-scratchpad">
+              <summary>Run diagnostics</summary>
+              {runnerTelemetryDetails(run.telemetry).map((detail) => (
+                <p key={detail}>{detail}</p>
+              ))}
+              {run.summary && (
+                <p>
+                  {run.summary.nrErrors} logged contacts with a confirmed call and an incorrect
+                  number.
+                </p>
+              )}
+            </details>
           )}
           <p>
             {hasTime

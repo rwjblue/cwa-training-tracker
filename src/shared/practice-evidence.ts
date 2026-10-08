@@ -1,6 +1,7 @@
 import { validateMaterialReference } from './instructor-material.ts';
 import { manualPracticeDetails } from './external-practice.ts';
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
+import { isRunnerTelemetry, runnerTelemetryDetails } from './runner-telemetry.ts';
 import { recordingSpeeds, recordingVariants, officialRecordingIdentity } from './recordings.ts';
 import {
   validateRecordingMarkSet,
@@ -222,6 +223,7 @@ function runner(value: unknown): Extract<PracticeEvidence, { type: 'runner' }>['
       'speedHistory',
       'speedChangeCount',
       'summary',
+      'telemetry',
       'errorCode',
       'runStartedAt',
       'runEndedAt',
@@ -272,6 +274,11 @@ function runner(value: unknown): Extract<PracticeEvidence, { type: 'runner' }>['
     )
       throw new Error('Invalid Runner error code.');
     result.errorCode = row.errorCode as RunnerRunState['errorCode'];
+  }
+  if (row.telemetry !== undefined) {
+    if (!isRunnerTelemetry(row.telemetry, elapsedSeconds))
+      throw new Error('Invalid Runner diagnostics counts, events or response delays.');
+    result.telemetry = structuredClone(row.telemetry);
   }
   if (row.speedHistory !== undefined) {
     if (
@@ -533,8 +540,12 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
       ...(run.summary
         ? [
             `${run.summary.qsoCount} contacts; ${run.summary.verifiedPoints} verified points; score ${run.summary.score}. Client engine result.`,
+            `${run.summary.nrErrors} correct calls with wrong number (NR); ${run.summary.nilErrors} unconfirmed logged contacts (NIL).`,
           ]
         : ['Runner score unavailable.']),
+      ...(run.telemetry
+        ? runnerTelemetryDetails(run.telemetry)
+        : ['Runner diagnostics unmeasured for this result.']),
       ...(run.speedHistory?.length
         ? [
             `Recorded speeds: ${run.speedHistory

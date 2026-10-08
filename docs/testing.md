@@ -246,6 +246,12 @@ Retained results and frozen review bodies must survive canceled/failed saves,
 including refusal of both terminal-result and queue storage. Only server
 acknowledgement can succeed without durable local storage. Verify pinned vendor
 hashes when updating the bundle; do not duplicate upstream engine tests.
+`runner-telemetry.spec.ts` owns the native caller-repeat/send-delay path and
+private saved diagnostics at desktop/mobile widths. Fast adapter tests own
+keyer-sample clock alignment, trailing-silence exclusion, overlapping callers,
+bounded event retention, partial capture and protocol/evidence compatibility.
+Existing result-retention and account export/import tests own diagnostic
+preservation and immutable facts; a public setup URL includes no diagnostics.
 
 Browser emulation cannot verify locked iOS playback. Before claiming it works,
 use a physical iPhone in Safari: start a Morse-only round, lock across a full
