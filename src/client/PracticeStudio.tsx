@@ -81,6 +81,7 @@ import { MediaSessionController } from './media-session';
 import {
   loadStudioNotes,
   saveStudioNotes,
+  settleSavedStudioNotes,
   studioCompletionSession,
   studioSession,
   studioNotesSession,
@@ -353,6 +354,7 @@ export default function PracticeStudio({
   const running = timer.running;
 
   const [scratchpad, setScratchpad] = useState('');
+  const [savedScratchpad, setSavedScratchpad] = useState<string>();
   const notesContext =
     launch?.task?.id ?? (assigned ? (launch?.id ?? 'assigned') : `public:${tool}`);
   const [notesRemembered, setNotesRemembered] = useState(true);
@@ -422,6 +424,13 @@ export default function PracticeStudio({
     setScratchpad(value);
     setNotesRemembered(saveStudioNotes(notesScope, notesContext, value, undefined, deviceToken));
   };
+  const settleScratchpad = (entry: PracticeSession) => {
+    if (!currentDevice()) return;
+    setNotesRemembered(settleSavedStudioNotes(notesScope, entry, undefined, deviceToken));
+    const notes = loadStudioNotes(notesScope, notesContext);
+    setScratchpad(notes);
+    setSavedScratchpad(notes);
+  };
   const [timerMinutes, setTimerMinutes] = useState<number | undefined>(launch?.task?.targetMinutes);
   const timerDone = timerMinutes !== undefined && seconds >= timerMinutes * 60;
   const [confirmReset, setConfirmReset] = useState(false);
@@ -455,7 +464,7 @@ export default function PracticeStudio({
         pauseTimer();
         timer.reset();
         generatedListening.current.reset();
-        changeScratchpad('');
+        if (savedEntry) settleScratchpad(savedEntry);
         sessionIdentity.current = undefined;
         saveCoordinator.current.reset();
         setConfirmReset(false);
@@ -470,9 +479,18 @@ export default function PracticeStudio({
         runnerUnsaved ||
         running ||
         seconds > 0 ||
-        scratchpad.length > 0,
+        (scratchpad.length > 0 && scratchpad !== savedScratchpad),
     );
-  }, [savingCompletion, copyUnsaved, runnerUnsaved, running, seconds, scratchpad, onUnsavedChange]);
+  }, [
+    savingCompletion,
+    copyUnsaved,
+    runnerUnsaved,
+    running,
+    seconds,
+    scratchpad,
+    savedScratchpad,
+    onUnsavedChange,
+  ]);
   useEffect(() => {
     if (!launch) return;
     resetTimer();
@@ -546,6 +564,19 @@ export default function PracticeStudio({
       : undefined;
   useEffect(() => {
     setScratchpad(loadStudioNotes(notesScope, notesContext));
+    const saved =
+      launch?.task && activity?.type === 'audio'
+        ? entries
+            .filter(
+              (entry) =>
+                entry.metadata?.plannedTaskId === launch.task!.id &&
+                entry.metadata?.practiceTool === 'audio',
+            )
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+        : undefined;
+    setSavedScratchpad(
+      typeof saved?.metadata?.scratchpad === 'string' ? saved.metadata.scratchpad : undefined,
+    );
   }, [notesScope, notesContext]);
   const stopPlayback = () => {
     recordingPlayback.current.cancel();
@@ -636,9 +667,11 @@ export default function PracticeStudio({
     pauseTimer();
     navigationFlight.current = (async () => {
       try {
-        const outcome = await saveCoordinator.current.flush(capture(), onAutoSave);
+        await saveCoordinator.current.flush(capture(), async (entry) => {
+          await onAutoSave(entry);
+          settleScratchpad(entry);
+        });
         if (!currentDevice()) return false;
-        if (outcome === 'saved') changeScratchpad('');
         resetTimer();
         setError('');
         setSaveFailed(false);
@@ -661,7 +694,8 @@ export default function PracticeStudio({
   };
   const saveNotes = () => {
     if (!currentDevice() || completionFlight.current || navigationFlight.current) return;
-    if (timer.snapshot().seconds !== 0 || !scratchpad.trim()) return;
+    if (timer.snapshot().seconds !== 0 || !scratchpad.trim() || scratchpad === savedScratchpad)
+      return;
     void saveSession(() => studioNotesSession(sessionInput()), 'notes');
   };
   const logTimedSession = () => {
@@ -1059,12 +1093,16 @@ export default function PracticeStudio({
       )}
       <p id="scratchpad-help" className="field-hint">
         {notesRemembered
-          ? 'Included with saved practice. Unsaved notes stay on this device for this tool.'
+          ? launch?.task && activity?.type === 'audio'
+            ? 'Included with saved practice. Notes stay on this device between listens for this assignment. A new assignment starts fresh.'
+            : 'Included with saved practice. Unsaved notes stay on this device for this tool.'
           : 'Included with saved practice. Your browser cannot store notes; unsaved notes last until you reload.'}
       </p>
       <button
         className="button outline"
-        disabled={timer.seconds !== 0 || running || !scratchpad.trim()}
+        disabled={
+          timer.seconds !== 0 || running || !scratchpad.trim() || scratchpad === savedScratchpad
+        }
         onClick={saveNotes}
         aria-describedby={isListening ? undefined : 'notes-save-help'}
       >

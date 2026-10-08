@@ -369,7 +369,9 @@ test('course dates populate Today with playable assignments and preserve linked 
 
   await row.getByRole('button', { name: 'Listen & practice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
-  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveValue(
+    'Copied ALICE in OH. Replayed the final sentence.',
+  );
   const entries = (await (await context.request.get('/api/entries')).json()).entries;
   expect(entries).toHaveLength(1);
   expect(entries[0].metadata.plannedTaskId).toBe(assigned.id);

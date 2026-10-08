@@ -4510,6 +4510,18 @@ compatible. Their editing controls and automatic assigned replay have no active
 Studio entry point. The #10, #12 and #13 ledgers above retain historical delivery
 evidence; this usability change makes no new trainer parity or deployment claim.
 
+## Assignment scratchpad continuity — 2026-10-08
+
+Saving an assigned recording block now retains its reviewed scratchpad on this
+device for the next listen. Review saves, Finish/tool switches and zero-time
+Save notes use the same account-and-assignment scope. Reopening the assignment
+after a reload restores that text; another assignment of the same recording
+starts with fresh notes. Each saved block still keeps its own scratchpad snapshot.
+Explicit discard/reset can clear the notes. Public and non-recording scratchpads
+retain their existing save-and-clear behavior. Notes do not restore elapsed time
+or unfinished listening coverage, and device-local drafts do not sync between
+devices.
+
 ## Practice tools and lesson navigation — 2026-10-05
 
 Practice tools now has a dedicated public library and sidebar destination. Word

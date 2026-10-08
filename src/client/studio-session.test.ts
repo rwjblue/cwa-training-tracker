@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PracticeSession } from '../shared/training';
 import {
   loadStudioNotes,
-  clearSavedStudioNotes,
+  settleSavedStudioNotes,
   studioNotesSession,
   studioCompletionSession,
   saveStudioNotes,
@@ -236,7 +236,7 @@ it('clears scoped notes memory and rejects a delayed old save without erasing re
     expect(loadStudioNotes(scope, 'public:words')).toBe('');
     saveStudioNotes(scope, 'public:words', 'Restored notes', undefined, token);
     const oldEntry = studioSession(input())!;
-    expect(clearSavedStudioNotes(scope, oldEntry, undefined, old)).toBe(false);
+    expect(settleSavedStudioNotes(scope, oldEntry, undefined, old)).toBe(false);
     expect(saveStudioNotes(scope, 'public:words', 'Old cleanup', undefined, old)).toBe(false);
     expect(loadStudioNotes(scope, 'public:words')).toBe('Restored notes');
     expect(loadStudioNotes(`${scope}-other`, 'public:words')).toBe('Other owner');
@@ -496,7 +496,7 @@ it('saves public scales as measured sending practice without unrelated listening
     removeItem: vi.fn(),
   };
   saveStudioNotes('guest', 'public:sending', value.scratchpad, storage);
-  expect(clearSavedStudioNotes('guest', entry, storage)).toBe(true);
+  expect(settleSavedStudioNotes('guest', entry, storage)).toBe(true);
   expect(loadStudioNotes('guest', 'public:sending', storage)).toBe('');
 });
 
@@ -634,17 +634,17 @@ it('clears only the saved practice context after confirmation without relying on
   saveStudioNotes('other-note-owner', 'task:recording', 'Private other notes', storage);
   const saved = studioSession(input())!;
   saved.metadata = { ...saved.metadata, plannedTaskId: 'task:recording' };
-  expect(clearSavedStudioNotes(scope, saved, storage)).toBe(true);
+  expect(settleSavedStudioNotes(scope, saved, storage)).toBe(true);
   expect(loadStudioNotes(scope, 'task:recording', storage)).toBe('');
   expect(loadStudioNotes(scope, 'public:words', storage)).toBe('Word notes');
   expect(loadStudioNotes('other-note-owner', 'task:recording', storage)).toBe(
     'Private other notes',
   );
   expect(values.size).toBe(3);
-  expect(clearSavedStudioNotes(scope, studioSession(input())!, storage)).toBe(true);
+  expect(settleSavedStudioNotes(scope, studioSession(input())!, storage)).toBe(true);
   expect(loadStudioNotes(scope, 'public:words', storage)).toBe('');
   expect(loadStudioNotes(scope, 'public:qso', storage)).toBe('QSO notes');
-  expect(clearSavedStudioNotes(scope, { ...saved, metadata: undefined }, storage)).toBe(false);
+  expect(settleSavedStudioNotes(scope, { ...saved, metadata: undefined }, storage)).toBe(false);
   const taskless = input();
   taskless.launch = {
     id: 'launch:taskless-audio',
@@ -653,8 +653,59 @@ it('clears only the saved practice context after confirmation without relying on
   saveStudioNotes(scope, taskless.launch.id, 'Taskless recording notes', storage);
   const tasklessSaved = studioSession(taskless)!;
   expect(tasklessSaved.metadata?.studioNotesContext).toBe(taskless.launch.id);
-  expect(clearSavedStudioNotes(scope, tasklessSaved, storage)).toBe(true);
+  expect(settleSavedStudioNotes(scope, tasklessSaved, storage)).toBe(true);
   expect(loadStudioNotes(scope, taskless.launch.id, storage)).toBe('');
+});
+
+it('retains reviewed recording notes for only their assignment across saves and reloads', () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+  };
+  const scope = 'recording-assignment-notes';
+  const task = {
+    id: 'first-recording-assignment',
+    title: 'Listen twice',
+    kind: 'listening' as const,
+    done: false,
+    notes: '',
+    createdAt: '2026-10-08T12:00:00Z',
+    exercise: {
+      type: 'audio' as const,
+      url: 'https://example.test/repeated.mp3',
+      minimumPasses: 2,
+    },
+  };
+  const next = input();
+  next.launch = { id: 'first-visit', ...practiceLaunchForTask(task) };
+  saveStudioNotes(scope, task.id, next.scratchpad, storage);
+  saveStudioNotes('another-learner', task.id, 'Private other notes', storage);
+  const reviewed = studioSession(next)!;
+  reviewed.metadata!.scratchpad = 'Edited recall from the first listen.';
+  expect(settleSavedStudioNotes(scope, reviewed, storage)).toBe(true);
+  invalidateScratchpadMemory(scope);
+  expect(loadStudioNotes(scope, task.id, storage)).toBe(reviewed.metadata!.scratchpad);
+
+  const second = { ...task, id: 'second-recording-assignment' };
+  expect(loadStudioNotes(scope, second.id, storage)).toBe('');
+  expect(loadStudioNotes('another-learner', task.id, storage)).toBe('Private other notes');
+  next.launch = { id: 'second-visit', ...practiceLaunchForTask(task) };
+  next.measured.seconds = 0;
+  next.scratchpad = 'Recall from both listens.';
+  expect(settleSavedStudioNotes(scope, studioNotesSession(next)!, storage)).toBe(true);
+  invalidateScratchpadMemory(scope);
+  expect(loadStudioNotes(scope, task.id, storage)).toBe(next.scratchpad);
+
+  next.scratchpad = '';
+  expect(settleSavedStudioNotes(scope, studioSession(next, 0)!, storage)).toBe(true);
+  invalidateScratchpadMemory(scope);
+  expect(loadStudioNotes(scope, task.id, storage)).toBe('');
 });
 
 it('snapshots difficult marks only for actual heard files and freezes them across save retries', async () => {

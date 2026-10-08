@@ -209,7 +209,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   await activate(page.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(retained).toHaveCount(0);
-  await expect.poll(readNotes).toBeNull();
+  await expect.poll(readNotes).toBe(notes);
   const exported = await (await context.request.get('/api/export')).json();
   expect(exported.sessions).toHaveLength(3);
   const result = exported.sessions.find(
@@ -227,7 +227,7 @@ test(`assigned recording inspection retains one paused owner at ${viewport.width
   expect(result.metadata.recordings[0].seconds).toBeCloseTo(result.metadata.elapsedSeconds, 8);
   // Leaving this account disposes its block before exposing the guest scope.
   await activate(row.getByRole('button', { name: 'Listen & practice', exact: true }));
-  await expect(scratchpad).toHaveValue('');
+  await expect(scratchpad).toHaveValue(notes);
   await scratchpad.fill('Private owner notes.');
   await navigateView(page, 'Today', activate);
   await activate(page.getByRole('button', { name: 'Open your account', exact: true }));

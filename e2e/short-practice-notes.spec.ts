@@ -184,7 +184,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   const acknowledged = await receipt;
   expect(acknowledged.request().postDataJSON()).toEqual(bodies[0]);
   expect(bodies).toHaveLength(2);
-  await expect(scratchpad).toHaveValue('');
+  await expect(scratchpad).toHaveValue(notes);
   await expect(saveNotes).toBeDisabled();
   await expect(page.getByText('Notes saved to history.', { exact: true })).toBeVisible();
   const zero = (await (await context.request.get('/api/entries')).json()).entries[0];

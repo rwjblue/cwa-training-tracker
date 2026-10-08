@@ -161,7 +161,7 @@ import { ImportedHistory, LegacyAttemptDetails, legacyAttemptTitle } from './Imp
 import CopyResult, { CopyAttemptDetails } from './CopyResult';
 import { savedCopyAttempt } from '../shared/copy-report';
 import { clearCopyDraft } from './copy-storage';
-import { clearSavedStudioNotes } from './studio-session';
+import { settleSavedStudioNotes } from './studio-session';
 import RunnerRecovery from './RunnerRecovery';
 import {
   RUNNER_RESULTS_EVENT,
@@ -2070,7 +2070,7 @@ function App() {
                     currentLaunch.current?.id !== sessionEditorOwner
                   )
                     return;
-                  clearSavedStudioNotes(scope, entry, undefined, deviceToken);
+                  settleSavedStudioNotes(scope, entry, undefined, deviceToken);
                   if (destination === 'history') acceptSavedPractice(entry, sessionEditorOwner);
                   else {
                     setSavedPracticeEntry(entry);
@@ -2124,7 +2124,7 @@ function App() {
                 ? nextRunnerLaunchForResult(entry, latestTasks.current)
                 : undefined;
             if (matchingOwner)
-              clearSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
+              settleSavedStudioNotes(user?.id ?? 'guest', entry, undefined, deviceToken);
             if (!sessionCompletionTask && destination === 'history')
               acceptSavedPractice(entry, sessionEditorOwner);
             else if (!sessionCompletionTask) {

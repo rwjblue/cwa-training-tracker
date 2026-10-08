@@ -342,8 +342,8 @@ export function saveStudioNotes(
   }
 }
 
-/** Clear the original scratchpad after confirmation, even if its studio has unmounted. */
-export function clearSavedStudioNotes(
+/** Recording notes belong to the assignment; other scratchpads finish with the saved block. */
+export function settleSavedStudioNotes(
   scope: string,
   entry: PracticeSession,
   storage?: NotesStorage,
@@ -362,5 +362,12 @@ export function clearSavedStudioNotes(
           ? explicitContext
           : undefined;
   if (!context) return false;
-  return saveStudioNotes(scope, context, '', storage, deviceToken);
+  const notes =
+    typeof taskId === 'string' &&
+    taskId &&
+    tool === 'audio' &&
+    typeof metadata?.scratchpad === 'string'
+      ? metadata.scratchpad
+      : '';
+  return saveStudioNotes(scope, context, notes, storage, deviceToken);
 }

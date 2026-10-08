@@ -34,6 +34,8 @@ CWops. Official course material stays at the
   your device, and saved practice retains the actual recordings and speeds used.
 - A practice scratchpad for recall and questions. Review and edit it when saving
   a session, then read or revise the saved scratchpad from your practice log.
+  Assigned recording notes stay on your device between listens for the same
+  assignment; a new assignment of that recording starts fresh.
 - Embedded Web Morse Runner for Single Call and WPX practice, with synthetic
   calls and assignment settings filled in automatically. Save the engine's
   measured time, QSO count, and verified score to your journal. Public runs
