@@ -41,6 +41,8 @@ journeys. Check the distinctive settled screens at both widths with
 `expectResponsive`; repeat the whole workflow only when viewport or input mode
 changes the behavior being protected. Keep explicit focus and reachable-control
 assertions for keyboard/touch regressions.
+`expectResponsive` also checks that visible mobile text fields and selects use
+at least 16px text, so focusing them does not trigger iOS Safari's automatic zoom.
 
 Use APIs to arrange fixtures or confirm the saved result. Exercise the operation
 being tested through its actual interface: an import UI test must choose a file,

@@ -24,6 +24,8 @@
 }
 body {
   margin: 0;
+  /* Keep pan and pinch zoom while avoiding accidental double-tap zoom. */
+  touch-action: manipulation;
 }
 button,
 input,
@@ -4784,4 +4786,20 @@ body {
 
 .nav-item {
   text-decoration: none;
+}
+
+/* Safari zooms focused fields below 16px and can keep that zoom after blur.
+   Cover phone layouts and larger touch devices, including landscape, while
+   leaving deliberately larger answer fields at their existing sizes. */
+@media (max-width: 1020px), (any-pointer: coarse) {
+  :root body input,
+  :root body textarea,
+  :root body select,
+  .modal .field > input,
+  .modal .field > textarea,
+  .modal .field > select,
+  :root .copy-settings .field input,
+  :root .copy-settings .field select {
+    font-size: 16px;
+  }
 }

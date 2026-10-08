@@ -118,6 +118,32 @@ export async function expectResponsive(page: Page, label: string) {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         `${label} should fit at ${viewport.width}px`,
       ).toBe(true);
+      if (viewport.width === 390) {
+        // iOS Safari zooms when focusing text controls smaller than 16px.
+        const undersizedControls = await page
+          .locator('input, textarea, select')
+          .evaluateAll((controls) =>
+            controls
+              .filter((control) => {
+                if (
+                  control.matches(
+                    '[type="checkbox"], [type="radio"], [type="range"], [type="file"]',
+                  )
+                )
+                  return false;
+                const style = getComputedStyle(control);
+                return (
+                  control.getClientRects().length > 0 &&
+                  style.visibility === 'visible' &&
+                  parseFloat(style.fontSize) < 16
+                );
+              })
+              .map(
+                (control) => control.getAttribute('aria-label') || control.id || control.tagName,
+              ),
+          );
+        expect(undersizedControls, `${label} should avoid Safari input-focus zoom`).toEqual([]);
+      }
       await expectAccessible(page, `${label}-${viewport.width}`);
     }
   } finally {
