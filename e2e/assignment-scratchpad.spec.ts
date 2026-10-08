@@ -88,15 +88,14 @@ test('recording scratchpads survive saved listens and stay scoped to one assignm
   await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
   await expect(count('This block')).toHaveText('1', { timeout: 10_000 });
   await page.getByRole('button', { name: 'Finish practice', exact: true }).tap();
-  await expect(
-    page.getByRole('region', { name: 'Current practice block', exact: true }),
-  ).toHaveCount(0);
+  await expect(page).toHaveURL(/#overview$/);
   await page.reload();
 
   await openAssignment(second.title);
   await expect(scratchpad).toHaveValue('');
   await expect(count('Previously saved')).toHaveText('0');
   await page.getByRole('button', { name: 'Finish practice', exact: true }).tap();
+  await expect(page).toHaveURL(/#overview$/);
   await openAssignment(first.title);
   await expect(scratchpad).toHaveValue(accumulated);
   await expect(count('Previously saved')).toHaveText('2');
