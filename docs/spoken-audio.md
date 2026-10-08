@@ -9,8 +9,9 @@ CWops recordings or curriculum audio. No personal training data is included.
 Eleven v4 (`eleven_v4`), Bella (`hpp4J3VqNfWAUOO0d1Us`), English, stability 0.75
 and similarity 0.75. Bella was selected from the current public catalog for
 Standard American pronunciation, crisp diction, deliberate pacing and
-educational use. Abbreviations have authored pronunciations (for example WX
-says “weather” and DE says “this is”). The catalog date is October 6, 2026.
+educational use. Abbreviations have authored pronunciations: ANT says “antenna,”
+AGN says “again,” WX says “weather” and DE says “this is.” The catalog date is
+October 6, 2026.
 
 Only the offline generation task reads `ELEVENLABS_API_KEY`; browsers and the
 Worker never call ElevenLabs or receive the key. The public index retains input

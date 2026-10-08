@@ -57,10 +57,11 @@
       "url": "/audio/cw-training/words/and.wav"
     },
     "ANT": {
-      "inputHash": "de4de130cc7aae3137e93301e72338497747eef5bb592902c3640cff6216e4d5",
-      "requestId": "YnepO2TGQkJ3rTU5gP8J",
-      "sha256": "a6b5cb1c31b8ba44ff739dd9a4043776ce5dec423ac74885870648e6f9ad4ffa",
-      "sourceSha256": "a9bef336c1aac40345f5004f78f29e840d2019eadbae0fb295ad98b8e8ea46c3",
+      "characterCost": 1.0,
+      "inputHash": "c45452888b5193fbce865627a56bb304bc81c3bbf416a55ce6eb00b60dd31c6f",
+      "requestId": "txNDLOUeXk195epfArTd",
+      "sha256": "cedcc8d75e7660ed81a1411f29c7d7c44c848a27352fb418e8225c2d8a30e514",
+      "sourceSha256": "61101839a60c5084b64f542d821ca78b10bf16a83f7f808b322b2e18f829e5c6",
       "url": "/audio/cw-training/words/ant.wav"
     },
     "AR": {
