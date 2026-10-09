@@ -77,14 +77,36 @@ build variables are:
 | `SKIP_DEPENDENCY_INSTALL`   | `1`                                         |
 | `MISE_IGNORED_CONFIG_PATHS` | `~/.config/mise:~/.tool-versions:/etc/mise` |
 
-The build task installs pinned Mise, installs the repository's pinned Node and
-dependencies, and waits up to fourteen minutes for the GitHub `Verify` workflow
-for that exact commit. It requires a successful `main` push run, including the
+The build task requires the `CWA_DEPLOY_GITHUB_TOKEN` build secret, installs
+pinned Mise, installs the repository's pinned Node and dependencies, and waits
+up to fourteen minutes for the GitHub `Verify` workflow for that exact commit.
+It requires a successful `main` push run, including the
 fast checks and every browser shard. A failed, canceled, missing, or timed-out
-verification stops the build before migrations. API errors also stop the build;
-the public GitHub API needs no credential, but a rate-limited build must be
-retried after the quota resets. This explicit gate connects the two systems;
-Cloudflare does not automatically wait for GitHub Actions checks.
+verification stops the build before migrations. The gate polls once per minute
+and honors GitHub rate-limit reset/retry headers within its fourteen-minute
+deadline. Other API errors, invalid responses, or a reset beyond the deadline
+stop the build with a diagnostic before migrations. This explicit gate connects
+the two systems; Cloudflare does not automatically wait for GitHub Actions checks.
+
+Create a dedicated fine-grained GitHub personal access token with **Public
+repositories (read-only)** access and no additional repository or account
+permissions. The gate only reads public workflow runs and the public `main`
+reference. Save it in the Worker's **Settings > Build > Build variables and
+secrets** as an encrypted secret named `CWA_DEPLOY_GITHUB_TOKEN`; it is needed
+by both build and deploy commands. Choose an expiration and replace the secret
+before it expires. Never reuse a broad local GitHub CLI credential, put this
+token in source control, or add it to Worker runtime bindings. Missing or
+rejected credentials block deployment; the gate does not fall back to anonymous
+requests.
+
+The October 8–9, 2026 failed builds reached the verification gate and stopped
+with HTTP 403 despite successful GitHub `Verify` runs. One failed after six
+minutes of polling; the following two failed on the first request. Anonymous
+GitHub requests share a small per-IP quota, which makes them unreliable from
+Cloudflare's shared build infrastructure. This failure pattern is consistent
+with exhaustion of that quota; the old logs omitted the rate-limit headers.
+Authentication uses the token owner's quota instead. See [GitHub rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)
+and [public workflow-run access](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-workflow).
 
 The ignored config paths keep Cloudflare's global tool defaults out of Mise's
 tool selection. Both commands still use this repository's `mise.toml` and file

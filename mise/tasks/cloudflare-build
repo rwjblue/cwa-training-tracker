@@ -3,6 +3,7 @@
 set -euo pipefail
 
 : "${WORKERS_CI_COMMIT_SHA:?Run this task inside Cloudflare Workers Builds}"
+: "${CWA_DEPLOY_GITHUB_TOKEN:?Set a public-read-only GitHub token as a Cloudflare build secret}"
 
 curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 https://mise.run |
   MISE_VERSION=v2026.9.1 sh
