@@ -23,6 +23,7 @@ import {
   getDeviceScopeToken,
   invalidateDeviceScope,
 } from './device-scope';
+import { capturePracticeUsage } from './practice-usage';
 
 const entry = (id = 'round-one') =>
   validatePracticeSession({
@@ -59,6 +60,119 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+it('reports a new durable guest result once without waiting for the counter response', async () => {
+  const original = entry('usage-guest');
+  fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+  const usage = capturePracticeUsage('stories', 'guest');
+  expect(
+    await autoSavePractice('guest', original, getDeviceScopeToken('guest'), undefined, usage),
+  ).toEqual({ entry: original, destination: 'device' });
+  expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/practice-usage', {
+    method: 'POST',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{"tool":"stories","audience":"guest"}',
+  });
+  await autoSavePractice(
+    'guest',
+    { ...original, notes: 'Retry with changed form values' },
+    getDeviceScopeToken('guest'),
+    undefined,
+    usage,
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(loadLocalPractice('guest')).toEqual([original]);
+});
+
+it('keeps account saving and later upload retries independent of failed one-shot counters', async () => {
+  const scope = 'usage-account';
+  knownAccount(scope);
+  const original = entry('usage-account-result');
+  fetchMock.mockImplementation((url: string) => {
+    if (url === '/api/practice-usage') throw new Error('Counter unavailable');
+    return Promise.reject(new Error('Account upload offline'));
+  });
+  const saved = await autoSavePractice(
+    scope,
+    original,
+    getDeviceScopeToken(scope),
+    undefined,
+    capturePracticeUsage('copy', scope),
+  );
+  expect(saved.destination).toBe('device');
+  expect(loadLocalPractice(scope)).toEqual([original]);
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/practice-usage')).toHaveLength(1);
+  fetchMock.mockImplementation((url: string) =>
+    url === '/api/entries'
+      ? Promise.resolve(Response.json({ entry: original }))
+      : Promise.reject(new Error('Must not retry aggregate delivery')),
+  );
+  const uploaded = vi.fn();
+  await flushPracticeSaves(scope, uploaded);
+  expect(uploaded).toHaveBeenCalledExactlyOnceWith(original);
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/practice-usage')).toHaveLength(1);
+});
+
+it('reports server-only practice only after its exact save acknowledgement', async () => {
+  const scope = 'usage-server-only';
+  knownAccount(scope);
+  localStorage.setItem = () => {
+    throw new Error('Storage unavailable');
+  };
+  const original = entry('usage-server-only-result');
+  const usage = capturePracticeUsage('runner', scope);
+  await expect(
+    autoSavePractice(
+      'guest',
+      original,
+      getDeviceScopeToken('guest'),
+      undefined,
+      capturePracticeUsage('runner', 'guest'),
+    ),
+  ).rejects.toThrow('could not save');
+  expect(fetchMock).not.toHaveBeenCalled();
+  fetchMock.mockRejectedValueOnce(new Error('Account upload offline'));
+  await expect(
+    autoSavePractice(scope, original, getDeviceScopeToken(scope), undefined, usage),
+  ).rejects.toThrow('offline');
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/practice-usage')).toHaveLength(0);
+  fetchMock.mockResolvedValueOnce(Response.json({ entry: entry('wrong-acknowledgement') }));
+  await expect(
+    autoSavePractice(scope, original, getDeviceScopeToken(scope), undefined, usage),
+  ).rejects.toThrow('did not acknowledge');
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/practice-usage')).toHaveLength(0);
+  fetchMock.mockImplementation((url: string) =>
+    url === '/api/entries'
+      ? Promise.resolve(Response.json({ entry: original }))
+      : Promise.reject(new Error('Counter offline')),
+  );
+  expect(
+    (await autoSavePractice(scope, original, getDeviceScopeToken(scope), undefined, usage))
+      .destination,
+  ).toBe('history');
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/practice-usage')).toHaveLength(1);
+});
+
+it('preserves notes, class time and imported or transferred saves without usage reporting', async () => {
+  const usage = capturePracticeUsage('manual', 'guest');
+  for (const original of [
+    { ...entry('usage-notes'), minutes: 0 },
+    { ...entry('usage-class'), context: 'class' as const },
+  ])
+    expect(
+      (await autoSavePractice('guest', original, getDeviceScopeToken('guest'), undefined, usage))
+        .destination,
+    ).toBe('device');
+  await autoSavePractice('guest', entry('usage-imported'));
+  expect(fetchMock).not.toHaveBeenCalled();
+  const scope = 'usage-transfer-account';
+  knownAccount(scope);
+  const transfer = entry('usage-transfer');
+  fetchMock.mockResolvedValueOnce(Response.json({ entry: transfer }));
+  expect((await autoSavePractice(scope, transfer)).destination).toBe('history');
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/practice-usage')).toHaveLength(0);
 });
 
 it('retains the local result unless the server acknowledges that exact entry', async () => {
@@ -605,16 +719,32 @@ it('permits a separate Runner only after a durable receipt and leaves its identi
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
-
 it('retains an exact material attempt until the queued material version has been acknowledged', async () => {
   const scope = 'material-order-account';
-  const material: InstructorMaterial = { version: 1, id: 'pending-material', course: { level: 'beginner', firstClassDate: '2026-09-28' },
-    session: 1, title: 'Pending material', text: 'PRIVATE TEXT', usage: 'preparation', createdAt: '2026-09-28T00:00:00.000Z' };
-  const state = { accountId: scope, revision: 0, generation: 0, settings: { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' }, plan: [] };
+  const material: InstructorMaterial = {
+    version: 1,
+    id: 'pending-material',
+    course: { level: 'beginner', firstClassDate: '2026-09-28' },
+    session: 1,
+    title: 'Pending material',
+    text: 'PRIVATE TEXT',
+    usage: 'preparation',
+    createdAt: '2026-09-28T00:00:00.000Z',
+  };
+  const state = {
+    accountId: scope,
+    revision: 0,
+    generation: 0,
+    settings: { ...DEFAULT_PROFILE, firstClassDate: '2026-09-28' },
+    plan: [],
+  };
   rememberAccount({ id: scope, email: 'synthetic@example.test' }, state);
   queueAccountChange(state, { type: 'material-create', material });
-  const attempt = validatePracticeSession({ ...entry('pending-material-attempt'), lesson: 1,
-    metadata: { instructorMaterial: materialReference(material) } });
+  const attempt = validatePracticeSession({
+    ...entry('pending-material-attempt'),
+    lesson: 1,
+    metadata: { instructorMaterial: materialReference(material) },
+  });
   expect((await autoSavePractice(scope, attempt)).destination).toBe('device');
   await flushPracticeSaves(scope, vi.fn());
   expect(fetchMock).not.toHaveBeenCalled();

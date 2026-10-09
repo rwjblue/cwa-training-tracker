@@ -58,9 +58,13 @@ Every modifying API request must carry an exact matching `Origin` and cannot
 come from a cross-site fetch context. Requests containing JSON require the JSON
 content type and are read with a byte limit, including chunked requests. API
 responses are never cached. The Worker also returns frame, MIME-sniffing,
-referrer, permissions, and HTTPS transport security headers. SQL values always
-use bound parameters. Private operations include the authenticated `user_id` in
-their queries. No user IDs supplied by clients establish ownership.
+referrer, permissions, and HTTPS transport security headers. Worker SQL values
+always use bound parameters. Private operations include the authenticated
+`user_id` in their queries. No user IDs supplied by clients establish ownership.
+The read-only statistics API is an explicit exception for aggregate queries
+across accounts: every request independently verifies an existing
+`metrics_viewer` grant before querying totals, and never returns account
+identities, email addresses, profiles, or private practice content.
 
 The origin setting also controls WebAuthn. During local development set
 `APP_ORIGIN` to the exact browser URL, including its port; for example,
@@ -101,6 +105,74 @@ private tasks, source archives, and profile settings. It keeps the account,
 sessions, and passkeys so the same account can import a fresh backup. Export
 before resetting or replacing data you want to retain. Import never writes to
 the original personal site.
+
+## Aggregate statistics and access
+
+`account_roles` stores an account ID, role, and original grant time, with one
+row per account/role pair. `metrics_viewer` is the only supported additional
+role. Ordinary account access requires no role row. Operators grant or revoke
+it by verified sign-in email through `mise run stats:grant` and
+`mise run stats:revoke`; see [deployment and bootstrap instructions](deployment.md#statistics-access).
+There is no dashboard role-management UI or implicit admin bootstrap. Each
+metrics API request checks the live grant, so revocation does not depend on
+session expiry or profile refresh.
+
+Role grants are not profile preferences and cannot be changed through account
+settings, native backups, or imported data. They survive a training-data reset
+and cascade when the account is deleted. The privileged operator CLI resolves
+the email to the permanent account ID and uses properly quoted SQL literals
+because Wrangler's D1 command interface does not accept parameter bindings.
+It runs Wrangler with argument arrays, never a shell command assembled from
+the email address.
+
+`users.last_activity_day` keeps only the latest server UTC day of meaningful
+authenticated workspace access: successful journal, plan, and settings
+reads/writes, or a private account operation. Updates are best effort and exclude authentication,
+routine account checks, admin statistics, and usage reporting. There is no
+per-account activity-event history or corresponding guest activity record.
+This installation metadata is separate from exported/imported training data
+and survives a training-data reset. Authentication and account-menu checks alone
+do not update it; when signing in opens the private workspace, its journal or
+plan load counts as activity. Direct statistics access avoids an eager journal
+load, and statistics API requests never update the day.
+
+Practice volume comes from a separate first-party `POST /api/practice-usage`
+notification for a newly recorded positive-duration practice session. Guest
+and account saves send the same single background request with credentials
+omitted and only a bounded tool category plus `guest`/`account` category. Class
+and zero-time note records, edits, retry uploads, imports, and guest-to-account
+transfers do not report another session. Saving and tool behavior do not wait
+for metrics, retry them, or queue their delivery. There are no event IDs,
+deduplication receipts, account IDs, guest IDs, or browser identifiers in the
+counter request or stored counters.
+
+The public counter endpoint validates its small payload and exact same-origin
+request boundary. A transient per-Worker-isolate write budget allows a burst of
+120 reports and refills at two reports per second. It stores only a token count
+and refill time in memory, with no IP, account, browser, or other identity keys.
+The budget resets when an isolate is recreated and applies only to that
+instance; stronger perimeter protections require separate Cloudflare
+configuration. It provides a modest write guard while aggregate counts remain
+self-reported and approximate. The endpoint increments `practice_usage` atomically
+by `(day, tool, audience)` using the receiving server's UTC day. The nine tool
+categories are word listening, QSO practice, story listening, copy, sending,
+free practice, Morse Runner, assigned recordings, and manually logged practice.
+Audience is a self-reported category, not authentication or identity evidence.
+These are approximate received-session counts: offline or failed reports can
+be lost, and the request day may differ from a saved entry's calendar date.
+They do not represent distinct people, exact completions, or historical account
+activity. Totals cover only the selected retained window.
+
+The current UTC day and its 179 predecessors are retained; daily cleanup deletes
+older rows. `admin_stats_metadata` stores the collection start day and last
+successful cleanup time, with no user identifiers. The console distinguishes
+dates before collection began from measured zero activity. Account storage
+totals measure stored account payload, separately from database storage and
+infrastructure telemetry. Cloudflare monitoring remains the source for detailed
+request volume, latency, and failure information; unavailable metrics are
+labeled rather than inferred from practice counts. The privacy page explains
+this collection without introducing advertising cookies or third-party
+analytics scripts.
 
 ## Operations and verification
 

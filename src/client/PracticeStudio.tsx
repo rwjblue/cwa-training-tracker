@@ -95,6 +95,7 @@ import { freeShareRoute, readFreeShare } from './free-share';
 import { publicRecordingHash } from './curriculum-links';
 import { selectRecordingVariant } from './recording-variants';
 import { getDeviceScopeToken, isDeviceScopeCurrent, subscribeDeviceScope } from './device-scope';
+import { capturePracticeUsage, studioUsageTool, type PracticeUsage } from './practice-usage';
 
 const duration = (seconds: number) =>
   `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -144,7 +145,7 @@ export default function PracticeStudio({
   onPublicRouteChange?: (hash: string) => void;
   practiceSummary?: React.ReactNode;
   practiceNavigation?: React.ReactNode;
-  onLog: (initial?: Partial<PracticeSession>) => void;
+  onLog: (initial?: Partial<PracticeSession>, usage?: PracticeUsage) => void;
   savedVersion: number;
   savedOwnerId?: string;
   savedEntry?: PracticeSession;
@@ -153,7 +154,7 @@ export default function PracticeStudio({
   onBack?: () => void;
   onFinish?: () => void;
   onCancel?: () => void;
-  onCompleteReview?: (entry: PracticeSession, task: PlannedTask) => void;
+  onCompleteReview?: (entry: PracticeSession, task: PlannedTask, usage?: PracticeUsage) => void;
   onBrowseTools?: () => void;
   onUnsavedChange?: (unsaved: boolean) => void;
   accountId?: string;
@@ -163,7 +164,7 @@ export default function PracticeStudio({
   tasks?: readonly PlannedTask[];
   today?: string;
   onSaved?: (entry: PracticeSession) => void;
-  onAutoSave: (entry: PracticeSession) => Promise<void>;
+  onAutoSave: (entry: PracticeSession, usage?: PracticeUsage) => Promise<void>;
   onTaskCompletion?: (task: PlannedTask, done: boolean) => Promise<void>;
   onBeforeLeaveChange?: (handler: (() => Promise<boolean>) | undefined) => void;
   onRunnerProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
@@ -361,6 +362,7 @@ export default function PracticeStudio({
   const sessionIdentity = useRef<{ id: string; createdAt: string; timezone: string } | undefined>(
     undefined,
   );
+  const sessionUsage = useRef<PracticeUsage | undefined>(undefined);
   const currentTime =
     !isCopy && !isRunner && currentDevice() && sessionIdentity.current
       ? {
@@ -413,12 +415,19 @@ export default function PracticeStudio({
   const beforeDiscardRef = useRef<() => Promise<boolean>>(async () => false);
   const canPractice = () =>
     currentDevice() && visible.current && !inspecting.current && !navigationLocked.current;
-  const identity = () =>
-    (sessionIdentity.current ??= {
+  const currentUsage = () =>
+    capturePracticeUsage(
+      studioUsageTool(launch, activity, isCopy ? 'copy' : isRunner ? 'runner' : tool),
+      notesScope,
+    );
+  const identity = () => {
+    if (!sessionIdentity.current) sessionUsage.current = currentUsage();
+    return (sessionIdentity.current ??= {
       id: `studio:${crypto.randomUUID()}`,
       createdAt: new Date().toISOString(),
       timezone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
+  };
   const changeScratchpad = (value: string) => {
     if (!currentDevice()) return;
     setScratchpad(value);
@@ -466,6 +475,7 @@ export default function PracticeStudio({
         generatedListening.current.reset();
         if (savedEntry) settleScratchpad(savedEntry);
         sessionIdentity.current = undefined;
+        sessionUsage.current = undefined;
         saveCoordinator.current.reset();
         setConfirmReset(false);
       }
@@ -642,6 +652,7 @@ export default function PracticeStudio({
     timer.reset();
     generatedListening.current.reset();
     sessionIdentity.current = undefined;
+    sessionUsage.current = undefined;
     saveCoordinator.current.reset();
     setConfirmReset(false);
   };
@@ -668,7 +679,7 @@ export default function PracticeStudio({
     navigationFlight.current = (async () => {
       try {
         await saveCoordinator.current.flush(capture(), async (entry) => {
-          await onAutoSave(entry);
+          await onAutoSave(entry, sessionUsage.current);
           settleScratchpad(entry);
         });
         if (!currentDevice()) return false;
@@ -702,7 +713,7 @@ export default function PracticeStudio({
     if (!canPractice()) return;
     pauseTimer();
     const entry = captureSession(1);
-    if (entry) onLog(entry);
+    if (entry) onLog(entry, sessionUsage.current);
   };
   const beforeLeave = (): Promise<boolean> => {
     if (!currentDevice()) return Promise.resolve(false);
@@ -739,7 +750,15 @@ export default function PracticeStudio({
           if (!currentDevice()) return false;
           // Completion can be declared with no new time. Review that zero-time
           // entry too, so difficulty, rating and notes have the same save flow.
-          onCompleteReview!(studioCompletionSession(sessionInput(), entry)!, task);
+          onCompleteReview!(
+            studioCompletionSession(sessionInput(), entry)!,
+            task,
+            isCopy
+              ? copyTrainer.current?.usageForCompletion()
+              : isRunner
+                ? currentUsage()
+                : sessionUsage.current,
+          );
           return true;
         }
         if (!currentDevice()) return false;
@@ -2257,27 +2276,30 @@ export default function PracticeStudio({
                           logTimedSession();
                           return;
                         }
-                        onLog({
-                          kind: launch?.task?.kind ?? (isSending ? 'sending' : 'listening'),
-                          lesson: launch?.task?.lesson,
-                          notes: launch?.task?.title,
-                          ...(!assigned && !isSending
-                            ? {
-                                characterWpm: activeListeningPreferences.characterWpm,
-                                effectiveWpm: activeListeningPreferences.effectiveWpm,
-                              }
-                            : activity?.type === 'audio'
-                              ? selectedRecordingSpeeds
-                              : {}),
-                          source: 'manual',
-                          metadata: {
-                            ...taskPracticeMetadata(launch?.task?.id, launch?.purpose),
-                            ...(assigned
-                              ? { studioNotesContext: notesContext }
-                              : { practiceTool: tool }),
-                            ...(scratchpad ? { scratchpad } : {}),
+                        onLog(
+                          {
+                            kind: launch?.task?.kind ?? (isSending ? 'sending' : 'listening'),
+                            lesson: launch?.task?.lesson,
+                            notes: launch?.task?.title,
+                            ...(!assigned && !isSending
+                              ? {
+                                  characterWpm: activeListeningPreferences.characterWpm,
+                                  effectiveWpm: activeListeningPreferences.effectiveWpm,
+                                }
+                              : activity?.type === 'audio'
+                                ? selectedRecordingSpeeds
+                                : {}),
+                            source: 'manual',
+                            metadata: {
+                              ...taskPracticeMetadata(launch?.task?.id, launch?.purpose),
+                              ...(assigned
+                                ? { studioNotesContext: notesContext }
+                                : { practiceTool: tool }),
+                              ...(scratchpad ? { scratchpad } : {}),
+                            },
                           },
-                        });
+                          capturePracticeUsage('manual', notesScope),
+                        );
                       }}
                     >
                       <Plus size={14} /> Log practice manually

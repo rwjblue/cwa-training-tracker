@@ -1,5 +1,12 @@
 import { getLcwo, changeLcwo } from './lcwo';
-import { getAuth, logout, requestEmailCode, verifyEmailCode } from './auth';
+import { getAuth, logout, requestEmailCode, requireAuth, verifyEmailCode } from './auth';
+import {
+  cleanupAdminStats,
+  getAdminStats,
+  hasMetricsAccess,
+  recordAccountActivity,
+  recordPracticeUsage,
+} from './admin-stats';
 import { HttpError, json, requireSameOrigin, securityHeaders } from './http';
 import {
   deletePasskey,
@@ -30,6 +37,12 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   const method = request.method;
   if (!['GET', 'HEAD'].includes(method)) requireSameOrigin(request, env);
   if (method === 'GET' && path === '/api/health') return json({ ok: true });
+  if (method === 'POST' && path === '/api/practice-usage') return recordPracticeUsage(request, env);
+  if (method === 'GET' && path === '/api/admin/stats') return getAdminStats(request, env);
+  if (method === 'GET' && path === '/api/admin/access') {
+    const auth = await requireAuth(request, env);
+    return json({ allowed: await hasMetricsAccess(env, auth.user.id) });
+  }
   if (method === 'GET' && path === '/api/lcwo') return getLcwo(request, env);
   if (method === 'POST' && path === '/api/lcwo') return changeLcwo(request, env);
   if (method === 'GET' && path === '/api/account-state') return getAccountState(request, env);
@@ -79,8 +92,22 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   throw new HttpError(404, 'This endpoint was not found.');
 }
 
+/** Record one coarse day only after a successful private workspace operation. */
+async function accountActivity(request: Request, env: Env): Promise<void> {
+  try {
+    const auth = await getAuth(request, env);
+    if (auth) await recordAccountActivity(env, auth.user.id);
+  } catch {
+    // Optional statistics must never change the workspace response.
+  }
+}
+
+function isWorkspaceActivity(path: string): boolean {
+  return path === '/api/account-operations' || /^\/api\/(entries|plan|settings)(?:\/|$)/.test(path);
+}
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     try {
       const url = new URL(request.url);
       const response =
@@ -89,6 +116,11 @@ export default {
           : url.pathname.startsWith('/api/')
             ? await api(request, env, url.pathname)
             : await env.ASSETS.fetch(request);
+      if (response.ok && isWorkspaceActivity(url.pathname)) {
+        const activity = accountActivity(request, env);
+        if (ctx) ctx.waitUntil(activity);
+        else await activity;
+      }
       return securityHeaders(response, env);
     } catch (error) {
       if (
@@ -100,8 +132,22 @@ export default {
           env,
         );
       }
-      if (error instanceof Error && /material_parent_missing|material_reference_missing|material_version_immutable/.test(error.message))
-        return securityHeaders(json({ error: 'The exact owned material version or earlier revision is unavailable. Keep the pending work and save or import its original material first.' }, 400), env);
+      if (
+        error instanceof Error &&
+        /material_parent_missing|material_reference_missing|material_version_immutable/.test(
+          error.message,
+        )
+      )
+        return securityHeaders(
+          json(
+            {
+              error:
+                'The exact owned material version or earlier revision is unavailable. Keep the pending work and save or import its original material first.',
+            },
+            400,
+          ),
+          env,
+        );
       if (error instanceof Error && error.message.includes('report_evidence_missing')) {
         return securityHeaders(
           json(
@@ -159,5 +205,6 @@ export default {
       env.DB.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(now),
       env.DB.prepare('DELETE FROM rate_limits WHERE expires_at <= ?').bind(Math.floor(now / 1000)),
     ]);
+    await cleanupAdminStats(env, now);
   },
 } satisfies ExportedHandler<Env>;

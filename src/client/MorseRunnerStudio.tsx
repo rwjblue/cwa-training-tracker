@@ -45,6 +45,7 @@ import { freezePracticeSaveOrigin, type PracticeSaveOrigin } from './practice-au
 import { clearRunnerResult, retainFinishedRunnerResult, readRunnerReview } from './runner-results';
 import { runnerFrameSettings, runnerSettingsFromRoute, runnerSettingsRoute } from './tool-share';
 import './morse-runner.css';
+import { capturePracticeUsage, type PracticeUsage } from './practice-usage';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
   mode: 'SingleCall',
@@ -82,7 +83,7 @@ interface Props {
   onProgressChange?: (current: CurrentRunnerProgress | undefined) => void;
   onResultReadyChange?: (resultId: string | undefined) => void;
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
-  onLog: (initial?: Partial<PracticeSession>) => void;
+  onLog: (initial?: Partial<PracticeSession>, usage?: PracticeUsage) => void;
   onUnsavedChange: (unsaved: boolean) => void;
   publicRoute?: string;
   onPublicRouteChange?: (hash: string) => void;
@@ -121,6 +122,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const capturedAttribution = useRef<RunnerPracticeAttribution | undefined>(undefined);
   capturedAttribution.current ??= captureRunnerPracticeAttribution(task, purpose, context);
   const scope = accountId ?? 'guest';
+  const [usage] = useState(() => capturePracticeUsage('runner', scope));
   const [deviceToken] = useState(() => getDeviceScopeToken(scope));
   const start = useRef<{ runId: string; timezone: string; origin: PracticeSaveOrigin } | undefined>(
     undefined,
@@ -496,7 +498,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
     const latest = current.current;
     if (!terminal(latest) || latest.elapsedSeconds < 1 || savedRunId === latest.runId) return;
     retainResult(latest);
-    if (finished.current) callbacks.current.onLog(finished.current);
+    if (finished.current) callbacks.current.onLog(finished.current, usage);
   };
   const messages: Record<RunnerRunState['status'], string> = {
     loading: 'Loading the simulator and your settings…',

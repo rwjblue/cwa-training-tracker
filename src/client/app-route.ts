@@ -4,7 +4,15 @@ import { practiceTools } from './practice-tools';
 import { publicLaunchFromHash, publicPracticeHash } from './curriculum-links';
 
 export type Page =
-  'summary' | 'overview' | 'tools' | 'practice' | 'logbook' | 'course' | 'settings' | 'events';
+  | 'summary'
+  | 'overview'
+  | 'tools'
+  | 'practice'
+  | 'logbook'
+  | 'course'
+  | 'settings'
+  | 'events'
+  | 'admin';
 const pages: Page[] = [
   'summary',
   'overview',
@@ -14,6 +22,7 @@ const pages: Page[] = [
   'course',
   'settings',
   'events',
+  'admin',
 ];
 
 export function readAppRoute(hash: string): {

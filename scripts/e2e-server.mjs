@@ -52,12 +52,20 @@ writeFileSync(logPath, '');
 const wrangler = resolve(root, 'node_modules/.bin/wrangler');
 const common = ['--config', configPath];
 const state = join(temporary, 'state');
+// Expose only paths for operator-task tests. The secret and database remain in
+// the isolated temporary directory, and every command still uses --local.
+const adminStatePath = join(root, '.tmp/e2e-admin-state.json');
+writeFileSync(adminStatePath, JSON.stringify({ configPath, statePath: state }));
 const migration = spawnSync(
   wrangler,
   ['d1', 'migrations', 'apply', 'DB', '--local', '--persist-to', state, ...common],
   { stdio: 'inherit' },
 );
-if (migration.status !== 0) process.exit(migration.status ?? 1);
+if (migration.status !== 0) {
+  rmSync(adminStatePath, { force: true });
+  rmSync(temporary, { recursive: true, force: true });
+  process.exit(migration.status ?? 1);
+}
 const child = spawn(
   wrangler,
   [
@@ -80,6 +88,7 @@ for (const stream of [child.stdout, child.stderr])
   });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 child.on('exit', (code) => {
+  rmSync(adminStatePath, { force: true });
   rmSync(temporary, { recursive: true, force: true });
   process.exit(code ?? 0);
 });

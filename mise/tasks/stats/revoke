@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Revoke read-only metrics access from an existing verified account (production by default)"
+#USAGE arg "<email>" help="The existing account's sign-in email address"
+#USAGE flag "--local" help="Use local development D1 instead of production"
+#USAGE flag "--remote" help="Explicitly use production D1 (the default)"
+set -euo pipefail
+args=("$@")
+if [[ -n "${usage_email+x}" ]]; then
+  args=("$usage_email")
+  if [[ "${usage_local:-false}" == "true" ]]; then args+=(--local); fi
+  if [[ "${usage_remote:-false}" == "true" ]]; then args+=(--remote); fi
+fi
+has_target=false
+for arg in "${args[@]}"; do
+  if [[ "$arg" == --local || "$arg" == --remote ]]; then has_target=true; fi
+done
+if [[ "$has_target" == false ]]; then args+=(--remote); fi
+node scripts/admin-stats-access.ts revoke "${args[@]}"

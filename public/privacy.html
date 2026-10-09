@@ -94,6 +94,33 @@
         your passkey provider or device. Email sign-in codes expire after five minutes and can be
         used once.
       </p>
+      <h2>Aggregate practice and service statistics</h2>
+      <p>
+        When a new practice session with recorded time is saved, your browser sends one background
+        request containing its tool category and whether you were practicing as a guest or with an
+        account. This request does not include cookies, account or device identifiers, practice
+        text, answers, notes, or results. Editing a record, importing a backup, or transferring a
+        guest result to an account does not send another practice count. Class records are excluded.
+        Reporting never blocks practice or saving, and failed requests are not retried.
+      </p>
+      <p>
+        We store only daily totals by tool and guest/account category, using the server’s UTC day,
+        and retain 180 days of totals. Daily cleanup removes older totals. These approximate
+        counters are not linked to individual accounts or guests. Guest practice records and custom
+        text still stay on your device unless you explicitly save a result to an account.
+      </p>
+      <p>
+        Separately, we store the most recent UTC day your signed-in account used its private
+        journal, plan, or settings, so we can count recently active accounts. We overwrite that
+        single day rather than keeping an activity history. Signing in and checking account details
+        do not update it on their own. Loading your private journal or plan after signing in does
+        count as activity. Requests for administrative statistics do not update it.
+      </p>
+      <p>
+        Authorized statistics viewers can see installation-wide totals such as account counts,
+        recently active account counts, practice volume, and storage usage. This read-only console
+        does not show account identities or individual practice records.
+      </p>
       <h2>Cookies and service providers</h2>
       <p>
         We use essential cookies to keep you signed in and protect sign-in attempts. There are no
@@ -135,6 +162,6 @@
         Please keep email addresses, sign-in codes, and private exports out of public issues.
       </p>
     </main>
-    <footer><small>Updated September 29, 2026 · 73, N1RWJ</small></footer>
+    <footer><small>Updated October 9, 2026 · 73, N1RWJ</small></footer>
   </body>
 </html>

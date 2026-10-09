@@ -45,6 +45,8 @@ the email simulator.
 Workers observability is enabled. Authentication code, token, and email body
 values must never be added to application logs. API responses are not cached.
 A daily scheduled handler cleans expired authentication and rate-limit data.
+It also removes practice counters outside the 180-day UTC retention window and
+records the last successful cleanup time for the statistics console.
 
 Use `npx wrangler tail` to inspect failures. Keep personal exports out of log
 output. D1 supports Time Travel for disaster recovery; inspect the available
@@ -59,6 +61,46 @@ npx wrangler d1 time-travel info DB
 
 The checked-in GitHub Actions workflow verifies pull requests and main commits.
 No deployment credential is needed for its tests or Wrangler dry run.
+
+## Statistics access
+
+The read-only admin console is available only to accounts explicitly granted
+the `metrics_viewer` role. There is no first-account rule, recurring admin seed,
+user directory, invitation flow, or access-management page. All viewers see the
+same installation-wide aggregates; this role does not permit viewing private
+practice records or modifying accounts.
+
+After applying the migrations, bootstrap your own access by signing in normally
+and running the operator task with your sign-in email. Additional instructors
+or administrators sign in to create and verify their accounts, then give you
+their sign-in email for the same task:
+
+```sh
+mise run stats:grant -- person@example.com
+mise run stats:revoke -- person@example.com
+```
+
+**These tasks target production D1 by default**, using your existing Wrangler
+Cloudflare login. `--remote` explicitly selects that same target. To use the
+local development database instead:
+
+```sh
+mise run stats:grant -- --local person@example.com
+mise run stats:revoke -- --local person@example.com
+```
+
+Both commands normalize the email exactly as sign-in does and resolve an
+existing verified account. They do not create accounts or send email. Grants
+are stored against the immutable account ID in `account_roles`, independently
+of profile settings and imports. Repeated grants or revocations are harmless;
+a missing account is a clear error. Revoking a grant takes effect on the next
+dashboard API request while preserving ordinary account access. Reload the app
+after granting access to see its Admin navigation link.
+
+The underlying Node script requires an explicit `--local` or `--remote` target.
+It executes Wrangler using argument arrays and safely quotes SQL literals;
+email addresses with apostrophes are supported. Apply migrations before using
+the task, and keep access changes out of automated tests against production.
 
 ## Cloudflare push-to-deploy
 
