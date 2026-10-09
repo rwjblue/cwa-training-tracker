@@ -674,10 +674,11 @@
       "url": "/audio/cw-training/words/xyl.wav"
     },
     "YAGI": {
-      "inputHash": "13c63108be3cf89a617cdba0a3dda5560679e8515cbe0bdcb5c9395c5ed28621",
-      "requestId": "JFP1eoiXMvgWQj3zYhFC",
-      "sha256": "f51b65b90fdbaf74dc9ab67ac669b99ed0a5e43efa61e5f0a28fc1f490d21852",
-      "sourceSha256": "2387657ea6a99e2b3f0642581bd9ea30fbc2a6be672d259892a3de4aaf656a45",
+      "characterCost": 1.0,
+      "inputHash": "145be61e3596c4c4f7d14cb519602ed6b6f91fbf5517c2f6a4ea28fdf215ecf4",
+      "requestId": "k1NrIa5WcXE5Co0eWbnr",
+      "sha256": "06d6a03ecd1841809a29d5e523a3ca4da66c7471dae5eed08c0c6264539d0ac5",
+      "sourceSha256": "cf902fe6d3cb054aeceb33885151061df9f2c12c9ebb44083bd58fa076bf02dc",
       "url": "/audio/cw-training/words/yagi.wav"
     },
     "YL": {

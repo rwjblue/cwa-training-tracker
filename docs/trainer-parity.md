@@ -45,6 +45,11 @@ URLs. Native repetitions, independent volume controls, seeking, shuffle/repeat
 transitions and listening credit retain their existing playback path. Physical
 iPhone lock-screen verification remains outstanding.
 
+On October 9, YAGI’s answer was regenerated using explicit IPA for “YAH-gee”
+with a hard g, replacing the two-word respelling. The updated clip hash selects
+the replacement audio through the existing playback path; see
+[pronunciation provenance](spoken-audio.md).
+
 ## Already usable
 
 - **Daily curriculum and private journal:** Published Beginner v4.8, Fundamental

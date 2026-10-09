@@ -13,6 +13,12 @@ educational use. Abbreviations have authored pronunciations: ANT says “antenna
 AGN says “again,” WX says “weather” and DE says “this is.” The catalog date is
 October 6, 2026.
 
+YAGI uses the inline IPA pronunciation `/ˈjɑːɡi/` to target “YAH-gee” with a
+hard g. On October 9, 2026, this replaced the two-word respelling “yah ghee.”
+Eleven v4 accepts slash-delimited IPA directly in the authored text; see
+[pronunciation guidance](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices#ipa-with-eleven-v4).
+Only its answer clip was regenerated; the original Kokoro comparison is retained.
+
 Only the offline generation task reads `ELEVENLABS_API_KEY`; browsers and the
 Worker never call ElevenLabs or receive the key. The public index retains input
 fingerprints and approved clip hashes. Saved files provide exact reproduction;
