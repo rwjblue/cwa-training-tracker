@@ -268,12 +268,27 @@ test('actual Story save keeps native time, canceled review and exact retry priva
     .click();
   await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   await selector(page).selectOption('story-trail');
+  // Count observed native movement after playing begins. Decode/buffer startup
+  // may advance currentTime before this event and is not practiced time.
+  await media(page).evaluate((audio: HTMLAudioElement) => {
+    audio.addEventListener(
+      'playing',
+      () => Reflect.set(window, 'storyNativePlayingStart', audio.currentTime),
+      { once: true },
+    );
+  });
   await start(page);
   await expect
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime))
     .toBeGreaterThan(1.3);
   await pause(page);
-  const heard = await media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime);
+  const native = await media(page).evaluate((audio: HTMLAudioElement) => ({
+    playingStart: Reflect.get(window, 'storyNativePlayingStart') as number,
+    pausedPosition: audio.currentTime,
+  }));
+  expect(native.playingStart).toBeGreaterThanOrEqual(0);
+  expect(native.pausedPosition).toBeGreaterThan(native.playingStart);
+  const heard = native.pausedPosition - native.playingStart;
   await selector(page).selectOption('story-radio');
   await page.getByRole('button', { name: 'Save', exact: true }).press('Enter');
   const dialog = page.getByRole('dialog');
