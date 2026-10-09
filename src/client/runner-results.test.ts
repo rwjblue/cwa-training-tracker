@@ -250,18 +250,37 @@ it.each(['completed', 'error'] as const)(
 );
 
 it('bounds the separate terminal inventory without evicting existing student results', () => {
-  for (let index = 0; index < 100; index++) {
+  // Arrange an almost-full valid inventory without repeatedly rescanning every
+  // earlier fixture. The final successful write and overflow still use storage.
+  for (let index = 0; index < 99; index++) {
     const result = entry(`retained-${index}`);
-    retainFinishedRunnerResult('guest', result, { id: result.id, accountId: 'guest' });
+    values.set(
+      runnerResultKey('guest', result.id),
+      JSON.stringify(
+        validateRunnerFinishedResult(
+          {
+            version: 1,
+            entry: result,
+            origin: { id: result.id, accountId: 'guest' },
+            reviewed: false,
+          },
+          'guest',
+        ),
+      ),
+    );
   }
+  const final = entry('retained-99');
+  retainFinishedRunnerResult('guest', final, { id: final.id, accountId: 'guest' });
+  const inventory = readRunnerResults('guest');
+  expect(inventory.error).toBe('');
+  expect(inventory.results.map(({ entry }) => entry.id)).toEqual(
+    Array.from({ length: 100 }, (_, index) => `runner:retained-${index}`),
+  );
   const overflow = entry('overflow');
   expect(() =>
     retainFinishedRunnerResult('guest', overflow, { id: overflow.id, accountId: 'guest' }),
   ).toThrow('100 retained Runner results');
-  expect(readRunnerResults('guest').results).toHaveLength(100);
-  expect(
-    readRunnerResults('guest').results.some(({ entry }) => entry.id === 'runner:retained-0'),
-  ).toBe(true);
+  expect(readRunnerResults('guest')).toEqual(inventory);
   expect(loadLocalPractice('guest')).toEqual([]);
   const submitted = {
     ...overflow,
@@ -273,7 +292,7 @@ it('bounds the separate terminal inventory without evicting existing student res
     reviewed: true,
     entry: submitted,
   });
-  expect(readRunnerResults('guest').results).toHaveLength(100);
+  expect(readRunnerResults('guest')).toEqual(inventory);
 });
 
 it('keeps canceled edits and the exact first submission in the open-page owner when storage refuses', () => {
