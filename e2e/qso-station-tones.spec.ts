@@ -130,7 +130,7 @@ test('public QSO random station cues survive native seek, replay and retiming an
   await expect(pair).toContainText(': 950 Hz');
   await openPracticeTool(page, 'Word listening', (control) => control.tap());
   await expect(pair).toHaveCount(0);
-  await openPracticeTool(page, 'Stories', (control) => control.tap());
+  await openPracticeTool(page, 'Sentences & stories', (control) => control.tap());
   await sound(page);
   await expect(variable).toBeChecked();
   await expect(pair).toHaveCount(0);

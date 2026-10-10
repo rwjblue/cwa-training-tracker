@@ -1571,6 +1571,45 @@ it('keeps old shared v1 preferences compatible and explicitly restores independe
   }
 });
 
+it('accepts legacy story setups without chunk mode and preserves explicit new chunk preferences', () => {
+  seed('guest');
+  const backup = captureDeviceBackup('guest', 'Guest');
+  const setup = {
+    ...backup.shared.practicePreferences!.storySettings,
+    storyId: 'sentences-home' as const,
+    pauseAfterChunk: true,
+  };
+  const shared = {
+    practicePreferences: { ...backup.shared.practicePreferences!, storySettings: setup },
+  };
+  expect(
+    validateDeviceBackup(JSON.stringify({ ...backup, shared }), 'guest').shared.practicePreferences!
+      .storySettings,
+  ).toEqual(setup);
+  const { pauseAfterChunk: omitted, ...legacy } = { ...setup, storyId: 'story-trail' };
+  const legacyShared = {
+    practicePreferences: { ...shared.practicePreferences, storySettings: legacy },
+  };
+  expect(
+    validateDeviceBackup(JSON.stringify({ ...backup, shared: legacyShared }), 'guest').shared
+      .practicePreferences!.storySettings.pauseAfterChunk,
+  ).toBe(false);
+  expect(() =>
+    validateDeviceBackup(
+      JSON.stringify({
+        ...backup,
+        shared: {
+          practicePreferences: {
+            ...shared.practicePreferences,
+            storySettings: { ...setup, pauseAfterChunk: 'yes' },
+          },
+        },
+      }),
+      'guest',
+    ),
+  ).toThrow();
+});
+
 it('keeps old device inventories and exact versioned QSO setups compatible without shared opt-in', () => {
   seed('guest');
   const backup = captureDeviceBackup('guest', 'Guest');

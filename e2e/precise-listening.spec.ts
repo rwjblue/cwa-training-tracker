@@ -126,7 +126,7 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await setExact(page, 'Character speed', 20);
   await setExact(page, 'Effective speed', 8);
   await setExact(page, 'Sidetone', 731, 'Hz');
-  await openPracticeTool(page, 'Stories', (control) => control.tap());
+  await openPracticeTool(page, 'Sentences & stories', (control) => control.tap());
   await sound(page);
   await page.getByRole('checkbox', { name: 'Variable pitch', exact: true }).uncheck();
   await setExact(page, 'Character speed', 60);
@@ -141,7 +141,9 @@ test('precise public mode settings migrate, preview locally, cancel, and survive
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page).toHaveURL(/#practice\/stories\?/);
-  await expect(page.getByRole('heading', { name: 'Stories', exact: true, level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Sentences & stories', exact: true, level: 1 }),
+  ).toBeVisible();
   await sound(page);
   await expect(exact(page, 'Character speed')).toHaveValue('60');
   await expect(exact(page, 'Effective speed')).toHaveValue('51');

@@ -358,7 +358,14 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
         Object.keys(key === 'storySettings' ? DEFAULT_STORY_SETTINGS : DEFAULT_QSO_SETTINGS),
       );
       for (const [field, expected] of Object.entries(normalized[key]))
-        if (setup[field] !== expected)
+        if (
+          !(
+            key === 'storySettings' &&
+            field === 'pauseAfterChunk' &&
+            !Object.hasOwn(setup, field)
+          ) &&
+          setup[field] !== expected
+        )
           throw new Error(`Listening mode preference ${field} is invalid.`);
       continue;
     }

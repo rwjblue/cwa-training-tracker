@@ -46,7 +46,7 @@ test('public tool links open their selections in a fresh guest browser and on re
   for (const [label, tool] of [
     ['Word listening', 'words'],
     ['QSO practice', 'qso'],
-    ['Stories', 'stories'],
+    ['Sentences & stories', 'stories'],
     ['Copy practice', 'copy'],
     ['Sending practice', 'sending'],
     ['Free practice', 'free'],
@@ -184,7 +184,12 @@ test('a generated QSO and selected Story share their exact text and sound across
     await expect(media(other)).toHaveJSProperty('paused', true);
     await expectResponsive(other, 'public-shared-qso');
 
-    await openPracticeTool(page, 'Stories');
+    await openPracticeTool(page, 'Sentences & stories');
+    await page
+      .getByRole('group', { name: 'Practice length', exact: true })
+      .getByRole('button', { name: 'Stories', exact: true })
+      .click();
+    await page.getByRole('checkbox', { name: 'Pause after each sentence', exact: true }).uncheck();
     await page.getByRole('combobox', { name: 'Story', exact: true }).selectOption('story-light');
     await expect.poll(() => hashParams(page.url()).get('story')).toBe('story-light');
     const storyUrl = page.url();

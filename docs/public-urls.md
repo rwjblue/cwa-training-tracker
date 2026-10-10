@@ -11,7 +11,7 @@ and opening another tab.
 | Each practice tool              | `#practice/words`, `/qso`, `/stories`, `/copy`, `/sending`, `/free`, `/runner`                                                                         |
 | Word listening                  | Built-in list, exact order and occurrence pitches, speed, gap, independent Morse/voice volumes, shuffle/repeat/spoken-answer and text visibility settings                               |
 | QSO practice                    | Scenario, versioned station recipe including fictional seasonal weather, exact station pitches, speed, text visibility and Listen/Check your copy view |
-| Stories                         | Stable story identity, narrator pitch, speed and text visibility                                                                                       |
+| Sentences & stories             | Stable phrase/sentence collection or story identity, narrator pitch, speed, text visibility and pause-after-chunk choice; current position is omitted |
 | Free practice                   | Generated set, content mode/length and sound settings; typed custom text is omitted                                                                    |
 | Copy practice                   | Validated public round recipe; responses, scores, attempt identity and adaptive progress are omitted                                                   |
 | Sending practice                | Selected scale section                                                                                                                                 |
@@ -29,6 +29,13 @@ They reproduce the same material and timing setup, including after opening with
 different device preferences. Their catalog ordering and generator interpretation
 must remain compatible; golden compatibility checks protect these inputs. Volume
 is a listening setting, but actual output still depends on the receiver's device.
+
+Sentences & stories retains `#practice/stories` and the original three story
+identities and text. New public phrase collections, sentence collections and
+two-sentence stories have separate stable identities. `chunk=1` plays one native
+chunk at a time; `chunk=0` plays continuously. Published story links without
+`chunk` retain continuous playback regardless of device defaults. Shared links
+open at the beginning, paused; they contain no practice progress.
 
 On October 6, 2026, the prerelease word-answer assets changed from Kokoro to
 ElevenLabs Bella / Eleven v4. Earlier local smoke-test links now use that pack;

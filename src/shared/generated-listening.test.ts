@@ -101,7 +101,9 @@ describe('generated listening summaries', () => {
     expect(generatedListeningDetails(envelope([words({ variablePitch: false })]))[0]).toContain(
       '; 600 Hz;',
     );
-    const variableDetails = generatedListeningDetails(envelope([words({ variablePitch: true })]))[0];
+    const variableDetails = generatedListeningDetails(
+      envelope([words({ variablePitch: true })]),
+    )[0];
     expect(variableDetails).toContain('; random 500–900 Hz per word;');
     expect(variableDetails).not.toContain('600 Hz');
   });
@@ -342,6 +344,26 @@ it('keeps strict public Story identities separate from QSO stations and private 
     { effectiveWpm: 29 },
   ])
     expect(() => validateGeneratedListeningSummary({ ...story, ...change })).toThrow();
+});
+
+it('preserves played phrase material and native chunk mode in portable evidence', () => {
+  const summary = {
+    mode: 'story',
+    storyId: 'phrases-radio',
+    characterWpm: 20,
+    effectiveWpm: 10,
+    toneHz: 650,
+    sentenceGapSeconds: 0,
+    pauseAfterChunk: true,
+  } as const;
+  const evidence = validateGeneratedListeningEvidence(envelope([summary]));
+  expect(evidence.summaries[0]).toEqual(summary);
+  expect(generatedListeningDetails(evidence)[0]).toContain('supplemental public phrases');
+  expect(generatedListeningDetails(evidence)[0]).toContain('pause after each phrase');
+  expect(validateGeneratedListeningEvidence(JSON.parse(JSON.stringify(evidence)))).toEqual(
+    evidence,
+  );
+  expect(() => validateGeneratedListeningSummary({ ...summary, pauseAfterChunk: 'yes' })).toThrow();
 });
 
 it('retains exact 51–60 WPM facts without rounding or dropping effective speed', () => {

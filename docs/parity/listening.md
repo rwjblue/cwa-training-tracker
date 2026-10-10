@@ -1273,3 +1273,35 @@ exceed their 30-second test limits, including on the serial rerun. Browser check
 used the installed Chromium 151 because the bundled Playwright browser was absent.
 Desktop/mobile sound layouts were inspected. These changes are local; no deployment
 or physical locked-device claim is made.
+
+## 2026-10-10 phrases and sentences
+
+The existing Stories tool is now Sentences & stories. It offers three authored
+phrase collections (24 phrases of 2–3 words), three matching sentence collections
+(24 sentences of 4–6 words), three two-sentence stories and the unchanged original
+story catalog. Fresh devices start with phrases and pause after each chunk;
+existing story selections without the new setting retain continuous playback.
+
+Chunk mode builds a native WAV containing only the selected phrase or sentence,
+with no trailing handoff or browser-timer stop. Whole-chunk Replay starts that
+recording deliberately; Next prepares the next chunk paused. Continuous mode
+retains exact word seeking, speed retiming and two-second handoffs. The passage
+task precedes the Scratchpad in mobile reading and keyboard order. Plain text
+copy is labeled Sentence copy, with its existing 5–9-word content and grading.
+
+The public route remains `#practice/stories`; recipes share stable material,
+narrator pitch and chunk choice without position, notes or progress. Original
+v1 story hashes remain pinned. Actual played material and chunk mode use the
+existing strict evidence, private saving and portable-backup paths. Older
+preferences, backups, shared links and saved summaries remain compatible.
+
+Validation: TypeScript, all 1,690 Vitest tests, the production build and 16
+speech-generator Python tests pass. The complete browser run passed 119/124;
+after correcting one old card-name reference and scoping the mobile transcript
+order to passage practice, a serial rerun passed all five failed cases plus the
+new chunk journey (6/6), without changing timeouts. That includes the account
+and two instructor-material cases that timed out with two workers. Native chunk
+end, replay, paused Next, ended-speed edits, fresh guest sharing and actual private
+saving were verified. Desktop/mobile layouts were inspected using installed
+Chromium because the bundled Playwright browser was absent. Changes are local;
+no deployment or physical locked-device audio claim is made.

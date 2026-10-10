@@ -1,5 +1,11 @@
 import PreciseRange from './PreciseRange';
-import { PRACTICE_STORIES, practiceStory, type StoryId } from '../shared/listening-stories';
+import {
+  PRACTICE_PASSAGES,
+  passageDescription,
+  passageKind,
+  practiceStory,
+  type StoryId,
+} from '../shared/listening-stories';
 import {
   type ReactNode,
   forwardRef,
@@ -48,6 +54,8 @@ interface AppliedListeningTrack {
   readonly mixed?: boolean;
   readonly summary: GeneratedListeningSummary;
   readonly title: string;
+  /** A native recording containing only this phrase/sentence; omitted for continuous audio. */
+  readonly chunkIndex?: number;
 }
 const EMPTY_WORDS: readonly string[] = [];
 const matchesWordSource = (
@@ -195,6 +203,9 @@ export default forwardRef<
   );
   const variablePitch = usesVariableListeningPitch(p);
   const narrative = isStory ? story : qso;
+  const kind = passageKind(story.id);
+  const chunkUnit = kind === 'phrases' ? 'phrase' : 'sentence';
+  const chunkIndex = isStory && p.storySettings.pauseAfterChunk ? position : undefined;
   const activeWordList = isWords ? p.wordList : null;
   const activeShuffle = isWords ? p.shuffleWords : null;
   const activeCustom = isWords ? custom : null;
@@ -219,6 +230,7 @@ export default forwardRef<
     variablePitch,
     wordGap,
     spokenAnswers,
+    isStory ? p.storySettings.pauseAfterChunk : null,
   ]);
   const materialOwner = useRef(content);
   materialOwner.current = content;
@@ -375,7 +387,7 @@ export default forwardRef<
       } else if (isWords) {
         track = wordListeningTrack(wordRound!, p).track;
       } else if (isStory) {
-        track = storyListeningTrack(story, p);
+        track = storyListeningTrack(story, p, chunkIndex);
       } else {
         track = qsoResult!.track;
       }
@@ -386,6 +398,7 @@ export default forwardRef<
         resetKey,
         configurations: [{ at: 0, summary }],
         title: isWords ? listTitle : narrative.title,
+        ...(chunkIndex !== undefined ? { chunkIndex } : {}),
       });
       return { applied, error: '' };
     } catch (error) {
@@ -404,6 +417,8 @@ export default forwardRef<
     wordGap,
     p.volume,
     p.voiceVolume,
+    chunkIndex,
+    isStory ? p.storySettings.pauseAfterChunk : null,
   ]);
   const { applied } = trackResult;
   const track = playingTrack ?? applied?.track ?? null;
@@ -453,8 +468,8 @@ export default forwardRef<
             const answerStart = track.words[progress.wordIndex]?.answerStart;
             setAnswer(answerStart !== undefined && progress.position >= answerStart);
             if (progress.itemIndex >= 0) {
-              index.current = progress.itemIndex;
-              setPosition(progress.itemIndex);
+              index.current = next.chunkIndex ?? progress.itemIndex;
+              setPosition(index.current);
             }
           },
           onState: (state) => {
@@ -530,7 +545,11 @@ export default forwardRef<
     }
   };
   const prepare = (restartEnded = true) => {
-    if (prepared.current?.material === content && prepared.current.resetKey === resetKey) {
+    if (
+      prepared.current?.material === content &&
+      prepared.current.resetKey === resetKey &&
+      prepared.current.chunkIndex === chunkIndex
+    ) {
       if (
         restartEnded &&
         prepared.current.mixed &&
@@ -550,7 +569,10 @@ export default forwardRef<
       }
       throw new Error(roundError || trackResult.error || 'Add some words to play.');
     }
-    install(applied, applied.track.items[index.current]?.start ?? 0);
+    install(
+      applied,
+      chunkIndex === undefined ? (applied.track.items[index.current]?.start ?? 0) : 0,
+    );
   };
   const play = async () => {
     if (!canPlay()) return;
@@ -617,6 +639,34 @@ export default forwardRef<
       onError((error as Error).message);
     }
   };
+  const selectChunk = (requested: number) => {
+    if (!canPlay() || !isStory || chunkIndex === undefined || !applied) return;
+    try {
+      const next = Math.min(Math.max(0, requested), story.lines.length - 1);
+      stop();
+      const selected = { ...applied, track: storyListeningTrack(story, p, next), chunkIndex: next };
+      install(selected, 0);
+      index.current = next;
+      setPosition(next);
+      setComplete(false);
+      setAnswer(false);
+    } catch (error) {
+      onError((error as Error).message);
+    }
+  };
+  const replayChunk = async () => {
+    if (!canPlay() || !isStory) return;
+    try {
+      prepare(false);
+      player.current.seek(
+        chunkIndex === undefined ? (player.current.track?.items[index.current]?.start ?? 0) : 0,
+      );
+      setComplete(false);
+      await player.current.resume();
+    } catch (error) {
+      onError((error as Error).message);
+    }
+  };
   useEffect(() => {
     const pending = pendingRound.current;
     if (pending?.round === content) {
@@ -647,6 +697,10 @@ export default forwardRef<
     }
     if (previous.material !== applied.material || previous.resetKey !== applied.resetKey) {
       resetTransport();
+      return;
+    }
+    if (previous.chunkIndex !== applied.chunkIndex) {
+      install(applied, 0);
       return;
     }
     if (
@@ -731,6 +785,7 @@ export default forwardRef<
   const step = (delta: number) => {
     if (!canPlay()) return;
     const requested = index.current + delta;
+    if (chunkIndex !== undefined) return selectChunk(requested);
     try {
       prepare(false);
       const items = player.current.track?.items;
@@ -759,6 +814,43 @@ export default forwardRef<
           {initialShare.error}
         </p>
       )}
+      {isStory && (
+        <div className="passage-practice-intro">
+          <p>
+            Build from familiar words to connected ideas. Start with phrases, then try sentences and
+            stories.
+          </p>
+          <div className="practice-tabs" role="group" aria-label="Practice length">
+            {(['phrases', 'sentences', 'stories'] as const).map((choice) => (
+              <button
+                type="button"
+                key={choice}
+                aria-pressed={kind === choice}
+                className={kind === choice ? 'selected' : ''}
+                onClick={() => {
+                  if (choice === kind) return;
+                  const selected = PRACTICE_PASSAGES.find(
+                    (item) => passageKind(item.id) === choice,
+                  )!;
+                  onChange({
+                    storySettings: {
+                      ...p.storySettings,
+                      storyId: selected.id,
+                      pauseAfterChunk: true,
+                    },
+                  });
+                }}
+              >
+                {choice === 'phrases'
+                  ? 'Phrases'
+                  : choice === 'sentences'
+                    ? 'Sentences'
+                    : 'Stories'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="practice-generator-controls">
         {isWords ? (
           <label>
@@ -777,7 +869,11 @@ export default forwardRef<
           </label>
         ) : isStory ? (
           <label>
-            Story
+            {kind === 'stories'
+              ? 'Story'
+              : kind === 'phrases'
+                ? 'Phrase collection'
+                : 'Sentence collection'}
             <select
               value={story.id}
               onChange={(e) =>
@@ -786,7 +882,7 @@ export default forwardRef<
                 })
               }
             >
-              {PRACTICE_STORIES.map((item) => (
+              {PRACTICE_PASSAGES.filter((item) => passageKind(item.id) === kind).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.title}
                 </option>
@@ -809,6 +905,28 @@ export default forwardRef<
           </label>
         )}
       </div>
+      {isStory && (
+        <div className="passage-practice-options">
+          <p className="field-hint">{passageDescription(story)}</p>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={Boolean(p.storySettings.pauseAfterChunk)}
+              onChange={(event) =>
+                onChange({
+                  storySettings: { ...p.storySettings, pauseAfterChunk: event.target.checked },
+                })
+              }
+            />
+            Pause after each {chunkUnit}
+          </label>
+          <p className="field-hint">
+            {chunkIndex !== undefined
+              ? 'Listen to one chunk. Replay or reveal it, then choose Next when you are ready.'
+              : 'Continuous playback, with a two-second pause between chunks.'}
+          </p>
+        </div>
+      )}
       {!isWords && !isStory && (
         <div className="qso-practice-mode" role="group" aria-label="QSO practice mode">
           <button type="button" aria-pressed={!copyMode} onClick={() => setCopyMode(false)}>
@@ -848,20 +966,28 @@ export default forwardRef<
               </button>
             </div>
           )}
-          {mediaReady && <ListeningSeekControls onBack={back} onReplay={() => void replayWord()} />}
+          {mediaReady && (!isStory || chunkIndex === undefined) && (
+            <ListeningSeekControls onBack={back} onReplay={() => void replayWord()} />
+          )}
+          {isStory && (
+            <button className="button outline passage-replay" onClick={() => void replayChunk()}>
+              Replay {chunkUnit}
+            </button>
+          )}
           <div className="native-morse-player" hidden={!mediaReady}>
             <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
           </div>
         </div>
-        {practiceWorkspace}
+        {!isStory && practiceWorkspace}
         <div className="listening-transcript-workspace">
           <div className="transmission-panel trainer-transmission">
             <div className="transmission-label">
               <span>
-                {complete
+                {complete && chunkIndex === undefined
                   ? 'ROUND COMPLETE'
-                  : `${isWords ? 'WORD' : isStory ? 'SENTENCE' : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
+                  : `${isWords ? 'WORD' : isStory ? chunkUnit.toUpperCase() : 'TRANSMISSION'} ${Math.min(position + 1, total)} OF ${total}`}
                 {active ? ' · LISTENING' : ''}
+                {isStory && ` · ${story.lines[position]?.split(' ').length ?? 0} WORDS`}
               </span>
               {!checkingCopy && (
                 <button onClick={() => onChange({ hideTrainerText: !p.hideTrainerText })}>
@@ -887,7 +1013,7 @@ export default forwardRef<
                   track={track}
                   activeWord={activeWord}
                   onSeek={seekWord}
-                  itemIndex={position}
+                  itemIndex={chunkIndex === undefined ? position : 0}
                 />
               ) : (
                 <p className="trainer-morse-text">{current ?? 'Press Play to begin.'}</p>
@@ -907,6 +1033,14 @@ export default forwardRef<
               </button>
             </div>
           </div>
+          {isStory && complete && chunkIndex !== undefined && (
+            <p className="field-hint" role="status">
+              {chunkUnit === 'phrase' ? 'Phrase' : 'Sentence'} complete. Replay or reveal it
+              {position < total - 1
+                ? ', or choose Next to continue.'
+                : `. This is the last ${chunkUnit}.`}
+            </p>
+          )}
           <div className="trainer-round-actions">
             <button
               className="text-button"
@@ -920,17 +1054,26 @@ export default forwardRef<
               }}
             >
               <Shuffle size={14} />{' '}
-              {isWords ? 'New round' : isStory ? 'Reset story to beginning' : 'New QSO'}
+              {isWords
+                ? 'New round'
+                : isStory
+                  ? kind === 'stories'
+                    ? 'Reset story to beginning'
+                    : 'Reset collection to beginning'
+                  : 'New QSO'}
             </button>
             <span className="field-hint">
               {complete
                 ? 'Round complete. Play to listen again.'
                 : checkingCopy && !copyRevealed
                   ? 'Replay as often as you need. Your copy stays here.'
-                  : 'Words and Previous/Next move your place while keeping playback playing or paused.'}
+                  : chunkIndex !== undefined
+                    ? 'Previous/Next prepare a paused chunk. Replay starts it.'
+                    : 'Words and Previous/Next move your place while keeping playback playing or paused.'}
             </span>
           </div>
         </div>
+        {isStory && practiceWorkspace}
       </div>
       {!isWords && !isStory && (
         <section
@@ -976,8 +1119,8 @@ export default forwardRef<
         <p className="field-hint" aria-label="Story narrator tone">
           Narrator: {applied.summary.toneHz} Hz.{' '}
           {variablePitch
-            ? 'One random pitch from 500 to 900 Hz for the whole story. Replays and speed changes keep this pitch.'
-            : 'All sentences use your selected sidetone.'}
+            ? `One random pitch from 500 to 900 Hz for ${kind === 'stories' ? 'the whole story' : 'this collection'}. Replays and speed changes keep this pitch.`
+            : `All ${kind === 'phrases' ? 'phrases' : 'sentences'} use your selected sidetone.`}
         </p>
       )}
       {isWords && (
@@ -1106,7 +1249,7 @@ export default forwardRef<
           {isWords
             ? 'Hear each word as a whole sound. Replay the current word or move at your own pace.'
             : isStory
-              ? 'Supplemental public stories, written for listening practice. Hear the meaning one sentence at a time; all sentences use one narrator tone.'
+              ? 'Original phrases, sentences and stories for listening practice. Hold the meaning of each chunk, then recall an idea or recognizable fragment. All chunks use one narrator tone.'
               : 'Choose a scenario, then generate as many contacts as you like. New QSO changes both stations; Play replays this contact.'}
         </p>
 
@@ -1132,9 +1275,31 @@ export default forwardRef<
       {(!checkingCopy || copyRevealed) && (
         <details className="trainer-catalog">
           <summary>
-            {isWords ? 'View word list' : isStory ? 'View full story' : 'View full conversation'}
+            {isWords
+              ? 'View word list'
+              : isStory
+                ? kind === 'stories'
+                  ? 'View full story'
+                  : 'View full collection'
+                : 'View full conversation'}
           </summary>
-          {track ? (
+          {isStory && chunkIndex !== undefined ? (
+            <ol className="passage-catalog">
+              {story.lines.map((line, item) => (
+                <li key={item}>
+                  <button
+                    type="button"
+                    className="text-button"
+                    aria-label={`Go to ${chunkUnit} ${item + 1}: ${line}`}
+                    aria-current={position === item ? 'step' : undefined}
+                    onClick={() => selectChunk(item)}
+                  >
+                    {line}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : track ? (
             <MorseTranscript track={track} activeWord={activeWord} onSeek={seekWord} />
           ) : (
             <p>{roundError || trackResult.error || 'Add words to begin.'}</p>

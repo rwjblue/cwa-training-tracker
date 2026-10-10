@@ -1,4 +1,9 @@
-import { PRACTICE_STORIES, practiceStory, type StoryId } from './listening-stories.ts';
+import {
+  PRACTICE_PASSAGES,
+  passageKind,
+  practiceStory,
+  type StoryId,
+} from './listening-stories.ts';
 
 /** Descriptive configurations actually played; never private text, scripts or per-source time. */
 interface GeneratedListeningSpeeds {
@@ -33,6 +38,7 @@ export type GeneratedListeningSummary = GeneratedListeningSpeeds &
         readonly storyId: StoryId;
         readonly toneHz: number;
         readonly sentenceGapSeconds: number;
+        readonly pauseAfterChunk?: boolean;
       }
     | {
         readonly mode: 'free';
@@ -196,17 +202,24 @@ export function validateGeneratedListeningSummary(value: unknown): GeneratedList
     };
   }
   if (row.mode === 'story') {
-    keys(row, [...common, 'storyId', 'toneHz', 'sentenceGapSeconds'], 'Generated story summary');
+    keys(
+      row,
+      [...common, 'storyId', 'toneHz', 'sentenceGapSeconds', 'pauseAfterChunk'],
+      'Generated story summary',
+    );
     return {
       mode: 'story',
       storyId: choice(
         row.storyId,
-        PRACTICE_STORIES.map((story) => story.id),
+        PRACTICE_PASSAGES.map((story) => story.id),
         'Generated story',
       ),
       ...speeds,
       toneHz: finite(row.toneHz, 'Narrator tone', 300, 1000),
       sentenceGapSeconds: finite(row.sentenceGapSeconds, 'Sentence pause', 0, 5),
+      ...(Object.hasOwn(row, 'pauseAfterChunk')
+        ? { pauseAfterChunk: boolean(row.pauseAfterChunk, 'Pause after each chunk') }
+        : {}),
     };
   }
   if (row.mode === 'free') {
@@ -344,8 +357,10 @@ export function generatedListeningDetails(evidence: GeneratedListeningEvidence):
       }
       if (summary.mode === 'qso')
         return `Played ${QSO_TITLES[summary.scenarioId]}: ${summary.stations.join(' / ')}; ${speed}; station tones ${summary.tonesHz.join(' / ')} Hz; ${summary.transmissionGapSeconds}s transmission pause.`;
-      if (summary.mode === 'story')
-        return `Played ${practiceStory(summary.storyId).title}: supplemental public story; ${speed}; narrator ${summary.toneHz} Hz; ${summary.sentenceGapSeconds}s sentence pause.`;
+      if (summary.mode === 'story') {
+        const kind = passageKind(summary.storyId);
+        return `Played ${practiceStory(summary.storyId).title}: supplemental public ${kind === 'stories' ? 'story' : kind}; ${speed}; narrator ${summary.toneHz} Hz; ${summary.pauseAfterChunk ? `pause after each ${kind === 'phrases' ? 'phrase' : 'sentence'}` : `${summary.sentenceGapSeconds}s sentence pause`}.`;
+      }
       const length =
         summary.contentMode === 'words'
           ? `; ${summary.wordLength === 'mixed' ? 'mixed 2–8-letter words' : `${summary.wordLength}-letter words`}`

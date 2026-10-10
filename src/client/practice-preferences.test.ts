@@ -166,6 +166,34 @@ describe('browser practice preferences', () => {
   });
 });
 
+it('starts new learners with phrases and preserves continuous playback for legacy story preferences', () => {
+  expect(normalizePracticePreferences(undefined).storySettings).toMatchObject({
+    storyId: 'phrases-radio',
+    pauseAfterChunk: true,
+  });
+  const old = normalizePracticePreferences({
+    version: 2,
+    storySettings: {
+      version: 1,
+      storyId: 'story-light',
+      characterWpm: 28,
+      effectiveWpm: 14,
+      tone: 650,
+      hideTrainerText: false,
+    },
+  });
+  expect(old.storySettings).toMatchObject({
+    storyId: 'story-light',
+    pauseAfterChunk: false,
+    characterWpm: 28,
+    effectiveWpm: 14,
+  });
+  const changed = changeListeningPreferences(old, {
+    storySettings: { ...old.storySettings, storyId: 'sentences-home', pauseAfterChunk: true },
+  });
+  expect(normalizePracticePreferences(JSON.parse(JSON.stringify(changed)))).toEqual(changed);
+});
+
 it('retains both Story speeds/selection independently and migrates old shared settings', () => {
   let current = normalizePracticePreferences({ characterWpm: 35, effectiveWpm: 17, tone: 725 });
   const common = { characterWpm: 35, effectiveWpm: 17, tone: 725 };
@@ -215,7 +243,7 @@ it('retains both Story speeds/selection independently and migrates old shared se
     },
   });
   expect(malformed.storySettings).toMatchObject({
-    storyId: 'story-trail',
+    storyId: 'phrases-radio',
     characterWpm: 5,
     effectiveWpm: 5,
     tone: 600,

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PRACTICE_STORIES, practiceStory } from '../shared/listening-stories';
+import {
+  PRACTICE_STORIES,
+  PRACTICE_PASSAGES,
+  passageKind,
+  practiceStory,
+} from '../shared/listening-stories';
 import { cleanMorseText } from './audio';
 import {
   listeningStoryRound,
@@ -29,10 +34,15 @@ describe('public authored story listening', () => {
     );
     for (const story of PRACTICE_STORIES)
       for (const sentence of story.lines) expect(cleanMorseText(sentence)).toBe(sentence);
-    expect(() => practiceStory('official-course-story')).toThrow('three public');
+    expect(() => practiceStory('official-course-story')).toThrow('public phrase');
   });
   it('uses one narrator, two-second handoffs and no trailing handoff for every story', () => {
-    const p = { ...DEFAULT_PRACTICE_PREFERENCES, tone: 725, variableStoryPitch: false };
+    const p = {
+      ...DEFAULT_PRACTICE_PREFERENCES,
+      tone: 725,
+      variableStoryPitch: false,
+      storySettings: { ...DEFAULT_PRACTICE_PREFERENCES.storySettings, pauseAfterChunk: false },
+    };
     for (const story of PRACTICE_STORIES) {
       const round = listeningStoryRound(story);
       const track = storyListeningTrack(round, p);
@@ -102,6 +112,34 @@ describe('public authored story listening', () => {
     expect(round.toneHz).toBe(500);
     expect(pitchRandom).toHaveBeenCalledTimes(2);
   });
+});
+
+it('keeps bridge material playable, bounded by chunk length and uniquely addressable', () => {
+  expect(new Set(PRACTICE_PASSAGES.map((item) => item.id)).size).toBe(PRACTICE_PASSAGES.length);
+  for (const passage of PRACTICE_PASSAGES) {
+    for (const line of passage.lines) {
+      expect(cleanMorseText(line)).toBe(line);
+      const count = line.split(' ').length;
+      if (passageKind(passage.id) === 'phrases') expect(count).toBeLessThanOrEqual(3);
+      if (passageKind(passage.id) === 'sentences') expect(count).toBeLessThanOrEqual(6);
+    }
+  }
+});
+
+it('renders a native chunk with no preceding/following material or trailing handoff', () => {
+  const story = listeningStoryRound(practiceStory('sentences-radio'), () => 0);
+  for (const index of [0, 3, story.lines.length - 1]) {
+    const track = storyListeningTrack(story, DEFAULT_PRACTICE_PREFERENCES, index);
+    expect(track.items).toHaveLength(1);
+    expect(track.items[0].text).toBe(story.lines[index]);
+    expect(track.items[0].start).toBe(0);
+    expect(track.duration).toBe(track.items[0].end);
+    expect(new Set(track.tones.map((tone) => tone.frequency))).toEqual(new Set([500]));
+  }
+  for (const index of [-1, 0.5, story.lines.length])
+    expect(() => storyListeningTrack(story, DEFAULT_PRACTICE_PREFERENCES, index)).toThrow(
+      'Choose a phrase',
+    );
 });
 
 it('rejects a Story that exceeds the bounded native recording limit at very slow spacing', () => {

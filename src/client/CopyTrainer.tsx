@@ -1067,7 +1067,9 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
               <strong>
                 {discrete
                   ? `${currentRecipe.mode === 'words' ? 'Word' : 'Call'} ${(attempt?.trials.length ?? 0) + 1} of ${attempt?.targets.length ?? 25}`
-                  : 'Copy the complete recording'}
+                  : currentRecipe.mode === 'plaintext'
+                    ? 'Copy one sentence · 5–9 words'
+                    : 'Copy the complete recording'}
               </strong>
               <span>
                 {speeds.characterWpm}/{speeds.effectiveWpm} WPM ·{' '}

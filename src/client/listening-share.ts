@@ -1,4 +1,4 @@
-import { practiceStory, PRACTICE_STORIES } from '../shared/listening-stories';
+import { practiceStory, PRACTICE_PASSAGES } from '../shared/listening-stories';
 import {
   type ListeningQsoRound,
   type ListeningStoryRound,
@@ -108,8 +108,12 @@ export function readListeningShare(
     if (variable !== undefined) updates.variableQsoPitch = variable;
   } else {
     updates.storySettings = { ...current.storySettings, ...sound };
-    const story = PRACTICE_STORIES.find((item) => item.id === params.get('story'));
+    const story = PRACTICE_PASSAGES.find((item) => item.id === params.get('story'));
     if (story) updates.storySettings.storyId = story.id;
+    // Published links without a chunk setting retain continuous playback.
+    updates.storySettings.pauseAfterChunk =
+      boolean('chunk') ??
+      (params.has('story') || params.has('pitch') ? false : current.storySettings.pauseAfterChunk);
     if (variable !== undefined) updates.variableStoryPitch = variable;
   }
   const result: ListeningShare = {
@@ -151,7 +155,7 @@ export function readListeningShare(
         frequenciesHz: Object.freeze(frequenciesHz),
       });
     } else if (tool === 'stories' && params.has('pitch')) {
-      if (!PRACTICE_STORIES.some((item) => item.id === params.get('story')))
+      if (!PRACTICE_PASSAGES.some((item) => item.id === params.get('story')))
         throw new Error('This story link has an unknown public story.');
       const toneHz = decodeNumbers(params.get('pitch')!, 1, 500, 900)[0];
       result.story = Object.freeze({ ...practiceStory(p.storySettings.storyId), toneHz });
@@ -187,6 +191,7 @@ export function listeningShareRoute(
     }
   } else if (p.tool === 'stories') {
     params.set('story', material.story?.id ?? p.storySettings.storyId);
+    params.set('chunk', p.storySettings.pauseAfterChunk ? '1' : '0');
     params.set('variable', p.variableStoryPitch ? '1' : '0');
     if (material.story) params.set('pitch', encodeNumbers([material.story.toneHz]));
   } else {

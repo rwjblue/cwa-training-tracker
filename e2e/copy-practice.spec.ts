@@ -1049,7 +1049,7 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await expectAccessible(page, 'copy-calls-result-mobile');
 
   await page.getByRole('button', { name: 'Adjust settings', exact: true }).click();
-  await page.getByRole('button', { name: 'Plain text', exact: true }).click();
+  await page.getByRole('button', { name: 'Sentence copy', exact: true }).click();
   await openDisclosure(page, 'Round settings');
   await page.getByRole('spinbutton', { name: /^Character speed/ }).fill('100');
   await page.getByRole('spinbutton', { name: /^Effective speed/ }).fill('100');
@@ -1057,7 +1057,7 @@ test('callsign controls protect replay and blind feedback, and plain text grades
   await page.getByRole('combobox', { name: 'Tone', exact: true }).selectOption('fixed');
   await page.getByRole('spinbutton', { name: 'Tone frequency Hz', exact: true }).fill('700');
   await page.getByRole('spinbutton', { name: /^Start delay/ }).fill('0');
-  await page.getByRole('button', { name: 'Start plain text', exact: true }).click();
+  await page.getByRole('button', { name: 'Start sentence copy', exact: true }).click();
   expect(Math.abs((await recordingTone(page)).hz - 700)).toBeLessThan(1);
   await page.getByRole('button', { name: 'Reveal answer', exact: true }).click();
   const target = await page

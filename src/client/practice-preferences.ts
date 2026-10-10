@@ -1,4 +1,4 @@
-import { PRACTICE_STORIES, type StoryId } from '../shared/listening-stories';
+import { PRACTICE_PASSAGES, type StoryId } from '../shared/listening-stories';
 import type { WordList } from './word-content';
 import { WORD_LENGTHS, type PracticeMode, type WordLength } from './audio';
 
@@ -37,6 +37,8 @@ export interface ListeningSoundSetup {
 }
 export interface StorySettings extends ListeningSoundSetup {
   storyId: StoryId;
+  /** Older preferences omitted this and played continuously. */
+  pauseAfterChunk?: boolean;
 }
 export const DEFAULT_QSO_SETTINGS: ListeningSoundSetup = {
   version: 1,
@@ -47,7 +49,8 @@ export const DEFAULT_QSO_SETTINGS: ListeningSoundSetup = {
 };
 export const DEFAULT_STORY_SETTINGS: StorySettings = {
   version: 1,
-  storyId: 'story-trail',
+  storyId: 'phrases-radio',
+  pauseAfterChunk: true,
   characterWpm: 20,
   effectiveWpm: 10,
   tone: 600,
@@ -111,9 +114,15 @@ export function normalizeStorySettings(
   if (source.version !== undefined && source.version !== 1) return { ...fallback };
   return {
     ...normalizeListeningSoundSetup(value, fallback),
-    storyId: PRACTICE_STORIES.some((story) => story.id === source.storyId)
+    storyId: PRACTICE_PASSAGES.some((story) => story.id === source.storyId)
       ? (source.storyId as StoryId)
       : fallback.storyId,
+    pauseAfterChunk:
+      typeof source.pauseAfterChunk === 'boolean'
+        ? source.pauseAfterChunk
+        : source.storyId !== undefined
+          ? false
+          : fallback.pauseAfterChunk,
   };
 }
 /** Words retain their original sound fields; QSO and Stories own separate setups. */
@@ -155,7 +164,16 @@ export function normalizePracticePreferences(value: unknown): PracticePreference
   return {
     version: 2,
     qsoSettings: normalizeListeningSoundSetup(source.qsoSettings ?? migratedSound, migratedSound),
-    storySettings: normalizeStorySettings(source.storySettings),
+    storySettings: normalizeStorySettings(
+      source.storySettings,
+      source.storySettings === undefined &&
+        (source.version === 1 ||
+          source.version === 2 ||
+          ['words', 'qso', 'stories', 'free', 'sending'].includes(String(source.tool)) ||
+          ['words', 'groups', 'numbers', 'callsigns', 'custom'].includes(String(source.mode)))
+        ? { ...DEFAULT_STORY_SETTINGS, storyId: 'story-trail', pauseAfterChunk: false }
+        : DEFAULT_STORY_SETTINGS,
+    ),
     tool: ['words', 'qso', 'stories', 'free', 'sending'].includes(String(source.tool))
       ? (source.tool as PracticePreferences['tool'])
       : source.mode

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { PRACTICE_STORIES, practiceStory } from '../shared/listening-stories';
+import { PRACTICE_STORIES, PRACTICE_PASSAGES, practiceStory } from '../shared/listening-stories';
 import {
   listeningQsoRound,
   listeningStoryRound,
@@ -35,6 +35,30 @@ const recipe = '1.1.0.0.0.0.0.0.0.0.19.0.1.1.1.1.0.1.1.1t.1';
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 describe('public listening URLs', () => {
+  it('shares bridge collections and chunk playback without inheriting recipient defaults', () => {
+    for (const passage of PRACTICE_PASSAGES) {
+      for (const pauseAfterChunk of [true, false]) {
+        const preferences = {
+          ...defaults,
+          tool: 'stories' as const,
+          storySettings: { ...defaults.storySettings, storyId: passage.id, pauseAfterChunk },
+        };
+        const story = listeningStoryRound(passage, () => 0.5);
+        const shared = readListeningShare(listeningShareRoute(preferences, { story }), {
+          ...defaults,
+          storySettings: { ...defaults.storySettings, pauseAfterChunk: !pauseAfterChunk },
+        });
+        expect(shared.error).toBeUndefined();
+        expect(shared.story).toEqual(story);
+        expect(shared.preferences.storySettings.pauseAfterChunk).toBe(pauseAfterChunk);
+        expect(shared.preferences.storySettings.storyId).toBe(passage.id);
+      }
+    }
+    const old = readListeningShare('#practice/stories?v=1&story=story-trail&pitch=jk');
+    expect(old.error).toBeUndefined();
+    expect(old.story?.id).toBe('story-trail');
+    expect(old.preferences.storySettings.pauseAfterChunk).toBe(false);
+  });
   it('shares only the validated public QSO workspace, without copy answers or reveal state', () => {
     const qso = listeningQsoRound(qsoFromRecipe(recipe), () => 0.5);
     const url = listeningShareRoute({ ...defaults, tool: 'qso' }, { qso, copyMode: true });
@@ -248,5 +272,10 @@ describe('public listening URLs', () => {
         "words": "a1be5e33eacbe8fb46870a237a67d5816d60018b288d78555963eb6b34fe547e",
       }
     `);
+  });
+  it('pins the expanded passage catalog for new v1 shared links', () => {
+    expect(digest(PRACTICE_PASSAGES)).toBe(
+      '0d7c63e7dd6deb66eac858ae4bc6f943b64c3d6655a685fb1cb75e4141f80d53',
+    );
   });
 });

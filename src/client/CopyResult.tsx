@@ -17,7 +17,7 @@ export const COPY_LABELS: Record<CopyMode, string> = {
   groups: 'Code groups',
   words: 'Word copy',
   callsigns: 'Callsign copy',
-  plaintext: 'Plain text',
+  plaintext: 'Sentence copy',
 };
 export const copyDuration = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;

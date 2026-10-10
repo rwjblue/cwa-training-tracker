@@ -154,19 +154,27 @@ export function storyListeningSummary(
     mode: 'story',
     storyId: story.id,
     toneHz: p.variableStoryPitch ? story.toneHz : p.tone,
-    sentenceGapSeconds: 2,
+    sentenceGapSeconds: p.storySettings.pauseAfterChunk ? 0 : 2,
+    ...(p.storySettings.pauseAfterChunk ? { pauseAfterChunk: true } : {}),
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
   });
 }
 /** Public authored sentences share one narrator; no station alternation or trailing handoff. */
-export function storyListeningTrack(story: ListeningStoryRound, p: PracticePreferences) {
+export function storyListeningTrack(
+  story: ListeningStoryRound,
+  p: PracticePreferences,
+  chunkIndex?: number,
+) {
   const frequency = p.variableStoryPitch ? story.toneHz : p.tone;
+  if (chunkIndex !== undefined && (!Number.isSafeInteger(chunkIndex) || !story.lines[chunkIndex]))
+    throw new Error('Choose a phrase or sentence in this collection.');
+  const lines = chunkIndex === undefined ? story.lines : [story.lines[chunkIndex]];
   return buildMorseTrack(
-    story.lines.map((text, index) => ({
+    lines.map((text, index) => ({
       text,
       frequency,
-      gapAfter: index < story.lines.length - 1 ? 2 : 0,
+      gapAfter: index < lines.length - 1 ? 2 : 0,
     })),
     {
       characterWpm: p.characterWpm,

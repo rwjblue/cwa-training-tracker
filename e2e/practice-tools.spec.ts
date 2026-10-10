@@ -35,7 +35,7 @@ test('guests choose from the public tool library without starting a default sess
     'Sending practice',
     'Word listening',
     'QSO practice',
-    'Stories',
+    'Sentences & stories',
     'Free practice',
     'Morse Runner',
   ]) {

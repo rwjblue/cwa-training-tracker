@@ -50,10 +50,138 @@ export const PRACTICE_STORIES = [
   },
 ] as const;
 
-export type StoryId = (typeof PRACTICE_STORIES)[number]['id'];
-export type PracticeStory = (typeof PRACTICE_STORIES)[number];
+/** Keep the original story catalog above unchanged for published v1 recipes. */
+export const PRACTICE_PHRASES = [
+  {
+    id: 'phrases-radio',
+    title: 'At the radio',
+    lines: [
+      'THE RADIO',
+      'A CLEAR CALL',
+      'MY NAME',
+      'YOUR SIGNAL',
+      'THE LAST WORD',
+      'LOW POWER',
+      'PLEASE SEND AGAIN',
+      'THANK YOU',
+    ],
+  },
+  {
+    id: 'phrases-outdoors',
+    title: 'Outside',
+    lines: [
+      'THE SUN',
+      'A BLUE SKY',
+      'THE GREEN TREE',
+      'A SMALL BIRD',
+      'THE OLD ROAD',
+      'BY THE LAKE',
+      'A COOL WIND',
+      'ON THE HILL',
+    ],
+  },
+  {
+    id: 'phrases-home',
+    title: 'At home',
+    lines: [
+      'MY CUP',
+      'HOT TEA',
+      'THE OPEN DOOR',
+      'A GOOD BOOK',
+      'THE RED BAG',
+      'ON THE DESK',
+      'AFTER LUNCH',
+      'TIME TO REST',
+    ],
+  },
+] as const;
+export const PRACTICE_SENTENCES = [
+  {
+    id: 'sentences-radio',
+    title: 'At the radio',
+    lines: [
+      'THE RADIO IS ON.',
+      'I HEAR A CLEAR CALL.',
+      'MY NAME IS BEN.',
+      'YOUR SIGNAL IS CLEAR.',
+      'I MISSED THE LAST WORD.',
+      'WE USE LOW POWER.',
+      'PLEASE SEND YOUR NAME AGAIN.',
+      'THANK YOU FOR THE CALL.',
+    ],
+  },
+  {
+    id: 'sentences-outdoors',
+    title: 'Outside',
+    lines: [
+      'THE SUN IS UP.',
+      'THE SKY IS BLUE.',
+      'THE TREE IS GREEN.',
+      'A SMALL BIRD SINGS.',
+      'WE TAKE THE OLD ROAD.',
+      'WE SIT BY THE LAKE.',
+      'A COOL WIND BLOWS.',
+      'WE WALK UP THE HILL.',
+    ],
+  },
+  {
+    id: 'sentences-home',
+    title: 'At home',
+    lines: [
+      'MY CUP IS FULL.',
+      'THE TEA IS HOT.',
+      'THE DOOR IS OPEN.',
+      'I READ A GOOD BOOK.',
+      'THE BAG IS RED.',
+      'MY BOOK IS ON THE DESK.',
+      'WE TALK AFTER LUNCH.',
+      'IT IS TIME TO REST.',
+    ],
+  },
+] as const;
+export const PRACTICE_MINI_STORIES = [
+  {
+    id: 'story-first-call',
+    title: 'A clear call (two sentences)',
+    lines: ['THE RADIO IS ON.', 'I HEAR A CLEAR CALL.'],
+  },
+  {
+    id: 'story-lake-rest',
+    title: 'By the lake (two sentences)',
+    lines: ['WE WALK TO THE LAKE.', 'WE SIT UNDER A TREE.'],
+  },
+  {
+    id: 'story-tea-book',
+    title: 'Tea and a book (two sentences)',
+    lines: ['THE TEA IS HOT.', 'I READ A GOOD BOOK.'],
+  },
+] as const;
+export const PRACTICE_PASSAGES = [
+  ...PRACTICE_PHRASES,
+  ...PRACTICE_SENTENCES,
+  ...PRACTICE_MINI_STORIES,
+  ...PRACTICE_STORIES,
+] as const;
+export type PassageKind = 'phrases' | 'sentences' | 'stories';
+export type StoryId = (typeof PRACTICE_PASSAGES)[number]['id'];
+export type PracticeStory = (typeof PRACTICE_PASSAGES)[number];
+export function passageKind(id: string): PassageKind {
+  return id.startsWith('phrases-')
+    ? 'phrases'
+    : id.startsWith('sentences-')
+      ? 'sentences'
+      : 'stories';
+}
+export function passageDescription(passage: PracticeStory): string {
+  const counts = passage.lines.map((line) => line.split(' ').length);
+  const kind = passageKind(passage.id);
+  const unit = kind === 'phrases' ? 'phrases' : 'sentences';
+  return kind === 'stories'
+    ? `${passage.lines.length} sentences · ${counts.reduce((sum, count) => sum + count, 0)} words total`
+    : `${passage.lines.length} ${unit} · ${Math.min(...counts)}–${Math.max(...counts)} words each`;
+}
 export function practiceStory(id: string): PracticeStory {
-  const story = PRACTICE_STORIES.find((item) => item.id === id);
-  if (!story) throw new Error('Choose one of the three public listening stories.');
+  const story = PRACTICE_PASSAGES.find((item) => item.id === id);
+  if (!story) throw new Error('Choose a public phrase collection, sentence collection, or story.');
   return story;
 }

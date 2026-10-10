@@ -22,7 +22,17 @@ async function navigate(page: Page, name: string) {
     .click();
 }
 async function openStories(page: Page) {
-  await openPracticeTool(page, 'Stories', (control) => control.press('Enter'));
+  await openPracticeTool(page, 'Sentences & stories', (control) => control.press('Enter'));
+  const choices = page.getByRole('group', { name: 'Practice length', exact: true });
+  if (
+    (await choices
+      .getByRole('button', { name: 'Stories', exact: true })
+      .getAttribute('aria-pressed')) !== 'true'
+  ) {
+    await choices.getByRole('button', { name: 'Stories', exact: true }).click();
+    await selector(page).selectOption('story-trail');
+  }
+  await page.getByRole('checkbox', { name: 'Pause after each sentence', exact: true }).uncheck();
 }
 async function paused(page: Page) {
   await expect
@@ -56,7 +66,7 @@ test('public Stories share native sentence/word transport and retain independent
   await sound(page)
     .getByText(/^Sound settings ·/)
     .click();
-  await expect(selector(page).locator('option')).toHaveCount(3);
+  await expect(selector(page).locator('option')).toHaveCount(6);
   await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'New QSO', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Check your copy', exact: true })).toHaveCount(0);
@@ -91,7 +101,7 @@ test('public Stories share native sentence/word transport and retain independent
   await expect
     .poll(() => media(page).evaluate((audio: HTMLAudioElement) => audio.currentTime))
     .toBeCloseTo(track.items[1].start, 3);
-  await expect(page.getByText('SENTENCE 2 OF 13', { exact: true })).toBeVisible();
+  await expect(page.getByText('SENTENCE 2 OF 13 · 11 WORDS', { exact: true })).toBeVisible();
   const catalog = page
     .locator('details')
     .filter({ has: page.getByText('View full story', { exact: true }) });
@@ -190,7 +200,7 @@ test('public Stories share native sentence/word transport and retain independent
   await expect(
     sound(page).getByText('Sound settings · 20/10 WPM · 500–900 Hz variable', { exact: true }),
   ).toBeVisible();
-  await openPracticeTool(page, 'Stories', (control) => control.tap());
+  await openPracticeTool(page, 'Sentences & stories', (control) => control.tap());
   await expect(selector(page)).toHaveValue('story-light');
   await expect(
     sound(page).getByText('Sound settings · 21/11 WPM · 1000 Hz', { exact: true }),

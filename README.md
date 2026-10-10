@@ -18,6 +18,13 @@ CWops. Official course material stays at the
   rigs/antennas/weather, POTA, and asking for repeats. Each New QSO combines
   different station details; replay keeps the same contact. Illustrative call-area
   locations, regional seasonal weather, and radio power choices stay consistent.
+- Sentences & stories bridges word recognition and connected listening with
+  24 short phrases, 24 short sentences, three two-sentence stories and the
+  original longer stories. Pause after each chunk uses a native recording that
+  ends at the phrase or sentence; replay the whole chunk, reveal its text, and
+  choose Next when ready. Continuous playback remains available.
+- Sentence copy, inside Copy practice, offers one 5–9-word sentence at a time
+  with typed answers and feedback.
 - QSO copy checks let you enter the station details you heard, replay the same
   contact, and check each answer. The form follows the chosen scenario; answers
   stay hidden until you reveal them. Copy feedback stays in the current studio

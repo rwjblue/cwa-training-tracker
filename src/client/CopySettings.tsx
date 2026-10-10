@@ -215,8 +215,8 @@ export default function CopySettings({
       )}
       {recipe.mode === 'plaintext' && (
         <p className="copy-help">
-          Copy an original practice sentence. Spaces and punctuation count; repeated spaces and
-          letter case do not. Each attempt selects a random sentence.
+          Copy one original sentence at a time, with 5–9 words. Spaces and punctuation count;
+          repeated spaces and letter case do not. Each attempt selects a random sentence.
         </p>
       )}
       {sequence && (

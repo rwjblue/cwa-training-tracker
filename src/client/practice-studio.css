@@ -663,6 +663,30 @@
 .listening-transcript-workspace .trainer-round-actions .field-hint {
   display: none;
 }
+.passage-practice-intro > p {
+  margin: 0 0 12px;
+  color: #526b4b;
+  line-height: 1.6;
+}
+.passage-practice-options {
+  margin: -4px 0 18px;
+}
+.passage-practice-options .field-hint {
+  margin-block: 8px;
+}
+.passage-replay {
+  margin-block: 8px;
+}
+.passage-catalog {
+  padding-left: 24px;
+}
+.passage-catalog li {
+  margin-block: 12px;
+}
+.passage-catalog button {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
 .listening-notes-workspace > .playback-toolbar {
   margin-top: 0;
 }

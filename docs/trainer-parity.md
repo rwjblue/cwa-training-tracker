@@ -4616,3 +4616,28 @@ replacement boundaries. Pure and browser coverage verifies URL round trips, exac
 listening recipes, privacy, device-default precedence and public catalog selection.
 This audit does not claim physical-device audio verification or unrelated trainer
 parity.
+
+## Phrases and sentence listening — 2026-10-10
+
+Sentences & stories extends the existing public Stories tool with 24 phrases,
+24 short sentences and three two-sentence stories, retaining the original three
+stories and their published v1 recipe text. Fresh-device practice starts with
+phrases. A pause-after-chunk option renders each selected phrase/sentence as its
+own native recording. Native end stops playback; Replay restarts the whole chunk,
+and Next prepares paused material. Continuous playback remains available.
+
+Practice length and collection controls expose the progression and word counts.
+The current chunk and controls precede the Scratchpad on mobile. The existing
+Plain text copy mode is now labeled Sentence copy, retaining its corpus and
+scoring. Public links preserve material, pitch, speeds, reveal preference and
+chunk choice, while legacy story links preserve continuous playback. Played
+evidence and optional device preferences retain the new choice through their
+existing private save and portable validation boundaries.
+
+Validation: TypeScript, all 1,690 Vitest tests and the production build pass.
+The full browser run passed 119/124. The five failures were resolved through a
+card-name test correction, passage-only mobile ordering and a serial rerun;
+that rerun passed 6/6, including the new chunk journey. Native end/replay,
+paused advancement, speed edits, guest sharing, private saving and desktop/mobile
+layout checks pass. These changes are local; physical locked-device behavior
+and deployment remain unverified. See [the listening audit](parity/listening.md).

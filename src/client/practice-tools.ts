@@ -13,14 +13,14 @@ export const practiceTools = [
   },
   {
     tool: 'stories',
-    label: 'Stories',
-    description: 'Listen to short stories in Morse and follow the text as you practice.',
+    label: 'Sentences & stories',
+    description: 'Build from short phrases to sentences and stories, one chunk at a time.',
   },
   {
     tool: 'copy',
     label: 'Copy practice',
     description:
-      'Hear code groups, words, callsigns, or plain text. Type your copy and review the result.',
+      'Hear code groups, words, callsigns, or sentences. Type your copy and review the result.',
   },
   {
     tool: 'sending',
