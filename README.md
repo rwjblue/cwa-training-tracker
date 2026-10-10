@@ -59,6 +59,10 @@ CWops. Official course material stays at the
 - Passwordless email codes that expire in five minutes, plus passkeys.
 - Readable callsign identity, optional Gravatar images, and a city-based timezone picker.
 - JSON export, validated repeatable import, and a training-data reset.
+- A read-only maintainer console with account growth, recently active accounts,
+  approximate daily practice counts by tool and guest/account category, and
+  storage and cleanup status. Practice counters contain no user identifiers and
+  expire after 180 days; reporting never blocks saving or retries failed requests.
 - A converter for the original n1rwj.com tracker export. Personal data is never
   included in this repository or fetched automatically from the source site.
 
@@ -113,6 +117,13 @@ mise run deploy
 The deploy task runs checks, tests, build, a Wrangler dry run, remote D1
 migrations, and the production deployment. Read [deployment notes](docs/deployment.md)
 before operating your own instance. There are no production credentials in CI.
+
+After signing in, bootstrap read-only statistics access for your existing
+verified account with `mise run stats:grant -- your-sign-in@example.com`.
+This task targets production by default; pass `--local` for development.
+Use `stats:revoke` to remove access. Grants resolve email to the permanent
+account ID and cannot be changed through profiles or imported backups. See
+[statistics access](docs/deployment.md#statistics-access) for details.
 
 ## Data and architecture
 

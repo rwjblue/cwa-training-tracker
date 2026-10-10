@@ -30,6 +30,7 @@ import {
 } from '../shared/practice-time';
 import PracticeTimeSummary from './PracticeTimeSummary';
 import Summary from './Summary';
+import { capturePracticeUsage, type PracticeUsage } from './practice-usage';
 import { ON_AIR_CATEGORIES, onAirCategoryLabel } from '../shared/on-air-practice';
 import DailyWordListening from './DailyWordListening';
 import { dailyWordListening } from '../shared/daily-word-listening';
@@ -138,6 +139,7 @@ import {
 import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
 import { MORSE } from './audio';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
+const AdminConsole = React.lazy(() => import('./AdminConsole'));
 import './styles.css';
 import Plan from './Plan';
 import CourseCurriculum from './CourseCurriculum';
@@ -371,6 +373,22 @@ function App() {
     view: 'week' | 'report';
   }>();
   const [user, setUser] = useState<User | null>(null);
+  const [metricsAccount, setMetricsAccount] = useState<string>();
+  const canViewMetrics = Boolean(user && metricsAccount === user.id);
+  useEffect(() => {
+    setMetricsAccount(undefined);
+    if (!user) return;
+    const accountId = user.id;
+    const controller = new AbortController();
+    void api<{ allowed: boolean }>('/admin/access', undefined, 'GET', controller.signal, {
+      accountId,
+    })
+      .then(({ allowed }) => {
+        if (!controller.signal.aborted && allowed) setMetricsAccount(accountId);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [user]);
   const scope = user?.id ?? 'guest';
   const deviceToken = getDeviceScopeToken(scope);
   const wordContent = useWordContent(scope, deviceToken);
@@ -379,6 +397,7 @@ function App() {
   const [deviceOpen, setDeviceOpen] = useState(false);
   const [lifecycleReview, setLifecycleReview] = useState<LifecycleReview | null>(null);
   const historyGeneration = useRef<{ accountId: string; generation: number } | null>(null);
+  const historySkippedForAdmin = useRef(false);
   const lifecycleRefreshScope = useRef<string | null>(null);
   const activeAccount = useRef(user?.id);
   activeAccount.current = user?.id;
@@ -429,6 +448,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [sessionEditor, setSessionEditor] = useState<Partial<PracticeSession> | null>(null);
   const [sessionEditorOwner, setSessionEditorOwner] = useState<string>();
+  const [sessionEditorUsage, setSessionEditorUsage] = useState<PracticeUsage>();
   const [sessionCompletionTask, setSessionCompletionTask] = useState<PlannedTask>();
   const [sessionEditorIsExisting, setSessionEditorIsExisting] = useState(false);
   const [toast, setToast] = useState('');
@@ -588,6 +608,11 @@ function App() {
       const state = await account.refresh(current);
       const token = getDeviceScopeToken(current.id);
       if (!isDeviceScopeCurrent(current.id, token) || loadAccountLifecycle(current.id)) return;
+      if (currentPage.current === 'admin') {
+        historySkippedForAdmin.current = true;
+        return state.settings;
+      }
+      historySkippedForAdmin.current = false;
       const sessionData = await getEntries({ accountId: current.id });
       if (
         activeAccount.current !== current.id ||
@@ -619,6 +644,12 @@ function App() {
       .catch((error: Error) => setAppError(error.message))
       .finally(() => setBooting(false));
   }, []);
+  useEffect(() => {
+    if (!booting && user && page !== 'admin' && historySkippedForAdmin.current) {
+      historySkippedForAdmin.current = false;
+      void load(user).catch((error: Error) => setAppError(error.message));
+    }
+  }, [booting, page, user]);
   useEffect(() => {
     if (deviceRevision && !deviceMutating && user && lifecycleRefreshScope.current === user.id) {
       lifecycleRefreshScope.current = null;
@@ -900,6 +931,7 @@ function App() {
     ownerId?: string,
     newResult = false,
     completeTask?: PlannedTask,
+    usage?: PracticeUsage,
   ) => {
     if (!isDeviceScopeCurrent(scope, deviceToken)) return;
     if (
@@ -916,6 +948,9 @@ function App() {
     setSessionEditorIsExisting(Boolean(latest));
     setSessionCompletionTask(completeTask);
     setSessionEditorOwner(ownerId);
+    setSessionEditorUsage(
+      usage ?? (!initial.id ? capturePracticeUsage('manual', scope) : undefined),
+    );
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
   const acceptSavedPractice = (entry: PracticeSession, ownerId?: string) => {
@@ -951,9 +986,9 @@ function App() {
       ),
     );
   };
-  const autoSave = async (entry: PracticeSession) => {
+  const autoSave = async (entry: PracticeSession, usage?: PracticeUsage) => {
     const scope = user?.id ?? 'guest';
-    const result = await autoSavePractice(scope, entry, deviceToken);
+    const result = await autoSavePractice(scope, entry, deviceToken, undefined, usage);
     if ((activeAccount.current ?? 'guest') !== scope || !isDeviceScopeCurrent(scope, deviceToken))
       return;
     if (result.destination === 'history') mergeSavedEntry(result.entry);
@@ -1222,6 +1257,7 @@ function App() {
       const settings = await load(newUser);
       if (pendingLog.current) {
         setSessionEditorIsExisting(false);
+        setSessionEditorUsage(undefined);
         setSessionEditor({
           date: dateInTimezone(new Date(), settings?.timezone),
           ...pendingLog.current,
@@ -1264,6 +1300,7 @@ function App() {
     { page: 'events', label: 'Live practice', icon: Radio },
     { page: 'logbook', label: 'Practice log', icon: BookOpen },
     { page: 'course', label: 'Academy guide', icon: CalendarDays },
+    ...(canViewMetrics ? [{ page: 'admin' as const, label: 'Admin', icon: ShieldCheck }] : []),
   ];
   const lessonPractice = Boolean(practiceLaunch?.task || practiceLaunch?.publicTitle);
   const coursePractice = lessonPractice || Boolean(practiceLaunch?.material);
@@ -1401,7 +1438,9 @@ function App() {
                   ? 'Account'
                   : page === 'practice'
                     ? practiceLabel
-                    : navItems.find((i) => i.page === page)?.label}
+                    : page === 'admin'
+                      ? 'Admin'
+                      : navItems.find((i) => i.page === page)?.label}
               </strong>
             </span>
           </div>
@@ -1746,12 +1785,14 @@ function App() {
                       liveNow={liveNow}
                       key={practiceLaunch.id}
                       active={page === 'practice' && !navigationBusy && !sessionEditor}
-                      onLog={(initial?: Partial<PracticeSession>) =>
-                        openLog(initial, practiceLaunch.id)
+                      onLog={(initial?: Partial<PracticeSession>, usage?: PracticeUsage) =>
+                        openLog(initial, practiceLaunch.id, false, undefined, usage)
                       }
-                      onCompleteReview={(entry: PracticeSession, task: PlannedTask) =>
-                        openLog(entry, practiceLaunch.id, false, task)
-                      }
+                      onCompleteReview={(
+                        entry: PracticeSession,
+                        task: PlannedTask,
+                        usage?: PracticeUsage,
+                      ) => openLog(entry, practiceLaunch.id, false, task, usage)}
                       onCancel={() => void cancelPractice()}
                       onBeforeDiscardChange={(handler: (() => Promise<boolean>) | undefined) => {
                         if (currentLaunch.current?.id === practiceLaunch.id)
@@ -1981,6 +2022,11 @@ function App() {
                   }}
                 />
               )}
+              {page === 'admin' && (
+                <React.Suspense fallback={<p role="status">Opening the admin console…</p>}>
+                  <AdminConsole user={user} onSignIn={() => setAuthOpen(true)} />
+                </React.Suspense>
+              )}
               {page === 'settings' && user && (
                 <Account
                   key={user.id}
@@ -2050,6 +2096,7 @@ function App() {
         <SessionModal
           initial={sessionEditor}
           isExisting={sessionEditorIsExisting}
+          usage={sessionEditorUsage}
           timezone={profile.timezone}
           scope={user?.id ?? 'guest'}
           generation={
@@ -3037,6 +3084,7 @@ function SessionModal({
   timezone,
   scope,
   generation,
+  usage,
   canStartNextRun = false,
   onCompleteExercise,
   onPracticeSaved,
@@ -3048,6 +3096,7 @@ function SessionModal({
   timezone: string;
   scope: string;
   generation?: number;
+  usage?: PracticeUsage;
   onClose: () => void;
   canStartNextRun?: boolean;
   onCompleteExercise?: () => Promise<void>;
@@ -3073,6 +3122,7 @@ function SessionModal({
   const saveController = useRef<AbortController | undefined>(undefined);
   const [capturedDeviceToken] = useState(() => getDeviceScopeToken(scope));
   const [capturedGeneration] = useState(generation);
+  const [capturedUsage] = useState(usage);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -3379,6 +3429,7 @@ function SessionModal({
           validated,
           capturedDeviceToken,
           retainedRunner?.origin,
+          capturedUsage,
         );
         if (mounted.current && isDeviceScopeCurrent(scope, capturedDeviceToken)) {
           if (onCompleteExercise) {

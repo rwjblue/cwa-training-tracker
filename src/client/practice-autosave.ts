@@ -13,6 +13,7 @@ import {
   requireCurrentDeviceScope,
   subscribeDeviceScope,
 } from './device-scope';
+import { reportPracticeUsage, type PracticeUsage } from './practice-usage';
 
 export const PRACTICE_SAVED_EVENT = 'cwa:practice-saved';
 export const PRACTICE_UPLOADED_EVENT = 'cwa:practice-uploaded';
@@ -253,6 +254,7 @@ export async function autoSavePractice(
   input: PracticeSession,
   deviceToken = getDeviceScopeToken(scope),
   capturedOrigin?: PracticeSaveOrigin,
+  usage?: PracticeUsage,
 ): Promise<PracticeSaveReceipt> {
   requireCurrentDeviceScope(scope, deviceToken);
   observeDeviceScope();
@@ -283,6 +285,7 @@ export async function autoSavePractice(
   }
   const freshGeneration = getConfirmedAccountGeneration(scope);
   let durable = false;
+  let newlyRecorded = false;
   try {
     const previous = localStorage.getItem(entryKey);
     if (previous) entry = validatePracticeSession(JSON.parse(previous));
@@ -291,6 +294,7 @@ export async function autoSavePractice(
       localStorage.setItem(entryKey, frozen);
       if (localStorage.getItem(entryKey) !== frozen)
         throw new Error('The result was not retained.');
+      newlyRecorded = true;
       freezePracticeSaveOrigin(
         scope,
         entry.id,
@@ -307,6 +311,11 @@ export async function autoSavePractice(
   } catch {
     // Still try the server if local storage is unavailable.
   }
+  // Producers opt in only for new work. Existing rows, imports and upload
+  // retries cannot create another usage event. Notes and class time are saved
+  // normally but do not contribute to practice volume.
+  const recordedUsage = usage && entry.minutes > 0 && entry.context !== 'class' ? usage : undefined;
+  if (durable && newlyRecorded && recordedUsage) reportPracticeUsage(recordedUsage);
   if (scope === 'guest') {
     if (!durable)
       throw new Error(
@@ -394,6 +403,7 @@ export async function autoSavePractice(
       // Clearing a newer replacement or publishing its old acknowledgement would lose work.
       if (durable && localStorage.getItem(entryKey) !== frozen)
         return { entry, destination: 'device' };
+      if (!durable && recordedUsage) reportPracticeUsage(recordedUsage);
       removeLocalPractice(scope, entry.id);
       window.dispatchEvent(
         new CustomEvent(PRACTICE_UPLOADED_EVENT, {

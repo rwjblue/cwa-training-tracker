@@ -61,6 +61,7 @@ import {
   subscribeDeviceScope,
 } from './device-scope';
 import './copy-trainer.css';
+import { captureCopyPracticeUsage, type PracticeUsage } from './practice-usage';
 
 interface Props {
   accountId?: string;
@@ -70,7 +71,7 @@ interface Props {
   task?: PlannedTask;
   purpose?: PracticePurpose;
   requiresCharacterSelection?: boolean;
-  onLog: (initial?: Partial<PracticeSession>) => void;
+  onLog: (initial?: Partial<PracticeSession>, usage?: PracticeUsage) => void;
   onSaved?: (entry: PracticeSession) => void;
   onCurrentPracticeChange?: (current: CurrentPracticeTime | undefined) => void;
   savedEntry?: PracticeSession;
@@ -84,6 +85,7 @@ export interface CopyTrainerHandle {
   pauseForInspection(): void;
   discard(): boolean;
   reviewForCompletion(): PracticeSession | undefined;
+  usageForCompletion(): PracticeUsage | undefined;
 }
 
 const CopyTrainer = forwardRef<CopyTrainerHandle, Props>(function CopyTrainer(props, ref) {
@@ -125,6 +127,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
   });
   const sharedRecipe = startup.shared;
   const initial = startup.initial;
+  const roundUsage = useRef(captureCopyPracticeUsage(scope, initial));
   const [retainedBeforeShare, setRetainedBeforeShare] = useState(startup.retained);
   const [draft, setDraft] = useState<CopyDraft | undefined>(() =>
     initial
@@ -289,7 +292,12 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
       },
     });
   };
-  useImperativeHandle(ref, () => ({ pauseForInspection, discard, reviewForCompletion }));
+  useImperativeHandle(ref, () => ({
+    pauseForInspection,
+    discard,
+    reviewForCompletion,
+    usageForCompletion: () => (savedRef.current ? undefined : roundUsage.current),
+  }));
   useLayoutEffect(() => {
     if (studioActive) inspected.current = false;
     else pauseForInspection();
@@ -336,6 +344,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
       if (event.persisted && !savedRef.current && (!sharedRecipe || draftRef.current)) {
         // Another tab may have continued this round while this page was cached.
         const latest = loadCopyDraft(scope);
+        roundUsage.current = captureCopyPracticeUsage(scope, latest);
         player.current.clear();
         prepared.current = '';
         autoDeadline.current = latest?.autoSkipAt;
@@ -536,6 +545,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
         id: crypto.randomUUID(),
         seed: crypto.randomUUID(),
       });
+      roundUsage.current = captureCopyPracticeUsage(scope);
       const next: CopyDraft = {
         attempt,
         timezone,
@@ -689,7 +699,13 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
       player.current.clear();
       savingRef.current = true;
       setSaving(true);
-      const result = await autoSavePractice(scope, pending, deviceToken);
+      const result = await autoSavePractice(
+        scope,
+        pending,
+        deviceToken,
+        undefined,
+        roundUsage.current,
+      );
       if (!mounted.current || !currentDevice()) return false;
       savedRef.current = true;
       setSaved(true);
@@ -770,6 +786,7 @@ const CopyTrainerSession = forwardRef<CopyTrainerHandle, Props>(function CopyTra
     claimCopyLease(scope, leaseOwner.current, true, deviceToken);
     blockedRef.current = false;
     const recovered = loadCopyDraft(scope);
+    roundUsage.current = captureCopyPracticeUsage(scope, recovered);
     if (recovered) {
       if (!recovered.pending) recovered.attempt.interruptionCount++;
       clock.current = new CopyClock(recovered.attempt);
