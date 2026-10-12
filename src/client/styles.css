@@ -201,6 +201,9 @@ a {
 .sidebar-note {
   margin: 52px 13px 30px;
 }
+.morse-code {
+  white-space: pre;
+}
 .tiny-dots {
   font-family: Georgia, serif;
   font-size: 24px;

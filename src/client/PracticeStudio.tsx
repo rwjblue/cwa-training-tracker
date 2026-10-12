@@ -56,6 +56,7 @@ import ListeningSoundSettings from './ListeningSoundSettings';
 import type { WordContentEditor } from './useWordContent';
 import { DEFAULT_WORD_CONTENT } from './word-storage';
 import MorseTranscript from './MorseTranscript';
+import MorseCode from './MorseCode';
 import ListeningSeekControls from './ListeningSeekControls';
 import MorseRunnerStudio, {
   DEFAULT_RUNNER_SETTINGS,
@@ -2315,8 +2316,8 @@ export default function PracticeStudio({
                       Try hearing each character as one complete sound, rather than counting dots
                       and dashes. Leave a little space. Let it sink in.
                     </p>
-                    <div className="morse-word" aria-label="73 in Morse code">
-                      − − · · · &nbsp; · · · − −
+                    <div className="morse-word">
+                      <MorseCode text="73" />
                     </div>
                   </details>
                 )}

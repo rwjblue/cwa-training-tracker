@@ -138,6 +138,7 @@ import {
 } from './device-scope';
 import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
 import { MORSE } from './audio';
+import MorseCode from './MorseCode';
 const PracticeStudio = React.lazy(() => import('./PracticeStudio'));
 const AdminConsole = React.lazy(() => import('./AdminConsole'));
 import './styles.css';
@@ -191,9 +192,6 @@ import { readAppRoute, launchHash, courseHash, isPlainNavigation, type Page } fr
 // Choose once per page load so navigation keeps the decoration still.
 const sidebarLetters = Object.keys(MORSE).filter((letter) => /^[A-Z]$/.test(letter));
 const sidebarLetter = sidebarLetters[Math.floor(Math.random() * sidebarLetters.length)];
-const sidebarMorse = [...MORSE[sidebarLetter]]
-  .map((symbol) => (symbol === '.' ? '·' : '−'))
-  .join(' ');
 const kinds: { id: PracticeKind; label: string; icon: LucideIcon; color: string }[] = [
   { id: 'listening', label: 'Listening', icon: Headphones, color: 'green' },
   { id: 'sending', label: 'Sending', icon: Radio, color: 'orange' },
@@ -1375,9 +1373,7 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-note">
-          <span className="tiny-dots" aria-hidden="true" title={`${sidebarLetter} in Morse code`}>
-            {sidebarMorse}
-          </span>
+          <MorseCode text={sidebarLetter} className="tiny-dots" decorative />
           <p>
             Progress is a practice.
             <br />
@@ -2063,7 +2059,7 @@ function App() {
               A little practice, every day. <a href="/privacy.html">Privacy</a>
             </p>
             <span>
-              − · · · &nbsp; · · − − &nbsp; <b>73</b>
+              <MorseCode text="73" decorative /> &nbsp; <b>73</b>
             </span>
           </footer>
         </main>
