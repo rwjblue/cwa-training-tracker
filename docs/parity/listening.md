@@ -1305,3 +1305,36 @@ end, replay, paused Next, ended-speed edits, fresh guest sharing and actual priv
 saving were verified. Desktop/mobile layouts were inspected using installed
 Chromium because the bundled Playwright browser was absent. Changes are local;
 no deployment or physical locked-device audio claim is made.
+
+## 2026-10-12 phrase quizzes and prerecorded hands-free passages
+
+The public tool now offers 72 short phrases across the original three collections
+and three additional sixteen-phrase collections. Existing stable identities,
+text and order remain compatible. Manual chunk Next moves beside Replay, starts
+the next phrase deliberately and hides its text. Reveal belongs to that chunk
+and survives its replay, while Previous/catalog selection prepare paused quizzes.
+
+Hands-free playback sends each complete phrase/sentence twice or three times,
+with one-to-five-second recall pauses, then plays a prerecorded English answer
+and continues automatically. The 128 unique whole-passage recordings were
+generated ahead of time with Kokoro v1.0/af_heart, and ship as PCM WAV assets with
+input fingerprints and hashes. Browsers run no speech model or synthesis API.
+Every repeat, answer and transition in the selected material is assembled into
+one bounded native file. Existing Media Session controls and independent voice
+gain apply. Speed/repeat/pause changes prepare a fresh recording; gain edits
+preserve native position and playing state. The collection stops at its end.
+
+Public URLs and portable device settings preserve the hands-free setup and
+voice volume, omit position and per-chunk reveals, and reopen paused. Legacy
+links retain their original mode even against a hands-free device default.
+Strict played evidence retains repeats and recall pauses without changing older
+summary shapes. The original word answer pack remains intact.
+
+Validation: all 1,751 fast tests, 17 generator tests, TypeScript, the production
+build and all 128 browser tests pass. Browser
+journeys exercise real audio with device speech unavailable, go offline after
+preparation, cross a spoken-answer/next-phrase boundary without changing the
+source, pause/resume, replay, reopen shared guest setup and save actual played
+settings. Manual Next hiding and desktop/mobile fit also pass. Layouts were
+inspected at 1440 and 390 pixels. Physical locked-device audio remains unverified;
+these are local changes with no deployment.

@@ -154,8 +154,16 @@ export function storyListeningSummary(
     mode: 'story',
     storyId: story.id,
     toneHz: p.variableStoryPitch ? story.toneHz : p.tone,
-    sentenceGapSeconds: p.storySettings.pauseAfterChunk ? 0 : 2,
-    ...(p.storySettings.pauseAfterChunk ? { pauseAfterChunk: true } : {}),
+    sentenceGapSeconds: p.storySettings.handsFree
+      ? (p.storySettings.recallGapSeconds ?? 3)
+      : p.storySettings.pauseAfterChunk
+        ? 0
+        : 2,
+    ...(p.storySettings.handsFree
+      ? { handsFree: true, morseRepeats: p.storySettings.morseRepeats ?? 2 }
+      : p.storySettings.pauseAfterChunk
+        ? { pauseAfterChunk: true }
+        : {}),
     characterWpm: p.characterWpm,
     effectiveWpm: p.effectiveWpm,
   });

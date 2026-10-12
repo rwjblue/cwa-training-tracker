@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Generate prerecorded English answers for public phrases, sentences and stories"
+set -euo pipefail
+node scripts/cw-training/passage-speech.mjs
+uv run --project scripts/cw-training/speech python -B scripts/cw-training/speech/generate.py --manifest data/cw-training/passage-speech.json "$@"

@@ -95,6 +95,75 @@ export const PRACTICE_PHRASES = [
     ],
   },
 ] as const;
+/** New identities preserve every previously shared collection and its order. */
+export const EXTRA_PRACTICE_PHRASES = [
+  {
+    id: 'phrases-radio-more',
+    title: 'More at the radio',
+    lines: [
+      'A STRONG SIGNAL',
+      'THE SHORT CALL',
+      'YOUR FIRST NAME',
+      'A LONG WIRE',
+      'THE QUIET BAND',
+      'MY SMALL RIG',
+      'THE NEXT STATION',
+      'PLEASE GO AHEAD',
+      'ONE MORE TIME',
+      'THE SAME FREQUENCY',
+      'A NEW CONTACT',
+      'THE MORNING NET',
+      'MY HOME STATION',
+      'A LITTLE NOISE',
+      'GOOD COPY NOW',
+      'SEE YOU LATER',
+    ],
+  },
+  {
+    id: 'phrases-outdoors-more',
+    title: 'More outside',
+    lines: [
+      'THE TALL GRASS',
+      'A WARM DAY',
+      'THE WIDE RIVER',
+      'UNDER THE TREE',
+      'A LIGHT RAIN',
+      'THE SMALL BOAT',
+      'ACROSS THE FIELD',
+      'THE EARLY MORNING',
+      'A DARK CLOUD',
+      'ALONG THE PATH',
+      'THE SANDY BEACH',
+      'A QUIET PARK',
+      'THE FALLING LEAVES',
+      'OVER THE BRIDGE',
+      'THE BRIGHT MOON',
+      'BEFORE THE STORM',
+    ],
+  },
+  {
+    id: 'phrases-home-more',
+    title: 'More at home',
+    lines: [
+      'THE KITCHEN TABLE',
+      'A CLEAN PLATE',
+      'THE SOFT CHAIR',
+      'BY THE WINDOW',
+      'A FRESH APPLE',
+      'THE SMALL CLOCK',
+      'MY BLUE SHIRT',
+      'THE FRONT ROOM',
+      'A GLASS BOWL',
+      'THE WARM BREAD',
+      'BEHIND THE DOOR',
+      'THE TOP SHELF',
+      'A FULL CUP',
+      'AFTER THE MEAL',
+      'THE EVENING NEWS',
+      'TIME FOR BED',
+    ],
+  },
+] as const;
 export const PRACTICE_SENTENCES = [
   {
     id: 'sentences-radio',
@@ -158,6 +227,7 @@ export const PRACTICE_MINI_STORIES = [
 ] as const;
 export const PRACTICE_PASSAGES = [
   ...PRACTICE_PHRASES,
+  ...EXTRA_PRACTICE_PHRASES,
   ...PRACTICE_SENTENCES,
   ...PRACTICE_MINI_STORIES,
   ...PRACTICE_STORIES,
@@ -176,9 +246,12 @@ export function passageDescription(passage: PracticeStory): string {
   const counts = passage.lines.map((line) => line.split(' ').length);
   const kind = passageKind(passage.id);
   const unit = kind === 'phrases' ? 'phrases' : 'sentences';
+  const min = Math.min(...counts);
+  const max = Math.max(...counts);
+  const wordCount = min === max ? String(min) : `${min}–${max}`;
   return kind === 'stories'
     ? `${passage.lines.length} sentences · ${counts.reduce((sum, count) => sum + count, 0)} words total`
-    : `${passage.lines.length} ${unit} · ${Math.min(...counts)}–${Math.max(...counts)} words each`;
+    : `${passage.lines.length} ${unit} · ${wordCount} words each`;
 }
 export function practiceStory(id: string): PracticeStory {
   const story = PRACTICE_PASSAGES.find((item) => item.id === id);

@@ -19,8 +19,9 @@ import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { MorsePlayer, type MorseTrack } from './audio';
 import MorseTranscript from './MorseTranscript';
 import ListeningSeekControls from './ListeningSeekControls';
-import { buildSpokenWordTrack } from './morse-track';
+import { buildSpokenWordTrack, buildSpokenPassageTrack } from './morse-track';
 import { loadWordSpeech } from './word-speech';
+import { loadPassageSpeech } from './passage-speech';
 import QsoCopy from './QsoCopy';
 import {
   nextWordRetimeItem,
@@ -180,6 +181,9 @@ export default forwardRef<
   customOwner.current = custom;
   const [position, setPosition] = useState(0);
   const [answer, setAnswer] = useState(false);
+  const [chunkRevealed, setChunkRevealed] = useState(
+    () => !(initialShare?.preferences ?? p).storySettings.hideTrainerText,
+  );
   const [active, setActive] = useState(false);
   const [complete, setComplete] = useState(false);
   const player = useRef(new MorsePlayer());
@@ -205,11 +209,15 @@ export default forwardRef<
   const narrative = isStory ? story : qso;
   const kind = passageKind(story.id);
   const chunkUnit = kind === 'phrases' ? 'phrase' : 'sentence';
-  const chunkIndex = isStory && p.storySettings.pauseAfterChunk ? position : undefined;
+  const handsFree = isStory && Boolean(p.storySettings.handsFree);
+  const chunkIndex =
+    isStory && p.storySettings.pauseAfterChunk && !handsFree ? position : undefined;
   const activeWordList = isWords ? p.wordList : null;
   const activeShuffle = isWords ? p.shuffleWords : null;
   const activeCustom = isWords ? custom : null;
   const spokenAnswers = isWords && p.spokenAnswers;
+  const hasSpeech = spokenAnswers || handsFree;
+  const speechSource = handsFree ? story.lines : words;
   const repeatList = isWords && p.repeatList;
   const wordGap = isWords ? p.wordGap : 0;
   const wordSourceKey = JSON.stringify([
@@ -230,6 +238,9 @@ export default forwardRef<
     variablePitch,
     wordGap,
     spokenAnswers,
+    handsFree,
+    handsFree ? p.storySettings.morseRepeats : null,
+    handsFree ? p.storySettings.recallGapSeconds : null,
     isStory ? p.storySettings.pauseAfterChunk : null,
   ]);
   const materialOwner = useRef(content);
@@ -241,7 +252,8 @@ export default forwardRef<
   const checkingCopy = !isWords && !isStory && copyMode;
   // Object identity prevents a newly generated contact revealing old answers for one frame.
   const copyRevealed = revealedQso === qso;
-  const hideTranscript = checkingCopy ? !copyRevealed : p.hideTrainerText && !answer;
+  const textHidden = chunkIndex !== undefined || handsFree ? !chunkRevealed : p.hideTrainerText;
+  const hideTranscript = checkingCopy ? !copyRevealed : textHidden && !answer;
   const roundList = wordRound?.listId ?? p.wordList;
   const listTitle = roundList === 'custom' ? 'Your word list' : WORD_LISTS[roundList].title;
   const stop = () => {
@@ -270,6 +282,7 @@ export default forwardRef<
     setPosition(0);
     setActiveWord(-1);
     setAnswer(false);
+    setChunkRevealed(false);
     setComplete(false);
   };
   const resetWords = () => {
@@ -339,24 +352,24 @@ export default forwardRef<
     [],
   );
   useEffect(() => {
-    if (!spokenAnswers || !words.length) {
+    if (!hasSpeech || !speechSource.length) {
       setSpeech(null);
       return;
     }
     let cancelled = false;
     setSpeech(null);
-    void loadWordSpeech(words).then(
+    void (handsFree ? loadPassageSpeech(speechSource) : loadWordSpeech(speechSource)).then(
       (clips) => {
-        if (!cancelled) setSpeech({ words, clips });
+        if (!cancelled) setSpeech({ words: speechSource, clips });
       },
       (error: Error) => {
-        if (!cancelled) setSpeech({ words, error: error.message });
+        if (!cancelled) setSpeech({ words: speechSource, error: error.message });
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [words, spokenAnswers, speechAttempt]);
+  }, [speechSource, hasSpeech, handsFree, speechAttempt]);
 
   const trackResult = useMemo(() => {
     const items = isWords ? words : narrative.lines;
@@ -375,15 +388,26 @@ export default forwardRef<
         volume: p.volume / 100,
       };
       let track: MorseTrack;
-      if (spokenAnswers) {
-        if (speech?.words !== words || !speech.clips)
-          return { applied: null, error: speech?.words === words ? (speech.error ?? '') : '' };
-        track = buildSpokenWordTrack(
-          words,
-          speech.clips,
-          { ...options, voiceVolume: p.voiceVolume / 100, extraWordGap: wordGap },
-          wordListeningFrequencies(wordRound!, p),
-        );
+      if (hasSpeech) {
+        if (speech?.words !== speechSource || !speech.clips)
+          return {
+            applied: null,
+            error: speech?.words === speechSource ? (speech.error ?? '') : '',
+          };
+        track = handsFree
+          ? buildSpokenPassageTrack(story.lines, speech.clips, {
+              ...options,
+              frequency: summary.mode === 'story' ? summary.toneHz : p.tone,
+              voiceVolume: p.voiceVolume / 100,
+              morseRepeats: p.storySettings.morseRepeats ?? 2,
+              recallGapSeconds: p.storySettings.recallGapSeconds ?? 3,
+            })
+          : buildSpokenWordTrack(
+              words,
+              speech.clips,
+              { ...options, voiceVolume: p.voiceVolume / 100, extraWordGap: wordGap },
+              wordListeningFrequencies(wordRound!, p),
+            );
       } else if (isWords) {
         track = wordListeningTrack(wordRound!, p).track;
       } else if (isStory) {
@@ -409,6 +433,11 @@ export default forwardRef<
     isWords,
     speech,
     spokenAnswers,
+    handsFree,
+    hasSpeech,
+    speechSource,
+    p.storySettings.morseRepeats,
+    p.storySettings.recallGapSeconds,
     repeatList,
     p.characterWpm,
     p.effectiveWpm,
@@ -468,6 +497,12 @@ export default forwardRef<
             const answerStart = track.words[progress.wordIndex]?.answerStart;
             setAnswer(answerStart !== undefined && progress.position >= answerStart);
             if (progress.itemIndex >= 0) {
+              if (
+                next.summary.mode === 'story' &&
+                next.summary.handsFree &&
+                index.current !== progress.itemIndex
+              )
+                setChunkRevealed(false);
               index.current = next.chunkIndex ?? progress.itemIndex;
               setPosition(index.current);
             }
@@ -560,7 +595,7 @@ export default forwardRef<
       return;
     }
     if (!applied) {
-      if (spokenAnswers && words.length) {
+      if (hasSpeech && speechSource.length) {
         if (speech?.error) setSpeechAttempt((attempt) => attempt + 1);
         throw new Error(
           trackResult.error ||
@@ -639,13 +674,14 @@ export default forwardRef<
       onError((error as Error).message);
     }
   };
-  const selectChunk = (requested: number) => {
+  const selectChunk = (requested: number, resume = false) => {
     if (!canPlay() || !isStory || chunkIndex === undefined || !applied) return;
     try {
       const next = Math.min(Math.max(0, requested), story.lines.length - 1);
       stop();
       const selected = { ...applied, track: storyListeningTrack(story, p, next), chunkIndex: next };
-      install(selected, 0);
+      setChunkRevealed(false);
+      install(selected, 0, resume);
       index.current = next;
       setPosition(next);
       setComplete(false);
@@ -708,7 +744,7 @@ export default forwardRef<
       previous.summary.effectiveWpm === applied.summary.effectiveWpm
     ) {
       if (
-        (spokenAnswers || !player.current.supportsVolume) &&
+        (hasSpeech || !player.current.supportsVolume) &&
         (previous.track.volume !== applied.track.volume ||
           previous.track.voiceVolume !== applied.track.voiceVolume)
       ) {
@@ -733,7 +769,7 @@ export default forwardRef<
       }
       return;
     }
-    if (spokenAnswers) {
+    if (hasSpeech) {
       resetTransport();
       return;
     }
@@ -779,13 +815,13 @@ export default forwardRef<
     }
   }, [applied, trackResult.error]);
   useEffect(() => {
-    if (audio.current && !spokenAnswers) setDeviceVolume(!player.current.setVolume(p.volume / 100));
-  }, [p.volume, spokenAnswers]);
+    if (audio.current && !hasSpeech) setDeviceVolume(!player.current.setVolume(p.volume / 100));
+  }, [p.volume, hasSpeech]);
   useImperativeHandle(ref, () => ({ play, stop, pauseForInspection }));
-  const step = (delta: number) => {
+  const step = (delta: number, resume = false) => {
     if (!canPlay()) return;
     const requested = index.current + delta;
-    if (chunkIndex !== undefined) return selectChunk(requested);
+    if (chunkIndex !== undefined) return selectChunk(requested, resume);
     try {
       prepare(false);
       const items = player.current.track?.items;
@@ -796,6 +832,8 @@ export default forwardRef<
       setPosition(next);
       setComplete(false);
       setAnswer(false);
+      if (isStory) setChunkRevealed(false);
+      if (resume) void player.current.resume().catch((error: Error) => onError(error.message));
     } catch (error) {
       onError((error as Error).message);
     }
@@ -837,6 +875,7 @@ export default forwardRef<
                       ...p.storySettings,
                       storyId: selected.id,
                       pauseAfterChunk: true,
+                      handsFree: false,
                     },
                   });
                 }}
@@ -884,7 +923,7 @@ export default forwardRef<
             >
               {PRACTICE_PASSAGES.filter((item) => passageKind(item.id) === kind).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title}
+                  {item.title} · {item.lines.length} {kind === 'phrases' ? 'phrases' : 'sentences'}
                 </option>
               ))}
             </select>
@@ -912,6 +951,7 @@ export default forwardRef<
             <input
               type="checkbox"
               checked={Boolean(p.storySettings.pauseAfterChunk)}
+              disabled={handsFree}
               onChange={(event) =>
                 onChange({
                   storySettings: { ...p.storySettings, pauseAfterChunk: event.target.checked },
@@ -920,10 +960,67 @@ export default forwardRef<
             />
             Pause after each {chunkUnit}
           </label>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={handsFree}
+              onChange={(event) =>
+                onChange({
+                  storySettings: {
+                    ...p.storySettings,
+                    handsFree: event.target.checked,
+                    pauseAfterChunk: !event.target.checked,
+                  },
+                })
+              }
+            />
+            Hands-free listening
+          </label>
+          {handsFree && (
+            <div className="passage-hands-free-settings">
+              <label className="field">
+                Morse repeats
+                <select
+                  value={p.storySettings.morseRepeats ?? 2}
+                  onChange={(event) =>
+                    onChange({
+                      storySettings: {
+                        ...p.storySettings,
+                        morseRepeats: Number(event.target.value) as 2 | 3,
+                      },
+                    })
+                  }
+                >
+                  <option value={2}>Twice, then spoken answer</option>
+                  <option value={3}>Three times, then spoken answer</option>
+                </select>
+              </label>
+              <PreciseRange
+                label="Recall pause"
+                showExact={false}
+                value={p.storySettings.recallGapSeconds ?? 3}
+                min={1}
+                max={5}
+                step={0.5}
+                unit="seconds"
+                onChange={(recallGapSeconds) =>
+                  onChange({
+                    storySettings: {
+                      ...p.storySettings,
+                      recallGapSeconds,
+                    },
+                  })
+                }
+                hint={`Time to recall between repeats, before the answer and before the next ${chunkUnit}.`}
+              />
+            </div>
+          )}
           <p className="field-hint">
-            {chunkIndex !== undefined
-              ? 'Listen to one chunk. Replay or reveal it, then choose Next when you are ready.'
-              : 'Continuous playback, with a two-second pause between chunks.'}
+            {handsFree
+              ? `Each ${chunkUnit} plays ${p.storySettings.morseRepeats ?? 2} times in Morse, with recall pauses, then a prerecorded English answer. The next ${chunkUnit} starts automatically. Start playback before locking your phone; the whole collection plays as one recording.`
+              : chunkIndex !== undefined
+                ? `Listen to one ${chunkUnit}. Replay or reveal it, then Next ${chunkUnit} starts a fresh quiz.`
+                : 'Continuous playback, with a two-second pause between chunks.'}
           </p>
         </div>
       )}
@@ -948,10 +1045,22 @@ export default forwardRef<
       <div className="listening-practice-workspace">
         <div className="listening-playback-workspace">
           {playbackControls}
-          {isWords && p.spokenAnswers && words.length > 0 && !track && !trackResult.error && (
+          {hasSpeech && speechSource.length > 0 && !applied && !trackResult.error && (
             <p role="status">Loading prerecorded answers…</p>
           )}
-          {trackResult.error && <p role="alert">{trackResult.error}</p>}
+          {trackResult.error && (
+            <div role="alert">
+              <p>{trackResult.error}</p>
+              {hasSpeech && speech?.error && (
+                <button
+                  className="button outline"
+                  onClick={() => setSpeechAttempt((attempt) => attempt + 1)}
+                >
+                  Retry loading answers
+                </button>
+              )}
+            </div>
+          )}
           {continuationError && (
             <div role="alert">
               <p>{continuationError} Earned listening time is retained.</p>
@@ -969,10 +1078,33 @@ export default forwardRef<
           {mediaReady && (!isStory || chunkIndex === undefined) && (
             <ListeningSeekControls onBack={back} onReplay={() => void replayWord()} />
           )}
-          {isStory && (
+          {isStory && chunkIndex === undefined && !handsFree && (
             <button className="button outline passage-replay" onClick={() => void replayChunk()}>
               Replay {chunkUnit}
             </button>
+          )}
+          {isStory && (chunkIndex !== undefined || handsFree) && (
+            <div className="passage-playback-actions">
+              <button
+                className="button outline"
+                disabled={position === 0}
+                onClick={() => (chunkIndex !== undefined ? selectChunk(position - 1) : step(-1))}
+              >
+                <ChevronLeft size={16} /> Previous
+              </button>
+              <button className="button outline" onClick={() => void replayChunk()}>
+                Replay {chunkUnit}
+              </button>
+              <button
+                className="button dark"
+                disabled={position >= total - 1}
+                onClick={() =>
+                  chunkIndex !== undefined ? selectChunk(position + 1, true) : step(1, true)
+                }
+              >
+                Next {chunkUnit} <ChevronRight size={16} />
+              </button>
+            </div>
           )}
           <div className="native-morse-player" hidden={!mediaReady}>
             <audio ref={audio} controls preload="metadata" aria-label="Practice audio" />
@@ -990,8 +1122,14 @@ export default forwardRef<
                 {isStory && ` · ${story.lines[position]?.split(' ').length ?? 0} WORDS`}
               </span>
               {!checkingCopy && (
-                <button onClick={() => onChange({ hideTrainerText: !p.hideTrainerText })}>
-                  {p.hideTrainerText ? 'Reveal text' : 'Hide text'}
+                <button
+                  onClick={() =>
+                    chunkIndex !== undefined || handsFree
+                      ? setChunkRevealed(!chunkRevealed)
+                      : onChange({ hideTrainerText: !p.hideTrainerText })
+                  }
+                >
+                  {textHidden ? 'Reveal text' : 'Hide text'}
                 </button>
               )}
             </div>
@@ -1019,25 +1157,27 @@ export default forwardRef<
                 <p className="trainer-morse-text">{current ?? 'Press Play to begin.'}</p>
               )}
             </div>
-            <div className="trainer-step-controls">
-              <button className="text-button" disabled={position === 0} onClick={() => step(-1)}>
-                <ChevronLeft size={15} /> Previous
-              </button>
-              <span>{isWords ? listTitle : narrative.title}</span>
-              <button
-                className="text-button"
-                disabled={position >= total - 1 || (isWords && !words.length)}
-                onClick={() => step(1)}
-              >
-                Next <ChevronRight size={15} />
-              </button>
-            </div>
+            {chunkIndex === undefined && !handsFree && (
+              <div className="trainer-step-controls">
+                <button className="text-button" disabled={position === 0} onClick={() => step(-1)}>
+                  <ChevronLeft size={15} /> Previous
+                </button>
+                <span>{isWords ? listTitle : narrative.title}</span>
+                <button
+                  className="text-button"
+                  disabled={position >= total - 1 || (isWords && !words.length)}
+                  onClick={() => step(1)}
+                >
+                  Next <ChevronRight size={15} />
+                </button>
+              </div>
+            )}
           </div>
           {isStory && complete && chunkIndex !== undefined && (
             <p className="field-hint" role="status">
               {chunkUnit === 'phrase' ? 'Phrase' : 'Sentence'} complete. Replay or reveal it
               {position < total - 1
-                ? ', or choose Next to continue.'
+                ? `, or choose Next ${chunkUnit} to listen to the next one.`
                 : `. This is the last ${chunkUnit}.`}
             </p>
           )}
@@ -1068,7 +1208,7 @@ export default forwardRef<
                 : checkingCopy && !copyRevealed
                   ? 'Replay as often as you need. Your copy stays here.'
                   : chunkIndex !== undefined
-                    ? 'Previous/Next prepare a paused chunk. Replay starts it.'
+                    ? `Next ${chunkUnit} starts playback with hidden text. Previous prepares a paused ${chunkUnit}.`
                     : 'Words and Previous/Next move your place while keeping playback playing or paused.'}
             </span>
           </div>
@@ -1256,7 +1396,7 @@ export default forwardRef<
         <p className="field-hint">
           {isWords && !spokenAnswers
             ? 'Change speed while listening: the current word and pause finish at their original timing; later words use the new speed.'
-            : !isWords
+            : !isWords && !handsFree
               ? 'Change speed to restart the same word occurrence. Playing stays playing; paused stays paused.'
               : 'Speed changes in spoken-answer mode start a fresh recording.'}{' '}
           {isStory

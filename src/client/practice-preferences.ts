@@ -39,6 +39,9 @@ export interface StorySettings extends ListeningSoundSetup {
   storyId: StoryId;
   /** Older preferences omitted this and played continuously. */
   pauseAfterChunk?: boolean;
+  handsFree?: boolean;
+  morseRepeats?: 2 | 3;
+  recallGapSeconds?: number;
 }
 export const DEFAULT_QSO_SETTINGS: ListeningSoundSetup = {
   version: 1,
@@ -51,6 +54,9 @@ export const DEFAULT_STORY_SETTINGS: StorySettings = {
   version: 1,
   storyId: 'phrases-radio',
   pauseAfterChunk: true,
+  handsFree: false,
+  morseRepeats: 2,
+  recallGapSeconds: 3,
   characterWpm: 20,
   effectiveWpm: 10,
   tone: 600,
@@ -117,12 +123,17 @@ export function normalizeStorySettings(
     storyId: PRACTICE_PASSAGES.some((story) => story.id === source.storyId)
       ? (source.storyId as StoryId)
       : fallback.storyId,
+    handsFree: source.handsFree === true,
+    morseRepeats: source.morseRepeats === 3 ? 3 : 2,
+    recallGapSeconds: bounded(source.recallGapSeconds, 3, 1, 5, 0.5),
     pauseAfterChunk:
-      typeof source.pauseAfterChunk === 'boolean'
-        ? source.pauseAfterChunk
-        : source.storyId !== undefined
-          ? false
-          : fallback.pauseAfterChunk,
+      source.handsFree === true
+        ? false
+        : typeof source.pauseAfterChunk === 'boolean'
+          ? source.pauseAfterChunk
+          : source.storyId !== undefined
+            ? false
+            : fallback.pauseAfterChunk,
   };
 }
 /** Words retain their original sound fields; QSO and Stories own separate setups. */

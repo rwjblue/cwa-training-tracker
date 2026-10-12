@@ -1,5 +1,63 @@
 # Prerecorded word answers
 
+## Whole-phrase, sentence and story answers
+
+Sentences & stories has a separate pack of 128 whole-passage English recordings.
+The public catalog includes 72 short phrases: the original three eight-phrase
+collections plus three new sixteen-phrase collections with distinct identities.
+Previously shared collection text and order remain intact. The same pack covers
+all 24 sentences and both short and original stories, deduplicating shared lines.
+
+These recordings were generated ahead of time with Kokoro v1.0, `af_heart`,
+American English, speed 1, in the development workspace. Playback needs neither
+an on-device model nor browser speech synthesis. The word trainer retains its
+existing ElevenLabs recordings. `data/cw-training/passage-speech.json` records
+the inputs, and the static index retains each input fingerprint and PCM hash.
+
+```sh
+mise run generate-passage-speech -- --dry-run
+mise run generate-passage-speech
+```
+
+The task updates the manifest from the versioned public catalog and uses the
+existing bounded PCM generator. Model files stay under ignored `.tmp/cw-speech/`;
+only the authored manifest, index and resulting WAV files ship. Normal builds
+and playback make no synthesis requests and need no model downloads. To change
+the recorded voice/provider, update the manifest-writing script deliberately and
+review the regenerated pack.
+
+Hands-free playback assembles the selected collection into one bounded native
+WAV: whole chunk in Morse, recall pause, another whole-chunk repeat, recall pause,
+prerecorded English answer, recall pause, next chunk. Three Morse repetitions
+are also available; recall pauses range from one to five seconds. Speed, repeat
+or pause changes prepare a fresh recording. Morse and voice gains are independent;
+gain edits preserve position and playback state. The twenty-minute recording
+limit still applies. Every transition within the prepared collection is encoded
+in audio, so progression needs no browser timer or later clip fetch. Start Play
+before locking the device. Playback ends after the collection; there is no
+automatic file replacement at the end.
+
+Manual chunk practice keeps Replay and Next together. Next starts the new chunk
+and hides its text; Previous and catalog selection prepare a paused hidden chunk.
+Reveal applies only to that chunk and stays revealed during its replay. Shared
+links and backups retain the public hands-free configuration and voice volume;
+links reopen paused and omit current position and per-chunk reveals. Old links
+without hands-free settings retain their original playback mode, overriding a
+newer hands-free device default. Played evidence records the actual repeats and
+recall pauses and remains compatible with earlier saved summaries.
+
+Automated checks cover shipped PCM/hash integrity, whole-chunk repetition and
+seek alignment, rendered speech and silence, bounded recordings, download retry,
+shared-link precedence, portable settings, saved played evidence, and desktop and
+mobile controls. The browser journey disables speech synthesis and goes offline
+after preparing audio, then crosses a real spoken-answer/next-phrase boundary
+without changing the native source. This verifies browser playback, not physical
+OS background behavior. A locked iPhone/Android check remains necessary: cross
+both Morse repetitions, the answer and the next phrase, use lock-screen
+pause/resume, and confirm the visible phrase after unlocking.
+
+## Word answer pack
+
 The public vocabulary has 99 unique answer clips: 70 common QSO words and
 30 common English words share AS. These are original ElevenLabs-generated
 answers, checked into the repository and served as static assets. They are not

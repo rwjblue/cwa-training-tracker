@@ -7,7 +7,7 @@ import {
 } from '../src/client/practice-preferences';
 import type { PracticeSession } from '../src/shared/training';
 
-test('phrases and sentences stop natively, replay whole chunks, share paused and save actual material', async ({
+test('phrases and sentences stop natively, start the next quiz with hidden text, share paused and save actual material', async ({
   page,
   context,
   browser,
@@ -39,11 +39,17 @@ test('phrases and sentences stop natively, replay whole chunks, share paused and
   ).toBeVisible();
   await page.getByRole('button', { name: 'Replay phrase', exact: true }).press('Enter');
   await expect(media).toHaveJSProperty('paused', false);
+  await expect(
+    page.getByRole('button', { name: 'Seek to word 2: RADIO', exact: true }),
+  ).toBeVisible();
   expect(await media.evaluate((audio: HTMLAudioElement) => audio.src)).toBe(first.src);
-  await page.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(media).toHaveJSProperty('paused', true);
+  await page.getByRole('button', { name: 'Next phrase', exact: true }).click();
+  await expect(media).toHaveJSProperty('paused', false);
+  await expect(page.getByRole('button', { name: 'Reveal text', exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Listen first. Reveal when you’re ready.', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('PHRASE 2 OF 8 · 3 WORDS', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Replay phrase', exact: true }).click();
   await expect.poll(() => media.evaluate((audio: HTMLAudioElement) => audio.ended)).toBe(true);
   await expect(page.getByText('PHRASE 2 OF 8 · 3 WORDS', { exact: true })).toBeVisible();
   await page.getByText(/^Sound settings ·/).click();

@@ -194,6 +194,28 @@ it('starts new learners with phrases and preserves continuous playback for legac
   expect(normalizePracticePreferences(JSON.parse(JSON.stringify(changed)))).toEqual(changed);
 });
 
+it('bounds hands-free settings and prevents manual chunk stops in automatic listening', () => {
+  expect(
+    normalizePracticePreferences({
+      storySettings: {
+        handsFree: true,
+        pauseAfterChunk: true,
+        morseRepeats: 3,
+        recallGapSeconds: 2.5,
+      },
+    }).storySettings,
+  ).toMatchObject({
+    handsFree: true,
+    pauseAfterChunk: false,
+    morseRepeats: 3,
+    recallGapSeconds: 2.5,
+  });
+  expect(
+    normalizePracticePreferences({ storySettings: { morseRepeats: 99, recallGapSeconds: NaN } })
+      .storySettings,
+  ).toMatchObject({ handsFree: false, morseRepeats: 2, recallGapSeconds: 3 });
+});
+
 it('retains both Story speeds/selection independently and migrates old shared settings', () => {
   let current = normalizePracticePreferences({ characterWpm: 35, effectiveWpm: 17, tone: 725 });
   const common = { characterWpm: 35, effectiveWpm: 17, tone: 725 };

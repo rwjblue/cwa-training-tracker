@@ -206,6 +206,15 @@ current owner; choosing a tool goes through its existing finish/save guard.
 through save/retry and readable history. Shared report rendering and portable
 backups stay in the report/account journeys and their fast evidence tests; do
 not append another report/export cycle to each listening mode.
+`phrase-listening.spec.ts` owns whole-chunk replay and deliberate Next with a
+fresh hidden answer. `hands-free-passages.spec.ts` owns the prepared passage
+recording crossing a spoken-answer/next-phrase boundary while offline and with
+device speech unavailable, native pause/resume, guest reopening and actual saved
+hands-free settings. `passage-speech.test.ts` owns all clip hashes/PCM formats,
+whole-chunk repeat and seek alignment, silence placement, duration limits and
+loading retry. Phone-width checks do not establish physical locked-phone audio.
+When a geometry regression needs several widths, assert geometry at those
+widths and run `expectResponsive` once for that screen, outside the width loop.
 When a geometry regression needs several widths, assert geometry at those
 widths and run `expectResponsive` once for that screen, outside the width loop.
 

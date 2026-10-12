@@ -39,6 +39,8 @@ export type GeneratedListeningSummary = GeneratedListeningSpeeds &
         readonly toneHz: number;
         readonly sentenceGapSeconds: number;
         readonly pauseAfterChunk?: boolean;
+        readonly handsFree?: boolean;
+        readonly morseRepeats?: 2 | 3;
       }
     | {
         readonly mode: 'free';
@@ -204,9 +206,24 @@ export function validateGeneratedListeningSummary(value: unknown): GeneratedList
   if (row.mode === 'story') {
     keys(
       row,
-      [...common, 'storyId', 'toneHz', 'sentenceGapSeconds', 'pauseAfterChunk'],
+      [
+        ...common,
+        'storyId',
+        'toneHz',
+        'sentenceGapSeconds',
+        'pauseAfterChunk',
+        'handsFree',
+        'morseRepeats',
+      ],
       'Generated story summary',
     );
+    if (
+      row.handsFree === true &&
+      (row.pauseAfterChunk === true || ![2, 3].includes(row.morseRepeats as number))
+    )
+      throw new Error('Hands-free listening needs two or three repeats and continuous playback.');
+    if (row.handsFree !== true && Object.hasOwn(row, 'morseRepeats'))
+      throw new Error('Morse repeats require hands-free listening.');
     return {
       mode: 'story',
       storyId: choice(
@@ -216,10 +233,19 @@ export function validateGeneratedListeningSummary(value: unknown): GeneratedList
       ),
       ...speeds,
       toneHz: finite(row.toneHz, 'Narrator tone', 300, 1000),
-      sentenceGapSeconds: finite(row.sentenceGapSeconds, 'Sentence pause', 0, 5),
+      sentenceGapSeconds: finite(
+        row.sentenceGapSeconds,
+        'Sentence pause',
+        row.handsFree === true ? 1 : 0,
+        5,
+      ),
       ...(Object.hasOwn(row, 'pauseAfterChunk')
         ? { pauseAfterChunk: boolean(row.pauseAfterChunk, 'Pause after each chunk') }
         : {}),
+      ...(Object.hasOwn(row, 'handsFree')
+        ? { handsFree: boolean(row.handsFree, 'Hands-free listening') }
+        : {}),
+      ...(row.handsFree === true ? { morseRepeats: row.morseRepeats as 2 | 3 } : {}),
     };
   }
   if (row.mode === 'free') {
@@ -359,7 +385,7 @@ export function generatedListeningDetails(evidence: GeneratedListeningEvidence):
         return `Played ${QSO_TITLES[summary.scenarioId]}: ${summary.stations.join(' / ')}; ${speed}; station tones ${summary.tonesHz.join(' / ')} Hz; ${summary.transmissionGapSeconds}s transmission pause.`;
       if (summary.mode === 'story') {
         const kind = passageKind(summary.storyId);
-        return `Played ${practiceStory(summary.storyId).title}: supplemental public ${kind === 'stories' ? 'story' : kind}; ${speed}; narrator ${summary.toneHz} Hz; ${summary.pauseAfterChunk ? `pause after each ${kind === 'phrases' ? 'phrase' : 'sentence'}` : `${summary.sentenceGapSeconds}s sentence pause`}.`;
+        return `Played ${practiceStory(summary.storyId).title}: supplemental public ${kind === 'stories' ? 'story' : kind}; ${speed}; narrator ${summary.toneHz} Hz; ${summary.handsFree ? `hands-free, ${summary.morseRepeats} Morse repeats + prerecorded spoken answer, ${summary.sentenceGapSeconds}s recall pauses` : summary.pauseAfterChunk ? `pause after each ${kind === 'phrases' ? 'phrase' : 'sentence'}` : `${summary.sentenceGapSeconds}s sentence pause`}.`;
       }
       const length =
         summary.contentMode === 'words'

@@ -14,6 +14,8 @@ export interface MorseWord {
   indexInItem: number;
   /** Start of the prerecorded answer, when this word includes spoken recognition. */
   answerStart?: number;
+  /** Repeated passage occurrences share a visible token without duplicating the transcript. */
+  repeatIndex?: number;
 }
 export interface MorseTrack {
   words: MorseWord[];
@@ -244,6 +246,68 @@ export function buildSpokenWordTrack(
     track.words.push({ text, start, end, itemIndex, indexInItem: 0, answerStart });
     track.items.push({ text, start, end });
     track.duration = end + gap;
+    if (track.duration > MAX_MORSE_SECONDS) throw tooLong();
+  }
+  return track;
+}
+
+/** Bake whole-chunk repeats, recall pauses and recorded English into one native file. */
+export function buildSpokenPassageTrack(
+  lines: readonly string[],
+  clips: ReadonlyMap<string, Float32Array>,
+  options: MorseTrackOptions & { morseRepeats: 2 | 3; recallGapSeconds: number },
+): MorseTrack {
+  if (options.morseRepeats !== 2 && options.morseRepeats !== 3)
+    throw new Error('Choose two or three Morse repeats.');
+  checkRange(options.recallGapSeconds, 1, 5, 'recall pause');
+  // Validate the source and bounded speed before constructing the repeated track.
+  buildMorseTrack(
+    lines.map((text) => ({ text })),
+    options,
+  );
+  const track: MorseTrack = {
+    words: [],
+    items: [],
+    tones: [],
+    speech: [],
+    duration: 0,
+    volume: options.volume,
+    voiceVolume: options.voiceVolume ?? options.volume,
+  };
+  for (const [itemIndex, text] of lines.entries()) {
+    const samples = clips.get(text);
+    if (!samples?.length || samples.length > MORSE_SAMPLE_RATE * 10)
+      throw new Error(`No valid prerecorded answer for ${text}.`);
+    const timeline = morseTimeline(text, options.characterWpm, options.effectiveWpm);
+    const start = track.duration;
+    for (let repeatIndex = 0; repeatIndex < options.morseRepeats; repeatIndex++) {
+      const at = track.duration;
+      track.tones.push(
+        ...timeline.tones.map((tone) => ({
+          ...tone,
+          at: at + tone.at,
+          frequency: options.frequency,
+        })),
+      );
+      track.words.push(
+        ...timeline.words.map((word, indexInItem) => ({
+          ...word,
+          start: at + word.start,
+          end: at + word.end,
+          itemIndex,
+          indexInItem,
+          repeatIndex,
+        })),
+      );
+      track.duration += timeline.duration + options.recallGapSeconds;
+      if (track.duration > MAX_MORSE_SECONDS) throw tooLong();
+    }
+    const answerStart = track.duration;
+    track.words.at(-1)!.answerStart = answerStart;
+    track.speech!.push({ at: answerStart, samples });
+    const end = answerStart + samples.length / MORSE_SAMPLE_RATE;
+    track.items.push({ text, start, end });
+    track.duration = end + options.recallGapSeconds;
     if (track.duration > MAX_MORSE_SECONDS) throw tooLong();
   }
   return track;

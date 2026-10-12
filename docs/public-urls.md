@@ -11,7 +11,7 @@ and opening another tab.
 | Each practice tool              | `#practice/words`, `/qso`, `/stories`, `/copy`, `/sending`, `/free`, `/runner`                                                                         |
 | Word listening                  | Built-in list, exact order and occurrence pitches, speed, gap, independent Morse/voice volumes, shuffle/repeat/spoken-answer and text visibility settings                               |
 | QSO practice                    | Scenario, versioned station recipe including fictional seasonal weather, exact station pitches, speed, text visibility and Listen/Check your copy view |
-| Sentences & stories             | Stable phrase/sentence collection or story identity, narrator pitch, speed, text visibility and pause-after-chunk choice; current position is omitted |
+| Sentences & stories             | Stable phrase/sentence collection or story identity, narrator pitch, speed, initial text visibility, chunk or hands-free playback, Morse repeats, recall pause and voice volume; current position and per-chunk reveals are omitted |
 | Free practice                   | Generated set, content mode/length and sound settings; typed custom text is omitted                                                                    |
 | Copy practice                   | Validated public round recipe; responses, scores, attempt identity and adaptive progress are omitted                                                   |
 | Sending practice                | Selected scale section                                                                                                                                 |
@@ -36,6 +36,13 @@ two-sentence stories have separate stable identities. `chunk=1` plays one native
 chunk at a time; `chunk=0` plays continuously. Published story links without
 `chunk` retain continuous playback regardless of device defaults. Shared links
 open at the beginning, paused; they contain no practice progress.
+
+`hands-free=1` selects one native recording with whole-chunk Morse repetitions,
+prerecorded English answers and automatic advancement. `repeats=2|3`,
+`recall-gap=1..5` (half-second steps), and `voice-volume=0..100` preserve its
+public setup. Hands-free overrides chunk stops. Older material links without
+`hands-free` disable that mode even on a device that prefers it. Current position
+and deliberate per-chunk text reveals remain local.
 
 On October 6, 2026, the prerelease word-answer assets changed from Kokoro to
 ElevenLabs Bella / Eleven v4. Earlier local smoke-test links now use that pack;

@@ -382,3 +382,28 @@ it('retains exact 51–60 WPM facts without rounding or dropping effective speed
     });
   }
 });
+
+it('preserves actual hands-free repeats and recall pauses and rejects contradictory saved facts', () => {
+  const summary = {
+    mode: 'story',
+    storyId: 'phrases-home-more',
+    characterWpm: 20,
+    effectiveWpm: 10,
+    toneHz: 650,
+    sentenceGapSeconds: 2.5,
+    handsFree: true,
+    morseRepeats: 2,
+  } as const;
+  const evidence = validateGeneratedListeningEvidence(envelope([summary]));
+  expect(evidence.summaries[0]).toEqual(summary);
+  expect(generatedListeningDetails(evidence)[0]).toContain(
+    '2 Morse repeats + prerecorded spoken answer, 2.5s recall pauses',
+  );
+  for (const change of [
+    { morseRepeats: 1 },
+    { morseRepeats: '2' },
+    { pauseAfterChunk: true },
+    { handsFree: false },
+  ])
+    expect(() => validateGeneratedListeningSummary({ ...summary, ...change })).toThrow();
+});

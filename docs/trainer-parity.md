@@ -4714,3 +4714,35 @@ report-evidence recheck and removing duplicate accessibility scans while retaini
 all distinct material states and both-width geometry. All nine affected material
 and Today journeys pass. Physical Safari and the reporter's production records
 remain unverified; this environment has no authenticated Cloudflare access.
+
+## Phrase quiz controls and hands-free passages — 2026-10-12
+
+Manual chunk practice now places Previous, Replay and a prominent Next beside
+playback. Next deliberately starts the next chunk in one tap and hides its text;
+Previous and catalog selection prepare paused, hidden material. Reveal is local
+to the current chunk, stays visible during replay, and is omitted from sharing.
+Legacy continuous playback keeps its existing seek and reveal behavior.
+
+Three new sixteen-phrase collections expand the public phrase catalog from 24
+to 72. They have distinct stable identities; the original collections, sentence
+catalog and stories retain their exact text and order. The prerecorded passage
+pack has 128 unique whole-phrase/sentence English clips generated ahead of time
+with Kokoro v1.0/af_heart in the development workspace. Playback performs no
+speech synthesis or inference on the learner's device.
+
+Hands-free listening prepares one native WAV for the complete selected material:
+two or three whole-chunk Morse plays, configurable one-to-five-second recall
+pauses, a prerecorded English answer, then the next chunk. All within-collection
+transitions are in PCM rather than browser timers or later downloads. Existing
+Media Session controls and independent Morse/voice gains apply. The bounded
+twenty-minute recording limit remains. Public URLs, device preferences/backups
+and actual played evidence preserve the mode, repeats and recall pause; legacy
+links explicitly retain their earlier mode despite newer device defaults.
+
+Validation: all 1,751 Vitest tests, 17 offline speech-generator tests and the
+TypeScript check pass. The production build and complete 128-test browser suite
+pass. Focused browser journeys verify native end/replay, Next
+with hidden text, recorded-answer/next-phrase advancement while offline and with
+speech synthesis unavailable, pause/resume, one unchanged native source, guest
+reopening, saved played facts and desktop/mobile fit. Desktop and mobile layouts
+were inspected. Physical locked-phone playback and deployment remain unverified.

@@ -1,0 +1,653 @@
+{
+  "version": 1,
+  "assetDirectory": "audio/cw-training/passages",
+  "generator": {
+    "engine": "kokoro-onnx",
+    "model": "kokoro-v1.0.onnx",
+    "voice": "af_heart",
+    "language": "en-us",
+    "speed": 1
+  },
+  "words": [
+    {
+      "word": "THE RADIO",
+      "pronunciation": "The radio",
+      "path": "public/audio/cw-training/passages/2f2c8e2b310d2a73.wav"
+    },
+    {
+      "word": "A CLEAR CALL",
+      "pronunciation": "A clear call",
+      "path": "public/audio/cw-training/passages/43a2bb15542a3708.wav"
+    },
+    {
+      "word": "MY NAME",
+      "pronunciation": "My name",
+      "path": "public/audio/cw-training/passages/fabb3de6aa28c73f.wav"
+    },
+    {
+      "word": "YOUR SIGNAL",
+      "pronunciation": "Your signal",
+      "path": "public/audio/cw-training/passages/2da5e81cf1394750.wav"
+    },
+    {
+      "word": "THE LAST WORD",
+      "pronunciation": "The last word",
+      "path": "public/audio/cw-training/passages/0aec35547e271c7c.wav"
+    },
+    {
+      "word": "LOW POWER",
+      "pronunciation": "Low power",
+      "path": "public/audio/cw-training/passages/d7025147a33d5124.wav"
+    },
+    {
+      "word": "PLEASE SEND AGAIN",
+      "pronunciation": "Please send again",
+      "path": "public/audio/cw-training/passages/e0f563ced04fa68c.wav"
+    },
+    {
+      "word": "THANK YOU",
+      "pronunciation": "Thank you",
+      "path": "public/audio/cw-training/passages/304bc9496ce6be54.wav"
+    },
+    {
+      "word": "THE SUN",
+      "pronunciation": "The sun",
+      "path": "public/audio/cw-training/passages/66e494773b91d86f.wav"
+    },
+    {
+      "word": "A BLUE SKY",
+      "pronunciation": "A blue sky",
+      "path": "public/audio/cw-training/passages/9224b8bc70cbbc2f.wav"
+    },
+    {
+      "word": "THE GREEN TREE",
+      "pronunciation": "The green tree",
+      "path": "public/audio/cw-training/passages/eed4e07a5ee2e404.wav"
+    },
+    {
+      "word": "A SMALL BIRD",
+      "pronunciation": "A small bird",
+      "path": "public/audio/cw-training/passages/d3d50bc187c3b403.wav"
+    },
+    {
+      "word": "THE OLD ROAD",
+      "pronunciation": "The old road",
+      "path": "public/audio/cw-training/passages/6178b9d59ed0826e.wav"
+    },
+    {
+      "word": "BY THE LAKE",
+      "pronunciation": "By the lake",
+      "path": "public/audio/cw-training/passages/9813dae8f931b0be.wav"
+    },
+    {
+      "word": "A COOL WIND",
+      "pronunciation": "A cool wind",
+      "path": "public/audio/cw-training/passages/609f7865729b12ae.wav"
+    },
+    {
+      "word": "ON THE HILL",
+      "pronunciation": "On the hill",
+      "path": "public/audio/cw-training/passages/1bee2d73e9b6bef2.wav"
+    },
+    {
+      "word": "MY CUP",
+      "pronunciation": "My cup",
+      "path": "public/audio/cw-training/passages/fb9262c24632785e.wav"
+    },
+    {
+      "word": "HOT TEA",
+      "pronunciation": "Hot tea",
+      "path": "public/audio/cw-training/passages/0a52267b7b4f15ad.wav"
+    },
+    {
+      "word": "THE OPEN DOOR",
+      "pronunciation": "The open door",
+      "path": "public/audio/cw-training/passages/664a1bfd88eeabf1.wav"
+    },
+    {
+      "word": "A GOOD BOOK",
+      "pronunciation": "A good book",
+      "path": "public/audio/cw-training/passages/17558c3cc1523924.wav"
+    },
+    {
+      "word": "THE RED BAG",
+      "pronunciation": "The red bag",
+      "path": "public/audio/cw-training/passages/610976642ea246ae.wav"
+    },
+    {
+      "word": "ON THE DESK",
+      "pronunciation": "On the desk",
+      "path": "public/audio/cw-training/passages/6ecf25846f10a00c.wav"
+    },
+    {
+      "word": "AFTER LUNCH",
+      "pronunciation": "After lunch",
+      "path": "public/audio/cw-training/passages/217a44c029a55daa.wav"
+    },
+    {
+      "word": "TIME TO REST",
+      "pronunciation": "Time to rest",
+      "path": "public/audio/cw-training/passages/2fe2bd982adddcc4.wav"
+    },
+    {
+      "word": "A STRONG SIGNAL",
+      "pronunciation": "A strong signal",
+      "path": "public/audio/cw-training/passages/3be212d4cc9ec900.wav"
+    },
+    {
+      "word": "THE SHORT CALL",
+      "pronunciation": "The short call",
+      "path": "public/audio/cw-training/passages/4d7f244195229842.wav"
+    },
+    {
+      "word": "YOUR FIRST NAME",
+      "pronunciation": "Your first name",
+      "path": "public/audio/cw-training/passages/4c3d655657611b3a.wav"
+    },
+    {
+      "word": "A LONG WIRE",
+      "pronunciation": "A long wire",
+      "path": "public/audio/cw-training/passages/4f5705731481ab7e.wav"
+    },
+    {
+      "word": "THE QUIET BAND",
+      "pronunciation": "The quiet band",
+      "path": "public/audio/cw-training/passages/954335757f369b8e.wav"
+    },
+    {
+      "word": "MY SMALL RIG",
+      "pronunciation": "My small rig",
+      "path": "public/audio/cw-training/passages/a585325191841e80.wav"
+    },
+    {
+      "word": "THE NEXT STATION",
+      "pronunciation": "The next station",
+      "path": "public/audio/cw-training/passages/e8927eb8ee2a8d7a.wav"
+    },
+    {
+      "word": "PLEASE GO AHEAD",
+      "pronunciation": "Please go ahead",
+      "path": "public/audio/cw-training/passages/f980f489c2e52d27.wav"
+    },
+    {
+      "word": "ONE MORE TIME",
+      "pronunciation": "One more time",
+      "path": "public/audio/cw-training/passages/81389e947c89558c.wav"
+    },
+    {
+      "word": "THE SAME FREQUENCY",
+      "pronunciation": "The same frequency",
+      "path": "public/audio/cw-training/passages/8f62ec3330109447.wav"
+    },
+    {
+      "word": "A NEW CONTACT",
+      "pronunciation": "A new contact",
+      "path": "public/audio/cw-training/passages/0abaca578524e6e8.wav"
+    },
+    {
+      "word": "THE MORNING NET",
+      "pronunciation": "The morning net",
+      "path": "public/audio/cw-training/passages/0c6b9b5ac035e5ec.wav"
+    },
+    {
+      "word": "MY HOME STATION",
+      "pronunciation": "My home station",
+      "path": "public/audio/cw-training/passages/bfb4fdad5382722a.wav"
+    },
+    {
+      "word": "A LITTLE NOISE",
+      "pronunciation": "A little noise",
+      "path": "public/audio/cw-training/passages/8008d00c5e8e0eb6.wav"
+    },
+    {
+      "word": "GOOD COPY NOW",
+      "pronunciation": "Good copy now",
+      "path": "public/audio/cw-training/passages/5f650b2897aa76c9.wav"
+    },
+    {
+      "word": "SEE YOU LATER",
+      "pronunciation": "See you later",
+      "path": "public/audio/cw-training/passages/b1eabeeaeda0065b.wav"
+    },
+    {
+      "word": "THE TALL GRASS",
+      "pronunciation": "The tall grass",
+      "path": "public/audio/cw-training/passages/7a8c138ad18821ca.wav"
+    },
+    {
+      "word": "A WARM DAY",
+      "pronunciation": "A warm day",
+      "path": "public/audio/cw-training/passages/bfb8bd95dac4b975.wav"
+    },
+    {
+      "word": "THE WIDE RIVER",
+      "pronunciation": "The wide river",
+      "path": "public/audio/cw-training/passages/63890302b931851d.wav"
+    },
+    {
+      "word": "UNDER THE TREE",
+      "pronunciation": "Under the tree",
+      "path": "public/audio/cw-training/passages/f5262a5ef4d463f5.wav"
+    },
+    {
+      "word": "A LIGHT RAIN",
+      "pronunciation": "A light rain",
+      "path": "public/audio/cw-training/passages/81ddecf823582012.wav"
+    },
+    {
+      "word": "THE SMALL BOAT",
+      "pronunciation": "The small boat",
+      "path": "public/audio/cw-training/passages/dedbaec546529aab.wav"
+    },
+    {
+      "word": "ACROSS THE FIELD",
+      "pronunciation": "Across the field",
+      "path": "public/audio/cw-training/passages/74ff74af1fcefc41.wav"
+    },
+    {
+      "word": "THE EARLY MORNING",
+      "pronunciation": "The early morning",
+      "path": "public/audio/cw-training/passages/b97f299dce948228.wav"
+    },
+    {
+      "word": "A DARK CLOUD",
+      "pronunciation": "A dark cloud",
+      "path": "public/audio/cw-training/passages/cfdd31286c156463.wav"
+    },
+    {
+      "word": "ALONG THE PATH",
+      "pronunciation": "Along the path",
+      "path": "public/audio/cw-training/passages/6ab6a524b409e76b.wav"
+    },
+    {
+      "word": "THE SANDY BEACH",
+      "pronunciation": "The sandy beach",
+      "path": "public/audio/cw-training/passages/044ee0f00d22ce4b.wav"
+    },
+    {
+      "word": "A QUIET PARK",
+      "pronunciation": "A quiet park",
+      "path": "public/audio/cw-training/passages/66826c808f978912.wav"
+    },
+    {
+      "word": "THE FALLING LEAVES",
+      "pronunciation": "The falling leaves",
+      "path": "public/audio/cw-training/passages/febf767632269720.wav"
+    },
+    {
+      "word": "OVER THE BRIDGE",
+      "pronunciation": "Over the bridge",
+      "path": "public/audio/cw-training/passages/db39e99dd7dcd86d.wav"
+    },
+    {
+      "word": "THE BRIGHT MOON",
+      "pronunciation": "The bright moon",
+      "path": "public/audio/cw-training/passages/48958c4a97d8d644.wav"
+    },
+    {
+      "word": "BEFORE THE STORM",
+      "pronunciation": "Before the storm",
+      "path": "public/audio/cw-training/passages/5da5be188d4ab065.wav"
+    },
+    {
+      "word": "THE KITCHEN TABLE",
+      "pronunciation": "The kitchen table",
+      "path": "public/audio/cw-training/passages/e15afd624e4271a0.wav"
+    },
+    {
+      "word": "A CLEAN PLATE",
+      "pronunciation": "A clean plate",
+      "path": "public/audio/cw-training/passages/eed16c75e0086ffb.wav"
+    },
+    {
+      "word": "THE SOFT CHAIR",
+      "pronunciation": "The soft chair",
+      "path": "public/audio/cw-training/passages/0e5b5462dbec200f.wav"
+    },
+    {
+      "word": "BY THE WINDOW",
+      "pronunciation": "By the window",
+      "path": "public/audio/cw-training/passages/9d29db810af66b24.wav"
+    },
+    {
+      "word": "A FRESH APPLE",
+      "pronunciation": "A fresh apple",
+      "path": "public/audio/cw-training/passages/d856b6078ceb0d6e.wav"
+    },
+    {
+      "word": "THE SMALL CLOCK",
+      "pronunciation": "The small clock",
+      "path": "public/audio/cw-training/passages/8c0bbf7bd8269559.wav"
+    },
+    {
+      "word": "MY BLUE SHIRT",
+      "pronunciation": "My blue shirt",
+      "path": "public/audio/cw-training/passages/cef8013667222056.wav"
+    },
+    {
+      "word": "THE FRONT ROOM",
+      "pronunciation": "The front room",
+      "path": "public/audio/cw-training/passages/1a3f8c4195a9426e.wav"
+    },
+    {
+      "word": "A GLASS BOWL",
+      "pronunciation": "A glass bowl",
+      "path": "public/audio/cw-training/passages/eddbd6ae9d455505.wav"
+    },
+    {
+      "word": "THE WARM BREAD",
+      "pronunciation": "The warm bread",
+      "path": "public/audio/cw-training/passages/698881fefa103acd.wav"
+    },
+    {
+      "word": "BEHIND THE DOOR",
+      "pronunciation": "Behind the door",
+      "path": "public/audio/cw-training/passages/7ed24f0091cfc2b6.wav"
+    },
+    {
+      "word": "THE TOP SHELF",
+      "pronunciation": "The top shelf",
+      "path": "public/audio/cw-training/passages/9c5a850f280209e0.wav"
+    },
+    {
+      "word": "A FULL CUP",
+      "pronunciation": "A full cup",
+      "path": "public/audio/cw-training/passages/30f411c8d08c4a57.wav"
+    },
+    {
+      "word": "AFTER THE MEAL",
+      "pronunciation": "After the meal",
+      "path": "public/audio/cw-training/passages/68db429ce92e2470.wav"
+    },
+    {
+      "word": "THE EVENING NEWS",
+      "pronunciation": "The evening news",
+      "path": "public/audio/cw-training/passages/6ed91ea3638a2cc0.wav"
+    },
+    {
+      "word": "TIME FOR BED",
+      "pronunciation": "Time for bed",
+      "path": "public/audio/cw-training/passages/c29d18d2206e6dff.wav"
+    },
+    {
+      "word": "THE RADIO IS ON.",
+      "pronunciation": "The radio is on.",
+      "path": "public/audio/cw-training/passages/95d86d144b5cc4ae.wav"
+    },
+    {
+      "word": "I HEAR A CLEAR CALL.",
+      "pronunciation": "I hear a clear call.",
+      "path": "public/audio/cw-training/passages/e436673dde4c07b7.wav"
+    },
+    {
+      "word": "MY NAME IS BEN.",
+      "pronunciation": "My name is ben.",
+      "path": "public/audio/cw-training/passages/39e6eec0456e3858.wav"
+    },
+    {
+      "word": "YOUR SIGNAL IS CLEAR.",
+      "pronunciation": "Your signal is clear.",
+      "path": "public/audio/cw-training/passages/64854b8dcdb76bff.wav"
+    },
+    {
+      "word": "I MISSED THE LAST WORD.",
+      "pronunciation": "I missed the last word.",
+      "path": "public/audio/cw-training/passages/46b2a99d25cb942d.wav"
+    },
+    {
+      "word": "WE USE LOW POWER.",
+      "pronunciation": "We use low power.",
+      "path": "public/audio/cw-training/passages/fbbae0dbbe6d736c.wav"
+    },
+    {
+      "word": "PLEASE SEND YOUR NAME AGAIN.",
+      "pronunciation": "Please send your name again.",
+      "path": "public/audio/cw-training/passages/8292163b503155bb.wav"
+    },
+    {
+      "word": "THANK YOU FOR THE CALL.",
+      "pronunciation": "Thank you for the call.",
+      "path": "public/audio/cw-training/passages/b6e9ebc13e04931b.wav"
+    },
+    {
+      "word": "THE SUN IS UP.",
+      "pronunciation": "The sun is up.",
+      "path": "public/audio/cw-training/passages/5181be0214268767.wav"
+    },
+    {
+      "word": "THE SKY IS BLUE.",
+      "pronunciation": "The sky is blue.",
+      "path": "public/audio/cw-training/passages/912eecea22b14b51.wav"
+    },
+    {
+      "word": "THE TREE IS GREEN.",
+      "pronunciation": "The tree is green.",
+      "path": "public/audio/cw-training/passages/8c286ef9b3248021.wav"
+    },
+    {
+      "word": "A SMALL BIRD SINGS.",
+      "pronunciation": "A small bird sings.",
+      "path": "public/audio/cw-training/passages/979c3a942a946c52.wav"
+    },
+    {
+      "word": "WE TAKE THE OLD ROAD.",
+      "pronunciation": "We take the old road.",
+      "path": "public/audio/cw-training/passages/54ddc7695d3a37df.wav"
+    },
+    {
+      "word": "WE SIT BY THE LAKE.",
+      "pronunciation": "We sit by the lake.",
+      "path": "public/audio/cw-training/passages/2dbaefbc0a6b7d3b.wav"
+    },
+    {
+      "word": "A COOL WIND BLOWS.",
+      "pronunciation": "A cool wind blows.",
+      "path": "public/audio/cw-training/passages/5552c31135e80b9f.wav"
+    },
+    {
+      "word": "WE WALK UP THE HILL.",
+      "pronunciation": "We walk up the hill.",
+      "path": "public/audio/cw-training/passages/f0a374d1a3f3b6fc.wav"
+    },
+    {
+      "word": "MY CUP IS FULL.",
+      "pronunciation": "My cup is full.",
+      "path": "public/audio/cw-training/passages/64cbdd6723c8a147.wav"
+    },
+    {
+      "word": "THE TEA IS HOT.",
+      "pronunciation": "The tea is hot.",
+      "path": "public/audio/cw-training/passages/d8531642dd724554.wav"
+    },
+    {
+      "word": "THE DOOR IS OPEN.",
+      "pronunciation": "The door is open.",
+      "path": "public/audio/cw-training/passages/30a8b7e90f5ef0ac.wav"
+    },
+    {
+      "word": "I READ A GOOD BOOK.",
+      "pronunciation": "I read a good book.",
+      "path": "public/audio/cw-training/passages/3318659832d09023.wav"
+    },
+    {
+      "word": "THE BAG IS RED.",
+      "pronunciation": "The bag is red.",
+      "path": "public/audio/cw-training/passages/7315ecc23854876d.wav"
+    },
+    {
+      "word": "MY BOOK IS ON THE DESK.",
+      "pronunciation": "My book is on the desk.",
+      "path": "public/audio/cw-training/passages/1fdf63f75750186b.wav"
+    },
+    {
+      "word": "WE TALK AFTER LUNCH.",
+      "pronunciation": "We talk after lunch.",
+      "path": "public/audio/cw-training/passages/fb586ab671596351.wav"
+    },
+    {
+      "word": "IT IS TIME TO REST.",
+      "pronunciation": "It is time to rest.",
+      "path": "public/audio/cw-training/passages/808c43f339b9b52e.wav"
+    },
+    {
+      "word": "WE WALK TO THE LAKE.",
+      "pronunciation": "We walk to the lake.",
+      "path": "public/audio/cw-training/passages/26e096837eb95ce9.wav"
+    },
+    {
+      "word": "WE SIT UNDER A TREE.",
+      "pronunciation": "We sit under a tree.",
+      "path": "public/audio/cw-training/passages/36cec4d25b017958.wav"
+    },
+    {
+      "word": "AT THE EDGE OF THE WOODS MAY FOUND A SMALL BLUE STONE.",
+      "pronunciation": "At the edge of the woods may found a small blue stone.",
+      "path": "public/audio/cw-training/passages/5fc85f8de7ca9c25.wav"
+    },
+    {
+      "word": "SHE LEFT IT BESIDE THE TRAIL AND WALKED UP THE HILL.",
+      "pronunciation": "She left it beside the trail and walked up the hill.",
+      "path": "public/audio/cw-training/passages/225f443ab43eb3b5.wav"
+    },
+    {
+      "word": "ON HER WAY HOME THE FOG HID THE PATH.",
+      "pronunciation": "On her way home the fog hid the path.",
+      "path": "public/audio/cw-training/passages/0272539726e54b75.wav"
+    },
+    {
+      "word": "THEN SHE SAW THE BLUE STONE AND KNEW WHICH WAY TO GO.",
+      "pronunciation": "Then she saw the blue stone and knew which way to go.",
+      "path": "public/audio/cw-training/passages/ca8dd3e4ba585552.wav"
+    },
+    {
+      "word": "SOMETIMES A SMALL THING CAN MAKE A BIG DIFFERENCE.",
+      "pronunciation": "Sometimes a small thing can make a big difference.",
+      "path": "public/audio/cw-training/passages/43493764843a7dc7.wav"
+    },
+    {
+      "word": "BEN TOOK HIS SMALL RADIO TO THE PARK ON A COOL AUTUMN MORNING.",
+      "pronunciation": "Ben took his small radio to the park on a cool autumn morning.",
+      "path": "public/audio/cw-training/passages/92f13c5d97b9a81e.wav"
+    },
+    {
+      "word": "HE PUT A WIRE IN A TREE AND SAT AT A WOODEN TABLE.",
+      "pronunciation": "He put a wire in a tree and sat at a wooden table.",
+      "path": "public/audio/cw-training/passages/6dbfe7e6a9cda5a1.wav"
+    },
+    {
+      "word": "FOR A WHILE HE HEARD ONLY THE WIND AND THE SOFT HISS OF THE RADIO.",
+      "pronunciation": "For a while he heard only the wind and the soft hiss of the radio.",
+      "path": "public/audio/cw-training/passages/854e27fce43c68f7.wav"
+    },
+    {
+      "word": "HE CALLED CQ THREE TIMES AND WAITED.",
+      "pronunciation": "He called cq three times and waited.",
+      "path": "public/audio/cw-training/passages/1b2a59c258d82bef.wav"
+    },
+    {
+      "word": "A FAINT SIGNAL CAME BACK FROM A STATION NEAR THE SEA.",
+      "pronunciation": "A faint signal came back from a station near the sea.",
+      "path": "public/audio/cw-training/passages/295c17da40b5db61.wav"
+    },
+    {
+      "word": "THE OTHER OPERATOR WAS NAMED ROSE AND SHE WAS USING FIVE WATTS.",
+      "pronunciation": "The other operator was named rose and she was using five watts.",
+      "path": "public/audio/cw-training/passages/215cd9faa83390c3.wav"
+    },
+    {
+      "word": "BEN TURNED UP THE VOLUME AND ASKED HER TO SEND HER NAME AGAIN.",
+      "pronunciation": "Ben turned up the volume and asked her to send her name again.",
+      "path": "public/audio/cw-training/passages/6d13d59d5e0a05a1.wav"
+    },
+    {
+      "word": "THIS TIME HE COPIED EVERY LETTER.",
+      "pronunciation": "This time he copied every letter.",
+      "path": "public/audio/cw-training/passages/01fa9bbb70e0d646.wav"
+    },
+    {
+      "word": "THEY TALKED ABOUT THEIR ANTENNAS AND THE WEATHER.",
+      "pronunciation": "They talked about their antennas and the weather.",
+      "path": "public/audio/cw-training/passages/62b20f74ba580bc2.wav"
+    },
+    {
+      "word": "ROSE HAD RAIN WHILE BEN HAD CLEAR SKIES.",
+      "pronunciation": "Rose had rain while ben had clear skies.",
+      "path": "public/audio/cw-training/passages/aa2509cd0a8f508f.wav"
+    },
+    {
+      "word": "WHEN THEY SAID GOODBYE THE SUN WAS HIGH ABOVE THE TREES.",
+      "pronunciation": "When they said goodbye the sun was high above the trees.",
+      "path": "public/audio/cw-training/passages/0ae1f7aff18c6ade.wav"
+    },
+    {
+      "word": "BEN PACKED HIS BAG WITH ONE CONTACT IN HIS LOG AND A SMILE ON HIS FACE.",
+      "pronunciation": "Ben packed his bag with one contact in his log and a smile on his face.",
+      "path": "public/audio/cw-training/passages/47506565930d9cc2.wav"
+    },
+    {
+      "word": "EVERY EVENING ELLA WALKED DOWN THE OLD ROAD TO THE LAKE.",
+      "pronunciation": "Every evening ella walked down the old road to the lake.",
+      "path": "public/audio/cw-training/passages/28ac3db902f8fa54.wav"
+    },
+    {
+      "word": "ONE NIGHT SHE NOTICED A SMALL LIGHT ON THE FAR SHORE.",
+      "pronunciation": "One night she noticed a small light on the far shore.",
+      "path": "public/audio/cw-training/passages/d2e4f29330b79f04.wav"
+    },
+    {
+      "word": "IT FLASHED TWICE THEN WENT DARK THEN FLASHED TWICE AGAIN.",
+      "pronunciation": "It flashed twice then went dark then flashed twice again.",
+      "path": "public/audio/cw-training/passages/4ffb643ddd275c4b.wav"
+    },
+    {
+      "word": "THE NEXT DAY SHE ASKED HER NEIGHBOR TOM ABOUT THE LIGHT.",
+      "pronunciation": "The next day she asked her neighbor tom about the light.",
+      "path": "public/audio/cw-training/passages/3e6ff71105ccd940.wav"
+    },
+    {
+      "word": "HIS FRIEND RUTH HAD JUST MOVED INTO THE CABIN ACROSS THE WATER.",
+      "pronunciation": "His friend ruth had just moved into the cabin across the water.",
+      "path": "public/audio/cw-training/passages/3ebe633eb1cfd271.wav"
+    },
+    {
+      "word": "TOM SMILED AND TOOK A FLASHLIGHT FROM A DRAWER.",
+      "pronunciation": "Tom smiled and took a flashlight from a drawer.",
+      "path": "public/audio/cw-training/passages/9cd5a49c90b8878d.wav"
+    },
+    {
+      "word": "HE SHOWED ELLA HOW SHORT AND LONG FLASHES COULD STAND FOR LETTERS.",
+      "pronunciation": "He showed ella how short and long flashes could stand for letters.",
+      "path": "public/audio/cw-training/passages/17e3a401d8e5a28f.wav"
+    },
+    {
+      "word": "THAT EVENING THEY WALKED TO THE LAKE TOGETHER.",
+      "pronunciation": "That evening they walked to the lake together.",
+      "path": "public/audio/cw-training/passages/4299d6eac806a502.wav"
+    },
+    {
+      "word": "WHEN THE LIGHT APPEARED TOM SENT A SLOW GREETING ACROSS THE WATER.",
+      "pronunciation": "When the light appeared tom sent a slow greeting across the water.",
+      "path": "public/audio/cw-training/passages/9239a9cbe23848ed.wav"
+    },
+    {
+      "word": "AFTER A SHORT PAUSE THE ANSWER CAME BACK.",
+      "pronunciation": "After a short pause the answer came back.",
+      "path": "public/audio/cw-training/passages/43cd8d9f8f6c4f97.wav"
+    },
+    {
+      "word": "SHE INVITED THEM TO VISIT FOR TEA THE NEXT AFTERNOON.",
+      "pronunciation": "She invited them to visit for tea the next afternoon.",
+      "path": "public/audio/cw-training/passages/699bd3e20b2f97a5.wav"
+    },
+    {
+      "word": "ELLA SENT HER NAME AND THEN A CAREFUL THANK YOU.",
+      "pronunciation": "Ella sent her name and then a careful thank you.",
+      "path": "public/audio/cw-training/passages/e65169a02d21a2cc.wav"
+    },
+    {
+      "word": "THE LAKE WAS JUST AS WIDE AS BEFORE BUT THE FAR SHORE NO LONGER FELT SO FAR AWAY.",
+      "pronunciation": "The lake was just as wide as before but the far shore no longer felt so far away.",
+      "path": "public/audio/cw-training/passages/82186e1c46060e79.wav"
+    }
+  ]
+}

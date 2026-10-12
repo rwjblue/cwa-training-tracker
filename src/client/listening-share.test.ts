@@ -273,9 +273,37 @@ describe('public listening URLs', () => {
       }
     `);
   });
-  it('pins the expanded passage catalog for new v1 shared links', () => {
-    expect(digest(PRACTICE_PASSAGES)).toBe(
+  it('pins existing passage text and order when adding collections with new identities', () => {
+    expect(digest(PRACTICE_PASSAGES.filter((passage) => !passage.id.endsWith('-more')))).toBe(
       '0d7c63e7dd6deb66eac858ae4bc6f943b64c3d6655a685fb1cb75e4141f80d53',
     );
+    expect(digest(PRACTICE_PASSAGES)).toBe(
+      '723658ab1d4c17969d3a7dda320f863b5746814331e1de24a1a4d40ac478485e',
+    );
+  });
+  it('shares hands-free timing and recorded voice volume while older links override hands-free device defaults', () => {
+    const preferences = {
+      ...defaults,
+      tool: 'stories' as const,
+      voiceVolume: 25,
+      storySettings: {
+        ...defaults.storySettings,
+        storyId: 'phrases-radio-more' as const,
+        handsFree: true,
+        morseRepeats: 3 as const,
+        recallGapSeconds: 2.5,
+        pauseAfterChunk: false,
+      },
+    };
+    const story = listeningStoryRound(practiceStory('phrases-radio-more'), () => 0);
+    const link = listeningShareRoute(preferences, { story });
+    const shared = readListeningShare(link);
+    expect(shared.preferences.storySettings).toEqual(preferences.storySettings);
+    expect(shared.preferences.voiceVolume).toBe(25);
+    expect(shared.story).toEqual(story);
+    expect(
+      readListeningShare('#practice/stories?story=phrases-radio&chunk=1', preferences).preferences
+        .storySettings,
+    ).toMatchObject({ handsFree: false, pauseAfterChunk: true });
   });
 });

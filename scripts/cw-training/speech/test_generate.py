@@ -178,6 +178,27 @@ class GenerationTests(unittest.TestCase):
             self.assertFalse((self.root / self.entry['path']).exists())
             request.assert_not_called()
 
+    def test_passage_manifest_writes_only_its_own_pack_and_rejects_other_destinations(self):
+        manifest = self.root / 'data/cw-training/passages.json'
+        manifest.parent.mkdir(parents=True)
+        self.document['assetDirectory'] = 'audio/cw-training/passages'
+        self.document['words'] = [{'word': 'THE RADIO', 'pronunciation': 'the radio', 'path': 'public/audio/cw-training/passages/radio.wav'}]
+        manifest.write_text(json.dumps(self.document))
+        with patch.object(speech, 'request_elevenlabs', return_value=(pcm_audio(), {})) as request:
+            self.run_generate(manifest=str(manifest))
+            self.run_generate(manifest=str(manifest))
+            self.assertEqual(request.call_count, 1)
+            self.assertFalse(self.index.exists())
+            passage_index = self.root / 'public/audio/cw-training/passages/index.json'
+            self.assertIn('THE RADIO', json.loads(passage_index.read_text())['clips'])
+            for bad_manifest in (self.manifest, self.root / '../outside.json'):
+                with self.assertRaisesRegex(speech.GenerationError, 'inside data/cw-training'):
+                    self.run_generate(manifest=str(bad_manifest))
+            self.document['assetDirectory'] = '../../outside'
+            manifest.write_text(json.dumps(self.document))
+            with self.assertRaisesRegex(speech.GenerationError, 'Unsupported speech asset'):
+                self.run_generate(manifest=str(manifest))
+
     def test_rejects_all_invalid_paths_before_first_request(self):
         self.document['words'].append({'word': 'BAD', 'pronunciation': 'bad', 'path': '../../outside.wav'})
         self.write_manifest()

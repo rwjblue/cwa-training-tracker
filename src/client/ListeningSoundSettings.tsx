@@ -149,7 +149,8 @@ export default function ListeningSoundSettings({
           />
         </div>
       </fieldset>
-      {preferences.tool === 'words' && (
+      {(preferences.tool === 'words' ||
+        (preferences.tool === 'stories' && preferences.storySettings.handsFree)) && (
         <fieldset className="listening-sound-group">
           <legend>Spoken answers</legend>
           <PreciseRange

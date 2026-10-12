@@ -6,12 +6,23 @@ const samples = new Map<string, Promise<Float32Array>>();
 
 /** Preload immutable clips; no device voices, audio context, or runtime inference. */
 export async function loadWordSpeech(words: readonly string[]): Promise<Map<string, Float32Array>> {
+  return loadSpeechClips(
+    words,
+    clips,
+    (missing) =>
+      `No prerecorded answer for ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ', …' : ''}. Turn off Three repeats + spoken answer to hear this list in Morse.`,
+  );
+}
+
+/** Both word and whole-passage packs use the same bounded, retryable PCM loader. */
+export async function loadSpeechClips(
+  words: readonly string[],
+  clips: Record<string, { url: string; sha256: string }>,
+  missingMessage: (missing: string[]) => string,
+): Promise<Map<string, Float32Array>> {
   const unique = [...new Set(words)];
   const missing = unique.filter((word) => !clips[word]);
-  if (missing.length)
-    throw new Error(
-      `No prerecorded answer for ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ', …' : ''}. Turn off Three repeats + spoken answer to hear this list in Morse.`,
-    );
+  if (missing.length) throw new Error(missingMessage(missing));
   const result = new Map<string, Float32Array>();
   for (let at = 0; at < unique.length; at += 4)
     await Promise.all(

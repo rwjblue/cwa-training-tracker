@@ -21,10 +21,13 @@ CWops. Official course material stays at the
   different station details; replay keeps the same contact. Illustrative call-area
   locations, regional seasonal weather, and radio power choices stay consistent.
 - Sentences & stories bridges word recognition and connected listening with
-  24 short phrases, 24 short sentences, three two-sentence stories and the
+  72 short phrases, 24 short sentences, three two-sentence stories and the
   original longer stories. Pause after each chunk uses a native recording that
   ends at the phrase or sentence; replay the whole chunk, reveal its text, and
-  choose Next when ready. Continuous playback remains available.
+  choose Next beside Replay to start the next quiz with hidden text. Hands-free
+  listening sends each chunk twice or three times, pauses for recall, speaks a
+  prerecorded English answer and advances automatically in one native recording.
+  Continuous Morse playback remains available.
 - Sentence copy, inside Copy practice, offers one 5–9-word sentence at a time
   with typed answers and feedback.
 - QSO copy checks let you enter the station details you heard, replay the same

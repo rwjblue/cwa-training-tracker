@@ -108,12 +108,19 @@ export function readListeningShare(
     if (variable !== undefined) updates.variableQsoPitch = variable;
   } else {
     updates.storySettings = { ...current.storySettings, ...sound };
+    const voiceVolume = number('voice-volume', 0, 100);
+    if (voiceVolume !== undefined) updates.voiceVolume = voiceVolume;
     const story = PRACTICE_PASSAGES.find((item) => item.id === params.get('story'));
     if (story) updates.storySettings.storyId = story.id;
     // Published links without a chunk setting retain continuous playback.
     updates.storySettings.pauseAfterChunk =
       boolean('chunk') ??
       (params.has('story') || params.has('pitch') ? false : current.storySettings.pauseAfterChunk);
+    // Published pre-hands-free URLs must override newer device defaults.
+    updates.storySettings.handsFree =
+      boolean('hands-free') ?? (params.has('story') ? false : current.storySettings.handsFree);
+    updates.storySettings.morseRepeats = number('repeats', 2, 3) === 3 ? 3 : 2;
+    updates.storySettings.recallGapSeconds = number('recall-gap', 1, 5, 0.5) ?? 3;
     if (variable !== undefined) updates.variableStoryPitch = variable;
   }
   const result: ListeningShare = {
@@ -192,6 +199,10 @@ export function listeningShareRoute(
   } else if (p.tool === 'stories') {
     params.set('story', material.story?.id ?? p.storySettings.storyId);
     params.set('chunk', p.storySettings.pauseAfterChunk ? '1' : '0');
+    params.set('hands-free', p.storySettings.handsFree ? '1' : '0');
+    params.set('repeats', String(p.storySettings.morseRepeats ?? 2));
+    params.set('recall-gap', String(p.storySettings.recallGapSeconds ?? 3));
+    params.set('voice-volume', String(p.voiceVolume));
     params.set('variable', p.variableStoryPitch ? '1' : '0');
     if (material.story) params.set('pitch', encodeNumbers([material.story.toneHz]));
   } else {

@@ -1610,6 +1610,39 @@ it('accepts legacy story setups without chunk mode and preserves explicit new ch
   ).toThrow();
 });
 
+it('round-trips hands-free device settings and rejects contradictory or unbounded playback preferences', () => {
+  seed('guest');
+  const backup = captureDeviceBackup('guest', 'Guest');
+  const setup = {
+    ...backup.shared.practicePreferences!.storySettings,
+    storyId: 'phrases-radio-more' as const,
+    handsFree: true,
+    morseRepeats: 3 as const,
+    recallGapSeconds: 2.5,
+    pauseAfterChunk: false,
+  };
+  const serialized = (change: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      ...backup,
+      shared: {
+        practicePreferences: {
+          ...backup.shared.practicePreferences,
+          storySettings: { ...setup, ...change },
+        },
+      },
+    });
+  expect(
+    validateDeviceBackup(serialized(), 'guest').shared.practicePreferences?.storySettings,
+  ).toEqual(setup);
+  for (const change of [
+    { pauseAfterChunk: true },
+    { morseRepeats: 4 },
+    { recallGapSeconds: 0 },
+    { handsFree: 'yes' },
+  ])
+    expect(() => validateDeviceBackup(serialized(change), 'guest')).toThrow();
+});
+
 it('keeps old device inventories and exact versioned QSO setups compatible without shared opt-in', () => {
   seed('guest');
   const backup = captureDeviceBackup('guest', 'Guest');

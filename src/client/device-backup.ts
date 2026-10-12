@@ -361,7 +361,7 @@ function validateSharedPreferences(value: unknown): PracticePreferences {
         if (
           !(
             key === 'storySettings' &&
-            field === 'pauseAfterChunk' &&
+            ['pauseAfterChunk', 'handsFree', 'morseRepeats', 'recallGapSeconds'].includes(field) &&
             !Object.hasOwn(setup, field)
           ) &&
           setup[field] !== expected

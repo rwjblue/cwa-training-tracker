@@ -277,14 +277,21 @@ def kokoro_wav(engine, generator, entry):
 
 
 def generate(args):
-    manifest = json.loads(MANIFEST.read_text())
+    manifest_path = Path(getattr(args, 'manifest', None) or MANIFEST).resolve()
+    if getattr(args, 'manifest', None) and (not manifest_path.is_relative_to((ROOT / 'data/cw-training').resolve()) or manifest_path.suffix != '.json'):
+        raise GenerationError('Speech manifest must be a JSON file inside data/cw-training.')
+    manifest = json.loads(manifest_path.read_text())
     generator = manifest['generator']
     provider = validate_generator(generator, args.provider)
     words = manifest['words']
     if not isinstance(words, list) or not words or any(not isinstance(entry, dict) for entry in words):
         raise GenerationError('Manifest words must be a nonempty list of entries.')
     public = (ROOT / 'public').resolve()
-    destination = (public / 'audio/cw-training/words').resolve()
+    asset_directory = manifest.get('assetDirectory', 'audio/cw-training/words')
+    if asset_directory not in ('audio/cw-training/words', 'audio/cw-training/passages'):
+        raise GenerationError('Unsupported speech asset directory.')
+    destination = (public / asset_directory).resolve()
+    index_path = destination / 'index.json' if getattr(args, 'manifest', None) else INDEX
     if not public.is_relative_to(ROOT.resolve()) or not destination.is_relative_to(public):
         raise GenerationError('Speech asset directory must stay inside the repository public directory.')
     paths = []
@@ -302,7 +309,7 @@ def generate(args):
     requested = {word.upper() for word in args.word} if args.word else None
     if requested and requested - {entry['word'] for entry in words}:
         raise GenerationError('Requested word is not in the manifest.')
-    index = json.loads(INDEX.read_text()) if INDEX.exists() else {'version': 1, 'clips': {}}
+    index = json.loads(index_path.read_text()) if index_path.exists() else {'version': 1, 'clips': {}}
     if not isinstance(index, dict) or index.get('version') != 1 or not isinstance(index.get('clips'), dict):
         raise GenerationError('Unsupported speech index.')
     if any(not isinstance(clip, dict) for clip in index['clips'].values()):
@@ -351,18 +358,19 @@ def generate(args):
         index['clips'][word] = clip
         print(f'{word}: {entry["pronunciation"]} -> {entry["path"]}', flush=True)
         # Every completed asset and index is replaced atomically; cached synthesis survives failures.
-        write_json(INDEX, index)
+        write_json(index_path, index)
         generated += 1
     if args.dry_run:
         print(f'Dry run: {generated} clips need writing; {api_requests} ElevenLabs requests; no output or API changes.')
         return
     index['clips'] = {word: clip for word, clip in index['clips'].items() if word in {entry['word'] for entry in words}}
-    write_json(INDEX, index)
+    write_json(index_path, index)
     print(f'{len(index["clips"])} word clips available; {generated} written.')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--manifest', help='Use an authored speech manifest inside data/cw-training')
     parser.add_argument('--provider', choices=('kokoro', 'kokoro-onnx', 'elevenlabs'), help='Validate the intended provider (default: manifest engine)')
     parser.add_argument('--word', action='append', help='Regenerate only this manifest word (repeatable)')
     parser.add_argument('--force', action='store_true', help='Regenerate unchanged clips; for ElevenLabs this also bypasses the response cache and incurs new requests')

@@ -678,8 +678,29 @@
 .passage-practice-options .field-hint {
   margin-block: 8px;
 }
+.passage-practice-options .checkbox-label {
+  display: block;
+  margin-block: 12px;
+}
+.passage-hands-free-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+  margin-block: 16px;
+}
 .passage-replay {
   margin-block: 8px;
+}
+.passage-playback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 8px;
+}
+.passage-playback-actions .button {
+  min-height: 44px;
+  flex: 1 1 auto;
+  justify-content: center;
 }
 .passage-catalog {
   padding-left: 24px;
