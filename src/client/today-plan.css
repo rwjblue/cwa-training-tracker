@@ -16,10 +16,10 @@
   line-height: 1.24;
   letter-spacing: -0.45px;
   margin: 9px 0;
-  color: #243f31;
+  color: var(--theme-ink, #243f31);
 }
 .today-plan-heading p {
-  color: #616e59;
+  color: var(--theme-muted, #616e59);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -34,7 +34,7 @@
   flex-shrink: 0;
   min-height: 44px;
   padding: 3px 0;
-  color: #415e3f;
+  color: var(--theme-sage, #415e3f);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -48,9 +48,9 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: #eef2e7;
-  color: #50614a;
-  border: 1px solid #e1e7d7;
+  background: var(--theme-raised, #eef2e7);
+  color: var(--theme-muted, #50614a);
+  border: 1px solid var(--theme-line, #e1e7d7);
   border-radius: 6px;
   font-size: 13px;
   line-height: 1.5;
@@ -60,7 +60,7 @@
 }
 .today-plan-session-hint {
   margin: -6px 25px 17px;
-  color: #50614a;
+  color: var(--theme-muted, #50614a);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -80,7 +80,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  color: #40563a;
+  color: var(--theme-ink, #40563a);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.5;
@@ -88,15 +88,15 @@
 }
 .today-plan-group-title span,
 .today-plan-disclosure summary > span {
-  color: #5c6b54;
+  color: var(--theme-muted, #5c6b54);
   font-size: 12px;
   border-radius: 4px;
-  background: #edf1e7;
+  background: var(--theme-raised, #edf1e7);
   padding: 1px 5px;
 }
 .today-plan-group-hint {
   font-size: 13px;
-  color: #62705b;
+  color: var(--theme-muted, #62705b);
   line-height: 1.6;
   margin: 2px 0 8px;
 }
@@ -110,7 +110,7 @@
   align-items: flex-start;
   gap: 11px;
   padding: 14px 0;
-  border-top: 1px solid #e7eade;
+  border-top: 1px solid var(--theme-line, #e7eade);
 }
 .today-plan-task:first-child {
   border-top: 0;
@@ -129,30 +129,30 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.6;
-  color: #2c4333;
+  color: var(--theme-ink, #2c4333);
   margin: 0;
   overflow-wrap: anywhere;
 }
 .today-plan-task.is-done h4 {
-  color: #5f6e57;
+  color: var(--theme-muted, #5f6e57);
   text-decoration: line-through;
 }
 .today-plan-started {
-  background: #f1eadd;
-  color: #745a30;
+  background: var(--theme-amber-surface, #f1eadd);
+  color: var(--theme-amber, #745a30);
   border-radius: 4px;
   padding: 2px 5px;
   font-size: 11px;
   line-height: 1.4;
 }
 .today-plan-task-meta {
-  color: #607057;
+  color: var(--theme-muted, #607057);
   font-size: 12px;
   line-height: 1.7;
   margin-top: 3px;
 }
 .today-plan-logged {
-  color: #496244;
+  color: var(--theme-muted, #496244);
   font-size: 12px;
   line-height: 1.7;
   margin-top: 2px;
@@ -169,7 +169,7 @@
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  color: #3d623d;
+  color: var(--theme-sage, #3d623d);
   font-size: 13px;
   font-weight: 500;
   min-height: 44px;
@@ -182,16 +182,16 @@
   text-underline-offset: 3px;
 }
 .today-plan-task-actions > span {
-  color: #5f6e57;
+  color: var(--theme-sage, #5f6e57);
   font-size: 12px;
 }
 .today-plan-task-actions > .today-plan-practice {
   min-height: 44px;
   padding: 8px 12px;
-  border: 1px solid #2b5038;
+  border: 1px solid var(--theme-primary, #2b5038);
   border-radius: 5px;
-  background: #2b5038;
-  color: #fff;
+  background: var(--theme-primary, #2b5038);
+  color: var(--theme-primary-ink, #fff);
 }
 .today-plan-task-actions > .today-plan-review {
   min-height: 44px;
@@ -210,10 +210,10 @@
 .today-plan-dismiss-actions .text-button {
   min-height: 44px;
   font-size: 13px;
-  color: #4e6345;
+  color: var(--theme-sage, #4e6345);
 }
 .today-plan-dismiss-actions > span {
-  color: #62705b;
+  color: var(--theme-sage, #62705b);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -221,8 +221,8 @@
   margin: 0 25px 16px;
   padding: 10px 12px;
   border-radius: 6px;
-  background: #f3f5ee;
-  color: #4e6345;
+  background: var(--theme-raised, #f3f5ee);
+  color: var(--theme-muted, #4e6345);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -236,7 +236,7 @@
   margin-top: 17px;
 }
 .today-plan-instructions {
-  color: #56694b;
+  color: var(--theme-muted, #56694b);
   font-size: 13px;
   margin-top: 7px;
 }
@@ -252,11 +252,11 @@
   overflow-wrap: anywhere;
   font-size: 14px;
   line-height: 1.7;
-  border-left: 2px solid #dce4d2;
+  border-left: 2px solid var(--theme-line, #dce4d2);
   padding: 4px 0 4px 12px;
 }
 .today-plan-disclosure {
-  border-top: 1px solid #e4e9dc;
+  border-top: 1px solid var(--theme-line, #e4e9dc);
   margin: 0 25px;
   padding: 12px 0;
 }
@@ -267,7 +267,7 @@
   gap: 7px;
   cursor: pointer;
   font-size: 13px;
-  color: #4e6345;
+  color: var(--theme-muted, #4e6345);
   font-weight: 600;
   line-height: 1.5;
   min-height: 44px;
@@ -294,8 +294,8 @@
   gap: 12px;
   padding: 13px 25px;
   font-size: 12px;
-  color: #627057;
-  border-top: 1px solid #e6ebdf;
+  color: var(--theme-muted, #627057);
+  border-top: 1px solid var(--theme-line, #e6ebdf);
   line-height: 1.6;
 }
 .today-plan-upcoming button {
@@ -303,7 +303,7 @@
   gap: 5px;
   align-items: center;
   font-size: 12px;
-  color: #4d6443;
+  color: var(--theme-muted, #4d6443);
 }
 .today-plan-empty,
 .today-plan-clear {
@@ -316,14 +316,14 @@
 .today-plan-clear h3 {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 19px;
-  color: #344f37;
+  color: var(--theme-ink, #344f37);
   line-height: 1.3;
   margin-bottom: 8px;
 }
 .today-plan-empty p,
 .today-plan-clear p {
   font-size: 14px;
-  color: #5f7056;
+  color: var(--theme-muted, #5f7056);
   line-height: 1.7;
 }
 .today-plan-empty > div,
@@ -332,13 +332,13 @@
 }
 .today-plan-empty-icon {
   border-radius: 9px;
-  background: #eff2e6;
+  background: var(--theme-raised, #eff2e6);
   width: 37px;
   height: 39px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #556e43;
+  color: var(--theme-muted, #556e43);
   flex-shrink: 0;
 }
 .today-plan-empty-actions {
@@ -357,7 +357,7 @@
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  color: #506749;
+  color: var(--theme-muted, #506749);
   font-size: 13px;
   line-height: 1.7;
   text-align: left;
@@ -371,10 +371,10 @@
   font-size: 13px;
 }
 .today-plan-footnote {
-  border-top: 1px solid #e6ebdf;
-  background: #fafbf5;
+  border-top: 1px solid var(--theme-line, #e6ebdf);
+  background: var(--theme-surface, #fafbf5);
   padding: 13px 25px;
-  color: #627057;
+  color: var(--theme-muted, #627057);
   font-size: 12px;
   line-height: 1.65;
 }
@@ -391,7 +391,7 @@
   margin: 0 25px 16px;
   padding: 14px 16px;
   border-radius: 8px;
-  background: #f8faf3;
+  background: var(--theme-surface, #f8faf3);
 }
 .today-plan > .material-library h3 {
   font-size: 15px;
@@ -426,14 +426,14 @@
 .today-plan-message {
   padding: 5px 25px 25px;
   font-size: 14px;
-  color: #5e7054;
+  color: var(--theme-muted, #5e7054);
 }
 .today-plan-error {
   margin: 0 25px 20px;
   border-radius: 6px;
-  background: #fcf1eb;
-  border: 1px solid #edcbbb;
-  color: #843d2c;
+  background: var(--theme-error-surface, #fcf1eb);
+  border: 1px solid var(--theme-line, #edcbbb);
+  color: var(--theme-error, #843d2c);
   padding: 11px;
   display: flex;
   flex-wrap: wrap;
@@ -568,7 +568,7 @@
   flex-wrap: wrap;
   gap: 7px 16px;
   margin: 0 0 8px;
-  color: #596650;
+  color: var(--theme-muted, #596650);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -581,7 +581,7 @@
 }
 .today-plan-resource-note {
   margin-top: 7px;
-  color: #875531;
+  color: var(--theme-error, #875531);
   font-size: 12px;
   line-height: 1.5;
 }

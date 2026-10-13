@@ -9,6 +9,8 @@ CWops. Official course material stays at the
 
 ## What it does
 
+- Light, forest dark, and system appearance choices, remembered on your device
+  and available without an account. The embedded simulator follows the same mode.
 - A word trainer with 70 common QSO words, 30 common English words, or your own
   list. Shuffle, repeat, adjust pauses, and optionally hear three Morse repeats
   followed by a prerecorded answer. Repeats, answers, and pauses play as one

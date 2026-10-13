@@ -5,7 +5,7 @@
   list-style: none;
   padding: 0;
   margin: 24px 0 36px;
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -80,7 +80,7 @@
   width: 33px;
   flex: 0 0 33px;
   font-size: 11px;
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
   transform: translateY(-5px);
 }
 .summary-chart-plot {
@@ -112,7 +112,7 @@
   transform: translateX(-50%);
   white-space: nowrap;
   font-size: 11px;
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
 }
 .summary-bar-area {
   display: flex;
@@ -168,8 +168,8 @@
   padding: 10px 12px;
   border-radius: 6px;
   background: var(--ink);
-  color: #fffefa;
-  box-shadow: 0 3px 12px #203b3233;
+  color: var(--theme-ink, #fffefa);
+  box-shadow: 0 3px 12px var(--theme-shadow, #203b3233);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -181,7 +181,7 @@
   bottom: -24px;
   left: 50%;
   transform: translateX(-50%);
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -192,7 +192,7 @@
 .summary-chart figcaption {
   font-size: 12px;
   line-height: 1.7;
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
 }
 .summary-breakdown {
   margin: 12px 0 18px;
@@ -209,7 +209,7 @@
 }
 .summary-breakdown caption {
   text-align: left;
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
   padding-bottom: 8px;
 }
 .summary-breakdown th,
@@ -225,7 +225,7 @@
 .summary-empty {
   text-align: center;
   padding: 28px 12px;
-  color: #5d6c61;
+  color: var(--theme-muted, #5d6c61);
 }
 .summary-empty h3 {
   margin: 12px 0 8px;

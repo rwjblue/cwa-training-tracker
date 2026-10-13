@@ -149,6 +149,11 @@ confidence in the user's workflow is.
 
 ## Coverage ownership
 
+`appearance.spec.ts` owns system changes, persisted appearance, cross-tab updates,
+pre-paint initialization under the site CSP, unavailable storage, account controls,
+and the simulator’s inherited color scheme. Appearance stays on the device and
+does not change account settings or public practice URLs.
+
 Keep exhaustive cases at the lowest layer that can detect the failure. A browser
 assertion should establish wiring or an interaction that lower layers cannot
 prove. When removing duplicate coverage, name the remaining test that owns the

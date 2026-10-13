@@ -5,11 +5,11 @@
 .welcome-intro {
   padding: clamp(28px, 4vw, 48px);
   border-radius: 12px;
-  background: #224d3d;
-  color: #fbfcf4;
+  background: var(--theme-active, #224d3d);
+  color: var(--theme-ink, #fbfcf4);
 }
 .welcome-intro > .eyebrow {
-  color: #d9e3cc;
+  color: var(--theme-ink, #d9e3cc);
 }
 .welcome-intro h1 {
   margin: 20px 0 16px;
@@ -20,7 +20,7 @@
 }
 .welcome-intro > p {
   max-width: 510px;
-  color: #e2e9dc;
+  color: var(--theme-ink, #e2e9dc);
   font-size: 15px;
   line-height: 1.65;
 }
@@ -31,16 +31,16 @@
   margin-top: 25px;
 }
 .welcome-sign-in {
-  color: #fbfcf4;
-  border: 1px solid #7f9b89;
+  color: var(--theme-ink, #fbfcf4);
+  border: 1px solid var(--theme-line, #7f9b89);
 }
 .welcome-sign-in:hover {
-  background: #315e4c;
+  background: var(--theme-active, #315e4c);
 }
 .welcome-access-note {
   display: block;
   margin-top: 14px;
-  color: #d9e3cc;
+  color: var(--theme-ink, #d9e3cc);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -58,7 +58,7 @@
   line-height: 1.3;
 }
 .welcome-section-heading > span {
-  color: #586950;
+  color: var(--theme-muted, #586950);
   font-size: 12px;
 }
 .welcome-tool-grid {
@@ -77,24 +77,24 @@
   text-align: left;
 }
 .welcome-tool:hover {
-  border-color: #789177;
-  background: #f3f6eb;
+  border-color: var(--theme-line, #789177);
+  background: var(--theme-raised, #f3f6eb);
 }
 .welcome-tool-icon,
 .welcome-private-icon {
   display: inline-flex;
   padding: 11px;
   border-radius: 9px;
-  background: #e8eddd;
-  color: #34573c;
+  background: var(--theme-raised, #e8eddd);
+  color: var(--theme-ink, #34573c);
 }
 .welcome-tool-orange {
-  background: #f5e9df;
-  color: #94502d;
+  background: var(--theme-raised, #f5e9df);
+  color: var(--theme-error, #94502d);
 }
 .welcome-tool-blue {
-  background: #e8efef;
-  color: #496d78;
+  background: var(--theme-raised, #e8efef);
+  color: var(--theme-blue, #496d78);
 }
 .welcome-tool h3 {
   margin: 18px 0 9px;
@@ -102,7 +102,7 @@
   font-weight: 600;
 }
 .welcome-tool p {
-  color: #61705e;
+  color: var(--theme-muted, #61705e);
   font-size: 13px;
   line-height: 1.65;
   margin-bottom: 22px;
@@ -122,8 +122,8 @@
   align-items: center;
   gap: 20px;
   padding: 24px;
-  background: #edf0e5;
-  border: 1px solid #dfe5d6;
+  background: var(--theme-raised, #edf0e5);
+  border: 1px solid var(--theme-line, #dfe5d6);
   border-radius: 10px;
 }
 .welcome-private-icon {
@@ -134,7 +134,7 @@
 }
 .welcome-private p {
   margin-top: 9px;
-  color: #57664f;
+  color: var(--theme-muted, #57664f);
   font-size: 13px;
   line-height: 1.65;
 }
@@ -152,7 +152,7 @@
 }
 .welcome-guide p {
   max-width: 450px;
-  color: #64705f;
+  color: var(--theme-muted, #64705f);
   font-size: 12px;
   line-height: 1.7;
 }

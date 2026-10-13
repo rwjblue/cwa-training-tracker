@@ -26,7 +26,7 @@
 }
 .material-list li {
   padding: 1rem 0;
-  border-bottom: 1px solid var(--border, #d1d5db);
+  border-bottom: 1px solid var(--border, var(--theme-line, #d1d5db));
   display: flex;
   gap: 1rem;
   justify-content: space-between;
@@ -48,7 +48,7 @@
   max-height: 55vh;
   padding: 1rem;
   line-height: 1.65;
-  border: 1px solid #aab3ba;
+  border: 1px solid var(--theme-line, #aab3ba);
   border-radius: 0.5rem;
 }
 .material-reader .field-hint {
@@ -70,5 +70,5 @@
 .material-editor .field > input,
 .material-editor .field > textarea,
 .material-editor .field > select {
-  color: #42543a;
+  color: var(--theme-ink, #42543a);
 }

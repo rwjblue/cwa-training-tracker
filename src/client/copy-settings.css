@@ -51,12 +51,12 @@
   align-items: center;
   min-height: 40px;
   font-size: 14px;
-  color: #626c5e;
+  color: var(--theme-muted, #626c5e);
 }
 
 .copy-settings .field-hint,
 .copy-settings-hint {
-  color: #626c5e;
+  color: var(--theme-muted, #626c5e);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -93,7 +93,7 @@
   width: fit-content;
   min-height: 44px;
   align-content: center;
-  color: #626c5e;
+  color: var(--theme-muted, #626c5e);
   font-size: 13px;
   cursor: pointer;
 }
@@ -116,7 +116,7 @@
 .copy-settings .copy-help {
   margin: 8px 0 0;
   padding: 8px 10px;
-  background: #f0f3ed;
+  background: var(--theme-raised, #f0f3ed);
   border-radius: 6px;
   font-size: 13px;
   line-height: 1.5;
@@ -126,7 +126,7 @@
   min-width: 0;
   margin: 12px 0 0;
   padding: 10px 12px;
-  border: 1px solid #c5cbc1;
+  border: 1px solid var(--theme-line, #c5cbc1);
   border-radius: 6px;
 }
 
@@ -173,18 +173,18 @@
   width: 100%;
   height: 100%;
   min-height: 44px;
-  border: 1px solid #a9b2a3;
+  border: 1px solid var(--theme-line, #a9b2a3);
   border-radius: 5px;
   font-family: var(--font-mono, monospace);
 }
 
 .copy-settings .copy-character-grid input:checked + span {
-  color: white;
-  background: #405d35;
+  color: var(--theme-primary-ink, white);
+  background: var(--theme-primary, #405d35);
 }
 
 .copy-settings .copy-character-grid input:focus-visible + span {
-  outline: 3px solid #ae6a16;
+  outline: 3px solid var(--theme-amber, #ae6a16);
   outline-offset: 2px;
 }
 
@@ -204,9 +204,9 @@
 .copy-settings:disabled .field input,
 .copy-settings:disabled .field select {
   opacity: 1;
-  color: #626c5e;
-  -webkit-text-fill-color: #626c5e;
-  background: var(--paper, #fff);
+  color: var(--theme-muted, #626c5e);
+  -webkit-text-fill-color: var(--theme-muted, #626c5e);
+  background: var(--paper, var(--theme-inset, #fff));
   cursor: default;
 }
 

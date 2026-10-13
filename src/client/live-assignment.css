@@ -4,9 +4,9 @@
   flex-basis: 100%;
   margin: 10px 0;
   padding: 12px;
-  border-left: 3px solid #6d805d;
-  background: #f4f6ef;
-  color: #2c4333;
+  border-left: 3px solid var(--theme-line, #6d805d);
+  background: var(--theme-raised, #f4f6ef);
+  color: var(--theme-ink, #2c4333);
   font-size: 13px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -18,7 +18,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: #294c34;
+  color: var(--theme-ink, #294c34);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

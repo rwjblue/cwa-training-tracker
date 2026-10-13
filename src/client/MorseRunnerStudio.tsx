@@ -46,6 +46,7 @@ import { clearRunnerResult, retainFinishedRunnerResult, readRunnerReview } from 
 import { runnerFrameSettings, runnerSettingsFromRoute, runnerSettingsRoute } from './tool-share';
 import './morse-runner.css';
 import { capturePracticeUsage, type PracticeUsage } from './practice-usage';
+import { useAppearance } from './appearance';
 
 export const DEFAULT_RUNNER_SETTINGS: RunnerSettings = {
   mode: 'SingleCall',
@@ -113,6 +114,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   },
   ref,
 ) {
+  const { theme } = useAppearance();
   const [run, setRun] = useState(() =>
     createRunnerRun(
       crypto.randomUUID(),
@@ -134,6 +136,11 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   const [retentionError, setRetentionError] = useState('');
   const current = useRef(run);
   const frame = useRef<HTMLIFrameElement>(null);
+  const syncFrameAppearance = () => {
+    const root = frame.current?.contentDocument?.documentElement;
+    if (root) root.dataset.theme = theme;
+  };
+  useLayoutEffect(syncFrameAppearance, [theme, run.runId]);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const stopFlight = useRef(new RunnerStopFlight());
   const inspected = useRef(!active);
@@ -426,6 +433,7 @@ const MorseRunnerStudio = forwardRef<MorseRunnerStudioHandle, Props>(function Mo
   }, [run.runId]);
 
   const configure = () => {
+    syncFrameAppearance();
     const element = frame.current;
     if (!element) return;
     if (current.current.status !== 'loading') {

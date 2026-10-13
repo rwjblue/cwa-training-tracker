@@ -8,7 +8,7 @@
   gap: 6px;
   margin-top: 9px;
   font-size: 12px;
-  color: #3b623e;
+  color: var(--theme-muted, #3b623e);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -19,7 +19,7 @@
 }
 .course-material-note {
   margin: 0 0 18px;
-  color: #596650;
+  color: var(--theme-muted, #596650);
   font-size: 13px;
   line-height: 1.65;
 }
@@ -38,7 +38,7 @@
 .plan-task-meta,
 .plan-footnote,
 .plan-form-hint {
-  color: #626e5d;
+  color: var(--theme-muted, #626e5d);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -54,7 +54,7 @@
   justify-content: space-between;
   margin: 0 28px;
   padding: 12px 16px;
-  background: #f5f6ef;
+  background: var(--theme-raised, #f5f6ef);
   border-radius: 8px;
 }
 .plan-status span:first-child {
@@ -89,7 +89,7 @@
   gap: 14px;
   align-items: flex-start;
   padding: 20px 0;
-  border-bottom: 1px solid #e8ebe3;
+  border-bottom: 1px solid var(--theme-line, #e8ebe3);
 }
 .plan-task:last-child {
   border-bottom: 0;
@@ -99,7 +99,7 @@
   height: 19px;
   margin-top: 3px;
   flex-shrink: 0;
-  accent-color: #426945;
+  accent-color: var(--theme-active, #426945);
   cursor: pointer;
 }
 .plan-task-body {
@@ -119,22 +119,22 @@
   overflow-wrap: anywhere;
 }
 .plan-task.is-done h3 {
-  color: #657060;
+  color: var(--theme-muted, #657060);
   text-decoration: line-through;
 }
 .plan-task-meta {
   margin: 4px 0 0;
 }
 .plan-overdue {
-  color: #8c6231;
-  background: #f8f0e2;
+  color: var(--theme-error, #8c6231);
+  background: var(--theme-amber-surface, #f8f0e2);
   padding: 3px 7px;
   border-radius: 4px;
   font-size: 10px;
 }
 .plan-dismissed {
-  color: #56624f;
-  background: #f0f3e9;
+  color: var(--theme-muted, #56624f);
+  background: var(--theme-raised, #f0f3e9);
   padding: 3px 7px;
   border-radius: 4px;
   font-size: 11px;
@@ -142,7 +142,7 @@
 .plan-notes {
   margin-top: 10px;
   font-size: 13px;
-  color: #596357;
+  color: var(--theme-muted, #596357);
 }
 .plan-notes summary {
   cursor: pointer;
@@ -151,7 +151,7 @@
   white-space: pre-wrap;
   line-height: 1.65;
   padding: 12px;
-  background: #f7f8f3;
+  background: var(--theme-raised, #f7f8f3);
   border-radius: 6px;
   overflow-wrap: anywhere;
 }
@@ -167,7 +167,7 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  color: #426945;
+  color: var(--theme-muted, #426945);
   border: 0;
   background: none;
   text-decoration: none;
@@ -182,13 +182,13 @@
 .plan-empty {
   text-align: center;
   padding: 35px 28px;
-  color: #657060;
+  color: var(--theme-muted, #657060);
 }
 .plan-empty svg {
   margin: 0 auto 12px;
 }
 .plan-empty h3 {
-  color: #293b2b;
+  color: var(--theme-ink, #293b2b);
   font-size: 18px;
   margin: 0 0 10px;
 }
@@ -204,25 +204,25 @@
 .plan-footnote {
   margin: 0;
   padding: 15px 28px;
-  background: #fafbf7;
-  border-top: 1px solid #e8ebe3;
+  background: var(--theme-surface, #fafbf7);
+  border-top: 1px solid var(--theme-line, #e8ebe3);
   font-size: 11px;
 }
 .plan-card > .alert {
   margin: 12px 28px;
 }
 .plan-dialog {
-  border: 1px solid #dfe4d8;
+  border: 1px solid var(--theme-line, #dfe4d8);
   border-radius: 18px;
   width: min(580px, calc(100vw - 28px));
   max-height: calc(100dvh - 48px);
   padding: 26px;
-  color: #25342b;
-  background: #fffefb;
-  box-shadow: 0 24px 90px #17221640;
+  color: var(--theme-ink, #25342b);
+  background: var(--theme-surface, #fffefb);
+  box-shadow: 0 24px 90px var(--theme-shadow, #17221640);
 }
 .plan-dialog::backdrop {
-  background: #17221677;
+  background: var(--theme-active, #17221677);
   backdrop-filter: blur(3px);
 }
 .plan-dialog-heading {
@@ -239,7 +239,7 @@
 .plan-dialog > p {
   font-size: 13px;
   line-height: 1.7;
-  color: #697365;
+  color: var(--theme-muted, #697365);
 }
 .plan-form {
   display: flex;
@@ -259,11 +259,11 @@
   width: 100%;
   font: inherit;
   font-weight: 400;
-  color: #263b29;
-  border: 1px solid #dce2d5;
+  color: var(--theme-ink, #263b29);
+  border: 1px solid var(--theme-control-border, #dce2d5);
   border-radius: 7px;
   padding: 10px 11px;
-  background: white;
+  background: var(--theme-inset, white);
 }
 .plan-form textarea {
   resize: vertical;
@@ -295,7 +295,7 @@
   font-family: inherit;
   font-size: 13px;
   line-height: 1.8;
-  background: #f6f8f0;
+  background: var(--theme-raised, #f6f8f0);
   padding: 20px;
   border-radius: 8px;
   max-height: 45vh;
@@ -378,7 +378,7 @@
 }
 .plan-task-links > .plan-task-practice {
   padding: 6px 10px;
-  border: 1px solid #c9d7bd;
+  border: 1px solid var(--theme-line, #c9d7bd);
   border-radius: 5px;
-  background: #eef3e8;
+  background: var(--theme-raised, #eef3e8);
 }

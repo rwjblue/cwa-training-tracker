@@ -17,12 +17,12 @@
 }
 
 .practice-tool-card:hover {
-  border-color: #789177;
-  background: #f3f6eb;
+  border-color: var(--theme-line-strong, #789177);
+  background: var(--theme-raised, #f3f6eb);
 }
 
 .practice-tool-card > svg {
-  color: #34573c;
+  color: var(--theme-sage, #34573c);
 }
 
 .practice-tool-card h2 {
@@ -33,7 +33,7 @@
 
 .practice-tool-card p {
   margin-bottom: 22px;
-  color: #61705e;
+  color: var(--theme-muted, #61705e);
   font-size: 13px;
   line-height: 1.65;
 }

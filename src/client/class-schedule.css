@@ -83,7 +83,7 @@
 }
 .class-meeting-details {
   margin-top: 4px;
-  color: #526353;
+  color: var(--theme-muted, #526353);
   font-size: 13px;
 }
 .class-meeting-details summary {

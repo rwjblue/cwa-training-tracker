@@ -69,6 +69,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   Pencil,
   Play,
   Plus,
@@ -78,6 +79,7 @@ import {
   Settings2,
   ShieldCheck,
   Signal,
+  Sun,
   Target,
   Trash2,
   TrendingUp,
@@ -124,6 +126,8 @@ import {
 import { useAccountData } from './useAccountData';
 import AccountSyncStatus from './AccountSyncStatus';
 import Modal from './Modal';
+import AppearanceChoices from './AppearanceChoices';
+import { useAppearance } from './appearance';
 import DeviceData from './DeviceData';
 import AccountLifecyclePanel, { type LifecycleReview } from './AccountLifecyclePanel';
 import { loadAccountLifecycle } from './account-lifecycle';
@@ -320,6 +324,8 @@ const sampleEntries: PracticeSession[] = [
 ];
 
 function App() {
+  const { theme } = useAppearance();
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const readPage = () => readAppRoute(window.location.hash).page;
   const [page, setPage] = useState<Page>(readPage);
   const [routeHash, setRouteHash] = useState(() => readAppRoute(window.location.hash).hash);
@@ -1441,6 +1447,18 @@ function App() {
             </span>
           </div>
           <div className="topbar-end">
+            <button
+              className="appearance-button"
+              aria-label="Appearance"
+              title={`Appearance · ${theme === 'dark' ? 'Dark' : 'Light'}`}
+              onClick={() => setAppearanceOpen(true)}
+            >
+              {theme === 'dark' ? (
+                <Sun size={17} aria-hidden="true" />
+              ) : (
+                <Moon size={17} aria-hidden="true" />
+              )}
+            </button>
             <span className="online-indicator">
               <i /> {user ? 'Your private workspace' : 'Open to every operator'}
             </span>
@@ -2064,6 +2082,20 @@ function App() {
           </footer>
         </main>
       </div>
+      {appearanceOpen && (
+        <Modal
+          title="Choose your appearance"
+          onClose={() => setAppearanceOpen(false)}
+          initialFocus="heading"
+        >
+          <AppearanceChoices />
+          <div className="appearance-done">
+            <button className="button dark" onClick={() => setAppearanceOpen(false)}>
+              Done <Check size={16} />
+            </button>
+          </div>
+        </Modal>
+      )}
       {deviceOpen && (
         <DeviceData
           key={scope}
@@ -4288,6 +4320,9 @@ function Account({
           </form>
         </section>
         <div className="account-side">
+          <section className="card account-card">
+            <AppearanceChoices />
+          </section>
           <section className="card account-card security-card">
             <div className="section-heading">
               <div>

@@ -11,20 +11,32 @@
   --runner-warning: #a15d37;
 }
 
-/* Embedded media queries follow the parent's color-scheme, including the
-   site's explicit theme selection; standalone use follows the OS preference. */
+/* The parent applies its appearance to this same-origin frame without touching
+   engine state. Standalone use continues to follow the OS preference. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
-    --runner-background: #111719;
-    --runner-panel: #192124;
-    --runner-border: #4a5759;
-    --runner-text: #edf2ef;
-    --runner-muted: #b3c0bb;
-    --runner-accent: #9bd4b6;
-    --runner-success: #7fcaa0;
-    --runner-warning: #e2a078;
+    --runner-background: #101b16;
+    --runner-panel: #1b2b23;
+    --runner-border: #52674f;
+    --runner-text: #e6ebdf;
+    --runner-muted: #abb9a8;
+    --runner-accent: #b7cda1;
+    --runner-success: #bfd5ad;
+    --runner-warning: #deb185;
   }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --runner-background: #101b16;
+  --runner-panel: #1b2b23;
+  --runner-border: #52674f;
+  --runner-text: #e6ebdf;
+  --runner-muted: #abb9a8;
+  --runner-accent: #b7cda1;
+  --runner-success: #bfd5ad;
+  --runner-warning: #deb185;
 }
 
 body {

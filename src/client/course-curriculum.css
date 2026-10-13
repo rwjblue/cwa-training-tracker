@@ -10,7 +10,7 @@
   margin-top: 8px;
 }
 .curriculum-overview > p {
-  color: #526353;
+  color: var(--theme-muted, #526353);
   font-size: 13px;
   line-height: 1.8;
   margin: 16px 0;
@@ -29,13 +29,13 @@
 }
 .curriculum-course-goals dd {
   margin: 0;
-  color: #526353;
+  color: var(--theme-muted, #526353);
   font-size: 13px;
   line-height: 1.8;
 }
 .curriculum-scheduling {
   margin-top: 12px;
-  color: #526353;
+  color: var(--theme-muted, #526353);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -66,7 +66,7 @@
 }
 .curriculum-sessions a[aria-current='page'] {
   background: var(--green);
-  color: white;
+  color: var(--theme-primary-ink, white);
   border-color: var(--green);
 }
 .curriculum-session-heading {
@@ -118,7 +118,7 @@
 }
 .curriculum-exercise-link small {
   font-size: 11px;
-  color: #526353;
+  color: var(--theme-muted, #526353);
   margin-bottom: 5px;
 }
 .curriculum-exercise-link strong {

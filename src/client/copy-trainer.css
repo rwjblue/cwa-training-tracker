@@ -1,6 +1,6 @@
 .copy-trainer {
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #dcdedb);
+  background: var(--paper, var(--theme-surface, #fff));
+  border: 1px solid var(--line, var(--theme-line, #dcdedb));
   border-radius: 12px;
   padding: clamp(16px, 2.5vw, 28px);
   max-width: 1080px;
@@ -43,17 +43,17 @@
 .copy-mode-tabs button {
   padding: 8px 12px;
   min-height: 40px;
-  border: 1px solid #b7bdb4;
+  border: 1px solid var(--theme-line, #b7bdb4);
   border-radius: 6px;
   background: transparent;
-  color: #354331;
+  color: var(--theme-ink, #354331);
   cursor: pointer;
   font-size: 14px;
 }
 .copy-mode-tabs button.selected {
-  background: #32412f;
-  border-color: #32412f;
-  color: white;
+  background: var(--theme-primary, #32412f);
+  border-color: var(--theme-primary, #32412f);
+  color: var(--theme-primary-ink, white);
 }
 .copy-mode-tabs button:disabled {
   cursor: default;
@@ -79,12 +79,12 @@
 }
 .copy-help {
   padding: 12px 16px;
-  background: #f0f3ed;
+  background: var(--theme-raised, #f0f3ed);
   border-radius: 6px;
   line-height: 1.6;
 }
 .copy-entry-panel {
-  border-top: 1px solid #d4d9d0;
+  border-top: 1px solid var(--theme-line, #d4d9d0);
   padding-top: 14px;
   margin-top: 8px;
 }
@@ -96,7 +96,7 @@
 }
 .copy-round-status > span {
   font-size: 12px;
-  color: #596151;
+  color: var(--theme-muted, #596151);
 }
 .copy-playback-controls {
   display: grid;
@@ -120,7 +120,7 @@
   margin: 0 0 4px;
   font-size: 13px;
   line-height: 24px;
-  color: #354331;
+  color: var(--theme-ink, #354331);
 }
 .copy-round-progress {
   display: grid;
@@ -136,30 +136,30 @@
   display: grid;
   place-items: center;
   min-height: 28px;
-  border: 1px solid #c8d0c2;
+  border: 1px solid var(--theme-line, #c8d0c2);
   border-radius: 4px;
-  color: #596151;
+  color: var(--theme-muted, #596151);
   font: 600 12px var(--font-mono, monospace);
 }
 .copy-progress-item.is-correct {
-  color: #2d5530;
-  background: #e7f0e3;
-  border-color: #729264;
+  color: var(--theme-ink, #2d5530);
+  background: var(--theme-raised, #e7f0e3);
+  border-color: var(--theme-line, #729264);
 }
 .copy-progress-item.is-incorrect {
-  color: #8b2e1d;
-  background: #ffebe4;
-  border-color: #c58975;
+  color: var(--theme-error, #8b2e1d);
+  background: var(--theme-raised, #ffebe4);
+  border-color: var(--theme-error, #c58975);
 }
 .copy-progress-item.is-skipped,
 .copy-progress-item.is-recorded {
-  color: #5b6054;
-  background: #f0f0e9;
+  color: var(--theme-muted, #5b6054);
+  background: var(--theme-raised, #f0f0e9);
 }
 .copy-progress-item.is-current {
-  color: #23371d;
-  background: #f0f6eb;
-  border: 2px solid #374e2f;
+  color: var(--theme-ink, #23371d);
+  background: var(--theme-raised, #f0f6eb);
+  border: 2px solid var(--theme-line, #374e2f);
 }
 .copy-trainer .copy-answer-field {
   margin: 0;
@@ -190,11 +190,11 @@
 }
 .copy-answer-field textarea:read-only,
 .copy-answer-field input:read-only {
-  background: #f8f9f5;
+  background: var(--theme-inset, #f8f9f5);
 }
 .copy-answer-field textarea::placeholder,
 .copy-answer-field input::placeholder {
-  color: #717969;
+  color: var(--theme-muted, #717969);
   font-family: var(--font-body, sans-serif);
   font-size: 14px;
 }
@@ -210,7 +210,7 @@
 }
 .copy-timing-hint {
   font-size: 11px;
-  color: #68715f;
+  color: var(--theme-muted, #68715f);
   line-height: 1.5;
   margin: 8px 0 0;
 }
@@ -218,7 +218,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-family: monospace;
-  background: #f3f3ef;
+  background: var(--theme-raised, #f3f3ef);
   padding: 12px;
   border-radius: 6px;
 }
@@ -230,10 +230,10 @@
 .copy-credit {
   margin-top: 20px;
   padding-top: 12px;
-  border-top: 1px solid #d9ddd5;
+  border-top: 1px solid var(--theme-line, #d9ddd5);
   font-size: 12px;
   line-height: 1.6;
-  color: #596151;
+  color: var(--theme-muted, #596151);
 }
 .copy-credit a {
   color: inherit;
@@ -274,7 +274,7 @@
 .copy-round-settings > summary {
   min-height: 44px;
   align-content: center;
-  color: #405d35;
+  color: var(--theme-ink, #405d35);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;

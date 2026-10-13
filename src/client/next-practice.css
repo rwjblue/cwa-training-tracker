@@ -31,10 +31,10 @@
 .next-practice h2 {
   font-size: 13px;
   font-weight: 600;
-  color: #526353;
+  color: var(--theme-muted, #526353);
 }
 .next-practice-guidance {
-  color: #526353;
+  color: var(--theme-muted, #526353);
   font-size: 13px;
   margin-block: 2px;
 }

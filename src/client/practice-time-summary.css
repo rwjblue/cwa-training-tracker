@@ -62,7 +62,7 @@
   width: calc(100% - 2rem);
 }
 .practice-time-summary .practice-time-date {
-  color: #55624f;
+  color: var(--theme-muted, #55624f);
 }
 .practice-time-hint summary {
   font-size: 0.82rem;

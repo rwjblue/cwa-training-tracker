@@ -1,0 +1,116 @@
+/* Dark colors are defined only for screens. Existing light colors remain the
+   fallbacks in component styles, including when printing a practice report. */
+:root {
+  color-scheme: light;
+}
+
+@media screen {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --theme-canvas: #101b16;
+    --theme-sidebar: #15221b;
+    --theme-surface: #1b2b23;
+    --theme-raised: #23352b;
+    --theme-inset: #14221a;
+    --theme-active: #2a3e2d;
+    --theme-ink: #e6ebdf;
+    --theme-muted: #abb9a8;
+    --theme-sage: #bfd5ad;
+    --theme-primary: #b7cda1;
+    --theme-primary-hover: #cbddb8;
+    --theme-primary-ink: #172219;
+    --theme-line: #354b3e;
+    --theme-line-strong: #48624c;
+    --theme-control-border: #52674f;
+    --theme-amber: #deb185;
+    --theme-amber-surface: #302a20;
+    --theme-error: #efa897;
+    --theme-error-surface: #34241e;
+    --theme-danger: #914b39;
+    --theme-blue: #aec8d8;
+    --theme-blue-surface: #233940;
+    --theme-overlay: #050c08c2;
+    --theme-shadow: #00000040;
+  }
+}
+
+.appearance-button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--theme-line-strong, #d8decf);
+  border-radius: 50%;
+  color: var(--theme-sage, #52624b);
+}
+
+.appearance-button:hover {
+  background: var(--theme-raised, #edf1e5);
+}
+
+.appearance-choices {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.appearance-choices legend {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.appearance-choices p {
+  color: var(--theme-muted, #617058);
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 8px;
+}
+
+.appearance-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.appearance-options button {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 6px;
+  border: 1px solid var(--theme-line-strong, #d8decf);
+  border-radius: 6px;
+  color: var(--theme-sage, #52624b);
+  background: var(--paper);
+  font-size: 13px;
+}
+
+.appearance-options button[aria-pressed='true'] {
+  background: var(--theme-primary, #274c3e);
+  border-color: var(--theme-primary, #274c3e);
+  color: var(--theme-primary-ink, #f9fbf2);
+}
+
+.appearance-choices .appearance-system-help {
+  font-size: 12px;
+  margin-top: 13px;
+}
+
+.appearance-done {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .topbar-end {
+    gap: 8px;
+  }
+}

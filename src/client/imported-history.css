@@ -8,7 +8,7 @@
   overflow-wrap: anywhere;
 }
 .imported-history p {
-  color: #59665c;
+  color: var(--theme-muted, #59665c);
   line-height: 1.65;
 }
 .imported-group {
@@ -54,7 +54,7 @@
   padding: 4px 0;
 }
 .imported-fields dt {
-  color: #59665c;
+  color: var(--theme-muted, #59665c);
 }
 .imported-fields dd {
   margin: 0;
@@ -75,7 +75,7 @@
   margin-top: 10px;
 }
 .imported-attempt > summary {
-  color: #59665c;
+  color: var(--theme-muted, #59665c);
 }
 .imported-attempt[open] {
   padding-bottom: 8px;

@@ -5,17 +5,17 @@
   margin: 0 0 16px;
 }
 .qso-practice-mode button {
-  border: 1px solid #bfcbb5;
+  border: 1px solid var(--theme-line, #bfcbb5);
   border-radius: 6px;
-  background: #fffefa;
+  background: var(--theme-surface, #fffefa);
   padding: 10px 16px;
-  color: #415836;
+  color: var(--theme-ink, #415836);
   font-size: 13px;
 }
 .qso-practice-mode button[aria-pressed='true'] {
-  background: #38513b;
-  border-color: #38513b;
-  color: #fff;
+  background: var(--theme-primary, #38513b);
+  border-color: var(--theme-primary, #38513b);
+  color: var(--theme-primary-ink, #fff);
 }
 .qso-copy-region[hidden] {
   display: none;
@@ -23,7 +23,7 @@
 .qso-copy-form {
   margin: 24px 0 16px;
   padding-top: 24px;
-  border-top: 1px solid #d8e0d0;
+  border-top: 1px solid var(--theme-line, #d8e0d0);
 }
 .qso-copy-heading {
   display: flex;
@@ -32,7 +32,7 @@
   gap: 12px;
 }
 .qso-copy-heading h3 {
-  color: #36523a;
+  color: var(--theme-ink, #36523a);
   font-family: Georgia, serif;
   font-size: 23px;
   font-weight: 500;
@@ -40,7 +40,7 @@
 .qso-copy-heading p,
 .qso-copy-instructions,
 .qso-copy-actions p {
-  color: #526449;
+  color: var(--theme-muted, #526449);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -61,14 +61,14 @@
 }
 .qso-copy-stations fieldset {
   min-width: 0;
-  border: 1px solid #d1dcc7;
+  border: 1px solid var(--theme-line, #d1dcc7);
   border-radius: 7px;
   margin: 0;
   padding: 15px;
 }
 .qso-copy-stations legend {
   padding-inline: 6px;
-  color: #3c5735;
+  color: var(--theme-ink, #3c5735);
   font-size: 13px;
   font-weight: 600;
 }
@@ -78,7 +78,7 @@
 .qso-copy-field label {
   display: block;
   margin-bottom: 6px;
-  color: #4a6040;
+  color: var(--theme-muted, #4a6040);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -87,16 +87,16 @@
   width: 100%;
   min-width: 0;
   padding: 11px 10px;
-  border: 1px solid #becbb2;
+  border: 1px solid var(--theme-control-border, #becbb2);
   border-radius: 5px;
-  background: #fffefa;
-  color: #334e2c;
+  background: var(--theme-inset, #fffefa);
+  color: var(--theme-ink, #334e2c);
   font:
     14px ui-monospace,
     monospace;
 }
 .qso-copy-field input[aria-invalid='true'] {
-  border-color: #9b6232;
+  border-color: var(--theme-control-border, #9b6232);
 }
 .qso-copy-feedback {
   display: grid;
@@ -107,18 +107,18 @@
   overflow-wrap: anywhere;
 }
 .qso-copy-status {
-  color: #536449;
+  color: var(--theme-muted, #536449);
 }
 .qso-copy-status.is-correct {
-  color: #28553b;
+  color: var(--theme-ink, #28553b);
   font-weight: 600;
 }
 .qso-copy-status.is-incorrect {
-  color: #865026;
+  color: var(--theme-error, #865026);
   font-weight: 600;
 }
 .qso-copy-expected {
-  color: #3f5736;
+  color: var(--theme-ink, #3f5736);
 }
 .qso-copy-expected strong {
   font-family: ui-monospace, monospace;
@@ -129,7 +129,7 @@
 }
 .qso-copy-extras summary {
   cursor: pointer;
-  color: #42593a;
+  color: var(--theme-ink, #42593a);
   font-size: 13px;
   padding-block: 8px;
 }
@@ -149,9 +149,9 @@
 .qso-copy-result:not(:empty) {
   margin-top: 16px;
   padding: 14px 16px;
-  background: #eef2e7;
+  background: var(--theme-raised, #eef2e7);
   border-radius: 6px;
-  color: #3c5634;
+  color: var(--theme-ink, #3c5634);
   font-size: 13px;
   line-height: 1.8;
 }
