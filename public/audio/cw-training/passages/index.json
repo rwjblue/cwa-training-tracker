@@ -1,643 +1,1027 @@
 {
   "clips": {
     "A BLUE SKY": {
-      "inputHash": "51bc66ef5a0218c013f9aff3a7b931d03f78ece391d5cecbf0db2d239320ef05",
-      "sha256": "73aedfeafd37bd2822f62ec8eabc8b5293ba8f79e82fbdf66891a8a7754cf0b9",
+      "characterCost": 4.0,
+      "inputHash": "40b0a0ed3574ed0a0494d527ba17f83c698392f57e835371fe1bd5418427f327",
+      "requestId": "yng0J1QvAKhGMw5PxCZM",
+      "sha256": "d2f460dd59a9461d43e2493747b80a5920dd50717a2413b2171fb1d19eaf6649",
+      "sourceSha256": "752c5a2fcd81a2f9410a43026b82936d978dd73b1bb4405342446a5f1371c1c1",
       "url": "/audio/cw-training/passages/9224b8bc70cbbc2f.wav"
     },
     "A CLEAN PLATE": {
-      "inputHash": "63b7d98c95aec840d5b7fa6cb9a943b26399b4b5716d99b6b4500029f008953d",
-      "sha256": "75ab4d8f3fd73b725f81034c34b06c11d213150c3eb2a1cd929599bc63ea24d1",
+      "characterCost": 5.0,
+      "inputHash": "f2c1d4aaab6c26c89b8776f3e9b8ce7442f65778f23c28c8a3906fe7ac2813f0",
+      "requestId": "EjWUVJBIawFratxNLcyH",
+      "sha256": "09a804d069cd40d9a630a261a51cd03e3b61909903bd9573f153629d0099bdac",
+      "sourceSha256": "a6a7db7acff19714a65edcb1ac6088dfce153733affd6b348506504100ef0773",
       "url": "/audio/cw-training/passages/eed16c75e0086ffb.wav"
     },
     "A CLEAR CALL": {
-      "inputHash": "b374b45d846bb2a7a916a33a99048121caf115e6f30b4343655a08e53910a87e",
-      "sha256": "7273a76b6630fe17263cf0e6cd1ce66585d8da8bab34a77fc49dc0c2109cf26e",
+      "characterCost": 5.0,
+      "inputHash": "da7a2dafaacbbaefef9f44439de9f142552a079d09bbf0aaa0a872c67f408cb2",
+      "requestId": "zykF0eIvFQbP9Q1szbK9",
+      "sha256": "cea02bbf1f468124ba1b4d157ccf6f585ed8bc5097e95d4ad3fb383eecdc4797",
+      "sourceSha256": "483aa8e764558d3cf16a7f5b7884e8b33892a951f0f2d7d43b9471b482e29c90",
       "url": "/audio/cw-training/passages/43a2bb15542a3708.wav"
     },
     "A COOL WIND": {
-      "inputHash": "5cf7ea1ad9412718526fab2e156ac042f653e6d123701805e67fabeaa5cc4eb2",
-      "sha256": "c4e90f7eb6ba6326e61f31560c670fef69505e0088d31290e3e46b9503dc0cf3",
+      "characterCost": 4.0,
+      "inputHash": "fafdc98bfd54d89bfdf46a9016c611c5c99adbfc73029e834a38db9903e05722",
+      "requestId": "ZDPACFeiGqHGRkDbqgrD",
+      "sha256": "3875d9ae6b059100624db3ce67f5dd4dd546760be3d04cbe0c7b515c0bf5281e",
+      "sourceSha256": "9d2ba9f17b25e1891427d3382fefd4aaac2a436daa0792b28e98558918c5c34e",
       "url": "/audio/cw-training/passages/609f7865729b12ae.wav"
     },
     "A COOL WIND BLOWS.": {
-      "inputHash": "0ae15df9f0a5b3765c29807c72749c3a49b257d97a013cb9656cb6648cadcdf8",
-      "sha256": "dc3d4b478495b53c6409f6dbb9e49ffe6ad63533a739eed32bd0ce8922c119a4",
+      "characterCost": 7.0,
+      "inputHash": "fed81cc1c34ebd700f3ebf662e3a4ee68b6c609b4810f6e3b424680daa151404",
+      "requestId": "H94WgFAlJ098Zj5IkTpv",
+      "sha256": "b12bf03829c6fea621f17d71ac63086997162e88b27cb8308e907ad6afa2d051",
+      "sourceSha256": "79094d769fb19e29b5ed5035b2f47881fabe538bcdb97cb034c6925092948fba",
       "url": "/audio/cw-training/passages/5552c31135e80b9f.wav"
     },
     "A DARK CLOUD": {
-      "inputHash": "c770368cb524e371493d5a70fcc1eae20d20b33e409a74a66b2f7f419b9089c6",
-      "sha256": "749fc31827f76b13723aa230bbb029ef1534ae10a17167c6c1575d8e08b57355",
+      "characterCost": 5.0,
+      "inputHash": "7da9bc7534263af3110446265ca8eaa9590f637920c82204d6f297bd4652bed0",
+      "requestId": "4gmm4j4ChdXAdWjNKUSV",
+      "sha256": "827e6333fe657810cc93eaefbe6aeb19858d39a78673bdae018462188741b405",
+      "sourceSha256": "7723c620320d37559aacda7adb81c0ff2a674c36baff527df3d83c6077739cb3",
       "url": "/audio/cw-training/passages/cfdd31286c156463.wav"
     },
     "A FAINT SIGNAL CAME BACK FROM A STATION NEAR THE SEA.": {
-      "inputHash": "0545ff77b2cf8536ce966e43d5b6d899eea3d25a97ac2cbad7c0160969ca596a",
-      "sha256": "a2a8d2712b59ee90a764f60661b3679f5f754ad1c0f3bab7cfc68b23c6d35e38",
+      "characterCost": 21.0,
+      "inputHash": "956c9adf611addb373d311735d701968ac14a722cd2e4fa19fc40d48044cdb48",
+      "requestId": "VhtOvWuwqqXt2k1MREY9",
+      "sha256": "9a39d4ed605d04910a87d1ac4925ad88107013dcfe1a7b56dce6e0ba346a2e49",
+      "sourceSha256": "417eeb36b6aea8398f267fa8b560f92e503b39d91448dbef25fe5f4c513a095d",
       "url": "/audio/cw-training/passages/295c17da40b5db61.wav"
     },
     "A FRESH APPLE": {
-      "inputHash": "7f65c8728bbe6defd1dc508015997c4aca4a7868b452655224640321082d2dd4",
-      "sha256": "55575a1f46a224ae4ecab632595621df850a32ff1f05b6c20e7d1d0677f4a674",
+      "characterCost": 5.0,
+      "inputHash": "9ffbdbcb72b91e64bae6dc90605e29fef3d65508af79787d8c197a8e12bfc6a4",
+      "requestId": "5cF5UChgzSP5ewAEcQEN",
+      "sha256": "ed5e878bc8715445652dc748c4cec1899038c9698a06f7e2ef0aae403d9e7562",
+      "sourceSha256": "d6b4594a5899905e1cee34a695702f3707833a89ae95096f33a552da27d8e5bb",
       "url": "/audio/cw-training/passages/d856b6078ceb0d6e.wav"
     },
     "A FULL CUP": {
-      "inputHash": "a22730abe06eabef6e6ffe3b188ed2ba279b4d3774cc6d4857530134d954bfbf",
-      "sha256": "db7e84cf257c465700f88b4e4b60ff3c4d1fcaeff32982cc725eebf489c1fdaf",
+      "characterCost": 4.0,
+      "inputHash": "33d71b5bb33e31269fc3c19df7a6018f5df68521451f651724a7667a12c87c5c",
+      "requestId": "fp701UHyNhzRyjtJ2t0H",
+      "sha256": "5af9388dfcabb486b121a27024dacd33f6bf6005b7184255e49f623896747d83",
+      "sourceSha256": "58fca0014c92c9d37b0b8ccba82111d60ffdbdac2ab34d16adf23e9cb21d860e",
       "url": "/audio/cw-training/passages/30f411c8d08c4a57.wav"
     },
     "A GLASS BOWL": {
-      "inputHash": "97d97bd3b8f4e95552b63181e36c142ed76216321b31388208dccccbc68c5b97",
-      "sha256": "5b8d5dcf18c09a6e9b6fa61cbdafd080be3b1d325123490af15f43cd6d5e7eea",
+      "characterCost": 5.0,
+      "inputHash": "55a28c0d64da9ae3181b66082ab8290ba0904e0955f65b3ee90693595ef614bc",
+      "requestId": "oBkvtq3g3gpNdnGqJmOC",
+      "sha256": "450e8533697103c54af5eb9b6cc35e8efd40224d58b3ef1a24a5fdf3b3530396",
+      "sourceSha256": "9048080cbb9f2163fadf88afa252649b46c31bf60a8396129b4778b40ef833cd",
       "url": "/audio/cw-training/passages/eddbd6ae9d455505.wav"
     },
     "A GOOD BOOK": {
-      "inputHash": "92453cc4bfde3cc6a1191c44932c8306b6a0c64fa53164b43dc5cfcc9805ec09",
-      "sha256": "cacc0b0dd002138a563afd1c31ae659f52dfbef14541eca7332c4a74bfe6f578",
+      "characterCost": 4.0,
+      "inputHash": "04d83c7677d780415d3576f0bf30b21ff762f638233dd74359192287bacdc758",
+      "requestId": "P7xXk1fBUqQHp2PFyAPm",
+      "sha256": "8522510a67528bf18718fe5dc54a8a514c230b944581e37a66ef9bdd362d1a38",
+      "sourceSha256": "1057bc4956dd8c01101fd13f247da0bf5b911c46bc9c2afcf4573760bcab86ec",
       "url": "/audio/cw-training/passages/17558c3cc1523924.wav"
     },
     "A LIGHT RAIN": {
-      "inputHash": "5716f91b32a757176c3aab4e8f5a920bce84d82571ec5fbd4371ca3d12a8848d",
-      "sha256": "12b27bfc02b87a8b31ecac7c84cd4326ccb589fd25add42592f4e9a2246c83d2",
+      "characterCost": 5.0,
+      "inputHash": "74de226ee28c47879f1e9aaf435ae199f9f59ede90d80dc5757f22aed827cfae",
+      "requestId": "nfYALKt8KXSNOrmiwKw8",
+      "sha256": "42bc747a2d644d579c266e7163eab126efc151ca351f67ba0c3cb5fdd404af30",
+      "sourceSha256": "f18ac41cdaf7f744680bcdd836bea73eb1313c1ca1c4094cc54211d1810fd0cd",
       "url": "/audio/cw-training/passages/81ddecf823582012.wav"
     },
     "A LITTLE NOISE": {
-      "inputHash": "ac41951993adc8bfab8641922d1461fee3dd50cd5746cd286505e7d1da504b56",
-      "sha256": "4d1b035a7e08c3e5cae112a0397fb9c0fdfb8c42d58a5474977b0ab87763e764",
+      "characterCost": 6.0,
+      "inputHash": "9c43fa85c0f5c9d0a486bf1f4ed1bb3cd6f70b3d2acd75de91d1ec899ba7307a",
+      "requestId": "Euf5Tcw5y7UDiVRAp0pW",
+      "sha256": "0933dc1455d7e29ece7048026efde17d57c0afbfaa218e7346d9f72aa789b26f",
+      "sourceSha256": "0226ba0481d1bf1908216312599512c9d4ffa40f3d922a4ec5d9f61dbf4be252",
       "url": "/audio/cw-training/passages/8008d00c5e8e0eb6.wav"
     },
     "A LONG WIRE": {
-      "inputHash": "04d94a8ac25289ecee3b58ba96dcf2321330fd6b12e85196c94749e121933563",
-      "sha256": "dbbc0b4b7387a0db9b5af7e14255326cb5bfbdcf2a08eee2831b76a7173e2717",
+      "characterCost": 4.0,
+      "inputHash": "7e8979cc5b6c9f76a6c78f02da3375c1ed9a065eaac2dd640bdaf324d27cfa98",
+      "requestId": "6gh5F2sRXpfneFf57oas",
+      "sha256": "c72c62dfed1c3e70554f947e6dd55fe02b83b0dbe18766e578420b09f2d5e3aa",
+      "sourceSha256": "7f5e8f8ae767b5d6d12789134bd44e6ee4fbfbdf599d4696668d24ff960eb99a",
       "url": "/audio/cw-training/passages/4f5705731481ab7e.wav"
     },
     "A NEW CONTACT": {
-      "inputHash": "11be5cd158e239ea847f58b7682e6514c0fba67b0ba89f11d74cbdbef65aae33",
-      "sha256": "cd3fd3cbe32c6fa1998d31765825148bede6623bc1c74ac15f2838f1ec01800e",
+      "characterCost": 5.0,
+      "inputHash": "a110742a680fa12b1a896703b395e13766585f06a892cbaa6324a1f12cc34173",
+      "requestId": "k87BUiy8icuyuPmxmvKy",
+      "sha256": "b87e79a70d6a50e09d3d5ed09ba5a97fbff296b655ae3eb7e53f5a9b5ec73220",
+      "sourceSha256": "c69ec608f47f23873fdd1e603195e775ff9e07c8314c4b1153f3735d0d0a9b1b",
       "url": "/audio/cw-training/passages/0abaca578524e6e8.wav"
     },
     "A QUIET PARK": {
-      "inputHash": "533a160db0ee34990f893a36ca23b2b554f3074f52b5792c5923c321a6fda43e",
-      "sha256": "90c434291d7b90ed5acd72ba093b5388841ca539ca74fd9cd89558d2491660d1",
+      "characterCost": 5.0,
+      "inputHash": "8524b7902d1582b9bfbcae744890a7309f115adc12c72601026b2d141c38f7b3",
+      "requestId": "73k1To07dXIy6Amx7NjW",
+      "sha256": "9e50f9d18c843190de452b5d3786c0efb0b2e0ab1219ca499bf1b59974a0ca7b",
+      "sourceSha256": "d8ca8264328c27fafceb7696ab5b1c245d49b75309c3034796184c39d73a0e60",
       "url": "/audio/cw-training/passages/66826c808f978912.wav"
     },
     "A SMALL BIRD": {
-      "inputHash": "8ad2c650fbbc106d89ef19ff214bcebc0197719e3d97d567f6f63a1a46e8c616",
-      "sha256": "3014a4ff39e47a54a65cab9b1e13f8334356d4d47bb04b68a0e18e0b1ce8b107",
+      "characterCost": 5.0,
+      "inputHash": "8d5e43fcdeab57cd1d972b173a82e1d44db0ea254d5b23aa1b052ac76af0a3b5",
+      "requestId": "1L9E4N7BktvNtp07xqJl",
+      "sha256": "00db02b7157da33921c3dd79e7060e3acdedc788cf2b45da3a8e76f53141d2d4",
+      "sourceSha256": "c8495edbec2cbfac85c3d3a836c39b3788cea2b61225faf9e0528c7556ae3671",
       "url": "/audio/cw-training/passages/d3d50bc187c3b403.wav"
     },
     "A SMALL BIRD SINGS.": {
-      "inputHash": "2b8aa2260ba1c637610a7d6c677da3a401f6814ed43805f833793840504dbbdf",
-      "sha256": "e197f68a5d38914e5fbd2208a1f1f5641b5702d8628bc43bb1d2993cd1c3aa52",
+      "characterCost": 8.0,
+      "inputHash": "d99e2addc4d2ffc2bb738ca147530acd2c547e5afdcba9809385cfb05ec35bee",
+      "requestId": "JX3T9L70fwaHccC45Z2o",
+      "sha256": "c95b009abce1fb91b4784c0e6c3ad165019e70ff1fb30e2b54026879af0c5e2a",
+      "sourceSha256": "0e5c3d5d16fd23e4a712587654fa1fb490804deb0084ef393f2735bea6dce545",
       "url": "/audio/cw-training/passages/979c3a942a946c52.wav"
     },
     "A STRONG SIGNAL": {
-      "inputHash": "834cbb84895a45bbe32ee07f5bc31b3b1c4f45fdb0db54430c2b169b0410241a",
-      "sha256": "fcc8cfc58ad2c9c28e634d714864be595c89043274ea2255bb65ed1c29c78065",
+      "characterCost": 6.0,
+      "inputHash": "f80377e126f20f928331fcf6cf2a94988916136519cdc2279bef68d86bdd9daf",
+      "requestId": "BcfcRTHTnNYGADF8PpMA",
+      "sha256": "c2e59525c822f6d3bcf1fdfec2e503115f6d32c7a3b48785ad73d33d993a5452",
+      "sourceSha256": "109b08e7df74247cdfae90bcb3ff9f205ca9e0d65088a79a5499768ede887b13",
       "url": "/audio/cw-training/passages/3be212d4cc9ec900.wav"
     },
     "A WARM DAY": {
-      "inputHash": "f057c6e53945d65fb9db8bef1d00cba799bbc97de103bf16da2dc51c57ed5872",
-      "sha256": "1e6f4728140d86d0e98e02043e0a69e287b90ae156d91bee906a306b49b676ea",
+      "characterCost": 4.0,
+      "inputHash": "9091cf926a59173099dbd1139db01850e46c6c85468a63ff1e6924fb2358bdca",
+      "requestId": "pDkHtUeTrCu7E6cURyjq",
+      "sha256": "58f09327d809ea4cf8f1acb2da8cabf3d547aca426a9e2e7f94bcbd5f5db3e08",
+      "sourceSha256": "696149efa4d74389d6584d26e331a77f841f1275a93003d5e855b94b7086689c",
       "url": "/audio/cw-training/passages/bfb8bd95dac4b975.wav"
     },
     "ACROSS THE FIELD": {
-      "inputHash": "cd3d119ac5109cd90e927dc5571ce86055c812c14d5ea3c3405dd9e063538c4d",
-      "sha256": "8c51491a625be9cbf874e8c9c6c29d05d13d229cea4d5e95957d56744fc5774a",
+      "characterCost": 6.0,
+      "inputHash": "64d354ffbb9fc35c8cfd9fb5569b8a06b22861bc4cd2e3055456601022cff567",
+      "requestId": "ZjK3PKAYPIMIZp4Vsubf",
+      "sha256": "6632c9626f929c3be91c4378dad406d13e0cd203275cee79fdf60446b67d7665",
+      "sourceSha256": "875a00f316bcf5f822e31e439b60576b0e68698f73d83899e4798442ae6353e3",
       "url": "/audio/cw-training/passages/74ff74af1fcefc41.wav"
     },
     "AFTER A SHORT PAUSE THE ANSWER CAME BACK.": {
-      "inputHash": "d01b34de45e4215f4d57eaac389d09fea044186be7cc0a35f898b29c716c4a75",
-      "sha256": "ff3df906ff08921a6c75edb53a3514c7d6ce55ebfc7f44387428b929ce27fa19",
+      "characterCost": 16.0,
+      "inputHash": "7b78a2b4dc74dbebeaa96d88493766fb0c228a731db22ab2b465c68229837ca8",
+      "requestId": "be6z5s5eltqqEbcVmw2y",
+      "sha256": "4d3916b71b5be05e749d675c07e1ebdfa5616d4dcc6c448a11b96705b0f3e90b",
+      "sourceSha256": "c55c3fb53145141bf850d41121ecbd2a4df7bc86a8425c1f1cd17d957664c28d",
       "url": "/audio/cw-training/passages/43cd8d9f8f6c4f97.wav"
     },
     "AFTER LUNCH": {
-      "inputHash": "dbf74750ae1a1c7a794f34698c526adc82ea9063e4277fb84709db349409646a",
-      "sha256": "7c551c9cf06ba731e65b5d6d5e419ce1249b9d912aaf0a5b3e56500e6e461010",
+      "characterCost": 4.0,
+      "inputHash": "cb61e628f03a50f448038ed83899a62dfcf582bc5966dd48468d1db082c98037",
+      "requestId": "b11zFcsyt3LhYUifNosj",
+      "sha256": "f08522ace240850768194aa19eeb381a0e2e9ac42775590a5b96410edca0d1e7",
+      "sourceSha256": "deb0211c17fa818993a8576dedccbcbda8d881a77711073d96dec3c108f5db53",
       "url": "/audio/cw-training/passages/217a44c029a55daa.wav"
     },
     "AFTER THE MEAL": {
-      "inputHash": "136a665fb6bec4a6dd1cd1dff48a14de21c9b0805e9bea3e3aa9b2e998441d2d",
-      "sha256": "454d134ba2f06ed8b8b21b7983b1c2e4f7be6dc3d5f9ad7c8020f54127dff8a7",
+      "characterCost": 6.0,
+      "inputHash": "908f722fc0ba36fcbe7f94cc65dc0fafe4094095f2842305c748fe8150ae8fc9",
+      "requestId": "GnQxupfE5qaUJJmmQUkQ",
+      "sha256": "90d1cd5f64516fd57edb41329fb68a5c1e438177c7d47e6348c5f0a5e47ae9cf",
+      "sourceSha256": "8b9f8079b1fcac6f17ed81c652dcfae7385bc4559dee5f7ba72318fab49d0c33",
       "url": "/audio/cw-training/passages/68db429ce92e2470.wav"
     },
     "ALONG THE PATH": {
-      "inputHash": "fa1697af2fe51f2cf107aa2072c13abd74c0affa6cec0bd0c1fdd897b578238a",
-      "sha256": "fc506470165196a711ab775e6d0acec3216daeb522c4f7e05f1553373f35870b",
+      "characterCost": 6.0,
+      "inputHash": "1747a652c9a5199c194e24366d565314b221c1ac99f7e26fb28434f0aaaadbe1",
+      "requestId": "tOmpyuY76JvwdeVQm1sF",
+      "sha256": "0215f66f24caad579e9a495a27e0b20c66af77d80ac6866a0af1dd3b1e2071a8",
+      "sourceSha256": "eef4d541e8e8848868b08b0c99261981cc51dee46ec3108ccbc628404fcf69c2",
       "url": "/audio/cw-training/passages/6ab6a524b409e76b.wav"
     },
     "AT THE EDGE OF THE WOODS MAY FOUND A SMALL BLUE STONE.": {
-      "inputHash": "c1c9ebd82a1dbc35053fe943bcfce1081062ceb6b6ef47fe6eea3989e525d4f3",
-      "sha256": "daedd4f5f60785fca390e5a7cfd9f08fdf7ca5a0e4a7306705ac71f7f4f0bc68",
+      "characterCost": 22.0,
+      "inputHash": "2eb87f568d3c13251ccc50cdf2750b73f72f49a3b29829300a3a564be35bd046",
+      "requestId": "d0Xe82Pj4NZqhVq3RWqh",
+      "sha256": "3aa102ba58273a0c4e52db1b5d53acde7c7c24fd846e90574610da8c3b99deec",
+      "sourceSha256": "8a7f1b402e6a9126824d49959a671d60ade78dbafe3612df2f214563958556a3",
       "url": "/audio/cw-training/passages/5fc85f8de7ca9c25.wav"
     },
     "BEFORE THE STORM": {
-      "inputHash": "84a4319b7bc9bdb9803cf016af440f6d1456e3ae73bc08a66a0de17ad887d3bc",
-      "sha256": "c07c3e200085fde387e72649de981c736bf6321a39fe647169e9d91d0e393722",
+      "characterCost": 6.0,
+      "inputHash": "8cbb4b33e4ddd04f2a6c8c5b55f8070049303e11c1bc844b15a13de42b782e66",
+      "requestId": "aRhDxAf1pVgdn8UHGp42",
+      "sha256": "240bbfeac37255be7dab97c04715150b7413db05f923d079ff9f38faeab99bd2",
+      "sourceSha256": "93953a9da8527f9fe85927eaf11c884251819f8070fee3a41f484d622858a4e4",
       "url": "/audio/cw-training/passages/5da5be188d4ab065.wav"
     },
     "BEHIND THE DOOR": {
-      "inputHash": "f379177239eada3b626c5129582e997ce227c1882760500edf09cb46c7d968a5",
-      "sha256": "4becc6cf9d353f3d23f3eab3e7e1a7f92ef0b321c371e14a034057f2c031e562",
+      "characterCost": 6.0,
+      "inputHash": "afe9efb5ceb8a0633003b1a96be019bd4d16227d3e54f2a0820cc95227aed411",
+      "requestId": "STiWy0tAij3URm1jcfZV",
+      "sha256": "51110b9751dc5ac5ed2372e8ad5564c7919eb9cc1c1e078007fdfdd112739733",
+      "sourceSha256": "aa45480fda6b0b8a0bcce21617617bd78221d4c1d739a028706bf089ee1c4a77",
       "url": "/audio/cw-training/passages/7ed24f0091cfc2b6.wav"
     },
     "BEN PACKED HIS BAG WITH ONE CONTACT IN HIS LOG AND A SMILE ON HIS FACE.": {
-      "inputHash": "e21f8e91bb1c765420e5f89c5c84769d28753cb1f174dc0d32fc0cbfaa0e9367",
-      "sha256": "02e929d3cfbb9c934657937736dac264aa8a1a0d0ed0388bf3d759b579fe219a",
+      "characterCost": 28.0,
+      "inputHash": "a90525d28d11a2d6b1eb8c433a4188a17e32667d0c74a62d73c19506ab584eaa",
+      "requestId": "AdORn2rHnI5iFhqYmnyp",
+      "sha256": "fc8b743e85be1059f4192f3b7455c61401677b208c247879453a0d7a3ef6866b",
+      "sourceSha256": "05cb9a9cec13a56a493fb75901bacbfd0b873e4dca94f26cfa861b6e5621dd7d",
       "url": "/audio/cw-training/passages/47506565930d9cc2.wav"
     },
     "BEN TOOK HIS SMALL RADIO TO THE PARK ON A COOL AUTUMN MORNING.": {
-      "inputHash": "31eabf916a0de748de4f420bd3f763d526cbd94addfa69e762185ab1e812865a",
-      "sha256": "032f105f9cf3649613c61b5827d3139cfc13c877cb530a1d8640b6aa92e438b9",
+      "characterCost": 25.0,
+      "inputHash": "75a3a89d8af268266ae69b2bccd01c70c2dcea58f5e9fd246f86657b5a34ebd7",
+      "requestId": "YZdCCs3cpGw613nLA3ML",
+      "sha256": "8ee02100df55265197085c6d5b1822850e1f65099fef1d69af4b24e5eac9a897",
+      "sourceSha256": "e9b5b9cfeb5bd99f72ba56d6ed086b692a6fe651b748d1cbf3a460e8991f846b",
       "url": "/audio/cw-training/passages/92f13c5d97b9a81e.wav"
     },
     "BEN TURNED UP THE VOLUME AND ASKED HER TO SEND HER NAME AGAIN.": {
-      "inputHash": "dd630494662a3e01a8ab12287f0d5b7784e738930be62c86c0ec6ce917cf838f",
-      "sha256": "a104659590c92cea94430f45e5508708e96dc0c47557a937e096e5942b33df38",
+      "characterCost": 25.0,
+      "inputHash": "f781ead69a3b0d05f006a47e08b10bc70d64685f096fb57b908fe6193a11dfda",
+      "requestId": "ifgZyNFn3TYF6p1f1qDR",
+      "sha256": "fb76a7e015d04fb71bc25a71a6bde91b2f0652db4775e3f3acfa23348fb7bb9a",
+      "sourceSha256": "25ea180917c9cb045b8a74e4ae020961ee98e891640cc440c09b9ab449793032",
       "url": "/audio/cw-training/passages/6d13d59d5e0a05a1.wav"
     },
     "BY THE LAKE": {
-      "inputHash": "81a69aca60017933bc55944447da6be4129f6c3ea5bfbcdd855fc145a7407082",
-      "sha256": "f70538662d5e05e5d09edda9c417fcf60ded542582cc3b8b43284b78b6fc6577",
+      "characterCost": 4.0,
+      "inputHash": "655f89929115db047bd0f1afa7b758c9ceb856b2b0b74b337d05d8182b66a701",
+      "requestId": "zSKhRIKrrJYdWrNfvmeK",
+      "sha256": "7d4689981d857600cbc22de3bbc00817c8948c1d3ad821a7363b1d1425e1ec91",
+      "sourceSha256": "fcd38121db91e5863bc73e9eeadf471c1155f05466b3f19fb988b1d0f24492c2",
       "url": "/audio/cw-training/passages/9813dae8f931b0be.wav"
     },
     "BY THE WINDOW": {
-      "inputHash": "254152936ec42a3af1d826a1dc300975e23e7edc981e8c2961772ffdfe7656f2",
-      "sha256": "f0aa6bf5d21681eb3f09298d022ac1229ac8e132f0104489574a232e830b551e",
+      "characterCost": 5.0,
+      "inputHash": "b294302b36769782928ba9ca31769ce54078c7b001be1b1f499b6fdd325923ad",
+      "requestId": "p93SyGaY15TLU840yCfz",
+      "sha256": "4d4e0bb26ca9385867f78cdaf1233d63ab690e69aa6e6cdf6623be653cc2e90c",
+      "sourceSha256": "77c1908824edb80a3cf74d40dd9e92d3994d349d6bbc6e8f9cf1e7c4c849e6a6",
       "url": "/audio/cw-training/passages/9d29db810af66b24.wav"
     },
     "ELLA SENT HER NAME AND THEN A CAREFUL THANK YOU.": {
-      "inputHash": "ea21d2d2a6f9964d6f97b6f679b7a50516288767bf2cd38362b17a47965ac9c1",
-      "sha256": "aa3f8fac94082110a434d6cf6f64caf797b8e3b2d514021b1413e410f159678c",
+      "characterCost": 19.0,
+      "inputHash": "12394f001c33cfeb40b670afe10d1931baccdf37ee3e45a17211f36a3f910bf2",
+      "requestId": "hfKT8QRxQUjltCdMksLD",
+      "sha256": "73b19e6c39f64fff6cd1d1ec4f7cb103cc92b5223398a9a52ff76321ac8e8095",
+      "sourceSha256": "25ecc9925370539b740e468d3d216cb1f6d4040c594dac12a302c159448ff2ec",
       "url": "/audio/cw-training/passages/e65169a02d21a2cc.wav"
     },
     "EVERY EVENING ELLA WALKED DOWN THE OLD ROAD TO THE LAKE.": {
-      "inputHash": "8a6fc98014b6b248128925a195eed48d7671d73374ab6c914f8ef6f043ccfab7",
-      "sha256": "0891101ddb597661e59263baa829fc8d754c61753ca0c54e857bc758e767be41",
+      "characterCost": 22.0,
+      "inputHash": "f0a329685d5def41ae612a5e996d5358621a6394730ce07da732e2b4d75ae6db",
+      "requestId": "pVke6PVFlAjnj83iXuFE",
+      "sha256": "716adaa63771ceec07239121c16d53bc42778af253db550e4e4ebd8e06ee314f",
+      "sourceSha256": "b288e549cca2d73bfa7f05fe7f79ca2eeac743d763ecb24b7df3aea56bee6398",
       "url": "/audio/cw-training/passages/28ac3db902f8fa54.wav"
     },
     "FOR A WHILE HE HEARD ONLY THE WIND AND THE SOFT HISS OF THE RADIO.": {
-      "inputHash": "5fc94e30948ef9ee44bee2a17cb5f184bf25a1ad16e58218bf228421efbe6441",
-      "sha256": "7d02b97bc9271ec59b1c7a5a263ea1e31a38b2c928cd089dc2c3842c458f97a2",
+      "characterCost": 26.0,
+      "inputHash": "85df126542bfd6265ee91cb359c7aab6dffd8b3f9212dff71fb41712e6fa7f94",
+      "requestId": "RO6fXr4SVzEZ8mtb3aaB",
+      "sha256": "fd9edf537ea5cedb29a51a63cb31f84e67ca838ebbba784aa46d9d9838fa7074",
+      "sourceSha256": "cf993a27b283662394123b5e09794d563ef631d1051abdd435bb2d0a6f6710f4",
       "url": "/audio/cw-training/passages/854e27fce43c68f7.wav"
     },
     "GOOD COPY NOW": {
-      "inputHash": "4ac7f8ec52bc842d29598b72506860ebccae140b58a0bb65b3b83009e9e38d88",
-      "sha256": "69b692b2a18536bb2a3712965a742f07048e5820977fa8e990ac857719deafb0",
+      "characterCost": 5.0,
+      "inputHash": "b8a484953467e70fad57cc06457e7ffffb09f97ef79628833a87956f6f7c8478",
+      "requestId": "UrOsNNrMcFAJG2EIe5vO",
+      "sha256": "7e6cc660618a51cac3e885e7609e30149400cf47169d3d2795444390ae6a2d62",
+      "sourceSha256": "bed83dd625fd126a60fe66f430956a14ab6085134d7b931906b8a0ec432855d8",
       "url": "/audio/cw-training/passages/5f650b2897aa76c9.wav"
     },
     "HE CALLED CQ THREE TIMES AND WAITED.": {
-      "inputHash": "4ff566e852667934d0e3394cce30aff2da8d4a119a2f791a20918bcee31bc3ab",
-      "sha256": "9cafb465509f665e06c744732dbad4a0409a8fb0c6e70fa7de94dea9b0c60314",
+      "characterCost": 14.0,
+      "inputHash": "abed9dc2a1229bf7d93949386e94bb5cbf9a6b1f3831d3b126f887ecb728f0b6",
+      "requestId": "z9bq9gQdrhD9wwmnrwV7",
+      "sha256": "48466a4ffdb387afc332571f25787fc54dda2786f14e7929416abaeaa09e5f66",
+      "sourceSha256": "b9236c4d210c57eb91b8be29f25dc9bde941a93cf7a940e18a0f91a95458fd41",
       "url": "/audio/cw-training/passages/1b2a59c258d82bef.wav"
     },
     "HE PUT A WIRE IN A TREE AND SAT AT A WOODEN TABLE.": {
-      "inputHash": "d4527aca707f9419ac2eebc9acade6c50dba75c01fc103fd2a8c0611f2b5f2d7",
-      "sha256": "010a036aef822d1bb5553fbbadf182f3f5a8d180f87512955170751a5370b259",
+      "characterCost": 20.0,
+      "inputHash": "47cb515a67fe0be5f1c0f4a0871664a7ca4a4fb47861c3ca3f78072684fcf30d",
+      "requestId": "a71rM1cOb6HNhTVOC9I5",
+      "sha256": "b9e7e7dabf85170044437a68e48ca6559bf551592972cc2ce714e5c8dc27abf4",
+      "sourceSha256": "f00dd692b668e922a9fcc5d3d5fe8a4452888970369c65f0a248a37b4a5a4e28",
       "url": "/audio/cw-training/passages/6dbfe7e6a9cda5a1.wav"
     },
     "HE SHOWED ELLA HOW SHORT AND LONG FLASHES COULD STAND FOR LETTERS.": {
-      "inputHash": "a4c1c7a0268729d681f50069069c04ae61fd11acd253ee7bdb6ed8ef05afaa40",
-      "sha256": "6110fe70efc9a69817ea063296e8159af9f3abdacc9f402b2821e5ced0db344f",
+      "characterCost": 26.0,
+      "inputHash": "ad703b616c7862be980b9028d4d3e7b72ac2b9809a8c477aa8d7d7a0e7b479a1",
+      "requestId": "qVef86HOyrknj4J0dcca",
+      "sha256": "5572bf29138619106dfc6ac76ae6166747a9e178c5040f295bfb4eef70bbe0c2",
+      "sourceSha256": "4bdcb4c1c4a59b956f5147f8eff145bfa7fb919a31bb3be9d3113421db7d9e34",
       "url": "/audio/cw-training/passages/17e3a401d8e5a28f.wav"
     },
     "HIS FRIEND RUTH HAD JUST MOVED INTO THE CABIN ACROSS THE WATER.": {
-      "inputHash": "66d64e6c89b1ae92ffbcc39490f00a273751464c77f0d8d102dc0c4f4eb1f42a",
-      "sha256": "f3cd2720c274b5627d3254fe731f2414dfa7127d155a19a01f07122e5a41e174",
+      "characterCost": 25.0,
+      "inputHash": "0a4cec18a68337cb1c8a9eede788dda60d90f21b5e9e6b2120e5ce879723d4b9",
+      "requestId": "9oSLWCfttK343fE9zq1H",
+      "sha256": "4044dfd817d326a7d0b64dadfa1b06b6b29e1595349f4d529c463e920ce6ef31",
+      "sourceSha256": "f68d7e3b7df8aecbc2aff4eeb729a2138cd01e718580761df5a42c4922e39b73",
       "url": "/audio/cw-training/passages/3ebe633eb1cfd271.wav"
     },
     "HOT TEA": {
-      "inputHash": "c40ed983cddce7e1b9c280fc32bf8f61523ebebf3c6486099d6efe20dedfd6b8",
-      "sha256": "f5d2a624e6b0249025fed597a1df98e106fab32c7be1fde8187e60f0697a06fd",
+      "characterCost": 3.0,
+      "inputHash": "76537bab5a63bbe40a31aa74025d860860d3cd0daa9cb29e0998b4b408687f07",
+      "requestId": "Qf2ZJtY7VK0XxMdnZELy",
+      "sha256": "75ea1573694476d8a2ae9dff42a687cae360748b2a8b2b4344f4cd369e147145",
+      "sourceSha256": "f3b52285797a2e7134e3e1a47f1de2bfc66a3ad28258849596098a626c05937d",
       "url": "/audio/cw-training/passages/0a52267b7b4f15ad.wav"
     },
     "I HEAR A CLEAR CALL.": {
-      "inputHash": "c61efa20031621a5ab8c860eb58b1332218872ee9d7b05280883e924199739ed",
-      "sha256": "1a78b1770d18033779f834a9958f67936a736644df16f10e1caa51e6a6a9932a",
+      "characterCost": 8.0,
+      "inputHash": "aae0d59b880c2b6c6357a0ee33c412bde10eee87f40528b544912d9b1059caff",
+      "requestId": "bYh4yy1Ps2Lsp5NeX3Ch",
+      "sha256": "56034d6f3b5bfea8864490a76fbdb783444f6a220d147f364a062431a28bf1b6",
+      "sourceSha256": "7d66fae62fd4db661afd5f8e84e591023438740ba86d91e93cdf93ca41e022a4",
       "url": "/audio/cw-training/passages/e436673dde4c07b7.wav"
     },
     "I MISSED THE LAST WORD.": {
-      "inputHash": "52f61adc36857ef8dbf63624c6ec93a306c9505cb0ea05899c81f82b037f6762",
-      "sha256": "ce12d48401640304eaa1bb172c42d5c5610fc3b9692a0a4449c5b46925589195",
+      "characterCost": 9.0,
+      "inputHash": "aa34e3bf46d5106e7aa6dc9c301d61c68ad7ca235986e95a41062946062672a1",
+      "requestId": "09OmJgnWj08Qjvi3a6ka",
+      "sha256": "f00655bfd4709037051c5d2857d2c57a894af2df11e8e55b6c37d293520b6209",
+      "sourceSha256": "83ab5de3b70c8af9a3b247f8590f03ecab230073b46798010b4ab7c3fc13e97d",
       "url": "/audio/cw-training/passages/46b2a99d25cb942d.wav"
     },
     "I READ A GOOD BOOK.": {
-      "inputHash": "4271a7a398755d24b48a31867da9a13c28abb298fa30751384102337be2c8167",
-      "sha256": "e45eb37765c094c8021e384cf6799f6812533106cdb563750f78af4db1c57989",
+      "characterCost": 8.0,
+      "inputHash": "1d8a2982a056e5377d8de4bcdd8271d07ef52e06af8d0322b50a00b2ae60403a",
+      "requestId": "hzn4NrHgYOj071p38rVu",
+      "sha256": "d36bd61a379ad94e92271a56649d54cbcc105282ec4361e6307e21951317f968",
+      "sourceSha256": "a05eb988aea76a8e227e97d11fcae19cdd8b3ebe2820bf4178ba40615a1e34e3",
       "url": "/audio/cw-training/passages/3318659832d09023.wav"
     },
     "IT FLASHED TWICE THEN WENT DARK THEN FLASHED TWICE AGAIN.": {
-      "inputHash": "6517a41829302d64280dff7491669844f827e4c204775fb1740f328450695dc9",
-      "sha256": "84143032803fab0de8c7e44f29f25c880e33cbe4171f67586ea6f37c5933ae90",
+      "characterCost": 23.0,
+      "inputHash": "4c0de11b5eb519e238cc21ba8d1aba006d8805075d60c3d73befa9ce30743556",
+      "requestId": "sCpdFCYUJyWZqgMQWkux",
+      "sha256": "36384d15622f8a1200e279731c8c151e81f541edd13130593028635fa213038a",
+      "sourceSha256": "78cf96b66a8e8ff56d9c42a7a3ca25628cc22692e8bfc118abda7a759cf1a685",
       "url": "/audio/cw-training/passages/4ffb643ddd275c4b.wav"
     },
     "IT IS TIME TO REST.": {
-      "inputHash": "4ba292da8a122c512d7c7084fe7495fafec2ef01454cc667a12b54346907ff49",
-      "sha256": "78055cb86fc8e3de7c7a2eba743e05293010d02f0c1b55f2e6a13a286c06e9f8",
+      "characterCost": 8.0,
+      "inputHash": "5edcdb1e9a219211387de90a4efafddfe7339b482165283230f34d6fe3089bda",
+      "requestId": "anH3eNYQI1uSvAffzVGJ",
+      "sha256": "d6900bcef27b2c424ec1531de47936e6ecc8216a30a028df981a31373f03b122",
+      "sourceSha256": "375e18a36ea436819f68275bc317ef2864a28a33695b22f64c0ac39f61cd4494",
       "url": "/audio/cw-training/passages/808c43f339b9b52e.wav"
     },
     "LOW POWER": {
-      "inputHash": "c7ea18ae7d166ce588fb811d550b77dff42464875c4f5b7a5ca5b301b7adf750",
-      "sha256": "45f02680e2a0c8f5560dc8eecc20bdc41e72ec82946be71638a1ee2ca414845b",
+      "characterCost": 4.0,
+      "inputHash": "cebcbc8efd033ec6118a85f49bc4023c8037fbde41d7a6f17038157707624cba",
+      "requestId": "yIYMO7KitZprX3ljbwYD",
+      "sha256": "f7bd11e81c9e1021f387a2771484b449add2acd28d4a7f436fb53dec592716cc",
+      "sourceSha256": "d8f53d3a27414b3cad745b7a4e7534142f5bfe3419bbb3106baffd7748b9f5b5",
       "url": "/audio/cw-training/passages/d7025147a33d5124.wav"
     },
     "MY BLUE SHIRT": {
-      "inputHash": "0de85d1cfa5d6c4d6df7829aac4a7e453b6c3105bd3d8d37404dd6b3977e5512",
-      "sha256": "d51ca6a6f1dd9237e0a6f7097784b76375fe469f9b8f38dba69001daf5fccb65",
+      "characterCost": 5.0,
+      "inputHash": "3ea15155382ad664650685103710567cdf65d0dbf637020358f738caf2bede5c",
+      "requestId": "XZlB6eWdxfmKQfi8EypK",
+      "sha256": "7b424872a8f01e53522349758c8f10b59777f42e6d20f694f0522f8f22bc4b55",
+      "sourceSha256": "2b6c77b8a41967c77e613bfee14d9c88b99b8a1b405bfe066bb75b65a1767b18",
       "url": "/audio/cw-training/passages/cef8013667222056.wav"
     },
     "MY BOOK IS ON THE DESK.": {
-      "inputHash": "948503b788bcf8ac68f6fa71260aac50d3f199c67765228479322f18793c79af",
-      "sha256": "0112445b8f36995d424720aa3a65ce1acea07ab583b76fed14090611c6a1bf22",
+      "characterCost": 9.0,
+      "inputHash": "012d8cbe3e202ee2bb17cbee45832eb1eef1c186c9addf129a276bc5053a654d",
+      "requestId": "hvHwEO425WKbS8RrfrWb",
+      "sha256": "ec2671c3d52e4954d306a11931117d8c4c91d33c4155852e6197307c4b3479c9",
+      "sourceSha256": "dbf5baf445cba0642b4e4cb2636dc7bd349ae4ed9dc87bad6f6a30ea7e2d364a",
       "url": "/audio/cw-training/passages/1fdf63f75750186b.wav"
     },
     "MY CUP": {
-      "inputHash": "33ee38a4551edef8b408424d7ee1dc47f8a5be05d99001ab398d88a7842dd90d",
-      "sha256": "313b2d150a9d202e093f2cfa56a99149c984a490136c289e9994960d71c36b7e",
+      "characterCost": 2.0,
+      "inputHash": "c719ba81d1bea528e99715d5540be89d1fe4feafabe099edfc3a4aa593cf9faa",
+      "requestId": "KYBZzI3lDeyj4zFc9DQz",
+      "sha256": "82c7971851e98dd4b48c4beca75f39e4433e9d4539d551b0d7f8e07717a1d518",
+      "sourceSha256": "c34add5f1662e9401840f0e4a2cc3dc57f767486f7e20e14c8af8b4e2029b6b1",
       "url": "/audio/cw-training/passages/fb9262c24632785e.wav"
     },
     "MY CUP IS FULL.": {
-      "inputHash": "60405e057b9369fa8f11ac6c0a909df00cbe84c68a69d29faa896eaf4fa35e43",
-      "sha256": "168051d127e332ea8faa4c5c0c36e6b555bd8745fe90be1a957df35931747041",
+      "characterCost": 6.0,
+      "inputHash": "d797e8656600835aaed5e8beafb19cf057f7d0b5ae1b14396045c0c1d9e348e8",
+      "requestId": "U5Clcs9Q5UfCb1xjtmrD",
+      "sha256": "27737ab8a37128b1a2cf94f156b9403a6a5f35ba8c13176ebdcdd8d2e1ab144f",
+      "sourceSha256": "ef5a203ab20e1d865c632f7c3143482c44c09d8ceee1a5e2bb36d1e073c7ffda",
       "url": "/audio/cw-training/passages/64cbdd6723c8a147.wav"
     },
     "MY HOME STATION": {
-      "inputHash": "a04c2ea3a64e3a0a1f620df2ac0da68e71452ed9b022b9d6653f70171191f352",
-      "sha256": "affd58970344cc685b36b31f2187025e6dc74cd4a80c86c4500fc26902b48ddd",
+      "characterCost": 6.0,
+      "inputHash": "c05e637e1d6c7983ad8d95f033d0c27de17ca1a85f06c45a6d3930bf67c21246",
+      "requestId": "jwYXk2WSXZjEg1qzIaSw",
+      "sha256": "3e6a06c2ee764287f1e01a40e6b60e62770dcd8f356dfb5ad62a49667260188f",
+      "sourceSha256": "c27bcd7a3fd1a7e0348655184323c6ae697e51d88c6353fada39beca744e6b57",
       "url": "/audio/cw-training/passages/bfb4fdad5382722a.wav"
     },
     "MY NAME": {
-      "inputHash": "033583abeee36c70c713bc58c16199a418b248e2f1fd5f4f13355b0049c22f22",
-      "sha256": "5ea7eb0b9299ff365428d48859d5322b0cc1caa49b9a1553c23b1eef9aeca940",
+      "characterCost": 3.0,
+      "inputHash": "a546b640a51a20bc0e6efb7630e3215486575a644cc5d7bbf7351206ffd84ed2",
+      "requestId": "Sgo0X7AnEXDuaIqTeglp",
+      "sha256": "eef27f7512045ded47ec88a39b1912a85450e4863c6670aa295ca862780a8854",
+      "sourceSha256": "f54e4ad21caa207d96764724d2f18ef9a77f064b1a600dfba8e6629bc92cce59",
       "url": "/audio/cw-training/passages/fabb3de6aa28c73f.wav"
     },
     "MY NAME IS BEN.": {
-      "inputHash": "25ef190e7cdf2b8c18391492e6598ec617dc61ca6437ac338d8f6e8e417b7193",
-      "sha256": "49c3b9d4c477266821ed9feb12fc07ccd0b8fe33f2e310388cbea29396bc4930",
+      "characterCost": 6.0,
+      "inputHash": "7af180a4e9d04cd455c40bfe4a67132ad210698845c974e42df5dc034b5c51cd",
+      "requestId": "8rSnpAbt1PsEICobx8Q1",
+      "sha256": "8379d1c06d440dc1ef408f7a8ab253f91a2fb6713a031dba4fcce82694794ac7",
+      "sourceSha256": "d86a5a49d8b982d6cd169dc407823dd653009824fe2198e171b6d26ab220abfd",
       "url": "/audio/cw-training/passages/39e6eec0456e3858.wav"
     },
     "MY SMALL RIG": {
-      "inputHash": "5119c6088dd865795f7436151a210a2c62ba029de4c0ff5bd4394a447bcb3a11",
-      "sha256": "0f75f317edf925daf60888fa2556076c8598fa22d71006659a8a537ffbe15699",
+      "characterCost": 5.0,
+      "inputHash": "5dcacbcf08d8c846c4f286dea54f6544eb5afba87da9abb14f504dd5321b1a9f",
+      "requestId": "jikH04TiqqUBupwnXGS4",
+      "sha256": "88607a1cfb0431a227a2f8ce3401a548a21f97159814803e2cabdc3bb37a2abc",
+      "sourceSha256": "6739df49f8245f4e144561821bb6275654dc1b861c37370caffeb2210dc8cdcd",
       "url": "/audio/cw-training/passages/a585325191841e80.wav"
     },
     "ON HER WAY HOME THE FOG HID THE PATH.": {
-      "inputHash": "c04d92c026130fb8392e8cc20c70441e6700c49be1e542243040c3ca6de0a629",
-      "sha256": "2e96d2ea93e61089e481eee24476e4571831c57990893c87c924fbce12f82063",
+      "characterCost": 15.0,
+      "inputHash": "d92bec3dbf9fae8df243b56a102133bdfe97c9c18883152b8b814b6e8bf19c45",
+      "requestId": "4u96UDiUB54bXoSIpyF8",
+      "sha256": "6847561ba2ba1f021e9fabe5012475cf014eaaf5c9a50abeb62b9a703b3ac630",
+      "sourceSha256": "4bad4d2f41d89abb744bcae63ca934c60e496aa420b04819e44e31e5ab75b2b7",
       "url": "/audio/cw-training/passages/0272539726e54b75.wav"
     },
     "ON THE DESK": {
-      "inputHash": "2deb93a41867d4aefc52628e617ed860cb8c0ce443c029b5da7c834c01344258",
-      "sha256": "eceffb9e2ca164b4e28d2de5150a5b06ff6b158693ee900385cedcbe6c16f08f",
+      "characterCost": 4.0,
+      "inputHash": "f05c0927e027313d9ad3e3071e2f70d562f8b519d7a98933dd00557f0376abd0",
+      "requestId": "D4bO3p4wCnIUzodBZzOh",
+      "sha256": "74fc0aa61de453023906c058b2644a41d3ed50f8d95be57cbf5bcc0020c1fe63",
+      "sourceSha256": "98ac3c573721add93eb09fd0fe69f12ce1d90cb34db2666145391eef42849c24",
       "url": "/audio/cw-training/passages/6ecf25846f10a00c.wav"
     },
     "ON THE HILL": {
-      "inputHash": "058553ff715b56b92aa8228afc97f39f5d4d1dca8a6da0a4dd8b4f918ad1c2b6",
-      "sha256": "7dc866033c617d303a8347211d10fa0f8c20e1af2d1f220a5dd5e8326af518e1",
+      "characterCost": 4.0,
+      "inputHash": "f3208b97188808044baa2095786fbeac84df1171bbaf4f3ca2161ddfdb06b969",
+      "requestId": "PUEWZaEYULftjYBEPrwV",
+      "sha256": "e5c053da0ae885f23f7f646f2156fb68df782e3426e3dac52fb43aa486dc1949",
+      "sourceSha256": "114d09fd7e9fe38a5599b2f5cca45434d4c51b68af41492756cf29857d43815f",
       "url": "/audio/cw-training/passages/1bee2d73e9b6bef2.wav"
     },
     "ONE MORE TIME": {
-      "inputHash": "9616f9bb3421dcc7e52119f50955b9cee1b9751172a97d57f48cb8252cf3fda9",
-      "sha256": "77c0099b6610b086f09fe3785dc6b62a841c55237fe369b0f95514ee4c4b9cf9",
+      "characterCost": 5.0,
+      "inputHash": "d90c8529191be057aeb40ebc146cbe0954ed00d831bc444c931f91c48ec54594",
+      "requestId": "prc7CbuekPHJ4bFvHSzN",
+      "sha256": "af5bd2c761e112311e1341e95aafe93b9d0b681012172d09346a812eb3c713b2",
+      "sourceSha256": "2e2cf8118acbc0a44d8a0d5d67f9364f515445c3ff6eb2c76b63decce0230616",
       "url": "/audio/cw-training/passages/81389e947c89558c.wav"
     },
     "ONE NIGHT SHE NOTICED A SMALL LIGHT ON THE FAR SHORE.": {
-      "inputHash": "29715a5ff9319fd5645e80eb7796822cb418986d56fb0531d7a4855138cf73d6",
-      "sha256": "182d70ebdb9b0fae8b244a0204ea854c13b32b2c03389f07946963f2c74a64e7",
+      "characterCost": 21.0,
+      "inputHash": "53b4222dfaa2b7c9743da5710acce172fbb0a7649a2001f34515e28ef415fc50",
+      "requestId": "fdsnQmxX0KJLYMzpWs4Z",
+      "sha256": "47f40dc5c99d9d9cb04c1a20a42345eace0fff8ade9fb611718461370cd36720",
+      "sourceSha256": "35d2541aafcc9254ee60549c0ac2f767dbd7a2571536844a77b2f0da5c68de17",
       "url": "/audio/cw-training/passages/d2e4f29330b79f04.wav"
     },
     "OVER THE BRIDGE": {
-      "inputHash": "0e5fd2a26d8d7e9f1e8014ad793dad245b2742897a9dd57bcb19483a9a5476a2",
-      "sha256": "db412c297b27b1910747dbf85cee835fc66e831cb869b742ccc3c5c4d5232ce0",
+      "characterCost": 6.0,
+      "inputHash": "91309dff5f4f9476e825a708de016a709e097c815b0b07f6c7b0d27d1cb384b1",
+      "requestId": "rHkflpUs9iRmLG9QQBpg",
+      "sha256": "e5fee635b6a1d0ae5c1fd6fdf67830fcecc957277ec85561612d70e822f9ccfb",
+      "sourceSha256": "a2cebb4d47fa2f298afd2344ff53062a8f311e67dd9d2cf97031c474e19d6db3",
       "url": "/audio/cw-training/passages/db39e99dd7dcd86d.wav"
     },
     "PLEASE GO AHEAD": {
-      "inputHash": "93bc570931bd9ecbc2987c951faad523c42ad733c03341fe10ff2c648ac22fcc",
-      "sha256": "180456bc22b55bac9b8cb91e7f9e5afc73167aa7a97e3052352026071fb5daff",
+      "characterCost": 6.0,
+      "inputHash": "bf899ca93a99069a88f59491953eeea965f52245e855e936f587f03b8f7627ca",
+      "requestId": "ym25myk2HFLqhYQHlhoa",
+      "sha256": "060eccd0dcf9955ca77546994700dacf539e9310c364b9fded30a745cb623932",
+      "sourceSha256": "2183ac4f4dfd14b7d601be8c94141b5b662d82853e0f1c982b980af51af9b5bb",
       "url": "/audio/cw-training/passages/f980f489c2e52d27.wav"
     },
     "PLEASE SEND AGAIN": {
-      "inputHash": "11a72883bde160ec44e2cc09577028743334ad5d4c01d8beec2249ddb5728aca",
-      "sha256": "6bad05f5cd7e2b79bdcd1d5a79c397b18373158f4bb656bac767ab7a91781246",
+      "characterCost": 7.0,
+      "inputHash": "80bb59261ffa7579130300f4c4b0b57d251e92d705b3555947db2ba8b690bb87",
+      "requestId": "Knqi8Vnv3vGj80ERXY7A",
+      "sha256": "d53f11f683fa65ff2d2bd334b818228d7db710b58c155977a77d8d65696c5176",
+      "sourceSha256": "736dc020ae81c130159d0cb77ae0307a348217abdf0af5744d4af702e16058d6",
       "url": "/audio/cw-training/passages/e0f563ced04fa68c.wav"
     },
     "PLEASE SEND YOUR NAME AGAIN.": {
-      "inputHash": "aa64ce2c9ae4a64c66ab525705d5e2dd46faeaa6399d1220e516d0dcf73a3f9d",
-      "sha256": "b2dbedf1a15cd1209b3e7e227af8ae489ca23f2778d75622fb3a6b651bda5af4",
+      "characterCost": 11.0,
+      "inputHash": "18ee945ddc72a049c0c8284619c2bfb868318585934beb39b9b84b213d30fa7e",
+      "requestId": "pCwbQOSvNpC4BJroMfHi",
+      "sha256": "ba3f8b718e67923b0aeed8e031323b1c550f746802f7ae35f63b5981b1572ce7",
+      "sourceSha256": "e587a291022ab9bcaa85b998ee19eaf94195a421e85d904ed908ed56c3394ade",
       "url": "/audio/cw-training/passages/8292163b503155bb.wav"
     },
     "ROSE HAD RAIN WHILE BEN HAD CLEAR SKIES.": {
-      "inputHash": "d2969b8e618dc42f4514563b36e4dade04776463b2f3dce10d7223405f448192",
-      "sha256": "37764d26ac6eb6780aa418ae7f637e228df2b0a839c22543241daad8e65e2da3",
+      "characterCost": 16.0,
+      "inputHash": "69d6f13a178c30191d61167c82aa950244aebb8e39e57b337278babd3ddba961",
+      "requestId": "PWAqhltFqw5nAaTdjFaw",
+      "sha256": "9c83481b1f0ddad9c00e5cc170d0b12c12b48c146078e3cb34632e57322f8239",
+      "sourceSha256": "cc08174b46082b339d31a78105e23aca50fa1cbb093428b6a1d1f9430d958dae",
       "url": "/audio/cw-training/passages/aa2509cd0a8f508f.wav"
     },
     "SEE YOU LATER": {
-      "inputHash": "0025e90163f077299b25a141d648f37ef1e1f6cfdf046e7a6b81613ea3e01fa7",
-      "sha256": "1a9da7920e0b43bbeb1d8c0127152bb43f524c9416fdff45c48ee63293da4de5",
+      "characterCost": 5.0,
+      "inputHash": "520ac41a2051811edd9274b85bb6e30bd3b9101e819484ac78f0772a0b24caae",
+      "requestId": "r4CBQXcMxT42ltqSQnmq",
+      "sha256": "dac9d03f8a68ca068941a740ba50e59533785b477eff9264506206c361e27e37",
+      "sourceSha256": "f18627217818dec56780eb3d45ff5faa9fd4d05e3f5e98a4f7c2f501c5f56a38",
       "url": "/audio/cw-training/passages/b1eabeeaeda0065b.wav"
     },
     "SHE INVITED THEM TO VISIT FOR TEA THE NEXT AFTERNOON.": {
-      "inputHash": "ad746d49fc9de1559420c811f9fe7233273bebf1d4a9e8cfa015b03240f5d714",
-      "sha256": "386f9353d00eaa55cd499ea9042f4493923362a84886041143e2d3bc409789fc",
+      "characterCost": 21.0,
+      "inputHash": "5010105c618dfdd437daf14324c2023334785c02e8566d14c95f5c17e7f78b65",
+      "requestId": "w5yywWrrJMha1PG4myjZ",
+      "sha256": "45d50a028925b6db2bd689f6695574e9ae6c2daa583e3e12d0ea7d4ee9eb5dca",
+      "sourceSha256": "254a68ca54e2a56ae8255e4d7c22ed650421297f37d328bf67b45a956dee9bf5",
       "url": "/audio/cw-training/passages/699bd3e20b2f97a5.wav"
     },
     "SHE LEFT IT BESIDE THE TRAIL AND WALKED UP THE HILL.": {
-      "inputHash": "053b3448bdb796292cf7a698c8318bde8534b70fca503c43f1b144c60e8ec0d4",
-      "sha256": "ef67913899ea347213633d5a7f2305a491b688bdecf8f027dc7040cddaac64f0",
+      "characterCost": 21.0,
+      "inputHash": "bf301f26017d0d3a34c534b3f036d938066afa00511c6a4d35c10e0502e1f2ee",
+      "requestId": "6v0lJSw477oe2OkslC3N",
+      "sha256": "af5e13c6756bb6393327ffd9205ead8618c725d740410ba31d1e3f48f32b81d6",
+      "sourceSha256": "eddc2a1a3940563b4cc57eb7ddf2f8003f96eedbb8e3a949b2f5d2815caa1cde",
       "url": "/audio/cw-training/passages/225f443ab43eb3b5.wav"
     },
     "SOMETIMES A SMALL THING CAN MAKE A BIG DIFFERENCE.": {
-      "inputHash": "60f048a39078f840ed132a13e7a65d3ad5f1d70f1fba62393601d6019b26d5eb",
-      "sha256": "9e75d278a2b2645da34a4524d6a1679e8b4df6d27983a699146ec101ed31b203",
+      "characterCost": 20.0,
+      "inputHash": "32718f47ca32eaa350ffa96c29b9b77decf9d26c0ee99f66569e27e46567cbe6",
+      "requestId": "wI6FYIYG7VTmdgAcoqHX",
+      "sha256": "268f0921a5938ee542eb9b5a08d29199ce893a2046f3ca66ebae8b834d08d9ee",
+      "sourceSha256": "c76ac55f24da9b89004a0f52435081deaf3f5e264f066b2baa06d916d3fdab54",
       "url": "/audio/cw-training/passages/43493764843a7dc7.wav"
     },
     "THANK YOU": {
-      "inputHash": "bf955fc85ddb28532bc45e3c708c2217e1d19d84c504a7f4944914807269aba6",
-      "sha256": "8b60ec7b5da6388d6a7a2bd3dc6c21b50c296cd87815d70871c3fa15bcd5aeb8",
+      "characterCost": 4.0,
+      "inputHash": "3a5b826407931eb272739efd2846d435438aababd2b8c2278f96063c2bbf7e7f",
+      "requestId": "G5SCAitz29a1oDiWwBoU",
+      "sha256": "5ce53f17be46f6a44d618fd9a4bfd8d796d510ec359f19fec8413e5069d3afe9",
+      "sourceSha256": "ba252f00054f50c57c9d0112cc71bc0147b9d4c41b1fdada503069759efa8e23",
       "url": "/audio/cw-training/passages/304bc9496ce6be54.wav"
     },
     "THANK YOU FOR THE CALL.": {
-      "inputHash": "732986d0b2884c941a54763fc48dd5d12612a2ee2d4c50b68f5a7a878fb9232b",
-      "sha256": "b4c465a5e9a2a40a74d27a05adbb7c6ccda0adc44bb9aa16d293be775fc719cc",
+      "characterCost": 9.0,
+      "inputHash": "0a8d2a83fd8e9c650f0e2bdf4174b1000f2d4f2173a6f7dfbaeb23c372909768",
+      "requestId": "cHDJCtD3mgfZNLY1fH9w",
+      "sha256": "0ad0c1723daa5e89260b1e4f50d61afbc9c2d29975b5a83ed0d925ed8fcecad8",
+      "sourceSha256": "385cdebe830edff9a213d380c7a8b2e0ea20f58b37fa80fbac99085b61778a56",
       "url": "/audio/cw-training/passages/b6e9ebc13e04931b.wav"
     },
     "THAT EVENING THEY WALKED TO THE LAKE TOGETHER.": {
-      "inputHash": "27f54fa429df07cac6395c6d0ed04ed8e869fb7c29b924db795a5312469a1fc5",
-      "sha256": "b7b5994f03afefadccc330929b54fdffc29b9cdc45aaf5a9077f961bded3e3b2",
+      "characterCost": 18.0,
+      "inputHash": "63f6f69769cd1f7fcf10a85054899239ca08457f04ed52c8647324cc2fc74724",
+      "requestId": "jWVzIQwaXq03IKFMGcBI",
+      "sha256": "7f050a4179efd672ee1f6929aa4ad8472f3c4d68549bc46c500c66c74f7ee29d",
+      "sourceSha256": "fd3183a123c8ab8e675c9ee98879eb260d93d50e1c7ef221abc5d196114b0d46",
       "url": "/audio/cw-training/passages/4299d6eac806a502.wav"
     },
     "THE BAG IS RED.": {
-      "inputHash": "4fb403142c3a27ec9a1ee223c45750de3b07b69a52ba787f4fff5a346ff27234",
-      "sha256": "8c27bcc181f0033f7a104846c50cb3aaedff86d16f95734b34efaed7772c1b4b",
+      "characterCost": 6.0,
+      "inputHash": "8c95989a404f8fa1e4fa46be1b1623c85a3933338c9587c19bc0d3ee8d9980f1",
+      "requestId": "oZ3R8vXXAXyfjqfaDFtM",
+      "sha256": "b423677165206262e4adb4e28ab44dce07510e4f9fc00a28c54c2fcbc29cecde",
+      "sourceSha256": "05c2ff6630eb85c0f0c973b928c3d90faf45524acfab950d4067b26480f31389",
       "url": "/audio/cw-training/passages/7315ecc23854876d.wav"
     },
     "THE BRIGHT MOON": {
-      "inputHash": "848846927d28978f3ef4a0fd243c0e55a5b7c471020760dd1f268bde0163b1c7",
-      "sha256": "ef19ff04b95522cd0c1e5cf6abade84e3422d39dbb73d013c7b3653ab79fba00",
+      "characterCost": 6.0,
+      "inputHash": "fdb30febd047b0a5c0e303a568f46d754f0d52aed8247ca92de851d5953a9666",
+      "requestId": "Buzbo8zUnvOzexbBnIm0",
+      "sha256": "e3e2aa647d2121d61c186f3142b35f5a819e009aaba27742417e8ce34b511eb0",
+      "sourceSha256": "2cb318cb9a091193d56a104d252050a11b47e237bc8e01c3b59ed5d64974e14e",
       "url": "/audio/cw-training/passages/48958c4a97d8d644.wav"
     },
     "THE DOOR IS OPEN.": {
-      "inputHash": "924252c06b6a13d7fe05796395d3c4c43e1cd9e97433db416a4841d21be58e1c",
-      "sha256": "5fa4b882a9c99672c1cd9da67809ee2be00632257e9c084ab7a95bbf2026cc79",
+      "characterCost": 7.0,
+      "inputHash": "5b0ee6d5ab82aeb7d3fced7fe5916b39528c66695e6204902da32ab61b635a35",
+      "requestId": "F4NthtaAtJnQwa6q5ndK",
+      "sha256": "8e1ac14f9b71cee9ade99728e04135ce40eda46fd86d43981e9638d58a3ee01a",
+      "sourceSha256": "b6e89d2195519ebf478562c2b46cefbaeaab56e9c1556df3a0c8a0f75aad30e6",
       "url": "/audio/cw-training/passages/30a8b7e90f5ef0ac.wav"
     },
     "THE EARLY MORNING": {
-      "inputHash": "f570477825020ca6edf7eca7320d629aed63a9962c705e10b32a323d951d52d9",
-      "sha256": "43de562265f2ce5220d0c1f38e19d419fefe0874aaa3803eef187595611295ab",
+      "characterCost": 7.0,
+      "inputHash": "8cf0f41fa2b1889b1305ac3f5e969b8e85f02abb9209d10eb2f0c6f6fde335ad",
+      "requestId": "tWlnMwcHE0zKhP5X178o",
+      "sha256": "d6e9af89610a9e08967589efe11f84e0ae8a2bdfd56dff9e3fa53131dd8f9b79",
+      "sourceSha256": "b1bdea340651f536c0498091782ec99dac66f753160be5de182e91a97c1d3b16",
       "url": "/audio/cw-training/passages/b97f299dce948228.wav"
     },
     "THE EVENING NEWS": {
-      "inputHash": "f49d4386cfb72ea32d108151fcb60dbc9886a539c9d8f28f8413c925dca34159",
-      "sha256": "ed39624e953d0aa5365ec41d73515fc851210aa5bd81b15c69b1f87b03dfd178",
+      "characterCost": 6.0,
+      "inputHash": "8a39f67e99631148003a1224239ec243e0da71d4dfde170e20f45cfcbafcb11b",
+      "requestId": "wdB5tPJ9mqzz2p7Ovb0G",
+      "sha256": "2fce725774c48bf615b7c6623a77cb7e0226877556174596096963526099c7b0",
+      "sourceSha256": "941c1650afeecd836f1bdaec70b330205c5e651c1a2feb29336aa689521146e3",
       "url": "/audio/cw-training/passages/6ed91ea3638a2cc0.wav"
     },
     "THE FALLING LEAVES": {
-      "inputHash": "c616853588cb311c3d8666b223fe97c15e2d0fcea448af24619a04a3449d56c8",
-      "sha256": "7229acc9700a4fa836645952010530d03cc44a8c594c34cb4d671d15e882fdd2",
+      "characterCost": 7.0,
+      "inputHash": "ea2a1c3f726c4caeeb1ede65e2f021ed5895c94ef274a08fd219886ff5b256e4",
+      "requestId": "rLBUvxYDqG5BMjPsTmcG",
+      "sha256": "6caaaaf76ab0861efcf9b48e453bf1eac7ce20f3b473c7391b65897e280ee351",
+      "sourceSha256": "f8ceb0bd4469b74da4244f7b1a371b3b5e35f9745b71bd4678bf94f157564b03",
       "url": "/audio/cw-training/passages/febf767632269720.wav"
     },
     "THE FRONT ROOM": {
-      "inputHash": "5aa9414069f58660e98443976141984d80396de64c4bb05618f3535659e22ecc",
-      "sha256": "0d158b9dce37bab8f9464512de7159a7185e7291aa224d33751a71c5531ae5e7",
+      "characterCost": 6.0,
+      "inputHash": "839adb971989776dff20ecc7e3257c07324944f6a090ca28333bc2f58f9afa87",
+      "requestId": "ZATyzKiDS7rR1cp43TeT",
+      "sha256": "90c60be2e7358faeac72751889e134e4990984c97a0a4f4ff7f28b19cfc7f571",
+      "sourceSha256": "b326def46564f089ee945daa9e1b7bf7d8b9d46ac60972c5984fac4135c5366f",
       "url": "/audio/cw-training/passages/1a3f8c4195a9426e.wav"
     },
     "THE GREEN TREE": {
-      "inputHash": "8abf2d7860aea20da8238bf417e8ec87804c620cb493165099465e8d1484829e",
-      "sha256": "0a6ac2b9d14090005a80125726426feab6a7c200fc25133455a61b79c016a806",
+      "characterCost": 6.0,
+      "inputHash": "cbe2f69591f5fac743ad6870961a0e5e0633bd6de93a62a6cd40eb41b2d6012e",
+      "requestId": "Ru2dW3v6v5PaxmdLnjsN",
+      "sha256": "5706e29f8e4e5788f3b6c028e5a43e35aac4102d8a414f96528b13f6acec8810",
+      "sourceSha256": "d579c9ce4a30a8118fa5ee0462e2eb2a8a1531bbf7ac3fbd9797c245a01b748f",
       "url": "/audio/cw-training/passages/eed4e07a5ee2e404.wav"
     },
     "THE KITCHEN TABLE": {
-      "inputHash": "39ca7167d76ee2da8b174784f66485d2c9e91915ac1cb884e26f1b717a824585",
-      "sha256": "bd350b65636a1e38f0cb17fbaa005ed8f8b079f79f893e024fc7a5f2ba380602",
+      "characterCost": 7.0,
+      "inputHash": "7e4af2d0c36cec926c3b3e8a75f49370a095176596435a83758c2a4729596278",
+      "requestId": "B4Lj8zapLVjVF3x45UGI",
+      "sha256": "4daee235f833b20c4f73e8808ab914ab977cc606a5454828c3dd63fe89ab7873",
+      "sourceSha256": "5a7df823f49c15c896357f8e9b0d7a613e83dd526f4851d693336121b74bb4a3",
       "url": "/audio/cw-training/passages/e15afd624e4271a0.wav"
     },
     "THE LAKE WAS JUST AS WIDE AS BEFORE BUT THE FAR SHORE NO LONGER FELT SO FAR AWAY.": {
-      "inputHash": "8a4eb83601dc32b5aba5c6fbfaf85e612f976933191aaa0abefb14ad73829ac1",
-      "sha256": "3a0b133e957d00045e9f35c0aa518179e334b8bb16395a87f294f1877dbdc1f7",
+      "characterCost": 32.0,
+      "inputHash": "1d99a8da18b8a0d495d2cce5c66074b2eb3a4a315417341382504e05fc450202",
+      "requestId": "zgGEMjeoalafEh6J0eGB",
+      "sha256": "7f91c4173a24ef41dd61c2eb6c932515ed97b5fec1df8ef1e1ec55f61aa89731",
+      "sourceSha256": "25817cf1d21b1ab8c5a5f07b9bbcf52979b0bdf32ba205750ead623753002387",
       "url": "/audio/cw-training/passages/82186e1c46060e79.wav"
     },
     "THE LAST WORD": {
-      "inputHash": "c26348e03547cdcf073e284f38879f1bd40e461c8c0c49431225cb86dcd80ac9",
-      "sha256": "7f0c2053df85f75770d310a8be2461fa5fcb608dd19f4c760b5d5fc2cced4faf",
+      "characterCost": 5.0,
+      "inputHash": "c89bd3352926ea7b749579e29cf3075ba7ec23c6067da1baa52d82c0f8d78bbc",
+      "requestId": "3gQEaqTVcxrXflB1iZvK",
+      "sha256": "9775cc9cc472b396c39c28ba5a8447f443b44793bdc0332a111da55c9c8f4c75",
+      "sourceSha256": "5857052d8ca8de7bed47081b57c1a846fa8167c8daaf575e074ebcfe7e5c672a",
       "url": "/audio/cw-training/passages/0aec35547e271c7c.wav"
     },
     "THE MORNING NET": {
-      "inputHash": "b5ea220021c597c88fd38c6b37b66abc9a02ab747fe15053a3c23e2d16843197",
-      "sha256": "a083734e7fa14f67ecff00150d8dde4c55bef5b267fd1ceb4954009fec7a1ddb",
+      "characterCost": 6.0,
+      "inputHash": "0400c5e0b1335cac80ad8eef19f69f0aa3b7c07398204887c76284a81d167249",
+      "requestId": "WhLqOZc5uGVu9iksrNKH",
+      "sha256": "4d8a456e0b98fa86605ad7c87eda21998708c959ea46470b4c7ec7e7cf238f77",
+      "sourceSha256": "5c53dde74dadadc263582122a75d4a5fb0089e34efe8a31033213c11e763047d",
       "url": "/audio/cw-training/passages/0c6b9b5ac035e5ec.wav"
     },
     "THE NEXT DAY SHE ASKED HER NEIGHBOR TOM ABOUT THE LIGHT.": {
-      "inputHash": "68427a02c01bea4e5bf2f79079fe9aa8a63924c998caf66094a8b2ba81d66149",
-      "sha256": "f38584e086cadb3a947e8050cc0b69d83ab10eaa29b132b84e632220450564d2",
+      "characterCost": 22.0,
+      "inputHash": "844dc3df98ddb4d322ee4944a1e1b7ded1a6ba81a2591e5dad009c153433ffe6",
+      "requestId": "oCetv4ofbPRTDRzPitRS",
+      "sha256": "1a52f94e9c4b51a9cc92f2b508ce54e8c1a4a8e97be98c6c458257424ddbd50c",
+      "sourceSha256": "9982f79a8a5a8f6dd93be40ae77ac4df72174e33fcf63b6a14e3991f5d5f8efc",
       "url": "/audio/cw-training/passages/3e6ff71105ccd940.wav"
     },
     "THE NEXT STATION": {
-      "inputHash": "31ded155c4c60b04d27114c52cb4d697e29927332b4ce4b1dbcb6a9cf04fbbcf",
-      "sha256": "0cd5fde602682b1e73ed5ff1ce83e0a82d8303cb516f0135dba9940ac236de78",
+      "characterCost": 6.0,
+      "inputHash": "e9a8bbdaf8649eed2a15ed094c5ca69af8076c1283b78221533d51e031f5c4ff",
+      "requestId": "9rYBmk8l3hVpemnEly06",
+      "sha256": "9d9f840b67b71c4655169997748fe2380d104d9ef40e8f1cc26c082d2a09d8c5",
+      "sourceSha256": "de9315e577d09fab1a0b6d47c3557a612bffe1857dfcd3ff8415744bd7a83a54",
       "url": "/audio/cw-training/passages/e8927eb8ee2a8d7a.wav"
     },
     "THE OLD ROAD": {
-      "inputHash": "1fc222513fba0f126220c8a2df660cfa28885bb06e4e9b0f04dd899479e47348",
-      "sha256": "dea78d731c51f093a08b60b8c26b222c66c4eb0981f1f59ce342ab55bdb421ec",
+      "characterCost": 5.0,
+      "inputHash": "83ffd682f6745f7aa9541af0275bb4657bce82a7fe3bd22856b92c9671afc6a0",
+      "requestId": "xBoAF6LOz2SflOq7pC6r",
+      "sha256": "7b880d9cc4572f9e5376912f2d4dd50a542247fc35ba09cd87a1e7fee23657fe",
+      "sourceSha256": "49f1feb09c854082a316848c8d89cb32ac8645b8a0024ead44130dac41441f65",
       "url": "/audio/cw-training/passages/6178b9d59ed0826e.wav"
     },
     "THE OPEN DOOR": {
-      "inputHash": "ddb062a01b7862e7a2d06a18c3a08474a875429c81a0c137b832b4bb89c424e1",
-      "sha256": "9965bb663068a1aa6e51c42830fe9d5e08f2d10899b978909ca4280c63e649c1",
+      "characterCost": 5.0,
+      "inputHash": "6506bfac9701ed3a264a92b6c72c66dbe9a2aed1b0ddf79314898abf1e3056ce",
+      "requestId": "phjDXnRZlBv7z3PHQRdI",
+      "sha256": "341bdd013ec40411ee7c2f69c37d5b09831c764c1c01e3efcbc8321ae3297692",
+      "sourceSha256": "12983310ba96bfe964c1ed8bfbbc6cd993f9b93f234e426c753ee552f610f133",
       "url": "/audio/cw-training/passages/664a1bfd88eeabf1.wav"
     },
     "THE OTHER OPERATOR WAS NAMED ROSE AND SHE WAS USING FIVE WATTS.": {
-      "inputHash": "4851955c95609ee0c2824f4304405721ba07f634d216f5fe608d42217383d6a4",
-      "sha256": "30e310f61753aa0c60c34415f00202a95253b612c88de780d7b33639ca5046e7",
+      "characterCost": 25.0,
+      "inputHash": "1ad0512bba2dd900c1ec81d2babc10064be3fdb9b4b56297a0bfba2f21fd9e25",
+      "requestId": "hadZtyJkpIEkIwvW2eNs",
+      "sha256": "a2803a374fad35d1f37695199ce79e2b1a198409025dd79c7e62d17c733349c0",
+      "sourceSha256": "fb348160026b1759968a024d9eddfecaf4048343814fefde6b29e2d8c6b948fe",
       "url": "/audio/cw-training/passages/215cd9faa83390c3.wav"
     },
     "THE QUIET BAND": {
-      "inputHash": "f9275d93bbb0ba8113124866782bd57e1647e1d5b9235ad27785dc31f728ca8c",
-      "sha256": "5108d1c7f1e6fbee6d5a7eb8fe653541c46f570f611d457505b49127932b7e5d",
+      "characterCost": 6.0,
+      "inputHash": "c26abbc91e16a79dd82d557a18853c4a614863d2abad688fa3df3f43fa65f2c3",
+      "requestId": "nJGrSIKAFC9WN26lw4Mx",
+      "sha256": "7a8bc34d6fac577570bfb2e9cc7f487f591eedcb78c894f58e5fe9c3cdf8ccce",
+      "sourceSha256": "cbd83eb5a84d02bce02c899450ceb7135a642a8f2f86173fad5332069872915e",
       "url": "/audio/cw-training/passages/954335757f369b8e.wav"
     },
     "THE RADIO": {
-      "inputHash": "1cc9b6216e220ce06b0a27ad464ca201a16054cb5138a2ce8f759768ec2b0bec",
-      "sha256": "8b2859eacc727dfe096cd2d5ab44e7a095fea4bc658e2423892ab907f0947fe7",
+      "characterCost": 4.0,
+      "inputHash": "b1790cf86f9dd2217646437bd42d90501cbe46a005c2b91fe0b71fe0f0ac89fd",
+      "requestId": "is9hBE3Auz1D7i0AZ7L9",
+      "sha256": "312c11742931437371d68d02d4412cadc6d6d5d80500e17847b16b3781fc94ed",
+      "sourceSha256": "6a419c3de79b0e0c48d688c078005865005b3b545edc167cbedaaf3ff2effdb6",
       "url": "/audio/cw-training/passages/2f2c8e2b310d2a73.wav"
     },
     "THE RADIO IS ON.": {
-      "inputHash": "f5611eeba7a331bbb5c6f3ee8ce425c00370278a8dc852b4ad0efd8bb52970ce",
-      "sha256": "7db141428701d04b568fc4982225a71be068d9e4f980bbaa05d3e32f22c1ac73",
+      "characterCost": 6.0,
+      "inputHash": "8d156f69bccd87936d911a01c29068e38a63da1185fe8eaee35c6952f8aef082",
+      "requestId": "xpOf3evPRmhmkhlADJsD",
+      "sha256": "d00946ab4c8da930e216fbc92047906af435032f27dd958f776e8e0c5a23c865",
+      "sourceSha256": "ea276e751e5d339608347b4afd443f644fa6090a2715fe014ab20262daea5afb",
       "url": "/audio/cw-training/passages/95d86d144b5cc4ae.wav"
     },
     "THE RED BAG": {
-      "inputHash": "1334ca78bcbd62fb45afa2783f2bea806781549a6b1517037ac1f1d9c9982bce",
-      "sha256": "5cd5543ee9ee9904dca2def295568a65055b8a80fe7fd8c392f02040288cbde7",
+      "characterCost": 4.0,
+      "inputHash": "7f08b59a33e20ab25534eb2f64075358d31fb2683f27f744032879483cb7f30b",
+      "requestId": "6kEl9BdIg3xTf7yPb33x",
+      "sha256": "4afc1512422b9e208e71e504ce3cd553db8f80751adf32804f91572b5f8ed460",
+      "sourceSha256": "6bd4ebc584ede69a030757053b4e94dc8df16b1d53916f70548808ac057bec35",
       "url": "/audio/cw-training/passages/610976642ea246ae.wav"
     },
     "THE SAME FREQUENCY": {
-      "inputHash": "e9f9ee3f2af791643754632f7a910eb7fedffcbdb425d6453aa6524ee71b396c",
-      "sha256": "e1caaa08b7611b73d316180c6d3ea765067c28d065ad6a6da917cd7be4ef0e85",
+      "characterCost": 7.0,
+      "inputHash": "59c88b83ac59634493c3737e6eea6e3c965a35d7a36c51c9c9bad23baf4feea9",
+      "requestId": "9Bk0Kqq8LZ0K6q5yEDsx",
+      "sha256": "e159913fb3531c72bb3dedb9d4e3fed14e67c51601d82d6b7a972bb1f3f8f5d3",
+      "sourceSha256": "65528d3275acfb1486d3418225f2ccc0fc36fbc02d5c93e0787b0ed249992760",
       "url": "/audio/cw-training/passages/8f62ec3330109447.wav"
     },
     "THE SANDY BEACH": {
-      "inputHash": "f754c3feddc5a6dac100d3797df73edad040dc182ec39ddc4b0c287def063ad7",
-      "sha256": "0072d1abe6c20f7873f088772449f4c2c7263a9ecd0e420b074b939e601a825a",
+      "characterCost": 6.0,
+      "inputHash": "d86e1e3acfb984c78b5bce7c3f9be3a016c0ea70bf86888c93e2941e6123de35",
+      "requestId": "OpKbBo1UfV5nysbTXizd",
+      "sha256": "ccc6e2c667f76df6b873244414b18caf19a510da96c348ee6dfc0a8cb376b2d7",
+      "sourceSha256": "96cbb012e0417ae9b255dbae67254c1caf3a7c8e34ff2f78f27e817819d85ed0",
       "url": "/audio/cw-training/passages/044ee0f00d22ce4b.wav"
     },
     "THE SHORT CALL": {
-      "inputHash": "45a2fb7e77516338c9ce437e6260e20278cb9a526fdd6bf3ef20575785a2239a",
-      "sha256": "367548716f92263e90eb7e320e3ac47cdb5de0351c7b29485b5acb9b5775e10f",
+      "characterCost": 6.0,
+      "inputHash": "cb1c18e2f9ea62f85fb7dd443bb2d8925c90312d80a81d5f8c9dd19043e90d0d",
+      "requestId": "8MSdf0VBxpR0skP1JZYJ",
+      "sha256": "ca9f14739a83ddbdd1a997b34c672c68ccdd947074b9312d8af2b99b90ff9a42",
+      "sourceSha256": "a139c468819446a975b4c877f8fa8633b01c4724118a24b59bd2c0d4f5e7c3d2",
       "url": "/audio/cw-training/passages/4d7f244195229842.wav"
     },
     "THE SKY IS BLUE.": {
-      "inputHash": "219330fcefbb3967b2f34d9ad08c7488fe39b52919ea3cf6c01792e0332c173b",
-      "sha256": "0e2f4cb5efd6f095019eb6b158107679a7a6e7b520a34ca8f863ece40f676cc6",
+      "characterCost": 6.0,
+      "inputHash": "d029beba8d2064dddf0fe2013811ec4749f48f8654150632c70d2c75ce1cddfb",
+      "requestId": "4ajGekD5CqCIP0v0LKoE",
+      "sha256": "5b79dcedb2ba77819cb8f09e6b76fa825667004fa5eb38c2c49d84aace93ae5b",
+      "sourceSha256": "23dd2ad778054164fecf0a2166244a023669c4f670841521cb33dd7846157623",
       "url": "/audio/cw-training/passages/912eecea22b14b51.wav"
     },
     "THE SMALL BOAT": {
-      "inputHash": "57eeac2b8dcb70a077215ab363ab3890549e651ccb8a1f1449b72165f2273a6e",
-      "sha256": "00a71ebc2e394077f4df534f4405fada4ad7f297b077d3193631163239c8bd34",
+      "characterCost": 6.0,
+      "inputHash": "cc88c751bdac89d8ebd430ebfae041922cb424836ef306aabc6bc7ca61d3f523",
+      "requestId": "vwuoWps8kIjxsyB6pxLv",
+      "sha256": "39fad677bcac1ff4d0df93dd25a0ef97a5b1548258bcaffec9250950a632ef68",
+      "sourceSha256": "141eee4708aec1bf6c97c0a0587ccf34b4e5b49500d177cffb3e7552e216bcb4",
       "url": "/audio/cw-training/passages/dedbaec546529aab.wav"
     },
     "THE SMALL CLOCK": {
-      "inputHash": "3074d37847b0ba8769bc5130f91c58c8c1fbd5e8ff5b5a87376988f8d0f9b10f",
-      "sha256": "d3fd06d2d501bd21cf4b284aab8b6962a3d09870269ec29dc8e1f4a4dd243cd6",
+      "characterCost": 6.0,
+      "inputHash": "a0f21bd5965f8e38016501eef0c7db6711737ec0a224234c1471bce1fe29cbcf",
+      "requestId": "ZORGSLyfe1TlbCNYLUze",
+      "sha256": "9a5e8c61924b8d9ebe19980bd2ff35695ecb4e3d45ae7cb9e7f7cb52197e9251",
+      "sourceSha256": "11d6e10ebf79d9c4b5cadb2b897d3fa5af3c398c89e736afd68b4fe145d073aa",
       "url": "/audio/cw-training/passages/8c0bbf7bd8269559.wav"
     },
     "THE SOFT CHAIR": {
-      "inputHash": "b35764b1179008758f38c44d094c70fffbe9b2625a3815871fe1272e84e904ba",
-      "sha256": "154778b39a7db578eec1848947464f3fa51c4b27ce95d05448b112e314b01493",
+      "characterCost": 6.0,
+      "inputHash": "005138d1485b8721c24abf7cc9c604acb66979c1dfdb61f2ca5d723510507fb1",
+      "requestId": "Sbev7Dxnh0iSbO1cHILi",
+      "sha256": "599605e23ab76f52c6190753d6919950db88e6484af3f8e1ac51cf1523509e3e",
+      "sourceSha256": "2d679ed125cc926fd94c0b1e9b467ee58d653892080edb563b86af6dc098fff6",
       "url": "/audio/cw-training/passages/0e5b5462dbec200f.wav"
     },
     "THE SUN": {
-      "inputHash": "e404f7025c0ce52adacce9bbec5e8d3189133fe53c070198bba8577a87205c7a",
-      "sha256": "276149b97751f7b5ba612c41bce02b07f80c89c17ce0d0b96e4d13500a5f75b6",
+      "characterCost": 3.0,
+      "inputHash": "4300a11edc670bea2b8179af430fbd14527deb94246e1a6fec32edf43fe16fe9",
+      "requestId": "jAHzoMRld2lteNVOgwce",
+      "sha256": "4e654dd690008a811f9d73e638f75bd83cc2d3b6558c7103e8f0369a0f42b6cf",
+      "sourceSha256": "d8cd7caf4e2a2d2ff587fc642f850145a4301979453e7b2d3e5ee2765850eefb",
       "url": "/audio/cw-training/passages/66e494773b91d86f.wav"
     },
     "THE SUN IS UP.": {
-      "inputHash": "e0771af1a3736458e116c646c114addf2de23e1ceb84ed3ac95eabc095ca9c09",
-      "sha256": "fd28a8e0ddad7fe5a53d238b20c4fa6d037023de291cc8a824ae7f4f11c3da5a",
+      "characterCost": 6.0,
+      "inputHash": "faa913f4b470a12ea66c47fb07d2ba342a707d34f1eb55dab38b710c7cdf3789",
+      "requestId": "XPg9YJXuKBVQ1xUWAkog",
+      "sha256": "d5e1729656ab18ad8ecd61086b44e73383830d7ab8dca987efcabee36c3da9c5",
+      "sourceSha256": "9e9ab54982ca078ef6530fbf004ad5300e11cd8b8378948bf0c24fcecc75192b",
       "url": "/audio/cw-training/passages/5181be0214268767.wav"
     },
     "THE TALL GRASS": {
-      "inputHash": "01af02bef905a4a796e966409497be8eba080421080a4a842f82a32d5498b09b",
-      "sha256": "34f0fd4820ff16373a1124ddbb08597be44dcb9a11853c5a4d1d5ced1533aed6",
+      "characterCost": 6.0,
+      "inputHash": "4c9a71a364ebd7ce731a51dc17a02d57eed18a89dc923d79e4929b733988bb72",
+      "requestId": "Vzy9TvVopO9ttJwG5Z0v",
+      "sha256": "237c3e76d429ca6930060eae02edf182f519112f93c3b058e7517a8faafb98c1",
+      "sourceSha256": "776ddcf99cf5c9734e9528311c431ff8ae1fa332a95506aef22adb910ca03ff9",
       "url": "/audio/cw-training/passages/7a8c138ad18821ca.wav"
     },
     "THE TEA IS HOT.": {
-      "inputHash": "1de9a483aebe2e631e331faef6c96549cf57e3089ac295c975fea2c712a9ac36",
-      "sha256": "fa647e54b353475635d4e03292458ee2acb336f2ed85bb1c674442541bff1677",
+      "characterCost": 6.0,
+      "inputHash": "e56c7e977ff362e7ce54a013f54755faf9886af3263fd73bb6300fc0fac0ae6f",
+      "requestId": "97eolR5d23BjaU59dIEE",
+      "sha256": "3fc6e48915fc89da6756b23442fd676af2978911559d25ee93986818b3730edf",
+      "sourceSha256": "629998e8a2593292026be855a2f8397ee8925e39d79c999133139251c94cfeb3",
       "url": "/audio/cw-training/passages/d8531642dd724554.wav"
     },
     "THE TOP SHELF": {
-      "inputHash": "24bcc01950865f312dcd51cc7c9a9a1c016932402cf4a4aa82e33abde88ff383",
-      "sha256": "4ec94a57668cafc8397ee26aceca27bf7382081c508fb9c0990d7618df5e1407",
+      "characterCost": 5.0,
+      "inputHash": "5ec1e13944fe19a15ff9e3c940db0c9a8685feb0a06ee4f6101357ccd6aaae34",
+      "requestId": "WgukgSYcmVI5nlcmN74F",
+      "sha256": "f308181f1a44840a91bd05d38fdc10cb19c6d5256365fdfa595864915dd02894",
+      "sourceSha256": "cd6b606b91d515895e2dca40b82f3dcecab530f9520ae6f034b582b14e488cb0",
       "url": "/audio/cw-training/passages/9c5a850f280209e0.wav"
     },
     "THE TREE IS GREEN.": {
-      "inputHash": "1223d1455334554e5414632360b041797bb8b618da921e334646bc334a6bb843",
-      "sha256": "8d96b45fc34e63fb3eadeca54ae7f6b3afd1dff5433d145c71862d90769c2512",
+      "characterCost": 7.0,
+      "inputHash": "69c88d6411cf550d036eb02c21bd3e4ae0edd39f545a6aac96cb59bc539d6b6c",
+      "requestId": "JiJAQCsBpHyS1wFdmmop",
+      "sha256": "e9924e5bd63a9ef73dddc464b8ed2a99e48abb8d32f99d26ee74dc1e5b1c3e99",
+      "sourceSha256": "81a231f28359579589f6c242082179f662c666cb6132349b3fb32e52b6a739f9",
       "url": "/audio/cw-training/passages/8c286ef9b3248021.wav"
     },
     "THE WARM BREAD": {
-      "inputHash": "6938bd3f923fcc3d943d7b1c7604f60d4ac59f8b773bdce10e7df891b4bdc054",
-      "sha256": "263a752026bacb568b29c6e22b0f0799d1d7b1dff702444613facff63da5a5e4",
+      "characterCost": 6.0,
+      "inputHash": "49c7ef43914c0354c5859003b2129b3f816bc88ae2e0a7e496ef44e1b4d68b5a",
+      "requestId": "OCSSTvmGvTQaNtEbv4rE",
+      "sha256": "fcfd9ac1a6c9d3dac6ed7c1d506d9ddce70213db4f1f994c1194ee893cbc654e",
+      "sourceSha256": "c8f13ae01dd846909311fbc3336bccca41be1d7c4022b2451b7eadc30819d23f",
       "url": "/audio/cw-training/passages/698881fefa103acd.wav"
     },
     "THE WIDE RIVER": {
-      "inputHash": "e90c371f596c8501286326e2091770ad65c2b0059fbcaf98ba94c1928f6d5665",
-      "sha256": "fd0baeec5030f0ec6740ff7de1e8c992cb4689bfe56fd9aa1a3a20453954e403",
+      "characterCost": 6.0,
+      "inputHash": "bfdf3b0b4568f5a7b2958dac8b3a2581f918d55fc43b54ac260c48b9d39aab6a",
+      "requestId": "gbUnUeByHC7FSmCGdOsV",
+      "sha256": "00d3ee1a259ae38730ce7ff80af9820b32d7ee089cb28a084d5a2d1cd35d8608",
+      "sourceSha256": "40fb9379580a5a03d6b9d8e434448b6e5262e10c5e430fcc790d5310f352222d",
       "url": "/audio/cw-training/passages/63890302b931851d.wav"
     },
     "THEN SHE SAW THE BLUE STONE AND KNEW WHICH WAY TO GO.": {
-      "inputHash": "592e997ed531022661ca18440a9cb1cc9c4525082294819039230f8525e274dd",
-      "sha256": "12b078fb8fa208087159dae9ec98233c48dc9f3299717c87d8d70051091516e2",
+      "characterCost": 21.0,
+      "inputHash": "5fa060c76759d5849ef5248c081cebe0d9ed7fbc19dd7f15fb9254eeed68ae52",
+      "requestId": "esQbuzGCAYwI5yWrV7P4",
+      "sha256": "fc54971ad7f1e08f58c1b971d642e1f6b8083e1c03c3798adf0d455997ed14bc",
+      "sourceSha256": "328eda805826c8ae47e10a2cd79d076f91cb66fb9a0f27dce46ba336f80357d9",
       "url": "/audio/cw-training/passages/ca8dd3e4ba585552.wav"
     },
     "THEY TALKED ABOUT THEIR ANTENNAS AND THE WEATHER.": {
-      "inputHash": "d055eb4a9583d499c6e5798eb8616c9f9b683694bea73754dbfaae41b02ab752",
-      "sha256": "2a700f7b83bcd148840612b9e53794953478f4c11441c19d12f24f0279b388b3",
+      "characterCost": 20.0,
+      "inputHash": "d89e3553fa8f040c5a47daa4b6566a93331b0f818415fa31ac2201abdaa0e5da",
+      "requestId": "s9lOvVYKLEMPO9LXeukE",
+      "sha256": "680d6d3f997f690fbcac3a501b8e715b33f320ba94842f10f1baaad4071a5464",
+      "sourceSha256": "15cc3a9f67b4254ea85136175d212588ca7b9be8015ef59a62a1f19d903d45da",
       "url": "/audio/cw-training/passages/62b20f74ba580bc2.wav"
     },
     "THIS TIME HE COPIED EVERY LETTER.": {
-      "inputHash": "9dfd515373a416b2a9cb455b104a60821d41cb7c660a3a13822a03f3df323f22",
-      "sha256": "55fb8c7dc0be01315bcc73bd0734866ce4f2f292fef08dc6548a2475f5bb0da3",
+      "characterCost": 13.0,
+      "inputHash": "8203d894db9c93835209bb3d764e2d1dde1665f1fa89eee1e8ead0c9c1c79a26",
+      "requestId": "lGJx84luA6uuCPiuFc6H",
+      "sha256": "a7092ab7c7a987b6d2b031500197d58740fe8bd50fbf5bbc5d1cfb6b091fa447",
+      "sourceSha256": "d1817e15f4bb4353c4b865840155bc2bef476071acb83419014f09953f5a427a",
       "url": "/audio/cw-training/passages/01fa9bbb70e0d646.wav"
     },
     "TIME FOR BED": {
-      "inputHash": "f19df82f4ef1e9f3b170f91dfdafe580ea9c0743f88c3834b392809fb69bb803",
-      "sha256": "7a359edfc36f9964486b628ccf0365b7b83584127e9a78877c77cc182f1bd31d",
+      "characterCost": 5.0,
+      "inputHash": "117bca13c853f9877d3d3e426a5f25b33d6641a1b5cb57498000a8b5f0295eed",
+      "requestId": "FJg7r3eFHpP42oH5Dbcb",
+      "sha256": "e91fef456342520f42a7bb19236772ea32f5a289e2def66eba48716ba7a385ab",
+      "sourceSha256": "f125b498ffc97f9a89ef74c70a7d923e795f1dc26e1a2e2c11be89b84d156459",
       "url": "/audio/cw-training/passages/c29d18d2206e6dff.wav"
     },
     "TIME TO REST": {
-      "inputHash": "d5e3a0063fa89d0819c28977519f2f84889c9b81b5f61cc615cb0b2f461750d8",
-      "sha256": "b685676437fbb6455a2e590f49f40a83b341b54a8e2417ba73491bc69788a222",
+      "characterCost": 5.0,
+      "inputHash": "c51c127d2a5907ebf44acee713d9b52182c1f340f3f26a0339a775ceadbfa370",
+      "requestId": "fQKqaXcNIJOKNvd7c43X",
+      "sha256": "0e7ff3b57102e424ee36df22029ed4b2b7438406d31726a3fafab3732a1ac8d5",
+      "sourceSha256": "b691606d1b226cf4ddcef29de33f5ae56788039aa48a6d67bff7e6a510681082",
       "url": "/audio/cw-training/passages/2fe2bd982adddcc4.wav"
     },
     "TOM SMILED AND TOOK A FLASHLIGHT FROM A DRAWER.": {
-      "inputHash": "9511bd52797fa7077e59c112dc2ed5a1436a31ec61877e5b398d57025b29f05c",
-      "sha256": "2051dacec4a6c05e7874b5c71be00fd6cd5d7d29566feef00d3fd51db6025e39",
+      "characterCost": 19.0,
+      "inputHash": "c3a50caf1b9d09701c90d843954b29bbe59ccf81c78ec67e9f185132d60186e5",
+      "requestId": "JDawqocyiHv7O0tlIfml",
+      "sha256": "d2d96a9409ec0a017db0403e78dee5e5356bd5b78b8624ed8cb9bbee21cb3f01",
+      "sourceSha256": "f0940caa0d53c1fa02c7dbb29ebe3db721973d0d95b5e6acb89f90ca9a260146",
       "url": "/audio/cw-training/passages/9cd5a49c90b8878d.wav"
     },
     "UNDER THE TREE": {
-      "inputHash": "48ef34078e6d52f65ea78c3eccfba283ec18f58fddcc3eefe24ee4e63af65a41",
-      "sha256": "96f32daf18ffe150330871d6caaff223b587576dd016f8c43abd7928b1158f0e",
+      "characterCost": 6.0,
+      "inputHash": "5f92c3e8f3aebbf7e494f8fadf966f5cddc24d2b0cb680c824374b9976aed180",
+      "requestId": "jNIE532wWO9EL474CIVB",
+      "sha256": "bc0ebb9084fdf712a609688d8790034c809376c3659a6df54baa21e83174c969",
+      "sourceSha256": "45328b6df39e0d89761c83216f4633efd8017f15cfbce02ec89f30090f41249c",
       "url": "/audio/cw-training/passages/f5262a5ef4d463f5.wav"
     },
     "WE SIT BY THE LAKE.": {
-      "inputHash": "aaac9690e50238242f7eb75f247a3fd34bc5efed3127f99aec804dc922d97c72",
-      "sha256": "51f13f175c9418f5189bbb8ec6ba931b57a3d627b2f910c3648700f242defbfb",
+      "characterCost": 8.0,
+      "inputHash": "102185699b17906a4e9291987e05becc4f7712ed47c4215baf6ce0643020241b",
+      "requestId": "FkFiCCD1eQ9hEPERl3uQ",
+      "sha256": "1fddbd87f590b07e51229a1ba893af57436be8cf67b29f246ccb6f278be3a1b6",
+      "sourceSha256": "ce35e671c46437bd7c8f4d451b2c645c657176eca49c4c65ef9e8154ae16a45d",
       "url": "/audio/cw-training/passages/2dbaefbc0a6b7d3b.wav"
     },
     "WE SIT UNDER A TREE.": {
-      "inputHash": "4f5762cdf4b0a2b8891d82ca38ef7bb75d779c95affd5f03136e6a8bead699ef",
-      "sha256": "1ff257d9e539958d6235207145df6a706e4f7cc04171a1f488b6d70ffa9f7fb8",
+      "characterCost": 8.0,
+      "inputHash": "b9312d82b335a4b3791fe1898bd17487f72022f0a363af8cf326b9d4d6299360",
+      "requestId": "Uqk18r5EWaO9JpuyOMQc",
+      "sha256": "34a7ce093d9361fd98efb6c05979eafc9e1857adff6978c2ca7711530103dce2",
+      "sourceSha256": "40ecf4642ff2208ae3b5237a42045bd381a39072814c261b212c36ad3a63c539",
       "url": "/audio/cw-training/passages/36cec4d25b017958.wav"
     },
     "WE TAKE THE OLD ROAD.": {
-      "inputHash": "94320b165c0ce86cd816cd8895b2b5461f1fcddef41e30cabd7a7717ee6ed00c",
-      "sha256": "0f2d53b05af683e8b623246b6b0433179c4b4bd062b45fa13e9cc98c5dc6bc5a",
+      "characterCost": 8.0,
+      "inputHash": "0d477f503d70270043df08ced0683b5e6dbc75458cc58bc8aea6256be8fb3948",
+      "requestId": "9JUhhZfcm36OSifU2Fqz",
+      "sha256": "363326d9dd2ff3e3fe8b231af40cf9decce8b8b6e2fe0feb7dc2f2b00a15dd20",
+      "sourceSha256": "340555e1b9b689331bd2cc5586b969e68c66440906dce9b7dc9cb0111027abd8",
       "url": "/audio/cw-training/passages/54ddc7695d3a37df.wav"
     },
     "WE TALK AFTER LUNCH.": {
-      "inputHash": "933bc8f25eb941dc71be744d65a566700416cdd59933c8a04adf9b4f5bc1cb18",
-      "sha256": "c6d7cb24164b0b98d33ca6b1e2ecda9a7d1bb492c59c6c8c7d24cfc053624605",
+      "characterCost": 8.0,
+      "inputHash": "ef385802ba83f713959b83d19354793f3bd58f46ed9cb6f071d54dfb30e62b0a",
+      "requestId": "mnqCXhYsoonptcWOeTKL",
+      "sha256": "b9fe10a00c7d49205f110c24c5c4cdcdbcaf0c6c21212079237d2e905633e8ac",
+      "sourceSha256": "eca9a5621297a8a59b1b7079ecbcacd8ea256bf4894e067966bd8386860a6a49",
       "url": "/audio/cw-training/passages/fb586ab671596351.wav"
     },
     "WE USE LOW POWER.": {
-      "inputHash": "0f8d8237fc16e5c6411d17290be994d1e8db645c726d220be576b61fc69bec69",
-      "sha256": "a8e0ef1de6f1e40aff4f74975ccc51e73823477ad35f47e8834abe56316f41a1",
+      "characterCost": 7.0,
+      "inputHash": "15f8cd0eb1fe092e9cc7fa8e8cb26912dcc952f2503478ffd6aef325faeee597",
+      "requestId": "shPrdoTjbyIxx8DwkfBe",
+      "sha256": "937b96002a23ba0222b11711748898c0a6a2c02a28bc8512a8010b60fc628082",
+      "sourceSha256": "1227812a4d3052f8e0200d28ca6fb890b2f2f6255f44f06c619a95b7f658eb5e",
       "url": "/audio/cw-training/passages/fbbae0dbbe6d736c.wav"
     },
     "WE WALK TO THE LAKE.": {
-      "inputHash": "c1593922214c0a9684c8112f0a0a2fc9d79958d5512a23e192600bbb3f670405",
-      "sha256": "081862a18c3ca0982927f0a0e56b0c99f70ebcdb00a421977c4637e895c88d3b",
+      "characterCost": 8.0,
+      "inputHash": "f3558593cd5ca7702f257b27d7bd9aa60692b81bde9b0994dd9bde62e0d352c7",
+      "requestId": "PSIl1Q7BxgqXYybV22T9",
+      "sha256": "f6fef492b5fd2c8497dce5e94d64aa26f752286f30b901c68ca271b0f78e2bcf",
+      "sourceSha256": "048358912c911c1036eee043c6caa5847a283d6e6cb6fa4201c242491dd6ac51",
       "url": "/audio/cw-training/passages/26e096837eb95ce9.wav"
     },
     "WE WALK UP THE HILL.": {
-      "inputHash": "bbb724abf2114c7c75038504ebe84bc1d496a1f65980ade21c7c0293c1f8deed",
-      "sha256": "2496bf6f6ac8762202ef92402dfecb139c10adbc8577e20f7ff386af0f433dbd",
+      "characterCost": 8.0,
+      "inputHash": "08c38dfa6ab3c647cd545ec6bf3a102badcea12e8711a39307cb26c608a2b88d",
+      "requestId": "vqrREbxEfuIwqmF8d4IP",
+      "sha256": "7e562be9f4dd3e214132f9087ab66fe05b22161cf457420059c49f988d6dfe89",
+      "sourceSha256": "c8b40b978546cf91467d25649033ef9d57c13212d4308b8cf82e46f9fb5f3865",
       "url": "/audio/cw-training/passages/f0a374d1a3f3b6fc.wav"
     },
     "WHEN THE LIGHT APPEARED TOM SENT A SLOW GREETING ACROSS THE WATER.": {
-      "inputHash": "5c363789df08b60b25e4f52d15ebf107d0bbb88703550480a505a8c540f02213",
-      "sha256": "62a5df036288cb526130e2a79f1ce649f5b9c18285f94d25363e4bffaf542e15",
+      "characterCost": 26.0,
+      "inputHash": "1b8d9380aac5533342ea38eefab7710c61a164632b1e5a4a4fb101e36b11e122",
+      "requestId": "u2ykSRSeqXrHflWcOu7u",
+      "sha256": "e13871a644fa866dd7a226981a8a34361ee702fd766aaf14cb8157abffb120b5",
+      "sourceSha256": "dadb08ddca5d03bc7f2c63ae8b9e5adee1f4ffb98eb37521a983776215b8211d",
       "url": "/audio/cw-training/passages/9239a9cbe23848ed.wav"
     },
     "WHEN THEY SAID GOODBYE THE SUN WAS HIGH ABOVE THE TREES.": {
-      "inputHash": "72b170c2077593301e974d95316bb4948e2261aad26cdbea45b2cffc0b929ba4",
-      "sha256": "e68969f6978b04837ca7ab5369439064555ffee4d6cbcad4a19b4a887a277a09",
+      "characterCost": 22.0,
+      "inputHash": "a5371b10bace05576171640b237c0f7b14d68bbc100d1c51be4c03f12df34663",
+      "requestId": "aiQXLxxbO13XLhGf8j7a",
+      "sha256": "af92ff9a313022def56bf98fbfb55141730cb3d55cd27686707fee75fbbdd7e2",
+      "sourceSha256": "c2c9d68ffb257ae88af5bc22933cc9abb2b6a6ce72be29402f63cd3f22a3c206",
       "url": "/audio/cw-training/passages/0ae1f7aff18c6ade.wav"
     },
     "YOUR FIRST NAME": {
-      "inputHash": "1dae3457f96cd1c77108542962e9549147bb0b7c37ed2b00cc6a72531d5808f8",
-      "sha256": "4e4a8864bcc5d27d747dbd6dbe73a4017320fdba8ff75722db8a2c70f3bbc254",
+      "characterCost": 6.0,
+      "inputHash": "cc58c2d58faf984911609ea8dd03aa33c661946c81cf3cfc221956e90d8e91ee",
+      "requestId": "6S7S5IcXtyGgMBb9cgrV",
+      "sha256": "af560a7a91ffcbcfda310134db360a7f03d40ea58017f979cb27e93e88e213e2",
+      "sourceSha256": "a0e1d2fa42fffe22b4da89e76a4c5925230dd194c225a54b24733d9f864b8d2a",
       "url": "/audio/cw-training/passages/4c3d655657611b3a.wav"
     },
     "YOUR SIGNAL": {
-      "inputHash": "d11bcc0c9bacf4b1956733d4ecab644adce22885577b7b5d08d2fdcba9979472",
-      "sha256": "02c466c443c3f2dfcd19a00d48c26dedeb61894862acb92c14c87414d19c709e",
+      "characterCost": 4.0,
+      "inputHash": "80bfefd4eff4a3b997ad918fc7e55d6af92f1dc6d37bc86691a390ed0f2f4c60",
+      "requestId": "s8CHThBHaO7mNOTo9oGh",
+      "sha256": "9130cb154f8e4056070a26574ffc4d3fb371320aa5d6c2ab6f7030da75bfde7d",
+      "sourceSha256": "dd27fa5d2e520abd77097df08c79f407e136f0d7ff71916374c6857208224912",
       "url": "/audio/cw-training/passages/2da5e81cf1394750.wav"
     },
     "YOUR SIGNAL IS CLEAR.": {
-      "inputHash": "b8e966dfafd01d4bb08541adf4c3339a00f43de4081e10d8ab1cf27d4a39a80a",
-      "sha256": "c8f027f89cc868a2460b1c3c0dd6155e0e6497ce742876caf0fed0d5b2b06f4c",
+      "characterCost": 8.0,
+      "inputHash": "ea58405956d89aaf04f864e729d61f005990d2d8b860d8ce3aae5a7b6cc21ed1",
+      "requestId": "OydXyAqJsAF4OI9xn4hG",
+      "sha256": "cf051c9debefd67c612d7c3e341696fc297363ce3a854ae1bb151b505b011b45",
+      "sourceSha256": "57a4e59dcf2db840dfc7ea1fcc76b1fc3ce9d6705dd963c61daa8325bd32e853",
       "url": "/audio/cw-training/passages/64854b8dcdb76bff.wav"
     }
   },

@@ -1,4 +1,4 @@
-# Prerecorded word answers
+# Prerecorded English answers
 
 ## Whole-phrase, sentence and story answers
 
@@ -8,11 +8,12 @@ collections plus three new sixteen-phrase collections with distinct identities.
 Previously shared collection text and order remain intact. The same pack covers
 all 24 sentences and both short and original stories, deduplicating shared lines.
 
-The currently shipped passage WAVs were generated ahead of time with Kokoro
-v1.0, `af_heart`, American English, speed 1, in the development workspace. The
-generation recipe now targets the existing word pack's ElevenLabs Bella /
-Eleven v4 voice and settings. This prepares local regeneration with the private
-key; it does not relabel the existing Kokoro recordings as ElevenLabs output.
+On October 13, 2026, all 128 Kokoro passage recordings were replaced with
+ElevenLabs output using the existing word pack's Bella
+(`hpp4J3VqNfWAUOO0d1Us`) / Eleven v4 (`eleven_v4`) settings: English,
+stability 0.75 and similarity 0.75. The replacement covered 3,040 characters
+of authored text in 128 requests; response receipts reported 1,213 metered
+characters. The word recordings and their index remain unchanged.
 Playback needs neither an on-device model nor browser speech synthesis.
 `data/cw-training/passage-speech.json` records the desired generation inputs;
 the static index retains the fingerprints and hashes of the actual shipped clips.
@@ -20,6 +21,7 @@ the static index retains the fingerprints and hashes of the actual shipped clips
 ```sh
 mise run generate-passage-speech -- --provider elevenlabs --dry-run
 mise run generate-passage-speech -- --provider elevenlabs
+mise run generate-passage-speech -- --provider elevenlabs --dry-run
 ```
 
 The task updates the manifest from the versioned public catalog, reads the
@@ -30,17 +32,24 @@ uses Python's standard library and needs no uv, ffmpeg or downloaded model.
 Only the authored manifest, index and resulting WAVs ship. Normal builds and
 playback make no synthesis requests. The existing word WAVs remain unchanged.
 
-For the initial voice replacement, the dry run should report 128 pending clips
-and, on a fresh checkout without cached responses, 128 ElevenLabs requests.
-Generate without `--force`: changed input fingerprints already replace the
-Kokoro clips, and received raw responses survive interrupted output under
-ignored `.tmp/cw-speech/elevenlabs/`. Rerunning completes unchanged or received
-work without repeating paid requests. Do not automatically retry an ambiguous
-API failure; inspect provider usage first. Explicit rate-limit retries are
+The replacement's initial dry run reported 128 pending clips and 128 ElevenLabs
+requests; the final dry run reported zero pending clips and zero requests.
+Generation completed without API failures or `--force`. Changed input
+fingerprints trigger replacement, and received raw responses survive interrupted
+output under ignored `.tmp/cw-speech/elevenlabs/`. Rerunning completes unchanged
+or received work without repeating paid requests. Do not automatically retry
+an ambiguous API failure; inspect provider usage first. Explicit rate-limit retries are
 bounded by the existing generator.
 
-After generation, rerun the dry run and require zero pending clips/requests.
-Audition short phrases and representative story sentences, then validate:
+All 128 replacement WAVs were checked against their index hashes and expected
+normalized mono 22050 Hz 16-bit PCM format. Seven representative short phrases
+and longer story sentences were played through local audio output; pronunciation
+quality was not assessed by ear in the automated session. Typecheck, regression
+tests, the production build and the three browser journeys below passed.
+
+After future generation, rerun the dry run and require zero pending clips and
+requests. Audition short phrases and representative story sentences, then
+validate:
 
 ```sh
 mise run check
@@ -52,10 +61,8 @@ mise run test-browser -- \
   e2e/spoken-answers.spec.ts
 ```
 
-Update this section to record the completed voice
-replacement, commit the passage WAVs/index and documentation with Jujutsu,
-and push to main. Never commit the private key or response cache. An API-key
-permission or unavailable voice/model error needs resolution before generation
+Never commit the private key or response cache. An API-key permission or
+unavailable voice/model error needs resolution before generation
 continues; retain the existing recordings until valid replacements are produced.
 
 Hands-free playback assembles the selected collection into one bounded native
