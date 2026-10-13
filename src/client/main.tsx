@@ -152,7 +152,7 @@ import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
 import { pendingListeningPasses } from '../shared/listening-progress';
-import NextPracticeAction from './NextPracticeAction';
+import NextPracticeAction, { FamiliarReview } from './NextPracticeAction';
 import { nextPracticePlan } from '../shared/next-practice';
 import type { PlannedTask } from '../shared/plan';
 import {
@@ -1729,7 +1729,15 @@ function App() {
                               onOpen={() => void navigate('course')}
                             />
                           }
-                          nextAction={!practiceLaunch ? nextPracticeAction : undefined}
+                          optionalReview={
+                            !practiceLaunch ? (
+                              <FamiliarReview
+                                reviews={nextPlan.reviews}
+                                busy={!nextReady || navigationBusy || booting}
+                                onReview={(taskId) => void startFamiliarReview(taskId)}
+                              />
+                            ) : undefined
+                          }
                           liveNow={liveNow}
                           accountId={user.id}
                           currentRunner={

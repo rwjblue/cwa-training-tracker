@@ -43,7 +43,7 @@ import TaskTodayPin from './TaskTodayPin';
 import { curriculumForLevel, sessionSyllabusUrl } from '../shared/curriculum';
 
 export interface TodayPlanProps {
-  nextAction?: React.ReactNode;
+  optionalReview?: React.ReactNode;
   preparation?: React.ReactNode;
   liveNow?: number;
   currentRunner?: CurrentRunnerProgress;
@@ -79,7 +79,7 @@ const minuteLabel = (minutes: number) => Number(minutes.toFixed(1));
 
 /** The parent owns private data, so course edits and journal saves stay in sync. */
 export default function TodayPlan({
-  nextAction,
+  optionalReview,
   preparation,
   liveNow = Date.now(),
   accountId,
@@ -203,7 +203,6 @@ export default function TodayPlan({
       </header>
       <ClassMeetingCard now={liveNow} accountId={accountId} profile={profile} onLog={onLog} />
       {preparation}
-      {nextAction}
       {!loading && !profile.classSchedule && plan.nextMeeting && (
         <div className="today-plan-next-class">
           <CalendarDays size={15} />
@@ -408,6 +407,7 @@ export default function TodayPlan({
           )}
         </>
       )}
+      {!loading && !error && optionalReview}
       {!loading && !error && (
         <footer className="today-plan-footnote">
           {curriculum && (

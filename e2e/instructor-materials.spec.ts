@@ -117,16 +117,11 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await navigate(page, 'Today');
   const preparation = page.getByRole('region', { name: 'Instructor preparation', exact: true });
   await expect(preparation).toContainText('Synthetic preparation');
-  const next = page.getByRole('region', { name: 'Your next practice', exact: true });
-  expect(
-    await preparation.evaluate((element) =>
-      Boolean(
-        element.compareDocumentPosition(document.querySelector('.next-practice')!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-      ),
-    ),
-  ).toBe(true);
-  await expect(next).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Your next practice', exact: true })).toHaveCount(
+    0,
+  );
+  const plan = page.getByRole('region', { name: 'What should I do today?', exact: true });
+  await expect(plan).toContainText('Synthetic preparation');
   await expectMaterialScreen(page, 'material-today-preparation');
   await keyboard(page.getByRole('button', { name: 'Open instructor materials', exact: true }));
   await keyboard(page.getByRole('button', { name: 'Read Synthetic preparation', exact: true }));

@@ -115,6 +115,9 @@ test('familiar review rotates native material and saves exact private evidence w
   const reviews = page.getByRole('region', { name: 'Optional familiar review', exact: true });
   const titles = () => reviews.getByRole('heading', { level: 4 }).allTextContents();
   await expect(reviews).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Your next practice', exact: true })).toHaveCount(
+    0,
+  );
   expect(await titles()).toEqual([audioTask.title, icrTask.title, runnerTask.title]);
   await expect(reviews).not.toContainText('Future ICR recipe');
   await expect(reviews).not.toContainText('Same recording on another day');

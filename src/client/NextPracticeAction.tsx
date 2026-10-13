@@ -130,39 +130,13 @@ export default function NextPracticeAction({
           </p>
         </>
       )}
-      {!resultPending && plan.reviews.length > 0 && (
-        <section className="familiar-review" aria-label="Optional familiar review">
-          <h3>Optional familiar review</h3>
-          <p>Choose familiar material while required work is complete or unavailable.</p>
-          <details className="next-practice-guidance">
-            <summary>About extra review</summary>
-            <p>
-              These suggestions rotate with saved practice. Review adds daily practice time and
-              preserves its source; it never completes or credits the required assignment.
-            </p>
-          </details>
-          <ul>
-            {plan.reviews.map(({ task, reason }) => (
-              <li key={task.id}>
-                <h4>{task.title}</h4>
-                <p>{reason}</p>
-                {task.notes && (
-                  <details className="next-practice-guidance">
-                    <summary>Exercise instructions</summary>
-                    <p>{task.notes}</p>
-                  </details>
-                )}
-                <button
-                  className="button outline"
-                  disabled={busy}
-                  onClick={() => onReview(task.id)}
-                >
-                  {finishing ? 'Finish & review' : 'Review'} {task.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {!resultPending && (
+        <FamiliarReview
+          reviews={plan.reviews}
+          busy={busy}
+          finishing={finishing}
+          onReview={onReview}
+        />
       )}
       <div className="next-practice-actions">
         <button className="text-button" disabled={busy} onClick={onManage}>
@@ -183,6 +157,51 @@ export default function NextPracticeAction({
             </p>
           </details>
         )}
+    </section>
+  );
+}
+
+/** Shared review suggestions, separate from the required assignment shortcut. */
+export function FamiliarReview({
+  reviews,
+  busy,
+  finishing,
+  onReview,
+}: {
+  reviews: ReturnType<typeof nextPracticePlan>['reviews'];
+  busy: boolean;
+  finishing?: boolean;
+  onReview: (taskId: string) => void;
+}) {
+  if (!reviews.length) return null;
+  return (
+    <section className="familiar-review" aria-label="Optional familiar review">
+      <h3>Optional familiar review</h3>
+      <p>Choose familiar material while required work is complete or unavailable.</p>
+      <details className="next-practice-guidance">
+        <summary>About extra review</summary>
+        <p>
+          These suggestions rotate with saved practice. Review adds daily practice time and
+          preserves its source; it never completes or credits the required assignment.
+        </p>
+      </details>
+      <ul>
+        {reviews.map(({ task, reason }) => (
+          <li key={task.id}>
+            <h4>{task.title}</h4>
+            <p>{reason}</p>
+            {task.notes && (
+              <details className="next-practice-guidance">
+                <summary>Exercise instructions</summary>
+                <p>{task.notes}</p>
+              </details>
+            )}
+            <button className="button outline" disabled={busy} onClick={() => onReview(task.id)}>
+              {finishing ? 'Finish & review' : 'Review'} {task.title}
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

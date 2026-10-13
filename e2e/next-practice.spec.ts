@@ -75,12 +75,20 @@ test('next assignment preserves native work through inspection and exact retry b
       await page.keyboard.press('Enter');
     }
   };
+  const todayPlan = page.getByRole('region', { name: 'What should I do today?', exact: true });
+  const row = (title: string) =>
+    todayPlan.getByRole('listitem').filter({
+      has: page.getByRole('heading', { name: title, exact: true, level: 4 }),
+    });
   const next = page.getByRole('region', { name: 'Your next practice', exact: true });
-  await expect(next).toContainText(audioTask.title);
+  await expect(next).toHaveCount(0);
+  await expect(row(audioTask.title)).toBeVisible();
   await expectResponsive(page, 'next-assignment-ready');
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
+  await activate(
+    row(audioTask.title).getByRole('button', { name: 'Listen & practice', exact: true }),
+  );
   const audio = page.getByLabel('Assigned recording', { exact: true });
   const owner = await audio.elementHandle();
   await page
@@ -137,8 +145,8 @@ test('next assignment preserves native work through inspection and exact retry b
   await activate(page.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/#overview$/);
-  await expect(next).toContainText(audioTask.title);
-  await expect(next).toContainText('Started');
+  await expect(next).toHaveCount(0);
+  await expect(row(audioTask.title)).toContainText('Started');
 
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   refuse = false;
@@ -169,8 +177,10 @@ test('next assignment preserves native work through inspection and exact retry b
     .toBe(true);
   await activate(menu);
   await activate(page.getByRole('link', { name: 'Today', exact: true }));
-  await expect(next).toContainText('Next manual exercise');
-  await activate(next.getByRole('button', { name: 'Start next block', exact: true }));
+  await expect(next).toHaveCount(0);
+  await activate(
+    row('Next manual exercise').getByRole('button', { name: 'Practice', exact: true }),
+  );
   await expect(
     page
       .getByRole('region', { name: 'Current practice session', exact: true })
@@ -264,16 +274,21 @@ test('blocked resources, live preparation, class phase and all-complete states s
       }),
     );
   };
+  const todayPlan = page.getByRole('region', { name: 'What should I do today?', exact: true });
+  const row = (title: string) =>
+    todayPlan.getByRole('listitem').filter({
+      has: page.getByRole('heading', { name: title, exact: true, level: 4 }),
+    });
   const next = page.getByRole('region', { name: 'Your next practice', exact: true });
-  await expect(next).toContainText('Ask your advisor for the recording');
-  await expect(next.getByRole('button', { name: 'Start next block', exact: true })).toHaveCount(0);
+  await expect(next).toHaveCount(0);
+  await expect(row(missing.title)).toContainText('Recording unavailable');
   await expectResponsive(page, 'next-blocked-recording');
   const opened = page.waitForEvent('popup');
-  await activate(next.getByRole('link', { name: 'Open exercise instructions', exact: true }));
+  await activate(row(missing.title).getByRole('link', { name: 'Open exercise', exact: true }));
   const popup = await opened;
   expect(popup.url()).toBe(missing.link);
   await popup.close();
-  await activate(next.getByRole('button', { name: 'Inspect your plan', exact: true }));
+  await activate(todayPlan.getByRole('button', { name: 'Your full plan', exact: true }));
   await activate(page.getByRole('button', { name: 'This week', exact: true }));
   await page.getByRole('checkbox', { name: `Mark ${missing.title} complete`, exact: true }).focus();
   await page.keyboard.press('Space');
@@ -286,12 +301,14 @@ test('blocked resources, live preparation, class phase and all-complete states s
     )
     .toBe(true);
   await navigate('Today');
-  await expect(next).toContainText('A live window is coming up');
+  await expect(row(live.title)).toContainText('Next eligible CWT window');
 
   await page.setViewportSize({ width: 390, height: 844 });
   mobile = true;
 
-  await activate(next.getByRole('button', { name: 'Prepare live exercise', exact: true }));
+  await activate(
+    row(live.title).getByRole('button', { name: 'Prepare live practice', exact: true }),
+  );
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeDisabled();
   await expect(
     page.getByRole('region', { name: 'CWT assignment opportunity', exact: true }),
@@ -303,11 +320,13 @@ test('blocked resources, live preparation, class phase and all-complete states s
   await activate(retained.getByRole('button', { name: 'Finish practice', exact: true }));
   await page.clock.setFixedTime(new Date('2026-10-07T14:59:59Z'));
   await page.clock.fastForward(60_001);
-  await expect(next).toContainText('No eligible live window remains');
+  await expect(row(live.title)).toContainText('No CWT window remains before the deadline.');
   await page.clock.setFixedTime(new Date('2026-10-07T15:00:00Z'));
   await page.clock.runFor(1000);
-  await expect(next).toContainText('Class is in progress');
-  await expect(next.getByRole('button', { name: 'Start next block', exact: true })).toHaveCount(0);
+  await expect(
+    todayPlan.getByRole('region', { name: 'Your private class schedule', exact: true }),
+  ).toContainText('CLASS IN PROGRESS');
+  await expect(next).toHaveCount(0);
 
   await navigate('Academy guide');
   await activate(page.getByRole('button', { name: 'This week', exact: true }));
@@ -315,8 +334,9 @@ test('blocked resources, live preparation, class phase and all-complete states s
   await navigate('Today');
   await page.clock.setFixedTime(new Date('2026-10-07T16:00:00Z'));
   await page.clock.fastForward(60_001);
-  await expect(next).toContainText('Your required exercises are complete');
-  await expect(next.getByRole('button', { name: 'Start next block', exact: true })).toHaveCount(0);
+  await expect(todayPlan).toContainText('Today’s plan is complete.');
+  await expect(next).toHaveCount(0);
+  await expectResponsive(page, 'today-complete-without-shortcut');
 
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
   const plan = (await (await context.request.get('/api/plan')).json()).plan;
