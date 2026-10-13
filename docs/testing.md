@@ -72,6 +72,10 @@ files have no automatic comparison and should not be added after every click.
 Run Axe on distinct screens and meaningful dialog states, not every transition.
 A goal crossing its threshold, a successful upload, or a different status string
 does not need another scan of the same screen. Keep the behavior assertions.
+When another journey already owns a screen's accessibility, use
+`expectResponsive(page, label, { accessibility: false })` for its geometry and
+mobile input-size checks, and name the remaining accessibility owner beside the
+call.
 
 Native playback tests should use short material and only the observed movement
 needed to exercise the boundary. Exhaustive trial counts, progress arithmetic,

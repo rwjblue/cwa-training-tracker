@@ -293,7 +293,9 @@ test('accepted long native and imported titles fit the library, reader and assoc
   await keyboard(page.getByRole('button', { name: 'Save material', exact: true }));
   await expect(page.getByRole('dialog', { name: 'Read instructor material' })).toBeVisible();
   await settleDialog(page);
-  await expectResponsive(page, 'material-long-title-reader');
+  // The authoring journey owns reader/preparation accessibility; this case
+  // keeps their long-title layout checks and scans both library states below.
+  await expectResponsive(page, 'material-long-title-reader', { accessibility: false });
   await page.keyboard.press('Escape');
   await expectResponsive(page, 'material-long-title-library');
   await keyboard(page.getByRole('button', { name: `Revise ${title}`, exact: true }));
@@ -301,7 +303,7 @@ test('accepted long native and imported titles fit the library, reader and assoc
   await page.keyboard.press('Escape');
   await navigate(page, 'Today');
   await expect(page.getByRole('region', { name: 'Instructor preparation' })).toContainText(title);
-  await expectResponsive(page, 'material-long-title-preparation');
+  await expectResponsive(page, 'material-long-title-preparation', { accessibility: false });
 
   const importedTitle = 'I'.repeat(200);
   const original = {
@@ -340,7 +342,8 @@ test('accepted long native and imported titles fit the library, reader and assoc
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: `Associate ${importedTitle}`, exact: true }).tap();
   await settleDialog(page);
-  await expectResponsive(page, 'material-long-imported-association');
+  // The association journey above owns accessibility of this same dialog.
+  await expectResponsive(page, 'material-long-imported-association', { accessibility: false });
   await keyboard(page.getByRole('button', { name: 'Save associated copy', exact: true }));
   await expect(page.getByRole('dialog', { name: 'Read instructor material' })).toBeVisible();
   await settleDialog(page);

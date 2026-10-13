@@ -106,7 +106,11 @@ export async function expectAccessible(page: Page, label: string) {
 }
 
 /** Check a settled screen at both widths without replaying its persistence workflow. */
-export async function expectResponsive(page: Page, label: string) {
+export async function expectResponsive(
+  page: Page,
+  label: string,
+  { accessibility = true }: { accessibility?: boolean } = {},
+) {
   const original = page.viewportSize();
   try {
     for (const viewport of [
@@ -144,7 +148,7 @@ export async function expectResponsive(page: Page, label: string) {
           );
         expect(undersizedControls, `${label} should avoid Safari input-focus zoom`).toEqual([]);
       }
-      await expectAccessible(page, `${label}-${viewport.width}`);
+      if (accessibility) await expectAccessible(page, `${label}-${viewport.width}`);
     }
   } finally {
     if (original) await page.setViewportSize(original);
