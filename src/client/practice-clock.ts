@@ -262,11 +262,20 @@ export class PracticeClock {
     this.media = undefined;
   }
 
-  observeRecording(source: RecordingSource) {
+  private updateRecording(source: RecordingSource, refineDuration: boolean) {
     if (this.resume && !sameRecording(this.resume.recording, source)) this.resume = undefined;
     if (this.media?.recording && !sameRecording(this.media.recording, source))
       this.media.resumePosition = undefined;
-    this.coverage.observe(source);
+    if (refineDuration) this.coverage.refineDuration(source);
+    else this.coverage.observe(source);
+  }
+
+  observeRecording(source: RecordingSource) {
+    this.updateRecording(source, false);
+  }
+
+  refineRecordingDuration(source: RecordingSource) {
+    this.updateRecording(source, true);
   }
 
   finalizeRecording(source: RecordingSource, ended: boolean) {

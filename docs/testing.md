@@ -59,6 +59,12 @@ of test time. That applies to manual and recall timers, not native audio credit:
 use a short synthetic recording and its actual media movement for listening.
 Fix the date/timezone when a scenario depends on a calendar day.
 
+`listening-duration.spec.ts` owns native MP3 duration refinement through Save
+and reload. Its short generated tone fixture has no Xing duration header, so
+Chromium revises its actual media duration while decoding. A WAV alone does not
+exercise this boundary. The fixture's generation command is beside the test;
+no official course audio is stored in the repository.
+
 Give each browser journey one primary concern. Playback, guidance, recording
 selection, save recovery, and backup controls need different assertions; they do
 not each need another export/import/report cycle. Use the existing backup and

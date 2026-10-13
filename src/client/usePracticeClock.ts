@@ -52,7 +52,7 @@ export function usePracticeClock() {
     if (recordingOwner.current !== audio || !audio.ended || audio.seeking) return;
     const source = recordingSource(audio);
     if (!source) return;
-    clock.current.observeRecording(source);
+    clock.current.refineRecordingDuration(source);
     if (media.current === audio) sample(audio);
     const outcome = clock.current.finalizeRecording(source, audio.ended);
     if (media.current === audio) {
@@ -80,8 +80,8 @@ export function usePracticeClock() {
     if (recordingOwner.current !== audio) return;
     const source = recordingSource(audio);
     if (!source) return;
+    clock.current.refineRecordingDuration(source);
     if (media.current === audio) sample(audio);
-    clock.current.observeRecording(source);
     if (media.current === audio)
       clock.current.startMedia(
         audio.currentTime,
@@ -139,7 +139,16 @@ export function usePracticeClock() {
         !document.hidden,
         audio.dataset.wordListening === 'true',
       );
-    } else if (event.type === 'seeking' || event.type === 'emptied') {
+    } else if (event.type === 'emptied') {
+      // Loading again, including the same URL, is a new source generation.
+      sourceIds.current.delete(audio);
+      if (media.current === audio || recordingOwner.current === audio) {
+        media.current = null;
+        recordingOwner.current = null;
+        clock.current.suspendMedia(false);
+        clock.current.discardRecording();
+      }
+    } else if (event.type === 'seeking') {
       if (media.current === audio || recordingOwner.current === audio) {
         // A seek while already paused must also revoke native resume tolerance.
         if (media.current === audio) media.current = null;

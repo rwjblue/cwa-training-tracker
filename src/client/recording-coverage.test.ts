@@ -238,6 +238,94 @@ describe('recording-local coverage', () => {
     expect(coverage.finalize(known, true)?.completed).toBe(false);
   });
 
+  it('keeps heard coverage across native MP3 estimates and stores only the final denominator', () => {
+    const coverage = new RecordingCoverage();
+    let recording = source(22.77607);
+    coverage.observe(recording, true);
+    coverage.hear(recording, 0, 20, 1);
+    const partial = coverage.measurements(recording.url)!;
+    for (let index = 1; index <= 150; index++) {
+      recording = source(22.77607 + index * 0.02);
+      coverage.refineDuration(recording);
+      coverage.observe(recording, true); // Hook reanchors this same playing element.
+      coverage.hear(recording, 20 + (index - 1) * 0.02, 20 + index * 0.02, 1);
+      expect(coverage.measurements(recording.url)?.durations).toEqual([
+        { durationSeconds: recording.durationSeconds, completedPasses: 0 },
+      ]);
+    }
+    recording = source(25.025306);
+    coverage.refineDuration(recording);
+    coverage.hear(recording, 23, 25.025306, 1);
+    expect(coverage.finalize(recording, true)?.completed).toBe(true);
+    expect(coverage.measurements(recording.url)?.durations).toEqual([
+      { durationSeconds: 25.025306, completedPasses: 1 },
+    ]);
+    expect(partial.durations).toEqual([{ durationSeconds: 22.77607, completedPasses: 0 }]);
+  });
+
+  it('clips a downward estimate to the final source bounds without rewriting prior completed facts', () => {
+    const coverage = new RecordingCoverage();
+    const first = source(10);
+    coverage.observe(first, true);
+    coverage.hear(first, 0, 10, 1);
+    coverage.finalize(first, true);
+    const estimated = source(12);
+    coverage.observe(estimated, true);
+    coverage.hear(estimated, 0, 11, 1);
+    coverage.refineDuration(first);
+    expect(coverage.snapshot().recordingProgress?.coveredSeconds).toBe(10);
+    expect(coverage.finalize(first, true)?.completed).toBe(true);
+    expect(coverage.measurements(first.url)?.durations).toEqual([
+      { durationSeconds: 10, completedPasses: 2 },
+    ]);
+  });
+
+  it.each(['another element', 'another URL', 'unknown duration', 'invalid duration'])(
+    'does not inherit coverage through metadata for %s',
+    (change) => {
+      const coverage = new RecordingCoverage();
+      const initial = source();
+      coverage.observe(initial, true);
+      coverage.hear(initial, 0, 5, 1);
+      const next = {
+        ...initial,
+        ...(change === 'another element' ? { sourceId: 'replacement' } : {}),
+        ...(change === 'another URL' ? { url: 'https://example.org/other.mp3' } : {}),
+        ...(change === 'unknown duration' ? { durationSeconds: undefined } : {}),
+        ...(change === 'invalid duration' ? { durationSeconds: Infinity } : {}),
+      };
+      coverage.refineDuration(next);
+      const known = { ...next, durationSeconds: 10 };
+      coverage.refineDuration(known);
+      coverage.hear(known, 5, 10, 1);
+      expect(coverage.finalize(known, true)?.completed).toBe(false);
+    },
+  );
+
+  it('retains a missing middle through native duration refinement', () => {
+    const coverage = new RecordingCoverage();
+    const estimated = source(9);
+    coverage.observe(estimated, true);
+    coverage.hear(estimated, 0, 5, 1);
+    const actual = source(10);
+    coverage.refineDuration(actual);
+    coverage.hear(actual, 5.01, 10, 1);
+    expect(coverage.finalize(actual, true)?.completed).toBe(false);
+  });
+
+  it('retains measured zero after an unfinished source is discarded', () => {
+    const coverage = new RecordingCoverage();
+    const estimated = source(9);
+    coverage.observe(estimated, true);
+    coverage.hear(estimated, 0, 5, 1);
+    const actual = source(10);
+    coverage.refineDuration(actual);
+    coverage.discard(actual);
+    expect(coverage.measurements(actual.url)?.durations).toEqual([
+      { durationSeconds: 10, completedPasses: 0 },
+    ]);
+  });
+
   it('does not inherit coverage through a material relative change in a tiny denominator', () => {
     const coverage = new RecordingCoverage();
     const original = source(0.0001);

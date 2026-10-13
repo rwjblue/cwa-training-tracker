@@ -656,9 +656,17 @@ One recording owner retains exact heard intervals through pause, buffering, reca
 and in-app inspection. Accepted native 1x movement supplies coverage; seeks, idle
 time and loading supply none. Overlap counts once toward coverage and replay adds
 only actual heard seconds. Every terminal outcome finalizes once. A new pass,
-source identity, actual duration or selected file starts fresh partial coverage,
+source identity, source replacement or selected file starts fresh partial coverage,
 while completed per-URL duration facts and heard time remain. Retired elements and
 late transport requests cannot contribute to a replacement owner.
+
+Native metadata revisions for the same loaded element/source retain heard
+coverage while refining its finite duration. MP3 duration estimates can change
+many times during honest playback. Partial saves expose a measured zero at the
+current estimate; only a terminal or discarded source retains that duration
+group, so estimates cannot exhaust the 100-group bound. Previously completed
+duration facts remain immutable. Reloading even the same URL creates a new
+source generation and cannot inherit partial coverage.
 
 Completion requires positive finite duration up to 24 hours and at least
 `duration - min(1 second, 5% of duration)` actual union coverage. Internal gaps are
@@ -4674,3 +4682,35 @@ Integration with main's device appearance update retains readable unsaved
 feedback in light and dark modes. The recording journey checks both modes at
 desktop and mobile widths; all ten combined appearance, recording and Today
 browser journeys pass, alongside the same TypeScript and fast-suite checks.
+
+## Native MP3 pass credit follow-up — 2026-10-13
+
+A report of saved listening time with zero saved passes exposed a separate
+measurement defect. Uninterrupted playback of a generated MP3 without a Xing
+duration header reproduced that exact result: native duration revisions cleared
+already heard coverage while retaining the clock's actual listening time. The
+previous WAV-based browser coverage had a stable denominator and missed it.
+
+Metadata refinement now retains coverage for the same identified loaded source,
+clips it to the refined bounds and leaves completed duration facts unchanged.
+Provisional estimates are projected as measured zero for partial saves rather
+than accumulated as stored groups. Source replacement, including a native reload
+of the same URL, still starts fresh coverage. The completion threshold, missing
+middle rejection, native-rate checks and independent learner completion remain.
+
+The [MP3 regression journey](../e2e/listening-duration.spec.ts) checks real native
+duration revisions, one saved pass and one remaining, saved/reopened counts and
+same-URL reload isolation. Fast coverage includes 150 metadata revisions, downward
+refinement, immutable snapshots, source fences and partial-save evidence. Existing
+zero-pass records retain their time; complete coverage cannot be reconstructed
+from stored seconds alone.
+
+Validation: TypeScript, the production build, all 1,756 Vitest tests and 16
+speech-generator tests pass. All five focused native recording, recall and save
+journeys pass, including the MP3 regression at mobile width and the existing
+desktop/mobile recording journey. The full browser run passed 128/131; three
+30-second editor/course-configuration timeouts were resolved by a serial
+report-evidence recheck and removing duplicate accessibility scans while retaining
+all distinct material states and both-width geometry. All nine affected material
+and Today journeys pass. Physical Safari and the reporter's production records
+remain unverified; this environment has no authenticated Cloudflare access.

@@ -66,6 +66,7 @@ export class RecordingCoverage {
         Math.abs(observed - this.owner.durationSeconds) <=
           Math.min(0.001, this.owner.durationSeconds * 0.000001));
     if (!this.matches(source) || !sameDuration || (begin && this.owner?.finalized)) {
+      if (this.owner?.ranges.length) this.bucket(this.owner, true);
       this.owner = {
         sourceId: identity(source),
         url: source.url,
@@ -78,6 +79,32 @@ export class RecordingCoverage {
       this.outcome = undefined;
       this.revision++;
     }
+  }
+
+  /** Native metadata can refine an estimate without replacing the loaded source. */
+  refineDuration(source: RecordingSource) {
+    const owner = this.owner;
+    const observed = duration(source.durationSeconds);
+    if (
+      !owner ||
+      !source.sourceId ||
+      !this.matches(source) ||
+      owner.finalized ||
+      owner.durationSeconds === undefined ||
+      observed === undefined
+    ) {
+      this.observe(source);
+      return;
+    }
+    if (observed === owner.durationSeconds) return;
+    owner.durationSeconds = observed;
+    const clip = (ranges: Range[]): Range[] =>
+      ranges
+        .map(([from, to]): Range => [from, Math.min(to, observed)])
+        .filter(([from, to]) => to > from);
+    owner.ranges = clip(owner.ranges);
+    owner.resumeGaps = clip(owner.resumeGaps);
+    this.revision++;
   }
 
   /** Native pause/buffer drain can reanchor slightly ahead without heard credit. */
@@ -135,12 +162,14 @@ export class RecordingCoverage {
       !Number.isFinite(from) ||
       !Number.isFinite(to) ||
       to <= from ||
-      !this.bucket(owner, true)
+      (!this.bucket(owner, false) &&
+        (this.facts.get(owner.url)?.durations.length ?? 0) >= MAX_RECORDING_PASS_DURATIONS)
     )
       return;
     const start = Math.max(0, Math.min(owner.durationSeconds, from));
     const end = Math.max(0, Math.min(owner.durationSeconds, to));
     if (end <= start) return;
+    if (!owner.ranges.length) this.revision++;
     const merged: Range[] = [];
     for (const range of [...owner.ranges, [start, end] as Range].sort((a, b) => a[0] - b[0])) {
       const previous = merged.at(-1);
@@ -158,7 +187,7 @@ export class RecordingCoverage {
     if (!ended || !this.matches(source) || !this.owner || this.owner.finalized) return;
     const owner = this.owner;
     owner.finalized = true;
-    const bucket = this.bucket(owner, false);
+    const bucket = this.bucket(owner, owner.ranges.length > 0);
     const covered = owner.ranges.reduce((sum, [from, to]) => sum + to - from, 0);
     const internalGapsAllowed = owner.ranges.every((range, index) => {
       if (!index) return true;
@@ -196,18 +225,26 @@ export class RecordingCoverage {
 
   discard(source?: RecordingSource) {
     if (!this.owner || (source && !this.matches(source))) return;
+    if (this.owner.ranges.length) this.bucket(this.owner, true);
     this.owner = undefined;
     this.revision++;
   }
 
   measurements(url: string): RecordingPassEvidence | undefined {
     const evidence = this.facts.get(url);
-    return (
-      evidence && {
-        ...evidence,
-        durations: evidence.durations.map((item) => ({ ...item })),
-      }
-    );
+    const durations = evidence?.durations.map((item) => ({ ...item })) ?? [];
+    const owner = this.owner;
+    // Keep a measured zero for partial saves, without storing every provisional
+    // MP3 estimate as a separate duration group. Terminal facts remain immutable.
+    if (
+      owner?.url === url &&
+      owner.ranges.length &&
+      owner.durationSeconds !== undefined &&
+      !durations.some((item) => item.durationSeconds === owner.durationSeconds) &&
+      durations.length < MAX_RECORDING_PASS_DURATIONS
+    )
+      durations.push({ durationSeconds: owner.durationSeconds, completedPasses: 0 });
+    return durations.length ? { version: 1, method: 'native-1x', durations } : undefined;
   }
 
   snapshot() {

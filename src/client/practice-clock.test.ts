@@ -917,6 +917,29 @@ describe('practice time', () => {
     expect(clock.finalizeRecording(short, true)?.completed).toBe(true);
   });
 
+  it('keeps measured time and coverage through native duration refinement and reanchoring', () => {
+    const clock = new PracticeClock();
+    const estimated = {
+      url: 'https://example.org/estimate.mp3',
+      sourceId: 'first',
+      durationSeconds: 9,
+    };
+    clock.startMedia(0, 0, 1, estimated);
+    clock.sample(8, 8000);
+    const actual = { ...estimated, durationSeconds: 10 };
+    clock.refineRecordingDuration(actual);
+    clock.startMedia(8, 8000, 1, actual);
+    clock.sample(10, 10_000);
+    expect(clock.finalizeRecording(actual, true)?.completed).toBe(true);
+    expect(clock.snapshot(10_000)).toMatchObject({
+      seconds: 10,
+      recordingProgress: { coveredSeconds: 10 },
+      recordings: [
+        { seconds: 10, passes: { durations: [{ durationSeconds: 10, completedPasses: 1 }] } },
+      ],
+    });
+  });
+
   it('keeps delayed real background media eligible and generic native rates time-only', () => {
     const clock = new PracticeClock();
     const recording = { url: 'https://example.org/background-pass.mp3', durationSeconds: 120 };
