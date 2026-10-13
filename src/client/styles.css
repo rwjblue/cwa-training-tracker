@@ -167,6 +167,7 @@ a {
   display: grid;
   gap: 7px;
 }
+/* Theme text and surfaces must change together to retain readable contrast. */
 .nav-item {
   width: 100%;
   display: flex;
@@ -180,9 +181,6 @@ a {
   font-size: 13px;
   letter-spacing: 0.1px;
   font-weight: 500;
-  transition:
-    background 0.18s,
-    color 0.18s;
 }
 .nav-item:hover {
   background: var(--theme-raised, #e9ede1);
@@ -320,9 +318,7 @@ a {
   font-size: 12px;
   font-weight: 550;
   line-height: 1.4;
-  transition:
-    background 0.15s,
-    transform 0.15s;
+  transition: transform 0.15s;
   white-space: nowrap;
   letter-spacing: 0.1px;
 }
@@ -1721,7 +1717,6 @@ a {
   border: 1px solid var(--theme-line, #e0e7d5);
   border-radius: 7px;
   background: var(--theme-surface, #fdfef7);
-  transition: background 0.15s;
   min-height: 197px;
 }
 .course-level:hover {
