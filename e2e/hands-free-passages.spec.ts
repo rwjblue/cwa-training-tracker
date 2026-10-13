@@ -57,7 +57,9 @@ test('hands-free passages cross recorded answers and next phrases in one native 
     .toBeCloseTo(track.duration, 3);
   const source = await media.getAttribute('src');
   expect(source).toMatch(/^blob:/);
-  expect(await page.evaluate(() => navigator.mediaSession.metadata?.title)).toBe('At the radio');
+  await expect
+    .poll(() => page.evaluate(() => navigator.mediaSession.metadata?.title))
+    .toBe('At the radio');
   expect(
     await page.evaluate(() => navigator.mediaSession.metadata?.artwork.length),
   ).toBeGreaterThan(0);
