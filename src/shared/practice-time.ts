@@ -5,8 +5,15 @@ import {
   isCalendarDate,
   validatePracticeSession,
   type PracticeSession,
+  type PracticePurpose,
   type Profile,
 } from './training.ts';
+
+export interface CurrentListeningPasses {
+  taskId?: string;
+  completedPasses: number;
+  purpose: PracticePurpose;
+}
 
 /** Readonly observations from existing clocks, never a second clock or checkpoint. */
 export interface CurrentPracticeTime {
@@ -16,6 +23,7 @@ export interface CurrentPracticeTime {
   recallSeconds?: number;
   wordListeningSeconds?: number;
   classTime?: boolean;
+  listening?: CurrentListeningPasses;
 }
 export interface PracticeTimeTotals {
   savedSeconds: number;

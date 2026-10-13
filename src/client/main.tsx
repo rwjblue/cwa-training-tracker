@@ -151,6 +151,7 @@ import CourseCurriculum from './CourseCurriculum';
 import TimeZoneSelect from './TimeZoneSelect';
 import { AccountIdentity } from './AccountIdentity';
 import TodayPlan from './TodayPlan';
+import { pendingListeningPasses } from '../shared/listening-progress';
 import NextPracticeAction from './NextPracticeAction';
 import { nextPracticePlan } from '../shared/next-practice';
 import type { PlannedTask } from '../shared/plan';
@@ -1100,6 +1101,7 @@ function App() {
     currentRunnerResult.ownerId === practiceLaunch?.id
       ? currentRunnerResult
       : undefined;
+  const pendingListens = pendingListeningPasses(visibleEntries, ownedCurrent, today);
   const lcwoRows = useMemo(
     () => lcwoContributions(lcwo.data, visibleEntries, profile.timezone),
     [lcwo.data, visibleEntries, profile.timezone, today],
@@ -1612,6 +1614,15 @@ function App() {
                           ? 'Paused while you browse. Your progress and notes are kept here.'
                           : 'Kept in this app while you look around. Return keeps playback and timers paused until you start them.'}
                     </p>
+                    {pendingListens && (
+                      <p>
+                        {pendingListens.completedPasses}{' '}
+                        {pendingListens.purpose === 'review' ? 'extra review ' : ''}
+                        {pendingListens.completedPasses === 1 ? 'listen' : 'listens'} this session ·{' '}
+                        <strong>Not saved yet.</strong> Finish practice to keep your listens and
+                        time.
+                      </p>
+                    )}
                   </div>
                   <div className="retained-practice-actions">
                     <button
@@ -1728,6 +1739,7 @@ function App() {
                               ? currentRunnerProgress.current
                               : undefined
                           }
+                          currentPractice={ownedCurrent}
                           profile={profile}
                           today={today}
                           entries={visibleEntries}

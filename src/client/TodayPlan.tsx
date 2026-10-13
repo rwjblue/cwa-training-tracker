@@ -7,6 +7,8 @@ import {
   type RunnerAssignmentProgress as RunnerProgress,
 } from '../shared/runner-progress';
 import ListeningPassProgress from './ListeningPassProgress';
+import { pendingListeningPasses } from '../shared/listening-progress';
+import type { CurrentListeningPasses, CurrentPracticeTime } from '../shared/practice-time';
 import TaskRecordingChoiceHint from './TaskRecordingChoiceHint';
 import { useId, useMemo, useRef, useState } from 'react';
 import {
@@ -45,6 +47,7 @@ export interface TodayPlanProps {
   preparation?: React.ReactNode;
   liveNow?: number;
   currentRunner?: CurrentRunnerProgress;
+  currentPractice?: CurrentPracticeTime;
   today?: string;
   accountId?: string;
   profile: Profile;
@@ -81,6 +84,7 @@ export default function TodayPlan({
   liveNow = Date.now(),
   accountId,
   currentRunner,
+  currentPractice,
   profile,
   today: learnerDate,
   entries,
@@ -112,6 +116,7 @@ export default function TodayPlan({
     [tasks, entries, today, currentRunner],
   );
   const plan = dailyPlanSummary(tasks, courseMeetings(profile), entries, today);
+  const pendingListens = pendingListeningPasses(entries, currentPractice, today);
   const course = curriculumForLevel(profile.level);
   const curriculum = tasks.some((task) => task.curriculum?.id === course?.id) ? course : undefined;
   const needsCourseDates = !profile.firstClassDate;
@@ -165,6 +170,7 @@ export default function TodayPlan({
           key={item.task.id}
           item={item}
           runnerProgress={runnerProgress.get(item.task.id)}
+          pendingListens={pendingListens?.taskId === item.task.id ? pendingListens : undefined}
           today={today}
           pinBusy={pinning || dismissing[0] || ''}
           onPin={(date) => void pinTask(item.task, date)}
@@ -448,6 +454,7 @@ function TodayTask({
   scope,
   item,
   runnerProgress,
+  pendingListens,
   today,
   onLog,
   onPractice,
@@ -463,6 +470,7 @@ function TodayTask({
   scope?: string;
   item: DailyPlannedTask;
   runnerProgress?: RunnerProgress;
+  pendingListens?: CurrentListeningPasses;
   today: string;
   onLog: () => void;
   onPin: (date: string | null) => void;
@@ -542,7 +550,10 @@ function TodayTask({
         </div>
         {task.exercise?.type === 'audio' && (
           <ListeningPassProgress
+            compact
             savedPasses={item.completedPasses}
+            currentPasses={pendingListens?.completedPasses}
+            extraReview={pendingListens?.purpose === 'review'}
             importedPasses={item.importedCompletedPasses}
             minimumPasses={task.exercise.minimumPasses}
           />

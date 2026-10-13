@@ -245,21 +245,24 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(page.getByRole('textbox', { name: 'Scratchpad', exact: true })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'New set', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Play Morse', exact: true })).toHaveCount(0);
+  // listening-passes.spec.ts owns mobile player/progress/Scratchpad ordering.
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     const audioBox = (await audio.boundingBox())!;
-    const notesBox = (await page
-      .getByRole('textbox', { name: 'Scratchpad', exact: true })
-      .boundingBox())!;
     expect(
       audioBox.y + audioBox.height,
       `Assigned playback should fit the first screen at ${width}px`,
     ).toBeLessThan(width === 390 ? 844 : 1000);
-    expect(
-      Math.abs(notesBox.y - audioBox.y),
-      `Assigned notes should stay beside audio at ${width}px`,
-    ).toBeLessThan(350);
+    if (width === 1440) {
+      const notesBox = (await page
+        .getByRole('textbox', { name: 'Scratchpad', exact: true })
+        .boundingBox())!;
+      expect(
+        Math.abs(notesBox.y - audioBox.y),
+        'Assigned notes should stay beside audio on desktop',
+      ).toBeLessThan(350);
+    }
   }
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);

@@ -65,7 +65,7 @@ test('recording scratchpads survive saved listens and stay scoped to one assignm
   await openAssignment(first.title);
   await scratchpad.fill('What I caught on the first listen.');
   await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
-  await expect(count('This block')).toHaveText('1', { timeout: 10_000 });
+  await expect(count('This session')).toHaveText('1', { timeout: 10_000 });
   await page.getByRole('button', { name: 'Save', exact: true }).tap();
   const dialog = page.getByRole('dialog');
   const reviewed = 'First listen, with a correction made while saving.';
@@ -79,14 +79,14 @@ test('recording scratchpads survive saved listens and stay scoped to one assignm
   await expect(scratchpad).toHaveValue(reviewed);
   await expect(page.getByRole('button', { name: 'Save notes', exact: true })).toBeDisabled();
   await expect(count('Previously saved')).toHaveText('1');
-  await expect(count('This block')).toHaveText('0');
+  await expect(count('This session')).toHaveText('0');
   await expect(count('Minimum remaining')).toHaveText('1');
   await expectResponsive(page, 'assignment-scratchpad');
   await page.setViewportSize({ width: 390, height: 844 });
   const accumulated = `${reviewed}\nMore details from the second listen.`;
   await scratchpad.fill(accumulated);
   await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
-  await expect(count('This block')).toHaveText('1', { timeout: 10_000 });
+  await expect(count('This session')).toHaveText('1', { timeout: 10_000 });
   await page.getByRole('button', { name: 'Finish practice', exact: true }).tap();
   await expect(page).toHaveURL(/#overview$/);
   await page.reload();

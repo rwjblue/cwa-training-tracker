@@ -4641,3 +4641,36 @@ that rerun passed 6/6, including the new chunk journey. Native end/replay,
 paused advancement, speed edits, guest sharing, private saving and desktop/mobile
 layout checks pass. These changes are local; physical locked-device behavior
 and deployment remain unverified. See [the listening audit](parity/listening.md).
+
+## Assigned recording listen feedback — 2026-10-13
+
+The live listen count, completion feedback and replay choices now sit directly
+below the native player, ahead of recall controls and the mobile Scratchpad.
+Completed listens explicitly say they are not saved yet and point to Save or
+Finish practice. The current count is labeled “This session.”
+
+Today shows pending listens beside saved assignment passes, including while the
+learner inspects another view. The retained practice banner also names the
+unsaved count. Both use observations from the existing native clock. A device or
+server receipt with the session's stable ID retires its pending count, so saving
+and later upload cannot count it twice. Extra review is labeled separately and
+does not reduce the assignment's required minimum. Finishing playback counts a
+listen; Save or Finish practice retains listening, recall and notes together.
+
+The [native recording journey](../e2e/listening-passes.spec.ts) checks desktop and
+mobile player/progress ordering, repeated playback, skipping, pause/resume,
+recording changes, assignment attribution, pending Today progress, saved receipts
+and extra review. [Pending-count tests](../src/shared/listening-progress.test.ts)
+cover receipt retirement and malformed observations.
+
+Validation: TypeScript, the production build, all 1,747 Vitest tests and 16
+speech-generator tests pass. The full browser run passed 123/127; its four
+failures were resolved through a corrected mobile layout assertion, explicit
+save/tool-transition waits, removal of duplicate accessibility scans and serial
+rechecks. All affected browser journeys pass. Physical Safari behavior and
+production deployment have not been verified for this change.
+
+Integration with main's device appearance update retains readable unsaved
+feedback in light and dark modes. The recording journey checks both modes at
+desktop and mobile widths; all ten combined appearance, recording and Today
+browser journeys pass, alongside the same TypeScript and fast-suite checks.

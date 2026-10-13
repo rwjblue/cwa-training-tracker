@@ -217,6 +217,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
   await page.keyboard.press('Escape');
   await expect(scratchpad).toHaveValue(shortNotes);
   await activate(page.getByRole('button', { name: 'Finish practice', exact: true }));
+  await expect(page).toHaveURL(/#overview$/);
   const assigned = (await (await context.request.get('/api/entries')).json()).entries.find(
     (item: PracticeSession) => item.minutes > 0,
   );
@@ -240,6 +241,7 @@ test(`short practice and explicit zero notes keep exact receipts at ${width}px`,
     .toBeGreaterThan(12);
   await activate(page.getByRole('button', { name: 'Pause practice', exact: true }));
   await openPracticeTool(page, 'QSO practice', activate);
+  await expect(page.getByRole('combobox', { name: 'QSO scenario', exact: true })).toBeVisible();
   const publicEntry = (await (await context.request.get('/api/entries')).json()).entries.find(
     (item: PracticeSession) => item.metadata?.scratchpad === publicNotes,
   );

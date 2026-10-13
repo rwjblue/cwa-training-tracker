@@ -129,8 +129,22 @@ test(`actual recording passes retain source evidence and separate learner comple
       .filter({ has: page.getByText(label, { exact: true }) })
       .locator('dd');
   await expect(count('Previously saved')).toHaveText('0');
-  await expect(count('This block')).toHaveText('0');
+  await expect(count('This session')).toHaveText('0');
   await expect(count('Minimum remaining')).toHaveText(String(task.exercise.minimumPasses));
+
+  // Progress stays immediately below the player, ahead of mobile notes.
+  for (const size of [viewport, { width: 390, height: 844 }]) {
+    await page.setViewportSize(size);
+    const playerBox = (await audio.boundingBox())!;
+    const progressBox = (await progress.boundingBox())!;
+    const notesBox = (await page
+      .getByRole('textbox', { name: 'Scratchpad', exact: true })
+      .boundingBox())!;
+    expect(progressBox.y).toBeGreaterThanOrEqual(playerBox.y + playerBox.height);
+    expect(progressBox.y - playerBox.y - playerBox.height).toBeLessThan(40);
+    if (size.width === 390) expect(progressBox.y + progressBox.height).toBeLessThan(notesBox.y);
+  }
+  await page.setViewportSize(viewport);
 
   // Actual native playback earns time. A jump over the middle earns no full pass.
   await audio.evaluate((item: HTMLAudioElement) => item.play());
@@ -157,7 +171,7 @@ test(`actual recording passes retain source evidence and separate learner comple
     body: JSON.stringify(await page.evaluate(() => Reflect.get(window, 'passMediaObservations'))),
     contentType: 'application/json',
   });
-  await expect(count('This block')).toHaveText('0');
+  await expect(count('This session')).toHaveText('0');
   await expect(
     page.getByRole('status').filter({ hasText: 'Some material was skipped.' }),
   ).toBeVisible();
@@ -180,9 +194,9 @@ test(`actual recording passes retain source evidence and separate learner comple
     )
     .toBe(true);
   await audio.evaluate((item: HTMLAudioElement) => item.play());
-  await expect(count('This block')).toHaveText('1', { timeout: 10_000 });
+  await expect(count('This session')).toHaveText('1', { timeout: 10_000 });
   await expect(
-    page.getByRole('status').filter({ hasText: 'Full listening pass recorded.' }),
+    page.getByRole('status').filter({ hasText: 'Full listening pass complete.' }),
   ).toBeVisible();
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
   await expect
@@ -195,8 +209,9 @@ test(`actual recording passes retain source evidence and separate learner comple
   await audio.focus();
   await page.keyboard.press('Space');
   await expect.poll(() => audio.evaluate((item: HTMLAudioElement) => !item.paused)).toBe(true);
-  await expect(count('This block')).toHaveText('2', { timeout: 10_000 });
+  await expect(count('This session')).toHaveText('2', { timeout: 10_000 });
   await expect(count('Minimum remaining')).toHaveText('0');
+  await expect(progress).toContainText('2 listens this session · Not saved yet.');
   expect(
     (await (await context.request.get('/api/plan')).json()).plan.find(
       (item: { id: string }) => item.id === task.id,
@@ -214,13 +229,31 @@ test(`actual recording passes retain source evidence and separate learner comple
   expect(
     await audio.evaluate((item: HTMLAudioElement) => item.paused && item.currentTime === 0),
   ).toBe(true);
-  await expect(count('This block')).toHaveText('2');
+  await expect(count('This session')).toHaveText('2');
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(0.8);
   await navigateView(page, 'Today', activate);
   expect((await (await context.request.get('/api/entries')).json()).entries).toHaveLength(0);
+  await expect(taskItem()).toContainText('0 listening passes saved');
+  await expect(taskItem()).toContainText('2 listens this session · Not saved yet');
+  await expect(taskItem()).toContainText('0 minimum remaining');
+  await expect(page.getByRole('region', { name: 'Current practice block' })).toContainText(
+    '2 listens this session · Not saved yet.',
+  );
+  const otherRecording = plan.find(
+    (item: { dueDate?: string; exercise?: { type: string; url?: string } }) =>
+      item.dueDate === '2026-10-06' &&
+      item.exercise?.type === 'audio' &&
+      item.exercise.url !== task.exercise.url,
+  );
+  expect(otherRecording).toBeTruthy();
+  await expect(
+    page.getByRole('listitem').filter({
+      has: page.getByRole('heading', { name: otherRecording.title, exact: true }),
+    }),
+  ).not.toContainText('this session');
   const inspectedPosition = await audio.evaluate((item: HTMLAudioElement) => item.currentTime);
   expect(inspectedPosition).toBeGreaterThan(0.8);
   await activate(
@@ -233,7 +266,7 @@ test(`actual recording passes retain source evidence and separate learner comple
     inspectedPosition,
     3,
   );
-  await expect(count('This block')).toHaveText('2');
+  await expect(count('This session')).toHaveText('2');
   // Rehear overlap after inspection. A native paused position can settle
   // forward on resume beyond this short clip's honest gap allowance. Starting
   // above zero still requires the pre-inspection coverage to complete a pass.
@@ -252,8 +285,13 @@ test(`actual recording passes retain source evidence and separate learner comple
     )
     .toBe(true);
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
-  await expect(count('This block')).toHaveText('3', { timeout: 10_000 });
+  await expect(count('This session')).toHaveText('3', { timeout: 10_000 });
   await expectResponsive(page, `listening-passes-${viewport.width}`);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expectResponsive(page, 'listening-passes-dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   await activate(page.getByRole('button', { name: 'Save', exact: true }));
@@ -265,7 +303,7 @@ test(`actual recording passes retain source evidence and separate learner comple
   await expect(dialog.getByRole('button', { name: 'Save practice', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await expect(count('This block')).toHaveText('3');
+  await expect(count('This session')).toHaveText('3');
   await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await dialog
     .getByRole('textbox', { name: /^Notes\b/ })
@@ -274,6 +312,7 @@ test(`actual recording passes retain source evidence and separate learner comple
   await activate(dialog.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(dialog).toHaveCount(0);
   const { entries } = await (await context.request.get('/api/entries')).json();
+  await expect(taskItem()).not.toContainText('Not saved yet');
   expect(entries).toHaveLength(1);
   const saved = entries[0];
   const recordings = saved.metadata.evidence.recordings;
@@ -296,7 +335,7 @@ test(`actual recording passes retain source evidence and separate learner comple
 
   await activate(taskItem().getByRole('button', { name: 'Listen & practice', exact: true }));
   await expect(count('Previously saved')).toHaveText('3');
-  await expect(count('This block')).toHaveText('0');
+  await expect(count('This session')).toHaveText('0');
   await expect(count('Minimum remaining')).toHaveText('0');
   await activate(page.getByRole('button', { name: 'Complete exercise', exact: true }));
   await expect(dialog.getByLabel(/^Time practiced/)).toHaveValue('0:00');
@@ -319,7 +358,17 @@ test(`actual recording passes retain source evidence and separate learner comple
   await expect(count('Minimum remaining')).toHaveCount(0);
   await expect(progress).toContainText('without required assignment credit');
   await activate(page.getByRole('button', { name: 'Start practice', exact: true }));
-  await expect(count('This block')).toHaveText('1', { timeout: 10_000 });
+  await expect(count('This session')).toHaveText('1', { timeout: 10_000 });
+  await navigateView(page, 'Today', activate);
+  await expect(taskItem()).toContainText('3 listening passes saved');
+  await expect(taskItem()).toContainText('1 extra review listen this session · Not saved yet');
+  await expect(taskItem()).toContainText('0 minimum remaining');
+  await activate(
+    page.getByRole('region', { name: 'Current practice block' }).getByRole('button', {
+      name: 'Return to practice',
+      exact: true,
+    }),
+  );
   await activate(page.getByRole('button', { name: 'Save', exact: true }));
   await activate(dialog.getByRole('button', { name: 'Save practice', exact: true }));
   await expect(dialog).toHaveCount(0);

@@ -17,6 +17,7 @@ export function usePracticeTimeProjection(
         settled ? current.seconds : Math.floor(current.seconds),
         settled ? current.recallSeconds : Math.floor(current.recallSeconds ?? 0),
         settled ? current.wordListeningSeconds : Math.floor(current.wordListeningSeconds ?? 0),
+        current.listening,
       ])
     : '';
   useEffect(() => {

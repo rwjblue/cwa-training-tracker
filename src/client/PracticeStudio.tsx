@@ -364,7 +364,11 @@ export default function PracticeStudio({
     undefined,
   );
   const sessionUsage = useRef<PracticeUsage | undefined>(undefined);
-  const currentTime =
+  const currentPasses = timer.recordings.reduce(
+    (total, item) => total + (recordingCompletedPasses(item) ?? 0),
+    0,
+  );
+  const currentTime: CurrentPracticeTime | undefined =
     !isCopy && !isRunner && currentDevice() && sessionIdentity.current
       ? {
           id: sessionIdentity.current.id,
@@ -373,6 +377,15 @@ export default function PracticeStudio({
           seconds: timer.seconds,
           recallSeconds: timer.recallSeconds,
           wordListeningSeconds: timer.wordListeningSeconds,
+          ...(activity?.type === 'audio'
+            ? {
+                listening: {
+                  taskId: launch?.task?.id,
+                  completedPasses: currentPasses,
+                  purpose: extraReview ? 'review' : 'assigned',
+                },
+              }
+            : {}),
         }
       : undefined;
   usePracticeTimeProjection(
@@ -390,10 +403,6 @@ export default function PracticeStudio({
     : undefined;
   const recordingMarksTask = tasks.find((task) => task.id === launch?.task?.id) ?? launch?.task;
   const taskRecordingMarks = recordingMarksTask?.recordingMarks ?? [];
-  const currentPasses = timer.recordings.reduce(
-    (total, item) => total + (recordingCompletedPasses(item) ?? 0),
-    0,
-  );
   const saveCoordinator = useRef(new StudioSaveCoordinator());
   const generatedListening = useRef(new GeneratedListeningCollector());
   const navigationFlight = useRef<Promise<boolean> | undefined>(undefined);
@@ -1739,57 +1748,58 @@ export default function PracticeStudio({
                                 recordingSession.current.release();
                               }}
                             />
+                            <ListeningPassProgress
+                              savedPasses={savedPassProgress?.completedPasses ?? 0}
+                              importedPasses={savedPassProgress?.importedCompletedPasses ?? 0}
+                              currentPasses={currentPasses}
+                              minimumPasses={activity.minimumPasses}
+                              extraReview={extraReview}
+                            />
+                            {timer.recordingOutcome &&
+                              timer.recordingOutcome.url === recordingUrl &&
+                              !playing &&
+                              !recordingPending && (
+                                <div>
+                                  <p role="status">
+                                    {timer.recordingOutcome.completed
+                                      ? `Full listening pass complete. ${currentPasses} ${currentPasses === 1 ? 'listen' : 'listens'} this session, not saved yet.`
+                                      : timer.recordingOutcome.reason === 'incomplete'
+                                        ? 'Some material was skipped. Heard time is not saved yet, and this pass is incomplete. Play again for a full pass.'
+                                        : 'Heard time is not saved yet, and this recording could not supply a complete pass measurement. Use Save or Finish practice to keep your time.'}
+                                  </p>
+                                  <div
+                                    className="playback-toolbar"
+                                    role="group"
+                                    aria-label="End of pass choices"
+                                  >
+                                    <button
+                                      className="button outline"
+                                      onClick={() => {
+                                        if (recording.current)
+                                          void playRecording(recording.current);
+                                      }}
+                                    >
+                                      Play another pass
+                                    </button>
+                                    {onFinish && (
+                                      <button className="button outline" onClick={onFinish}>
+                                        Finish this block
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            {timer.recordingProgress?.status === 'duration-limit' && (
+                              <p role="status">
+                                This block reached its recording duration limit. Heard time and
+                                earlier passes remain; save this block before measuring more passes.
+                              </p>
+                            )}
                             {recallControls}
                           </div>
                           {scratchpadWorkspace}
                         </div>
                         {taskActions}
-                        <ListeningPassProgress
-                          savedPasses={savedPassProgress?.completedPasses ?? 0}
-                          importedPasses={savedPassProgress?.importedCompletedPasses ?? 0}
-                          currentPasses={currentPasses}
-                          minimumPasses={activity.minimumPasses}
-                          extraReview={extraReview}
-                        />
-                        {timer.recordingOutcome &&
-                          timer.recordingOutcome.url === recordingUrl &&
-                          !playing &&
-                          !recordingPending && (
-                            <div>
-                              <p role="status">
-                                {timer.recordingOutcome.completed
-                                  ? 'Full listening pass recorded. Take a moment to recall, play another pass, or finish practice.'
-                                  : timer.recordingOutcome.reason === 'incomplete'
-                                    ? 'Some material was skipped. Heard time is retained, but this pass is incomplete. Play again for a full pass.'
-                                    : 'Heard time is retained, but this recording could not supply a complete pass measurement.'}
-                              </p>
-                              <div
-                                className="playback-toolbar"
-                                role="group"
-                                aria-label="End of pass choices"
-                              >
-                                <button
-                                  className="button outline"
-                                  onClick={() => {
-                                    if (recording.current) void playRecording(recording.current);
-                                  }}
-                                >
-                                  Play another pass
-                                </button>
-                                {onFinish && (
-                                  <button className="button outline" onClick={onFinish}>
-                                    Finish this block
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        {timer.recordingProgress?.status === 'duration-limit' && (
-                          <p role="status">
-                            This block reached its recording duration limit. Heard time and earlier
-                            passes remain; save this block before measuring more passes.
-                          </p>
-                        )}
 
                         <p className="field-hint">
                           The recording plays directly from CWops. You can pause, seek, and use your
