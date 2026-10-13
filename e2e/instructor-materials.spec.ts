@@ -1,6 +1,12 @@
 import { expect, type Page, type Locator } from '@playwright/test';
 import { test } from './fixtures';
-import { accountRequest, scopedRequest, expectResponsive, signIn } from './helpers';
+import {
+  accountRequest,
+  scopedRequest,
+  expectAccessible,
+  expectResponsive,
+  signIn,
+} from './helpers';
 import { DEFAULT_PROFILE } from '../src/shared/training';
 test.use({ hasTouch: true, timezoneId: 'UTC' });
 async function keyboard(control: Locator) {
@@ -57,6 +63,13 @@ async function timed(page: Page, seconds: number) {
   await page.clock.resume();
   await keyboard(page.getByRole('button', { name: /^Save(?: \d|$)/ }));
 }
+async function expectMaterialScreen(page: Page, label: string) {
+  // Each distinct material state gets one Axe scan at the journey's current
+  // width (desktop author/reader/practice, mobile class review/history). The
+  // same dialog DOM does not need another scan for each layout measurement.
+  await expectResponsive(page, label, { accessibility: false });
+  await expectAccessible(page, `${label}-${page.viewportSize()!.width}`);
+}
 test('private paste/link/file authoring retains exact revisions through reader, practice/class, cancellation and save retry', async ({
   page,
   context,
@@ -65,7 +78,7 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await keyboard(page.getByRole('button', { name: 'Add material', exact: true }));
   let dialog = page.getByRole('dialog');
   await settleDialog(page);
-  await expectResponsive(page, 'material-author');
+  await expectMaterialScreen(page, 'material-author');
   await dialog.getByLabel('Title', { exact: true }).fill('Synthetic preparation');
   await dialog
     .getByRole('textbox', { name: 'Material text', exact: true })
@@ -79,7 +92,7 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   expect(first.text).toContain('<script>');
   expect(await page.evaluate(() => Object.hasOwn(window, 'materialExecuted'))).toBe(false);
   await settleDialog(page);
-  await expectResponsive(page, 'material-reader');
+  await expectMaterialScreen(page, 'material-reader');
   await page.getByRole('slider', { name: /Reader text size/ }).focus();
   await page.getByRole('slider', { name: /Reader text size/ }).press('ArrowRight');
   const text = page.getByRole('region', { name: 'Material text', exact: true });
@@ -114,13 +127,13 @@ test('private paste/link/file authoring retains exact revisions through reader, 
     ),
   ).toBe(true);
   await expect(next).toBeVisible();
-  await expectResponsive(page, 'material-today-preparation');
+  await expectMaterialScreen(page, 'material-today-preparation');
   await keyboard(page.getByRole('button', { name: 'Open instructor materials', exact: true }));
   await keyboard(page.getByRole('button', { name: 'Read Synthetic preparation', exact: true }));
   await keyboard(page.getByRole('button', { name: 'Use for practice', exact: true }));
   await expect(page).toHaveURL(/#practice(?:[/?].*)?$/);
   await expect(page.getByRole('region', { name: 'Material text' })).toContainText(first.text);
-  await expectResponsive(page, 'material-practice');
+  await expectMaterialScreen(page, 'material-practice');
   await timed(page, 65);
   dialog = page.getByRole('dialog');
   await dialog.getByRole('checkbox', { name: /completed this material/ }).check();
@@ -166,7 +179,7 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await page.getByRole('button', { name: 'Use in class', exact: true }).tap();
   await timed(page, 30);
   await settleDialog(page);
-  await expectResponsive(page, 'material-class-review');
+  await expectMaterialScreen(page, 'material-class-review');
   await expect(page.getByRole('checkbox', { name: /class meeting/ })).toBeChecked();
   await expect(page.getByRole('checkbox', { name: /class meeting/ })).toBeDisabled();
   await expect(page.getByRole('checkbox', { name: /completed this material/ })).toHaveCount(0);
@@ -181,7 +194,7 @@ test('private paste/link/file authoring retains exact revisions through reader, 
   await navigate(page, 'Practice log');
   await page.getByText('Practice evidence', { exact: true }).first().click();
   await expect(page.getByText(/Exact material version:/).first()).toBeVisible();
-  await expectResponsive(page, 'material-history');
+  await expectMaterialScreen(page, 'material-history');
   const backup = await (await context.request.get('/api/export')).json();
   expect(backup.materials).toEqual(materials);
 });

@@ -268,7 +268,7 @@ test('course dates populate Today with playable assignments and preserve linked 
   await expect(audio).toHaveAttribute('src', assigned.exercise.url);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expectAccessible(page, 'assigned-recording-mobile');
+  // listening-passes.spec.ts owns this Studio screen's desktop/mobile Axe scans.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
@@ -487,7 +487,8 @@ test('course dates populate Today with playable assignments and preserve linked 
   await earlierRow.getByRole('button', { name: 'Log practice', exact: true }).click();
   await expect(sessionSelect).toHaveValue('1');
   await expect(sessionSelect).toHaveAccessibleDescription(/earlier session for review/);
-  await expectAccessible(page, 'practice-session-desktop');
+  // Scan this same session dialog once below at mobile width; retain its
+  // desktop selection and accessible-description assertions here.
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(sessionSelect).toBeVisible();
