@@ -178,6 +178,26 @@ class GenerationTests(unittest.TestCase):
             self.assertFalse((self.root / self.entry['path']).exists())
             request.assert_not_called()
 
+    def test_provider_change_replaces_previous_pack_without_force_or_duplicate_requests(self):
+        previous_generator = {'engine': 'kokoro-onnx', 'model': 'kokoro-v1.0.onnx', 'voice': 'af_heart', 'language': 'en-us', 'speed': 1}
+        target = self.root / self.entry['path']
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b'previous Kokoro recording')
+        self.index.write_text(json.dumps({'version': 1, 'clips': {'WX': {
+            'inputHash': speech.input_fingerprint(previous_generator, self.entry),
+            'sha256': speech.digest(target),
+        }}}))
+        with patch.object(speech, 'request_elevenlabs', return_value=(pcm_audio(), {})) as request:
+            self.assertIn('1 ElevenLabs requests', self.run_generate(dry_run=True))
+            request.assert_not_called()
+            self.assertEqual(target.read_bytes(), b'previous Kokoro recording')
+            self.run_generate()
+            self.run_generate()
+            request.assert_called_once()
+            written = json.loads(self.index.read_text())['clips']['WX']
+            self.assertEqual(written['inputHash'], speech.input_fingerprint(GENERATOR, self.entry))
+            self.assertIn('sourceSha256', written)
+
     def test_passage_manifest_writes_only_its_own_pack_and_rejects_other_destinations(self):
         manifest = self.root / 'data/cw-training/passages.json'
         manifest.parent.mkdir(parents=True)

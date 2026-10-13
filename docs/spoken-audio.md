@@ -8,23 +8,55 @@ collections plus three new sixteen-phrase collections with distinct identities.
 Previously shared collection text and order remain intact. The same pack covers
 all 24 sentences and both short and original stories, deduplicating shared lines.
 
-These recordings were generated ahead of time with Kokoro v1.0, `af_heart`,
-American English, speed 1, in the development workspace. Playback needs neither
-an on-device model nor browser speech synthesis. The word trainer retains its
-existing ElevenLabs recordings. `data/cw-training/passage-speech.json` records
-the inputs, and the static index retains each input fingerprint and PCM hash.
+The currently shipped passage WAVs were generated ahead of time with Kokoro
+v1.0, `af_heart`, American English, speed 1, in the development workspace. The
+generation recipe now targets the existing word pack's ElevenLabs Bella /
+Eleven v4 voice and settings. This prepares local regeneration with the private
+key; it does not relabel the existing Kokoro recordings as ElevenLabs output.
+Playback needs neither an on-device model nor browser speech synthesis.
+`data/cw-training/passage-speech.json` records the desired generation inputs;
+the static index retains the fingerprints and hashes of the actual shipped clips.
 
 ```sh
-mise run generate-passage-speech -- --dry-run
-mise run generate-passage-speech
+mise run generate-passage-speech -- --provider elevenlabs --dry-run
+mise run generate-passage-speech -- --provider elevenlabs
 ```
 
-The task updates the manifest from the versioned public catalog and uses the
-existing bounded PCM generator. Model files stay under ignored `.tmp/cw-speech/`;
-only the authored manifest, index and resulting WAV files ship. Normal builds
-and playback make no synthesis requests and need no model downloads. To change
-the recorded voice/provider, update the manifest-writing script deliberately and
-review the regenerated pack.
+The task updates the manifest from the versioned public catalog, reads the
+approved public generator settings from `data/cw-training/word-speech.json`,
+and uses the existing bounded PCM generator. Mise loads `ELEVENLABS_API_KEY`
+from the ignored local `.env` or inherited environment. ElevenLabs generation
+uses Python's standard library and needs no uv, ffmpeg or downloaded model.
+Only the authored manifest, index and resulting WAVs ship. Normal builds and
+playback make no synthesis requests. The existing word WAVs remain unchanged.
+
+For the initial voice replacement, the dry run should report 128 pending clips
+and, on a fresh checkout without cached responses, 128 ElevenLabs requests.
+Generate without `--force`: changed input fingerprints already replace the
+Kokoro clips, and received raw responses survive interrupted output under
+ignored `.tmp/cw-speech/elevenlabs/`. Rerunning completes unchanged or received
+work without repeating paid requests. Do not automatically retry an ambiguous
+API failure; inspect provider usage first. Explicit rate-limit retries are
+bounded by the existing generator.
+
+After generation, rerun the dry run and require zero pending clips/requests.
+Audition short phrases and representative story sentences, then validate:
+
+```sh
+mise run check
+mise run test
+mise run build
+mise run test-browser -- \
+  e2e/phrase-listening.spec.ts \
+  e2e/hands-free-passages.spec.ts \
+  e2e/spoken-answers.spec.ts
+```
+
+Update this section to record the completed voice
+replacement, commit the passage WAVs/index and documentation with Jujutsu,
+and push to main. Never commit the private key or response cache. An API-key
+permission or unavailable voice/model error needs resolution before generation
+continues; retain the existing recordings until valid replacements are produced.
 
 Hands-free playback assembles the selected collection into one bounded native
 WAV: whole chunk in Morse, recall pause, another whole-chunk repeat, recall pause,

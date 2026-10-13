@@ -2,11 +2,14 @@
   "version": 1,
   "assetDirectory": "audio/cw-training/passages",
   "generator": {
-    "engine": "kokoro-onnx",
-    "model": "kokoro-v1.0.onnx",
-    "voice": "af_heart",
-    "language": "en-us",
-    "speed": 1
+    "engine": "elevenlabs",
+    "model": "eleven_v4",
+    "voice": "hpp4J3VqNfWAUOO0d1Us",
+    "language": "en",
+    "voiceSettings": {
+      "stability": 0.75,
+      "similarity_boost": 0.75
+    }
   },
   "words": [
     {
