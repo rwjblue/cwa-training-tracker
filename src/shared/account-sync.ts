@@ -15,12 +15,15 @@ import { mergeCurriculumPlan } from './curriculum';
 import { MAX_PLAN_TASKS, validatePlannedTask, validateNewTaskPin, type PlannedTask } from './plan';
 import { DEFAULT_PROFILE, validateProfile, type Profile } from './training';
 
-export interface AccountSnapshot {
+export interface AccountAuthority {
   accountId: string;
   revision: number;
   generation: number;
   /** Present on fresh server state; older device snapshots may omit it. */
   historyRevision?: number;
+}
+
+export interface AccountSnapshot extends AccountAuthority {
   settings: Profile;
   plan: PlannedTask[];
   reports?: ReportDocument[];
@@ -150,6 +153,24 @@ function revision(value: unknown): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
     throw new Error('Invalid account revision or generation.');
   return value;
+}
+
+function accountAuthority(input: Record<string, unknown>): AccountAuthority {
+  return {
+    accountId: id(input.accountId),
+    revision: revision(input.revision),
+    generation: revision(input.generation),
+    ...(input.historyRevision === undefined
+      ? {}
+      : { historyRevision: revision(input.historyRevision) }),
+  };
+}
+
+/** Compact private reads carry the same ownership and dataset fence as full snapshots. */
+export function validateAccountAuthority(value: unknown): AccountAuthority {
+  const input = record(value);
+  keys(input, ['accountId', 'revision', 'generation', 'historyRevision']);
+  return accountAuthority(input);
 }
 
 export function validateAccountChange(value: unknown): AccountChange {
@@ -332,12 +353,7 @@ export function validateAccountSnapshot(value: unknown): AccountSnapshot {
   const reports = input.reports === undefined ? undefined : validateReportDocuments(input.reports);
   if (reports) validateReportRelationships(reports);
   return {
-    accountId: id(input.accountId),
-    revision: revision(input.revision),
-    generation: revision(input.generation),
-    ...(input.historyRevision === undefined
-      ? {}
-      : { historyRevision: revision(input.historyRevision) }),
+    ...accountAuthority(input),
     settings: validateProfile(settings),
     plan: effectivePlan(input.plan),
     ...(reports === undefined ? {} : { reports }),

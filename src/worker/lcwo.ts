@@ -5,6 +5,7 @@ import {
   type LcwoData,
   type LcwoRun,
 } from '../shared/lcwo';
+import { validateAccountAuthority } from '../shared/account-sync';
 import { requireAuth } from './auth';
 import {
   accountSnapshotStatements,
@@ -92,6 +93,20 @@ function valid<T>(parse: () => T): T {
 }
 export async function getLcwo(request: Request, env: Env) {
   const auth = await requireAuth(request, env);
+  if (new URL(request.url).searchParams.get('summary') === '1') {
+    // Read the dataset fence and retained results in the same transaction without
+    // loading the plan, reports, materials, or complete original import archive.
+    const [authority, ...results] = await env.DB.batch<Record<string, unknown>>([
+      env.DB.prepare(
+        'SELECT account_revision AS revision, dataset_generation AS generation, history_revision AS historyRevision FROM users WHERE id = ?',
+      ).bind(auth.user.id),
+      ...lcwoReadStatements(env, auth.user.id),
+    ]);
+    return json({
+      state: validateAccountAuthority({ accountId: auth.user.id, ...authority.results[0] }),
+      data: lcwoFromResults(results),
+    });
+  }
   const results = await env.DB.batch([
     ...accountSnapshotStatements(env, auth.user.id),
     ...lcwoReadStatements(env, auth.user.id),

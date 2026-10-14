@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AccountSnapshot } from '../shared/account-sync';
-import { validateAccountSnapshot } from '../shared/account-sync';
+import {
+  validateAccountAuthority,
+  validateAccountSnapshot,
+  type AccountAuthority,
+  type AccountSnapshot,
+} from '../shared/account-sync';
 import { validateLcwoBackup, type LcwoData } from '../shared/lcwo';
 import { api } from './api';
 import { isDeviceScopeCurrent, isDeviceScopeMutating } from './device-scope';
@@ -25,18 +29,18 @@ export function useLcwoData(authority: AccountSnapshot | null, token: string) {
     isDeviceScopeCurrent(captured.accountId, capturedToken) &&
     !isDeviceScopeMutating(captured.accountId);
   const accept = (
-    value: { state: unknown; data: unknown },
+    state: AccountAuthority,
+    value: unknown,
     captured: AccountSnapshot,
     capturedToken: string,
   ) => {
-    const state = validateAccountSnapshot(value.state);
     if (state.accountId !== captured.accountId || state.generation !== captured.generation)
       throw new Error(
         'LCWO history belongs to a different account or replaced dataset. Refresh your account.',
       );
     let data: LcwoData | null = null;
-    if (value.data !== null) {
-      const row = value.data as LcwoData;
+    if (value !== null) {
+      const row = value as LcwoData;
       if (typeof row.connected !== 'boolean')
         throw new Error('LCWO connection status could not be read.');
       data = { ...validateLcwoBackup({ ...row, connected: false }), connected: row.connected };
@@ -57,14 +61,14 @@ export function useLcwoData(authority: AccountSnapshot | null, token: string) {
     setLoading(true);
     try {
       const response = await api<{ state: unknown; data: unknown }>(
-        '/lcwo',
+        '/lcwo?summary=1',
         undefined,
         'GET',
         signal ?? AbortSignal.timeout(10_000),
         { accountId: captured.accountId },
       );
       if (request !== serial.current || !owns(captured, capturedToken)) return;
-      accept(response, captured, capturedToken);
+      accept(validateAccountAuthority(response.state), response.data, captured, capturedToken);
       setError('');
     } catch (failure) {
       if (request === serial.current && owns(captured, capturedToken) && !signal?.aborted)
@@ -102,7 +106,7 @@ export function useLcwoData(authority: AccountSnapshot | null, token: string) {
     );
     if (request !== serial.current || !owns(captured, capturedToken))
       throw new Error('The owning account changed. Reload retained history before retrying.');
-    accept(response, captured, capturedToken);
+    accept(validateAccountSnapshot(response.state), response.data, captured, capturedToken);
     setError('');
     return response.imported;
   };

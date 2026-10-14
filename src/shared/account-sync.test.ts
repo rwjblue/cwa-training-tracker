@@ -2,6 +2,7 @@ import type { InstructorMaterial } from './instructor-material';
 import { describe, expect, it } from 'vitest';
 import {
   applyAccountChange,
+  validateAccountAuthority,
   validateAccountChange,
   validateAccountOperation,
   validateAccountSnapshot,
@@ -41,6 +42,26 @@ const operation = (): AccountOperation => ({
 });
 
 describe('account synchronization protocol', () => {
+  it('validates compact account authority without accepting private snapshot fields', () => {
+    const authority = { accountId: 'account-a', revision: 2, generation: 0, historyRevision: 9 };
+    expect(validateAccountAuthority(authority)).toEqual(authority);
+    expect(validateAccountAuthority({ accountId: 'account-a', revision: 2, generation: 0 })).toEqual({
+      accountId: 'account-a',
+      revision: 2,
+      generation: 0,
+    });
+    expect(() => validateAccountAuthority({ ...authority, settings: DEFAULT_PROFILE })).toThrow(
+      'Unsupported',
+    );
+    for (const accountId of ['', '../../other', 1])
+      expect(() => validateAccountAuthority({ ...authority, accountId })).toThrow();
+    for (const field of ['revision', 'generation', 'historyRevision'])
+      for (const value of ['9', -1, 0.5, Number.MAX_SAFE_INTEGER + 1])
+        expect(() => validateAccountAuthority({ ...authority, [field]: value })).toThrow();
+    expect(() => validateAccountAuthority({ ...authority, generation: undefined })).toThrow();
+    expect(() => validateAccountSnapshot(authority)).toThrow();
+  });
+
   it('normalizes only supplied profile fields and preserves unrelated current preferences', () => {
     const validated = validateAccountOperation(operation());
     expect(validated.change).toEqual({ type: 'settings', changes: { callsign: 'N1RWJ' } });

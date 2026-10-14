@@ -31,7 +31,12 @@ import { createCopyAttempt, defaultCopyRecipe, submitCopyAnswer } from '../share
 import { copyAttemptSessionFields } from '../shared/copy-report';
 import { getAuth } from './auth';
 import { getAccountSnapshot, accountSnapshotStatements, snapshotFromResults } from './account-sync';
-import type { AccountChange, AccountOperation, AccountSnapshot } from '../shared/account-sync';
+import type {
+  AccountAuthority,
+  AccountChange,
+  AccountOperation,
+  AccountSnapshot,
+} from '../shared/account-sync';
 import {
   hashLifecyclePayload,
   type AccountLifecycleBackup,
@@ -7783,6 +7788,112 @@ describe('private request-only LCWO linking and retained history', () => {
       state: AccountSnapshot;
     };
   }
+  async function summary(cookie: string) {
+    const response = await request('/api/lcwo?summary=1', 'GET', undefined, cookie);
+    expect(response.status).toBe(200);
+    return (await response.json()) as {
+      data: import('../shared/lcwo').LcwoData | null;
+      state: AccountAuthority;
+    };
+  }
+  it('returns only owned LCWO facts and compact authority without reading the full private snapshot', async () => {
+    const owner = await signIn('lcwo-summary-owner@example.test');
+    const other = await signIn('lcwo-summary-other@example.test');
+    const original = {
+      course: { title: 'Synthetic private course' },
+      attempts: [],
+      materials: [
+        { id: 'original:lcwo-summary', title: 'Private original', text: 'PRIVATE SOURCE' },
+      ],
+    };
+    expect(
+      (await request('/api/import', 'POST', { mode: 'merge', data: original }, owner.cookie)).status,
+    ).toBe(200);
+    const fetcher = upstream();
+    expect((await request('/api/lcwo', 'POST', credentials, owner.cookie)).status).toBe(200);
+    const full = await retained(owner.cookie);
+    expect(full.state.originalMaterials?.materials).toEqual(original.materials);
+    expect(full.state.settings).toEqual(expect.any(Object));
+    expect(full.state.plan).toEqual(expect.any(Array));
+    expect((await request('/api/lcwo?summary=1')).status).toBe(401);
+    const mismatch = await request('/api/lcwo?summary=1', 'GET', undefined, other.cookie, {
+      'X-CWA-Account': owner.user.id,
+    });
+    expect(mismatch.status).toBe(409);
+    expect(await mismatch.json()).not.toHaveProperty('data');
+
+    const originalPrepare = db.prepare.bind(db);
+    const prepare = vi.spyOn(db, 'prepare').mockImplementation((sql) => {
+      if (/\b(import_sources|training_plan|advisor_reports|instructor_materials)\b/.test(sql))
+        throw new Error('Compact LCWO history must not load the full private snapshot.');
+      return originalPrepare(sql);
+    });
+    const upstreamCalls = fetcher.mock.calls.length;
+    const compact = await summary(owner.cookie);
+    expect(compact).toEqual({
+      state: {
+        accountId: owner.user.id,
+        revision: full.state.revision,
+        generation: full.state.generation,
+        historyRevision: full.state.historyRevision,
+      },
+      data: full.data,
+    });
+    expect(await summary(other.cookie)).toMatchObject({
+      state: { accountId: other.user.id },
+      data: null,
+    });
+    expect(fetcher).toHaveBeenCalledTimes(upstreamCalls);
+    prepare.mockRestore();
+    // The existing default response still carries the full validated snapshot.
+    expect(await retained(owner.cookie)).toEqual(full);
+  });
+  it('reads summary authority and LCWO history from the same dataset when reset wins the transaction race', async () => {
+    const owner = await signIn('lcwo-summary-reset@example.test');
+    upstream();
+    expect((await request('/api/lcwo', 'POST', credentials, owner.cookie)).status).toBe(200);
+    const before = await summary(owner.cookie);
+    expect(before.data?.runs).toHaveLength(4);
+    let release!: () => void, entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const reached = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const originalBatch = db.batch.bind(db);
+    let held = false;
+    const batch = vi.spyOn(db, 'batch').mockImplementation(async (statements) => {
+      if (!held && statements.some((statement) => statement.sql.includes('SELECT link_json'))) {
+        held = true;
+        entered();
+        await gate;
+      }
+      return originalBatch(statements);
+    });
+    const reading = summary(owner.cookie);
+    await reached;
+    try {
+      expect(
+        (await request('/api/reset', 'POST', { confirmation: 'RESET' }, owner.cookie)).status,
+      ).toBe(200);
+    } finally {
+      release();
+    }
+    const after = await reading;
+    batch.mockRestore();
+    const current = await getAccountSnapshot(env, owner.user.id);
+    expect(after).toEqual({
+      state: {
+        accountId: owner.user.id,
+        revision: current.revision,
+        generation: before.state.generation + 1,
+        historyRevision: current.historyRevision,
+      },
+      data: null,
+    });
+    expect(current.generation).toBe(after.state.generation);
+  });
   it.each(['current', 'older boolean'])(
     'disconnects at the exact real 6 MiB limit without removing history (%s flag)',
     async (flag) => {
