@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import RunnerAssignmentProgress from './RunnerAssignmentProgress';
 import LiveAssignmentWindow from './LiveAssignmentWindow';
 import ClassMeetingCard from './ClassMeetingCard';
@@ -194,7 +195,7 @@ export default function TodayPlan({
             What should I do today?
           </h2>
           <p>
-            {dayLabel(today)} <span>· {profile.timezone.replaceAll('_', ' ')}</span>
+            {dayLabel(today)} <span>· {timezoneAbbreviation(profile.timezone, today)}</span>
           </p>
         </div>
         <button className="today-plan-manage" onClick={onManagePlan}>
@@ -437,8 +438,8 @@ export default function TodayPlan({
             )}
             {plan.pinned.length > 0 && (
               <p>
-                Pins last for {today} in {profile.timezone}. Completion and dismissal stay
-                unchanged. Changing timezone keeps the pin date fixed.
+                Pins last for {today} in {timezoneAbbreviation(profile.timezone, today)}. Completion
+                and dismissal stay unchanged. Changing timezone keeps the pin date fixed.
               </p>
             )}
           </details>

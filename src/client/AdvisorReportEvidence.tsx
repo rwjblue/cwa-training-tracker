@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import { useState, type ReactNode, type ComponentProps } from 'react';
 import { PracticeEvidenceDetails } from './PracticeEvidenceDetails';
 import { savedCopyAttempt, copyAttemptReportDetails } from '../shared/copy-report';
@@ -51,7 +52,8 @@ function SourceFacts({
       {snapshot ? (
         <>
           <p>
-            <strong>Captured practice day:</strong> {snapshot.date} ({report.window.timezone})
+            <strong>Captured practice day:</strong> {snapshot.date} (
+            {timezoneAbbreviation(report.window.timezone, snapshot.date)})
           </p>
           <ul>
             {snapshot.facts.map((fact, index) => (

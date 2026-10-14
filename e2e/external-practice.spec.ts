@@ -127,7 +127,7 @@ test('all external LCWO families create, inspect and edit without generic score 
     if (kind === 'words') {
       await page.getByLabel(/^Actual local completion/).fill('2026-09-29T00:01:30');
       await expect(page.getByLabel(/^Practice timezone/)).toHaveValue('America/New_York');
-      await expect(dialog(page)).toContainText('practice date: 2026-09-28 in America/New_York');
+      await expect(dialog(page)).toContainText('practice date: 2026-09-28 in EDT');
     }
     await page.getByLabel(/^Notes/).fill(`Synthetic external ${kind}`);
     await settled(page);
@@ -236,7 +236,7 @@ test('manual Runner resolves DST, preserves captured timezone and actual runtime
   await page.getByLabel(/^Runner verified points/).fill('0');
   await page.getByLabel(/^Runner score/).fill('0');
   await page.getByLabel(/^Actual local completion/).fill('2025-03-09T02:30');
-  await page.getByLabel(/^Practice timezone/).fill('America/New_York');
+  await page.getByLabel(/^Practice timezone/).selectOption('America/New_York');
   await expect(page.getByRole('alert')).toContainText('does not exist');
   await page.getByRole('button', { name: 'Save practice', exact: true }).tap();
   expect((await (await context.request.get('/api/export')).json()).sessions).toEqual([]);
@@ -246,7 +246,16 @@ test('manual Runner resolves DST, preserves captured timezone and actual runtime
   ).toHaveValue('');
   await page
     .getByRole('combobox', { name: 'Repeated completion time', exact: true })
+    .selectOption('0');
+  await expect(page.getByLabel(/^Practice timezone/).locator('option:checked')).toContainText(
+    'EDT',
+  );
+  await page
+    .getByRole('combobox', { name: 'Repeated completion time', exact: true })
     .selectOption('1');
+  await expect(page.getByLabel(/^Practice timezone/).locator('option:checked')).toContainText(
+    'EST',
+  );
   await expect(dialog(page)).toContainText('Actual start: 2025-11-02T06:14:30.000Z');
   await settled(page);
   const zone = page.getByLabel(/^Practice timezone/);

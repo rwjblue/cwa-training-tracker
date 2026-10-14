@@ -78,11 +78,24 @@ test('assigned CWT opportunities share deadlines across Today, Week and retained
   await activate(page.getByRole('button', { name: 'This week', exact: true }));
   const opportunity = page.getByRole('region', { name: 'CWT assignment opportunity', exact: true });
   await expect(opportunity).toContainText('Next eligible CWT window');
-  await expect(opportunity).toContainText('Wed, Oct 7, 2026, 22:00');
-  await expect(opportunity).toContainText('Wed, Oct 7, 2026, 13:00');
+  await expect(
+    opportunity.getByText('2026-10-07 22:00–23:00 GMT+9', { exact: true }),
+  ).toBeVisible();
+  await expect(opportunity.getByText('2026-10-07 13:00–14:00 UTC', { exact: true })).toBeVisible();
+  const schedule = opportunity.getByRole('link', {
+    name: 'View live practice schedule',
+    exact: true,
+  });
+  await expect(schedule).toHaveAttribute('href', '#events');
+  await activate(schedule);
+  await expect(page).toHaveURL(/#events$/);
+  await expect(page.getByRole('heading', { name: 'Live practice', exact: true })).toBeVisible();
   await expectResponsive(page, 'live-task-upcoming-week');
   await navigate('Today');
+  await page.setViewportSize({ width: 390, height: 844 });
+  mobile = true;
   await expect(opportunity).toContainText('Next eligible CWT window');
+  await expectResponsive(page, 'live-task-upcoming-today-mobile');
   await activate(page.getByRole('button', { name: 'Prepare live practice', exact: true }));
   await expect(page.getByRole('button', { name: 'Start practice', exact: true })).toBeDisabled();
   await openDisclosure(page, 'Session options and logging');

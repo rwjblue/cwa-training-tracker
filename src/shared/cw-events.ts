@@ -1,3 +1,5 @@
+import { formatZonedDateTime } from './timezone-display.ts';
+
 /** Public organizer schedule. No account, course or practice-result state belongs here. */
 export type CwEventId = 'sst' | 'mst' | 'cwt';
 export interface CwEventSlot {
@@ -139,17 +141,13 @@ export function cwEventAgenda(now: number, limit = 9) {
 }
 
 export function formatCwEventWindow(event: CwEventOccurrence, timezone: string): string {
-  const format = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  });
-  return `${format.format(event.start)} – ${format.format(event.end)}`;
+  const start = formatZonedDateTime(event.start, timezone);
+  const end = formatZonedDateTime(event.end, timezone);
+  // Keep ordinary one-day windows compact; retain both dates/offsets when
+  // crossing midnight or a clock change.
+  if (start.slice(0, 10) === end.slice(0, 10) && start.slice(17) === end.slice(17))
+    return `${start.slice(0, 16)}–${end.slice(11)}`;
+  return `${start} – ${end}`;
 }
 
 export function cwEventCountdown(milliseconds: number): string {

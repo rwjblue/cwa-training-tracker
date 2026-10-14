@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import type { PracticeSession } from '../shared/training';
 import type { ReportDocument } from '../shared/report-document';
 import { reportablePractice, reportPracticeDate } from '../shared/report-evidence';
@@ -43,10 +44,11 @@ export default function AdvisorLearnedWords({
     <details className="advisor-learned-words" aria-label="Learned word sources and history">
       <summary>Review learned-word candidates ({candidates.length})</summary>
       <p>
-        These are current saved declarations in this inclusive window, in {report.window.timezone}.
-        Refresh from saved practice to update the captured suggestion; your edits and deliberate
-        blanks remain protected. A saved scratchpad line such as <code>Learned: Rig, QTH</code>{' '}
-        explicitly declares learning. Other prose and heard/generated words do not.
+        These are current saved declarations in this inclusive window, in{' '}
+        {timezoneAbbreviation(report.window.timezone, report.window.reportDate)}. Refresh from saved
+        practice to update the captured suggestion; your edits and deliberate blanks remain
+        protected. A saved scratchpad line such as <code>Learned: Rig, QTH</code> explicitly
+        declares learning. Other prose and heard/generated words do not.
       </p>
       <p>
         Eligible words are suggested once. Only the words in the exact confirmed native submission

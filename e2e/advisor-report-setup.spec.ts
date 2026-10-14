@@ -154,7 +154,7 @@ test('private report definition, exact field rules, preparation window and retai
   await keyboard(page.getByRole('button', { name: 'Advisor report setup', exact: true }));
   await expect(page.getByRole('combobox', { name: 'Class session', exact: true })).toBeFocused();
   const preparation = page.getByRole('region', { name: 'Report preparation window' });
-  await expect(preparation).toContainText('America/New_York');
+  await expect(preparation).toContainText('EDT');
   await expect(preparation).toContainText('2026-09-29, 2026-09-30, 2026-10-01');
   await expect(preparation).toContainText('2026-10-03');
   await page.getByLabel('Report date', { exact: true }).fill('2026-09-30');

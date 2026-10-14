@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import { useId } from 'react';
 import type { dailyWordListening } from '../shared/daily-word-listening';
 import { formatPracticeDuration } from './practice-duration';
@@ -21,7 +22,7 @@ export default function DailyWordListening({
     <section className="practice-time-summary daily-word-listening" aria-labelledby={heading}>
       <h2 id={heading}>Optional daily word listening</h2>
       <p className="practice-time-date">
-        {summary.date} · {timezone.replaceAll('_', ' ')}
+        {summary.date} · {timezoneAbbreviation(timezone, summary.date)}
       </p>
       <dl className="practice-time-totals daily-word-totals" aria-label="Word listening only">
         <div>

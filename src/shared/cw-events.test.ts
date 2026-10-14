@@ -72,11 +72,28 @@ describe('verified public live schedule', () => {
     const before = cwEventAgenda(ms('2026-10-25T23:00:00Z')).next;
     const after = cwEventAgenda(ms('2026-11-01T23:00:00Z')).next;
     expect(after.start - before.start).toBe(7 * 86_400_000);
-    expect(formatCwEventWindow(before, 'America/New_York')).toContain('Sun, Oct 25, 2026, 20:00');
-    expect(formatCwEventWindow(after, 'America/New_York')).toContain('Sun, Nov 1, 2026, 19:00');
+    expect(formatCwEventWindow(before, 'America/New_York')).toBe('2026-10-25 20:00–21:00 EDT');
+    expect(formatCwEventWindow(after, 'America/New_York')).toBe('2026-11-01 19:00–20:00 EST');
     const cwt = cwEventAgenda(ms('2026-10-07T18:00:00Z')).next;
-    expect(formatCwEventWindow(cwt, 'Asia/Tokyo')).toContain('Thu, Oct 8, 2026, 04:00');
-    expect(formatCwEventWindow(cwt, 'UTC')).toContain('Wed, Oct 7, 2026, 19:00');
+    expect(formatCwEventWindow(cwt, 'Asia/Tokyo')).toBe('2026-10-08 04:00–05:00 GMT+9');
+    expect(formatCwEventWindow(cwt, 'UTC')).toBe('2026-10-07 19:00–20:00 UTC');
+    const late = cwEventAgenda(ms('2026-10-08T02:00:00Z')).next;
+    expect(formatCwEventWindow(late, 'America/New_York')).toBe(
+      '2026-10-07 23:00 EDT – 2026-10-08 00:00 EDT',
+    );
+  });
+  it('keeps both timezone labels when a window spans a clock change', () => {
+    const event = cwEventAgenda(ms('2026-11-01T00:00:00Z')).next;
+    expect(
+      formatCwEventWindow(
+        {
+          ...event,
+          start: ms('2026-11-01T05:30:00Z'),
+          end: ms('2026-11-01T06:30:00Z'),
+        },
+        'America/New_York',
+      ),
+    ).toBe('2026-11-01 01:30 EDT – 2026-11-01 01:30 EST');
   });
   it('rejects invalid clocks, inverted/unbounded ranges and invalid list sizes', () => {
     for (const now of [NaN, Infinity, -Infinity, 8.64e15])

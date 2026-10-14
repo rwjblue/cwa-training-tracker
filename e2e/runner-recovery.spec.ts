@@ -308,7 +308,7 @@ async function retainedResults(page: Page, scope: string) {
     await openDisclosure(dialog, 'Measured results and practice evidence');
     await expect(dialog).toContainText('20 WPM starting speed');
     await expect(dialog).toContainText('24 WPM');
-    await expect(dialog).toContainText('America/New_York');
+    await expect(dialog).toContainText('EDT');
     await dialog.evaluate((element) =>
       Promise.all(element.getAnimations().map((animation) => animation.finished)),
     );
@@ -418,7 +418,7 @@ async function retainedResults(page: Page, scope: string) {
     );
     await expect(page.getByRole('dialog')).toContainText('20 WPM starting speed');
     await expect(page.getByRole('dialog')).toContainText('24 WPM');
-    await expect(page.getByRole('dialog')).toContainText('America/New_York');
+    await expect(page.getByRole('dialog')).toContainText('EDT');
     await expectAccessible(page, `runner-recovery-report-${mobile ? 'mobile' : 'desktop'}`);
   });
 }

@@ -36,9 +36,9 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   await activate(page.getByRole('button', { name: 'See SST, MST and CWT live practice' }));
   await expect(page.getByRole('heading', { name: 'Live practice', exact: true })).toBeVisible();
   await expect(page.getByText('No event in progress. Next: SST.', { exact: true })).toBeVisible();
-  await expect(page.getByText('Times shown in', { exact: false })).toContainText('Asia/Tokyo');
+  await expect(page.getByText('Times shown in', { exact: false })).toContainText('GMT+9');
   const next = page.getByRole('article', { name: 'Next live event', exact: true });
-  await expect(next).toContainText('Sat, Oct 3, 2026, 05:00');
+  await expect(next).toContainText('2026-10-03 05:00–06:00 GMT+9');
   await expect(next).toContainText('Starts in 0m 1s');
   await expectResponsive(page, 'live-agenda-next-local');
   const mode = page.getByRole('combobox', { name: 'Display times', exact: true });
@@ -46,13 +46,13 @@ test('guest live agenda boundaries, retained time mode, calendar import and clip
   await page.keyboard.press('u');
   await page.keyboard.press('Enter');
   await expect(mode).toHaveValue('utc');
-  await expect(next).toContainText('Fri, Oct 2, 2026, 20:00');
+  await expect(next).toContainText('2026-10-02 20:00–21:00 UTC');
   await page.reload();
   await expect(mode).toHaveValue('utc');
   await page.clock.setFixedTime(new Date('2026-10-02T20:00:00Z'));
   const current = page.getByRole('article', { name: 'SST in progress', exact: true });
   await expect(current).toContainText('Ends in 1h 0m 0s');
-  await expect(next).toContainText('Mon, Oct 5, 2026, 00:00');
+  await expect(next).toContainText('2026-10-05 00:00–01:00 UTC');
   await expectResponsive(page, 'live-agenda-current');
 
   await page.setViewportSize({ width: 390, height: 844 });

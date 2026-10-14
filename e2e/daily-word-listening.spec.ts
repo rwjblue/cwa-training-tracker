@@ -102,7 +102,7 @@ test('optional daily words count actual replay separately from recall and retire
       await page.keyboard.press('Enter');
     }
   };
-  await expect(daily).toContainText(`${date} · Pacific/Honolulu`);
+  await expect(daily).toContainText(`${date} · HST`);
   await expect(daily.getByLabel('Word listening only')).toContainText('9:58');
   await activate(daily.getByText('Resource and progress details', { exact: true }));
   await expect(daily).toContainText('original daily recording is private and unavailable here');

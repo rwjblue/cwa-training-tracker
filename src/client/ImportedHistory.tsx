@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import type { PracticeSession, TrainingExport } from '../shared/training';
 import { api } from './api';
 import './imported-history.css';
@@ -102,6 +103,7 @@ function label(key: string) {
 }
 
 function fieldText(key: string, value: unknown) {
+  if (key === 'timezone' && typeof value === 'string') return timezoneAbbreviation(value);
   if (key === 'editedAnswerKeys' && Array.isArray(value))
     return value
       .filter((item): item is string => typeof item === 'string')
@@ -419,8 +421,8 @@ function Archive({ data, cutoff }: { data: unknown; cutoff: RecordData }) {
       {text(cutoff.date) && (
         <p className="imported-cutoff">
           Practice was imported strictly before <strong>{text(cutoff.date)}</strong> (
-          {text(cutoff.timezone)}). The original source archive below retains all exported records,
-          including any later records, for reference.
+          {timezoneAbbreviation(text(cutoff.timezone), text(cutoff.date))}). The original source
+          archive below retains all exported records, including any later records, for reference.
         </p>
       )}
       <p>

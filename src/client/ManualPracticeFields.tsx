@@ -10,6 +10,8 @@ import {
   type ExternalPractice,
 } from '../shared/external-practice';
 import { dateInTimezone, type PracticeSession } from '../shared/training';
+import { timezoneAbbreviation } from '../shared/timezone-display';
+import TimeZoneSelect from './TimeZoneSelect';
 
 export function manualPracticeDraft(entry: Partial<PracticeSession>, timezone: string) {
   const result = entry.metadata?.externalResult;
@@ -89,7 +91,7 @@ export default function ManualPracticeFields({
     try {
       candidates = manualCompletionCandidates(draft.completedLocal, draft.timezone);
       if (!candidates.length)
-        timingError = `This time does not exist in ${draft.timezone} because the clock changes. Choose another time.`;
+        timingError = `This time does not exist in ${timezoneAbbreviation(draft.timezone, draft.completedLocal.slice(0, 10))} because the clock changes. Choose another time.`;
       if (
         candidates.length &&
         seconds !== undefined &&
@@ -101,12 +103,13 @@ export default function ManualPracticeFields({
           seconds,
           draft.occurrence === '' ? undefined : (Number(draft.occurrence) as 0 | 1),
         );
-        startPreview = `Actual start: ${timing.startedAt} · practice date: ${dateInTimezone(timing.startedAt, timing.timezone)} in ${timing.timezone}.`;
+        startPreview = `Actual start: ${timing.startedAt} · practice date: ${dateInTimezone(timing.startedAt, timing.timezone)} in ${timezoneAbbreviation(timing.timezone, timing.startedAt)}.`;
       }
     } catch (error) {
       timingError = (error as Error).message;
     }
   }
+  const completionInstant = candidates[Number(draft.occurrence)];
   const numberField = (
     key: keyof ManualPracticeDraft,
     label: string,
@@ -241,22 +244,17 @@ export default function ManualPracticeFields({
               </span>
             </label>
             {draft.completedLocal && (
-              <label className="field">
-                Practice timezone
-                <input
-                  aria-label="Practice timezone"
-                  aria-describedby={`${hintId}-zone`}
-                  value={draft.timezone}
-                  required
-                  maxLength={100}
-                  onChange={(event) =>
-                    onChange({ ...draft, timezone: event.target.value, occurrence: '' })
-                  }
-                />
-                <span className="field-hint" id={`${hintId}-zone`}>
-                  Captured learner IANA timezone; your browser timezone is not used.
-                </span>
-              </label>
+              <TimeZoneSelect
+                id={`${hintId}-zone`}
+                value={draft.timezone}
+                at={
+                  completionInstant === undefined
+                    ? draft.completedLocal.slice(0, 10)
+                    : new Date(completionInstant).toISOString()
+                }
+                onChange={(timezone) => onChange({ ...draft, timezone, occurrence: '' })}
+                hint="Captured practice timezone; your browser timezone is not used."
+              />
             )}
           </div>
           {timingError && (

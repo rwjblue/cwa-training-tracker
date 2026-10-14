@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 
 const fallbackZones = [
   'UTC',
@@ -20,7 +21,7 @@ const fallbackZones = [
   'Pacific/Auckland',
 ];
 
-function zoneLabel(zone: string): string {
+function zoneLabel(zone: string, at?: string): string {
   if (zone === 'UTC') return 'UTC — Coordinated Universal Time';
   const parts = zone.split('/');
   const city = parts.slice(1).reverse().join(', ').replaceAll('_', ' ') || zone;
@@ -28,7 +29,7 @@ function zoneLabel(zone: string): string {
     const name = new Intl.DateTimeFormat('en', { timeZone: zone, timeZoneName: 'longGeneric' })
       .formatToParts(new Date())
       .find((part) => part.type === 'timeZoneName')?.value;
-    return name ? `${city} — ${name}` : city;
+    return `${city} — ${timezoneAbbreviation(zone, at)}${name ? ` (${name})` : ''}`;
   } catch {
     return city;
   }
@@ -40,12 +41,14 @@ export default function TimeZoneSelect({
   id = 'practice-timezone',
   label = 'Practice timezone',
   hint = 'Your daily goals and class dates follow this timezone.',
+  at,
 }: {
   value: string;
   onChange: (value: string) => void;
   id?: string;
   label?: string;
   hint?: string;
+  at?: string;
 }) {
   const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const options = useMemo(() => {
@@ -54,9 +57,9 @@ export default function TimeZoneSelect({
         ? Intl.supportedValuesOf('timeZone')
         : fallbackZones;
     return [...new Set([value, detected, 'UTC', ...supported])]
-      .map((zone) => ({ zone, label: zoneLabel(zone) }))
+      .map((zone) => ({ zone, label: zoneLabel(zone, at) }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [value, detected]);
+  }, [value, detected, at]);
   return (
     <div className="field timezone-field">
       <label htmlFor={id}>{label}</label>
@@ -70,7 +73,7 @@ export default function TimeZoneSelect({
       <span className="field-hint">{hint}</span>
       {value !== detected && (
         <button type="button" className="text-button" onClick={() => onChange(detected)}>
-          Use device timezone: {zoneLabel(detected).split(' — ')[0]}
+          Use device timezone: {zoneLabel(detected, at).split(' (')[0]}
         </button>
       )}
     </div>

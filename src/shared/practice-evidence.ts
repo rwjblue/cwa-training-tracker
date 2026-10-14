@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from './timezone-display.ts';
 import { validateMaterialReference } from './instructor-material.ts';
 import { manualPracticeDetails } from './external-practice.ts';
 import { isRunnerSettings, isRunnerSummary, type RunnerRunState } from './runner.ts';
@@ -565,7 +566,9 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
         ? [`Run started ${run.runStartedAt}${run.runEndedAt ? `; ended ${run.runEndedAt}` : ''}.`]
         : []),
       ...(run.attribution
-        ? [`Practice date uses the run start in ${run.attribution.timezone}.`]
+        ? [
+            `Practice date uses the run start in ${timezoneAbbreviation(run.attribution.timezone, run.runStartedAt)}.`,
+          ]
         : []),
     ];
   }

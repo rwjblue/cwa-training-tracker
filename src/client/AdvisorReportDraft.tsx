@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import AdvisorReportHandoff from './AdvisorReportHandoff';
 import AdvisorLearnedWords from './AdvisorLearnedWords';
 import AdvisorReportAnswers from './AdvisorReportAnswers';
@@ -445,7 +446,8 @@ export default function AdvisorReportDraft({
       {dateError && <p role="alert">{dateError}</p>}
       <section className="advisor-window" aria-label="Report preparation window">
         <p>
-          <strong>Course timezone:</strong> {window.timezone}
+          <strong>Course timezone:</strong>{' '}
+          {timezoneAbbreviation(window.timezone, window.meetingStartsAt ?? window.reportDate)}
         </p>
         <p>
           <strong>Source preparation dates:</strong>{' '}
@@ -464,7 +466,7 @@ export default function AdvisorReportDraft({
               dateStyle: 'medium',
               timeStyle: 'short',
             }).format(new Date(window.meetingStartsAt))}{' '}
-            ({window.timezone})
+            ({timezoneAbbreviation(window.timezone, window.meetingStartsAt)})
           </p>
         )}
         <p>

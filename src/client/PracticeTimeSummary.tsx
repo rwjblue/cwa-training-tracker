@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import { useId } from 'react';
 import type {
   dailyPracticeGoals,
@@ -26,7 +27,7 @@ export default function PracticeTimeSummary({
     <section className="practice-time-summary" aria-labelledby={heading}>
       <h2 id={heading}>Today’s practice time</h2>
       <p className="practice-time-date">
-        {summary.date} · {timezone.replaceAll('_', ' ')}
+        {summary.date} · {timezoneAbbreviation(timezone, summary.date)}
       </p>
       <dl className="practice-time-totals" aria-label="Independent practice">
         <div>

@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from './timezone-display.ts';
 import {
   validateAdvisorReportDefinition,
   validateAdvisorReportAnswers,
@@ -385,7 +386,7 @@ export function reportDocumentText(document: ReportDocument): string {
   return [
     document.definition.title,
     `Session ${document.window.session}; report date ${document.window.reportDate}`,
-    `Course timezone: ${document.window.timezone}`,
+    `Course timezone: ${timezoneAbbreviation(document.window.timezone, document.window.meetingStartsAt ?? document.window.reportDate)}`,
     `Window: ${document.window.empty ? 'empty' : `${document.window.fromDate} through ${document.window.toDate} (inclusive)`}`,
     ...document.definition.fields.map(
       (field) => `${field.section} — ${field.label}: ${document.answers[field.key] ?? ''}`,

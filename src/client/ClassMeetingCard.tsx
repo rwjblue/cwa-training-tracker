@@ -7,6 +7,7 @@ import {
   type Profile,
 } from '../shared/training';
 import { meetingTimeLabel } from './ClassScheduleFields';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import './class-schedule.css';
 
 /** Calendar display only: this clock never measures or credits practice. */
@@ -108,7 +109,8 @@ export default function ClassMeetingCard({
         <summary>Class details</summary>
         {meeting && (
           <p>
-            Displayed in {profile.timezone}. Meeting timezone: {meeting.timezone}.
+            Displayed in {timezoneAbbreviation(profile.timezone, meeting.startsAt)}. Meeting
+            timezone: {timezoneAbbreviation(meeting.timezone, meeting.startsAt)}.
             {meeting.exception ? ' Individual class exception.' : ''}
           </p>
         )}

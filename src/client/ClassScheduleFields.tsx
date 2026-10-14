@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { courseMeetings, type Profile } from '../shared/training';
 import { timedClassMeetings, type ClassSchedule, type ClassTime } from '../shared/class-schedule';
 import TimeZoneSelect from './TimeZoneSelect';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import './class-schedule.css';
 
 const emptyTime: ClassTime = { startTime: '', endTime: '', endsNextDay: false };
@@ -154,7 +155,8 @@ export default function ClassScheduleFields({
               <li key={item.session}>
                 <span>
                   Session {item.session} · {item.date} · {item.startTime}–{item.endTime}
-                  {item.endsNextDay ? ' next day' : ''} · {item.timezone ?? current.timezone}
+                  {item.endsNextDay ? ' next day' : ''} ·{' '}
+                  {timezoneAbbreviation(item.timezone ?? current.timezone, item.date)}
                 </span>
                 <div className="class-schedule-actions">
                   <button

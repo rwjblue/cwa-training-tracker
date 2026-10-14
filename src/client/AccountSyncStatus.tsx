@@ -1,4 +1,5 @@
 import type { AdvisorReportDefinition } from '../shared/report-definition';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import { useState } from 'react';
 import { validateRecordingMarkSet, recordingMarkSetDetails } from '../shared/recording-marks';
 import type { AccountChange, AccountSnapshot } from '../shared/account-sync';
@@ -28,6 +29,7 @@ const valueLabel = (value: unknown) =>
           : 'No'
         : String(value);
 const preferenceValueLabel = (key: string, value: unknown) => {
+  if (key === 'timezone' && typeof value === 'string') return timezoneAbbreviation(value);
   if (key === 'reportDefinition' && value) {
     const definition = value as AdvisorReportDefinition;
     return [
@@ -53,11 +55,11 @@ const preferenceValueLabel = (key: string, value: unknown) => {
   const time = (item: NonNullable<ClassSchedule['ordinary']>) =>
     `${item.startTime}–${item.endTime}${item.endsNextDay ? ' next day' : ''}`;
   return [
-    `meeting timezone ${schedule.timezone}`,
+    `meeting timezone ${timezoneAbbreviation(schedule.timezone)}`,
     `ordinary times ${schedule.ordinary ? time(schedule.ordinary) : 'not set'}`,
     ...schedule.exceptions.map(
       (item) =>
-        `session ${item.session}: ${item.date} ${time(item)} ${item.timezone ?? schedule.timezone}`,
+        `session ${item.session}: ${item.date} ${time(item)} ${timezoneAbbreviation(item.timezone ?? schedule.timezone, item.date)}`,
     ),
     `join link ${schedule.joinUrl ?? 'not set'}`,
   ].join('; ');

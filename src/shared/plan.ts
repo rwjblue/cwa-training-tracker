@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from './timezone-display.ts';
 import { lcwoRunDetails, type LcwoBackup } from './lcwo.ts';
 import { lcwoContributions, lcwoContributionDetails, estimatedLcwoSessions } from './lcwo-practice.ts';
 import { practiceAssessmentDetails } from './practice-assessment.ts';
@@ -662,9 +663,11 @@ export function weeklyReport(
   const minutes = (value: number) => Number(value.toFixed(2)).toString();
   const total = practice.reduce((sum, entry) => sum + entry.minutes, 0);
   const label = profile.callsign || profile.displayName || 'CW practice';
+  const startZone = timezoneAbbreviation(profile.timezone, fromDate);
+  const endZone = timezoneAbbreviation(profile.timezone, toDate);
   const lines = [
     `${label} — practice report`,
-    `${fromDate} through ${toDate} (${profile.timezone})`,
+    `${fromDate} through ${toDate} (${startZone}${startZone === endZone ? '' : ` / ${endZone}`})`,
     '',
     `${minutes(total)} independent-practice minutes across ${new Set(practice.filter((entry) => entry.minutes > 0).map((entry) => entry.date)).size} days.`,
     `${profile.dailyGoalMinutes} minutes is the optional personal daily target. Required goals apply only to dates with assignments. Class time is listed separately.`,

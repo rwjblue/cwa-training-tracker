@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from './timezone-display.ts';
 import { civilTimeCandidates } from './civil-time.ts';
 import { dateInTimezone, isCalendarDate, type PracticeSession } from './training.ts';
 import { sessionEvidence } from './practice-evidence.ts';
@@ -188,7 +189,7 @@ export function createManualTiming(
   const candidates = manualCompletionCandidates(local, zone);
   if (!candidates.length)
     throw new Error(
-      `This completion time does not exist in ${zone} because the clock changes. Choose another time.`,
+      `This completion time does not exist in ${timezoneAbbreviation(zone, local.slice(0, 10))} because the clock changes. Choose another time.`,
     );
   if (candidates.length > 1 && occurrence === undefined)
     throw new Error('This completion time occurs twice. Choose the earlier or later occurrence.');
@@ -309,7 +310,7 @@ export function manualPracticeDetails(metadata?: PracticeSession['metadata']): s
   const details: string[] = [];
   if (timing)
     details.push(
-      `Actual practice start: ${timing.startedAt} · completion: ${timing.completedAt} · ${timing.timezone} (${timing.completedLocal}${timing.occurrence === undefined ? '' : timing.occurrence === 0 ? ', earlier occurrence' : ', later occurrence'}). Duration is user-entered; upload time is separate.`,
+      `Actual practice start: ${timing.startedAt} · completion: ${timing.completedAt} · ${timezoneAbbreviation(timing.timezone, timing.completedAt)} (${timing.completedLocal}${timing.occurrence === undefined ? '' : timing.occurrence === 0 ? ', earlier occurrence' : ', later occurrence'}). Duration is user-entered; upload time is separate.`,
     );
   else details.push('Actual start and completion: unknown (not recorded).');
   if (result?.trainer === 'lcwo') {

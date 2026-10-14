@@ -1,4 +1,5 @@
 import { civilTimeCandidates } from './civil-time.ts';
+import { timezoneAbbreviation } from './timezone-display.ts';
 import {
   addDays,
   courseMeetings,
@@ -93,7 +94,7 @@ export function classTimestamp(date: string, time: string, zone: string): string
   const candidates = civilTimeCandidates(date, time, zone);
   if (!candidates.length)
     throw new Error(
-      `${date} ${time} does not exist in ${zone} because the clock changes. Choose another time.`,
+      `${date} ${time} does not exist in ${timezoneAbbreviation(zone, date)} because the clock changes. Choose another time.`,
     );
   return new Date(candidates[0]).toISOString();
 }

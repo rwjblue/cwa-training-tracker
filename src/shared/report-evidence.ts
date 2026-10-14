@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from './timezone-display.ts';
 import { dateInTimezone, getPracticePurpose, type PracticeSession } from './training.ts';
 import { sessionEvidence, recordingCompletedPasses } from './practice-evidence.ts';
 import { generatedListeningDetails } from './generated-listening.ts';
@@ -376,7 +377,7 @@ export function reportPracticeSnapshot(
   const date = reportPracticeDate(entry, timezone);
   const facts = [
     actual
-      ? `Actual start: ${actual}; report day ${date} in ${timezone}.`
+      ? `Actual start: ${actual}; report day ${date} in ${timezoneAbbreviation(timezone, actual)}.`
       : `Declared practice day: ${date}; actual start not recorded. Upload time is not a practice timestamp.`,
     `Saved ${display(entry.minutes)} minutes; ${getPracticePurpose(entry) === 'review' ? 'extra review (reportable, no required-task credit)' : 'ordinary practice'}.`,
   ];

@@ -7,6 +7,7 @@ import {
   type CwEventOccurrence,
 } from '../shared/cw-events';
 import { publicCwCalendarUrl } from '../shared/cw-calendar';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import {
   EVENT_TIME_MODE_KEY,
   loadEventTimeMode,
@@ -126,7 +127,7 @@ export default function LivePracticeAgenda({
           </select>
         </label>
         <p>
-          Times shown in <strong>{timezone}</strong>.
+          Times shown in <strong>{timezoneAbbreviation(timezone, now)}</strong>.
         </p>
         {preferenceFailed && (
           <p role="status">

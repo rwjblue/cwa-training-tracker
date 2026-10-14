@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import { LCWO_RUN_LABELS, lcwoRunDetails } from '../shared/lcwo';
 import { lcwoContributionDetails, type LcwoContribution } from '../shared/lcwo-practice';
 import './lcwo.css';
@@ -29,8 +30,9 @@ export default function LcwoHistory({
     >
       <h2 tabIndex={-1}>Retained LCWO results</h2>
       <p>
-        {rows.length} unique external source results. Completion dates use {timezone}; refresh dates
-        do not supply practice credit. Source facts are read-only.
+        {rows.length} unique external source results. Completion dates use{' '}
+        {timezoneAbbreviation(timezone)}; refresh dates do not supply practice credit. Source facts
+        are read-only.
       </p>
       <label className="field">
         LCWO trainer filter

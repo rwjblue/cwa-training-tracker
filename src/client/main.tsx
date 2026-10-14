@@ -1,3 +1,4 @@
+import { timezoneAbbreviation } from '../shared/timezone-display';
 import type { InstructorMaterial, OriginalMaterialInventory } from '../shared/instructor-material';
 import MaterialLibrary from './MaterialLibrary';
 import MaterialPreparation from './MaterialPreparation';
@@ -2876,7 +2877,7 @@ function Course({
             </strong>
             <span>
               {nextMeeting
-                ? `Session ${nextMeeting.lesson} · ${profile.timezone}. Confirm meeting changes with your advisor.`
+                ? `Session ${nextMeeting.lesson} · ${timezoneAbbreviation(profile.timezone, nextMeeting.date)}. Confirm meeting changes with your advisor.`
                 : 'Keep the habit going, one good session at a time.'}
             </span>
           </div>
