@@ -1,5 +1,6 @@
+# Cloudflare injects release paths beneath beacon.min.js/ as well as the plain URL.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com/beacon.min.js; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://gravatar.com; connect-src 'self' https://cloudflareinsights.com; media-src 'self' blob: https://cwops.org https://cwa.cwops.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com/beacon.min.js https://static.cloudflareinsights.com/beacon.min.js/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://gravatar.com; connect-src 'self' https://cloudflareinsights.com; media-src 'self' blob: https://cwops.org https://cwa.cwops.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), publickey-credentials-get=(self), publickey-credentials-create=(self)

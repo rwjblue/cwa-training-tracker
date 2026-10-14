@@ -159,6 +159,10 @@ confidence in the user's workflow is.
 
 ## Coverage ownership
 
+`content-security-policy.spec.ts` owns plain and versioned Cloudflare analytics
+script loading under the served CSP, with unrelated same-host scripts blocked.
+It injects synthetic beacons because local Wrangler does not add edge analytics.
+
 `appearance.spec.ts` owns system changes, persisted appearance, cross-tab updates,
 pre-paint initialization under the site CSP, unavailable storage, account controls,
 and the simulator’s inherited color scheme. Appearance stays on the device and
