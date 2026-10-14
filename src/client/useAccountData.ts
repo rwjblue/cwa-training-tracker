@@ -51,6 +51,7 @@ export function useAccountData(user: User | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cached, setCached] = useState(Boolean(scope && loadCachedAccount(scope)));
+  const refreshes = useRef(new Map<string, { token: string; promise: Promise<AccountSnapshot> }>());
   const publish = useCallback((state: AccountSnapshot, token: string) => {
     if (
       active.current !== state.accountId ||
@@ -96,42 +97,53 @@ export function useAccountData(user: User | null) {
         isSelectedAccount(target.id) &&
         isDeviceScopeCurrent(target.id, token);
       if (active.current === target.id) setLoading(true);
-      try {
-        const result = await api<{ state: AccountSnapshot }>(
-          '/account-state',
-          undefined,
-          'GET',
-          undefined,
-          { accountId: target.id },
-        );
-        const state = validateAccountSnapshot(result.state);
-        if (state.accountId !== target.id)
-          throw new Error('The returned state belongs to another account.');
-        if (ownsResponse() && !observeAccountGeneration(target, state)) return state;
-        if (ownsResponse()) {
-          rememberAccount(target, state);
-          publish(state, token);
-        }
-        if (ownsResponse()) {
-          setError('');
-          setCached(false);
-        }
-        if (ownsResponse()) {
-          retryAccountOperations(target.id);
-          await flush(target.id);
-        }
-        return state;
-      } catch (failure) {
-        if (ownsResponse()) {
-          setError(
-            failure instanceof Error ? failure.message : 'Your account could not be refreshed.',
+      // Identity loading, scope hydration and reconnect can request the same
+      // snapshot together. Share their work only within the same device owner.
+      const retained = refreshes.current.get(target.id);
+      if (retained?.token === token) return retained.promise;
+      const pending = (async () => {
+        try {
+          const result = await api<{ state: AccountSnapshot }>(
+            '/account-state',
+            undefined,
+            'GET',
+            undefined,
+            { accountId: target.id },
           );
-          setCached(Boolean(loadCachedAccount(target.id)));
+          const state = validateAccountSnapshot(result.state);
+          if (state.accountId !== target.id)
+            throw new Error('The returned state belongs to another account.');
+          if (ownsResponse() && !observeAccountGeneration(target, state)) return state;
+          if (ownsResponse()) {
+            rememberAccount(target, state);
+            publish(state, token);
+          }
+          if (ownsResponse()) {
+            setError('');
+            setCached(false);
+          }
+          if (ownsResponse()) {
+            retryAccountOperations(target.id);
+            await flush(target.id);
+          }
+          return state;
+        } catch (failure) {
+          if (ownsResponse()) {
+            setError(
+              failure instanceof Error ? failure.message : 'Your account could not be refreshed.',
+            );
+            setCached(Boolean(loadCachedAccount(target.id)));
+          }
+          throw failure;
+        } finally {
+          if (ownsResponse()) setLoading(false);
         }
-        throw failure;
-      } finally {
-        if (ownsResponse()) setLoading(false);
-      }
+      })().finally(() => {
+        if (refreshes.current.get(target.id)?.promise === pending)
+          refreshes.current.delete(target.id);
+      });
+      refreshes.current.set(target.id, { token, promise: pending });
+      return pending;
     },
     [user, publish, flush, scope, deviceToken],
   );

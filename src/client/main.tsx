@@ -403,6 +403,7 @@ function App() {
   const [deviceOpen, setDeviceOpen] = useState(false);
   const [lifecycleReview, setLifecycleReview] = useState<LifecycleReview | null>(null);
   const historyGeneration = useRef<{ accountId: string; generation: number } | null>(null);
+  const historyMutations = useRef(0);
   const historySkippedForAdmin = useRef(false);
   const lifecycleRefreshScope = useRef<string | null>(null);
   const activeAccount = useRef(user?.id);
@@ -611,22 +612,41 @@ function App() {
     if (isDeviceScopeMutating(current.id) || loadAccountLifecycle(current.id))
       return cached?.state.settings;
     try {
-      const state = await account.refresh(current);
       const token = getDeviceScopeToken(current.id);
-      if (!isDeviceScopeCurrent(current.id, token) || loadAccountLifecycle(current.id)) return;
-      if (currentPage.current === 'admin') {
+      const ownsLoad = () =>
+        activeAccount.current === current.id &&
+        identityLoad.current === requestVersion &&
+        isDeviceScopeCurrent(current.id, token) &&
+        !loadAccountLifecycle(current.id);
+      const readHistory = async () => {
+        const mutation = historyMutations.current;
+        const data = await getEntries({ accountId: current.id });
+        return { mutation, data };
+      };
+      const isAdmin = () => currentPage.current === 'admin';
+      const [state, initialHistory] = await Promise.all([
+        account.refresh(current),
+        isAdmin() ? undefined : readHistory(),
+      ]);
+      if (!ownsLoad()) return;
+      if (isAdmin()) {
         historySkippedForAdmin.current = true;
         return state.settings;
       }
+      let history = initialHistory;
+      // A queued upload, edit or delete can finish after this GET captured its
+      // snapshot. Reload instead of replacing the newer accepted local change.
+      // A late read also handles leaving Admin while account state was loading.
+      while (!history || history.mutation !== historyMutations.current) {
+        history = await readHistory();
+        if (!ownsLoad()) return;
+        if (isAdmin()) {
+          historySkippedForAdmin.current = true;
+          return state.settings;
+        }
+      }
+      const sessionData = history.data;
       historySkippedForAdmin.current = false;
-      const sessionData = await getEntries({ accountId: current.id });
-      if (
-        activeAccount.current !== current.id ||
-        identityLoad.current !== requestVersion ||
-        !isDeviceScopeCurrent(current.id, token) ||
-        loadAccountLifecycle(current.id)
-      )
-        return;
       if (sessionData.accountId !== current.id || sessionData.generation !== state.generation) {
         // History and account state can straddle a remote boundary. Never paint
         // an old dataset; another refresh discovers and fences the new generation.
@@ -960,7 +980,9 @@ function App() {
     setSessionEditor({ date: dateInTimezone(new Date(), profile.timezone), ...initial, ...latest });
   };
   const acceptSavedPractice = (entry: PracticeSession, ownerId?: string) => {
-    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
+    if ((activeAccount.current ?? 'guest') !== scope || !isDeviceScopeCurrent(scope, deviceToken))
+      return;
+    historyMutations.current++;
     const generation = user ? getConfirmedAccountGeneration(user.id) : undefined;
     if (user && generation !== undefined)
       historyGeneration.current = { accountId: user.id, generation };
@@ -982,7 +1004,9 @@ function App() {
     }
   };
   const mergeSavedEntry = (entry: PracticeSession) => {
-    if (!isDeviceScopeCurrent(scope, deviceToken)) return;
+    if ((activeAccount.current ?? 'guest') !== scope || !isDeviceScopeCurrent(scope, deviceToken))
+      return;
+    historyMutations.current++;
     const generation = user ? getConfirmedAccountGeneration(user.id) : undefined;
     if (user && generation !== undefined)
       historyGeneration.current = { accountId: user.id, generation };
@@ -1997,6 +2021,7 @@ function App() {
                       });
                       if (activeAccount.current !== owner || !isDeviceScopeCurrent(owner, token))
                         return;
+                      historyMutations.current++;
                       setEntries((current) => current.filter((entry) => entry.id !== id));
                       notify('Practice entry deleted.');
                     }}
