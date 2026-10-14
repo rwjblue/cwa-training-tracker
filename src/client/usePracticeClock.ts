@@ -12,7 +12,12 @@ export function usePracticeClock() {
   const [state, setState] = useState(() =>
     clock.current.snapshot(performance.now(), !document.hidden),
   );
-  const snapshot = () => clock.current.snapshot(performance.now(), !document.hidden);
+  const snapshot = () => {
+    // Native transport can finish while terminal events are delayed or absent.
+    // A pause/buffer boundary clears movement, but retains the pass owner.
+    if (recordingOwner.current?.ended) finalizeMedia(recordingOwner.current, false);
+    return clock.current.snapshot(performance.now(), !document.hidden);
+  };
   const refresh = () => {
     const next = snapshot();
     setState((previous) =>
@@ -94,14 +99,14 @@ export function usePracticeClock() {
     refresh();
   };
   const pauseMedia = () => {
-    if (media.current?.ended) finalizeMedia(media.current, false);
+    if (recordingOwner.current?.ended) finalizeMedia(recordingOwner.current, false);
     if (media.current) sample(media.current);
     media.current = null;
     clock.current.suspendMedia();
     refresh();
   };
   const pause = () => {
-    if (media.current?.ended) finalizeMedia(media.current, false);
+    if (recordingOwner.current?.ended) finalizeMedia(recordingOwner.current, false);
     if (media.current) sample(media.current);
     media.current = null;
     clock.current.pause(performance.now(), !document.hidden);
@@ -115,6 +120,11 @@ export function usePracticeClock() {
     const audio = event.target;
     if (!(audio instanceof HTMLAudioElement)) return;
     if (retiredRecordings.current.has(audio)) return;
+    // Media events are queued. An old pause/wait/error must not revoke the
+    // anchor established by a later native or lock-screen resume.
+    if (event.type === 'pause' && !audio.paused) return;
+    if (event.type === 'waiting' && !audio.paused && audio.readyState >= 3) return;
+    if (event.type === 'error' && !audio.error) return;
     if (event.type === 'play') {
       // Stop at the request, even if decoding/buffering never reaches playing.
       if (!audio.paused) stopRecall();
@@ -176,7 +186,7 @@ export function usePracticeClock() {
   };
   useEffect(() => {
     const tick = () => {
-      if (media.current?.ended) finalizeMedia(media.current, false);
+      if (recordingOwner.current?.ended) finalizeMedia(recordingOwner.current, false);
       else if (media.current && !media.current.paused) sample(media.current);
       refresh();
     };
@@ -202,7 +212,7 @@ export function usePracticeClock() {
     discardRecording,
     observeRecording,
     startManual(recall = false) {
-      if (media.current?.ended) finalizeMedia(media.current, false);
+      if (recordingOwner.current?.ended) finalizeMedia(recordingOwner.current, false);
       if (media.current) sample(media.current);
       media.current = null;
       clock.current.startManual(performance.now(), recall, !document.hidden);

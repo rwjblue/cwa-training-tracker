@@ -209,6 +209,16 @@ test(`actual recording passes retain source evidence and separate learner comple
   await audio.focus();
   await page.keyboard.press('Space');
   await expect.poll(() => audio.evaluate((item: HTMLAudioElement) => !item.paused)).toBe(true);
+  await expect
+    .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
+    .toBeGreaterThan(1.2);
+  // Reproduce a pause queued before native resume but delivered afterwards.
+  // Native playback/time still move; stale events must leave tracking active.
+  await audio.evaluate((item: HTMLAudioElement) => {
+    item.dispatchEvent(new Event('pause'));
+    item.dispatchEvent(new Event('waiting'));
+    item.dispatchEvent(new Event('error'));
+  });
   await expect(count('This session')).toHaveText('2', { timeout: 10_000 });
   await expect(count('Minimum remaining')).toHaveText('0');
   await expect(progress).toContainText('2 listens this session · Not saved yet.');

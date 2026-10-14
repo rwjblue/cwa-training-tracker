@@ -4683,6 +4683,60 @@ feedback in light and dark modes. The recording journey checks both modes at
 desktop and mobile widths; all ten combined appearance, recording and Today
 browser journeys pass, alongside the same TypeScript and fast-suite checks.
 
+## Native transport pass credit follow-up — 2026-10-14
+
+A completed ING-18 listen reported as uncounted prompted an audit of native
+and lock-screen playback. Media Session Play uses the ordinary recording
+transport; hiding the page interrupts recall, not recorded audio. Two event
+ordering defects were identified independently of the MP3 duration refinement:
+a queued pause/wait/error could clear an already resumed movement anchor, and
+a paused pass owner could remain unfinalized when its terminal event was absent.
+The latter escaped the tick/visibility fallback because it checked only active
+movement, which pause had already cleared. The reporter clarified uninterrupted
+Start, phone auto-lock, natural end and Save: time survived but the live pass
+count was already zero. These defensive cases do not prove that exact cause.
+At a standard natural end, `ended` is already true during `pause`, which the
+previous hook also reconciled.
+
+The media hook now rejects obsolete pause, waiting and error events using the
+element's current native state. Terminal reconciliation checks the retained
+recording owner during tick/visibility, snapshot, pause and manual-mode
+boundaries. A native ended state is still required, source ownership is retained,
+and completion still requires the existing full-pass coverage. Duplicate
+terminal observations cannot supply another pass; ordinary pauses and skipped
+material cannot earn completion.
+
+Fast hook regressions exercise the event ordering and missing-terminal cases.
+The existing native recording journey injects obsolete events after actual
+native pause/resume and checks subsequent pass counts through Save and reload.
+The MP3 duration, rewind, recall and save journeys retain their separate
+boundaries. Browser coverage uses Chromium with synthetic audio and desktop
+and mobile layouts; it cannot establish physical iPhone lock-screen behavior
+or prove the reporter's exact event sequence.
+
+Playback completion still requires Save or Finish for durable pass evidence.
+Today and Studio include current unsaved listens; Course Plan includes saved
+listens. Reload/crash recovery for an active block remains outside this scope.
+Existing zero-pass records cannot be repaired from listened seconds alone.
+
+Platform evidence: WebKit has documented asynchronous terminal events being
+[delayed by background suspension](https://bugs.webkit.org/show_bug.cgi?id=173332#c2).
+That historical bug is not proof of current behavior on the reporter's device.
+Ordinary delayed samples are allowed by the media clock. Time admission has a
+broader jitter allowance than pass coverage: one clipped movement interval can
+retain almost all listened time yet leave a coverage hole and reject a pass.
+A monotonic clock that stalls while audio advances would still reject coverage,
+and WebKit tracks a
+[system-sleep clock issue](https://bugs.webkit.org/show_bug.cgi?id=225610).
+No clock fallback or looser seek/coverage rule is introduced without device
+evidence. Production deployment and the original private records are unverified.
+
+Validation: `mise run check`, all 1,777 Vitest tests and 18 speech-generator
+tests, `mise run build`, and all 132 Chromium browser journeys pass. The new
+hook suite covers 14 event-ordering and ownership cases; its initial 11 cases
+failed against the original hook and passed with the fixes. Physical phone
+lock-screen behavior remains unverified.
+
 ## Native MP3 pass credit follow-up — 2026-10-13
 
 A report of saved listening time with zero saved passes exposed a separate

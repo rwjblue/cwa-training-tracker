@@ -191,6 +191,10 @@ saved source evidence and completion independent of listening time.
 and saved actual rehearing without seek or full-pass credit. Recording marks and
 automatic assigned replay have no active Studio controls; their stored-data,
 validation and policy compatibility remain covered by the fast suites.
+`usePracticeClock.test.ts` owns queued native transport events, retained-owner
+terminal recovery through visibility/tick/save, and partial/source fences.
+`listening-passes.spec.ts` also verifies obsolete transport events after actual
+native resume; these simulations do not establish physical lock-screen behavior.
 `recording-playback.test.ts` owns delayed resolutions/rejections, source
 replacement, superseding Play and ownership loss; `course-replay.test.ts` owns
 replay eligibility and the minimum-pass boundary. `media-session.test.ts`,

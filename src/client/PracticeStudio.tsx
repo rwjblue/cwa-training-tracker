@@ -1738,7 +1738,11 @@ export default function PracticeStudio({
                                 endRecording(event.currentTarget);
                               }}
                               onError={(event) => {
-                                if (event.currentTarget !== recording.current) return;
+                                if (
+                                  event.currentTarget !== recording.current ||
+                                  !event.currentTarget.error
+                                )
+                                  return;
                                 setError(
                                   'The recording could not load. Open the official exercise to check its availability.',
                                 );
