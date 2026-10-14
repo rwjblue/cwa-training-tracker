@@ -96,6 +96,7 @@ test('native MP3 duration estimates retain a full pass through Save and reload',
       .locator('dd');
   await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
   await expect(count('This session')).toHaveText('1', { timeout: 10_000 });
+  await expect.poll(() => audio.evaluate((item: HTMLAudioElement) => item.ended)).toBe(true);
   const nativeDuration = await audio.evaluate((item: HTMLAudioElement) => item.duration);
   const revisions: number[] = await page.evaluate(() => Reflect.get(window, 'recordingDurations'));
   expect(new Set(revisions.filter(Number.isFinite)).size).toBeGreaterThan(1);
@@ -121,15 +122,15 @@ test('native MP3 duration estimates retain a full pass through Save and reload',
   await expect(count('Previously saved')).toHaveText('1');
   await expect(count('This session')).toHaveText('0');
 
-  // A real reload of this same URL is a new source, even if the native duration
-  // estimate matches. Hearing its old prefix cannot fill the new source's gap.
+  // A real reload is a new source. Skipping to its final half-second supplies
+  // less listening time than a pass, even with the allowance for short clips.
   await page.getByRole('button', { name: 'Start practice', exact: true }).tap();
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
     .toBeGreaterThan(1.5);
   const resumeAt = await audio.evaluate((item: HTMLAudioElement) => {
     item.pause();
-    const position = item.currentTime - 0.4;
+    const position = item.duration - 0.5;
     item.load();
     return position;
   });

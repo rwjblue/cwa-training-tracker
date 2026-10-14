@@ -21,17 +21,27 @@ export interface TimeCorrection {
   recallSeconds?: number;
   reason: string;
 }
-/** Observed whole-source coverage at native 1x, grouped by its actual media duration. */
-export interface RecordingPassEvidence {
-  version: 1;
-  method: 'native-1x';
-  durations: { durationSeconds: number; completedPasses: number }[];
-}
+/** Native 1x pass counts grouped by observed media duration; older coverage facts retain their meaning. */
+export type RecordingPassEvidence =
+  | {
+      version: 1;
+      method: 'native-1x';
+      durations: { durationSeconds: number; completedPasses: number }[];
+    }
+  | {
+      version: 2;
+      method: 'native-1x-time';
+      durations: { durationSeconds: number; completedPasses: number }[];
+    };
 export const MAX_RECORDING_PASS_DURATIONS = 100;
 
 /** Combined endpoint/native-boundary loss: at most one second and 5% of a source. */
 export const recordingPassTolerance = (durationSeconds: number) =>
   Math.min(1, durationSeconds * 0.05);
+
+/** Listening-time passes allow five missing seconds, bounded to half a short source. */
+export const recordingTimePassTolerance = (durationSeconds: number) =>
+  Math.min(5, durationSeconds / 2);
 
 /** Relative roundoff never supplies a short source or a zero listening budget. */
 function exceedsMeasuredTime(required: number, available: number, totalScale = 0) {
@@ -158,8 +168,12 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
   if (row.passes !== undefined) {
     const passes = object(row.passes, 'Recording passes');
     keys(passes, ['version', 'method', 'durations'], 'Recording passes');
-    if (passes.version !== 1 || passes.method !== 'native-1x')
-      throw new Error('Recording passes require version 1 native-1x coverage.');
+    const coveragePasses = passes.version === 1 && passes.method === 'native-1x';
+    const timePasses = passes.version === 2 && passes.method === 'native-1x-time';
+    if (!coveragePasses && !timePasses)
+      throw new Error(
+        'Recording passes require version 1 native-1x coverage or version 2 native-1x-time listening.',
+      );
     if (
       !Array.isArray(passes.durations) ||
       !passes.durations.length ||
@@ -188,16 +202,17 @@ export function validateRecordingEvidence(value: unknown): RecordingEvidence {
       throw new Error('Recording pass durations must be distinct.');
     if (!Number.isSafeInteger(durations.reduce((sum, item) => sum + item.completedPasses, 0)))
       throw new Error('Recording completed pass total must be a safe whole number.');
+    const tolerance = timePasses ? recordingTimePassTolerance : recordingPassTolerance;
     const minimumHeard = durations.reduce(
       (sum, item) =>
-        sum +
-        item.completedPasses *
-          (item.durationSeconds - recordingPassTolerance(item.durationSeconds)),
+        sum + item.completedPasses * (item.durationSeconds - tolerance(item.durationSeconds)),
       0,
     );
     if (exceedsMeasuredTime(minimumHeard, result.seconds))
       throw new Error('Recording completed passes exceed its measured native-1x listening time.');
-    result.passes = { version: 1, method: 'native-1x', durations };
+    result.passes = timePasses
+      ? { version: 2, method: 'native-1x-time', durations }
+      : { version: 1, method: 'native-1x', durations };
   }
   if (row.marks !== undefined) {
     const marks = validateRecordingMarkSet(row.marks);
@@ -578,7 +593,7 @@ export function practiceEvidenceDetails(evidence: PracticeEvidence): string[] {
       (item) =>
         `${item.seconds.toFixed(2)} seconds listened${item.speedWpm !== undefined ? ` at ${item.speedWpm} file WPM` : ''}; ${
           item.passes
-            ? `${recordingCompletedPasses(item)} completed ${recordingCompletedPasses(item) === 1 ? 'pass' : 'passes'} (native 1x; ${item.passes.durations.map((duration) => `${duration.completedPasses} × ${duration.durationSeconds.toFixed(2)}s observed duration`).join('; ')})`
+            ? `${recordingCompletedPasses(item)} completed ${recordingCompletedPasses(item) === 1 ? 'pass' : 'passes'} (${item.passes.version === 2 ? 'native 1x listening time' : 'native 1x'}; ${item.passes.durations.map((duration) => `${duration.completedPasses} × ${duration.durationSeconds.toFixed(2)}s observed duration`).join('; ')})`
             : 'passes unmeasured'
         }: ${item.url}`,
     ),

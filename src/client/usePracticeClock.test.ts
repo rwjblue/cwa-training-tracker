@@ -118,6 +118,30 @@ describe('native recording event reconciliation', () => {
     },
   );
 
+  it('counts accepted background jitter before Save without any native terminal event or state', () => {
+    const finalized = vi.spyOn(PracticeClock.prototype, 'finalizeRecording');
+    const { hook, audio, document, emit, move } = setup();
+    document.hidden = true;
+    move(6, 5800);
+    emit('timeupdate'); // Accepted time clips the 6-second movement to 5.9 seconds.
+    move(10, 9800);
+    audio.paused = true;
+    // Some suspended pages resume without an ended callback or settled ended flag.
+    emit('pause');
+    expect(finalized).not.toHaveBeenCalled();
+    expect(hook.snapshot().seconds).toBeCloseTo(9.9);
+    expect(passes(hook)).toBe(1);
+    expect(hook.snapshot().recordingOutcome).toBeUndefined();
+    expect(hook.pause().recordings[0].passes).toEqual({
+      version: 2,
+      method: 'native-1x-time',
+      durations: [{ durationSeconds: 10, completedPasses: 1 }],
+    });
+    hook.pause();
+    expect(passes(hook)).toBe(1);
+    expect(hook.snapshot().seconds).toBeCloseTo(9.9);
+  });
+
   it('keeps a genuine buffer boundary paused and recovers its terminal owner', () => {
     const { hook, audio, emit, move, show } = setup();
     move(9.9, 9900);
@@ -133,7 +157,7 @@ describe('native recording event reconciliation', () => {
     expect(passes(hook)).toBe(1);
   });
 
-  it('keeps a genuine native error suspended and revokes its resume-gap permission', () => {
+  it('keeps a genuine native error suspended and retains actual time after deliberate resume', () => {
     const { hook, audio, emit, move } = setup();
     move(2, 2000);
     emit('timeupdate');
@@ -147,13 +171,14 @@ describe('native recording event reconciliation', () => {
     audio.paused = true;
     audio.ended = true;
     emit('ended');
-    expect(passes(hook)).toBe(0);
-    expect(hook.snapshot().recordingOutcome).toMatchObject({ completed: false });
+    expect(passes(hook)).toBe(1);
+    expect(hook.snapshot().seconds).toBeCloseTo(9.95);
+    expect(hook.snapshot().recordingOutcome).toMatchObject({ completed: true });
   });
 
   it('retires a same-URL reloaded owner before a late ended event and keeps the new source isolated', () => {
     const { hook, audio, emit, move } = setup();
-    move(5, 5000);
+    move(4, 4000);
     emit('timeupdate');
     audio.paused = true;
     emit('pause');
@@ -164,17 +189,17 @@ describe('native recording event reconciliation', () => {
     expect(hook.snapshot().recordingOutcome).toBeUndefined();
     expect(passes(hook)).toBe(0);
 
-    // A reload of this exact URL creates a new generation. Hearing its second
-    // half cannot join the first generation's first half into a full pass.
-    move(5, 20_000);
+    // A reload of this exact URL creates a new generation. Hearing another
+    // portion cannot spend the previous generation's partial listening budget.
+    move(6, 20_000);
     audio.paused = false;
     audio.ended = false;
     emit('playing');
-    move(10, 25_000);
+    move(10, 24_000);
     audio.paused = true;
     audio.ended = true;
     emit('ended');
-    expect(hook.snapshot().seconds).toBe(10);
+    expect(hook.snapshot().seconds).toBe(8);
     expect(passes(hook)).toBe(0);
     expect(hook.snapshot().recordingOutcome).toMatchObject({
       completed: false,
@@ -199,7 +224,7 @@ describe('native recording event reconciliation', () => {
     expect(hook.snapshot().seconds).toBe(3);
   });
 
-  it('preserves a deliberate seek hole when later terminal observations recover completion', () => {
+  it('keeps substantial skipped material incomplete when terminal observations recover the owner', () => {
     const { hook, audio, emit, move } = setup();
     move(3, 3000);
     emit('timeupdate');

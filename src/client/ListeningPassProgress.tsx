@@ -69,7 +69,7 @@ export default function ListeningPassProgress({
           ? 'Extra review keeps its own time and passes, without required assignment credit.'
           : remaining === 0
             ? 'The minimum is met. Complete the exercise when you are ready, or listen again.'
-            : 'Hear the full recording for a pass. Seeking keeps heard time but cannot replace skipped material. Complete the exercise when you are ready.'}
+            : 'A pass is about a recording’s worth of listening time. Rehearing counts too. Complete the exercise when you are ready.'}
       </p>
     </section>
   );

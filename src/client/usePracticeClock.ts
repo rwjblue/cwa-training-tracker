@@ -155,14 +155,14 @@ export function usePracticeClock() {
       if (media.current === audio || recordingOwner.current === audio) {
         media.current = null;
         recordingOwner.current = null;
-        clock.current.suspendMedia(false);
+        clock.current.suspendMedia();
         clock.current.discardRecording();
       }
     } else if (event.type === 'seeking') {
       if (media.current === audio || recordingOwner.current === audio) {
-        // A seek while already paused must also revoke native resume tolerance.
+        // The seek destination adds no listening time; resume reanchors movement.
         if (media.current === audio) media.current = null;
-        clock.current.suspendMedia(false);
+        clock.current.suspendMedia();
       }
     } else if (event.type === 'ended') {
       // Natural pause may precede ended and clear the active movement anchor.
@@ -173,13 +173,11 @@ export function usePracticeClock() {
       recordingOwner.current === audio &&
       media.current !== audio
     ) {
-      // A failed paused owner cannot lend a native resume boundary to later Play.
-      clock.current.suspendMedia(false);
+      clock.current.suspendMedia();
     } else if (media.current === audio) {
       if (['pause', 'waiting', 'error'].includes(event.type)) {
         if (audio.ended) finalizeMedia(audio, false);
         pauseMedia();
-        if (event.type === 'error') clock.current.suspendMedia(false);
       } else sample(audio);
     }
     refresh();

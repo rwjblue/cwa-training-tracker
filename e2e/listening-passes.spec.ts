@@ -113,7 +113,7 @@ test(`actual recording passes retain source evidence and separate learner comple
       /WD101[-_]10/i.test(item.exercise.url ?? ''),
   );
   expect(task).toBeTruthy();
-  const observedDuration = 3.6;
+  const observedDuration = 6;
   const serveRecording = syntheticRecording(observedDuration);
   await page.route(task.exercise.url, serveRecording);
   const taskItem = () =>
@@ -128,6 +128,14 @@ test(`actual recording passes retain source evidence and separate learner comple
       .locator('dl > div')
       .filter({ has: page.getByText(label, { exact: true }) })
       .locator('dd');
+  // Time-based credit can appear early; the native six-second fixture still
+  // needs its whole duration to end, beyond Playwright's default five-second wait.
+  const waitForRecordingEnd = () =>
+    expect
+      .poll(() => audio.evaluate((item: HTMLAudioElement) => item.ended), {
+        timeout: (observedDuration + 1) * 1000,
+      })
+      .toBe(true);
   await expect(count('Previously saved')).toHaveText('0');
   await expect(count('This session')).toHaveText('0');
   await expect(count('Minimum remaining')).toHaveText(String(task.exercise.minimumPasses));
@@ -166,17 +174,17 @@ test(`actual recording passes retain source evidence and separate learner comple
     )
     .toBe(true);
   await audio.evaluate((item: HTMLAudioElement) => item.play());
-  await expect.poll(() => audio.evaluate((item: HTMLAudioElement) => item.ended)).toBe(true);
+  await waitForRecordingEnd();
   await test.info().attach('native-seek-events', {
     body: JSON.stringify(await page.evaluate(() => Reflect.get(window, 'passMediaObservations'))),
     contentType: 'application/json',
   });
   await expect(count('This session')).toHaveText('0');
   await expect(
-    page.getByRole('status').filter({ hasText: 'Some material was skipped.' }),
+    page.getByRole('status').filter({ hasText: 'Not enough listening time for a pass yet.' }),
   ).toBeVisible();
 
-  // Rehear overlap in the same pass: extra heard seconds, one coverage union.
+  // Rehearing counts toward a pass even before reaching the native end.
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
   await expect
     .poll(() => audio.evaluate((item: HTMLAudioElement) => item.currentTime))
@@ -195,8 +203,10 @@ test(`actual recording passes retain source evidence and separate learner comple
     .toBe(true);
   await audio.evaluate((item: HTMLAudioElement) => item.play());
   await expect(count('This session')).toHaveText('1', { timeout: 10_000 });
+  expect(await audio.evaluate((item: HTMLAudioElement) => item.ended)).toBe(false);
+  await waitForRecordingEnd();
   await expect(
-    page.getByRole('status').filter({ hasText: 'Full listening pass complete.' }),
+    page.getByRole('status').filter({ hasText: 'Listening pass complete.' }),
   ).toBeVisible();
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
   await expect
@@ -220,6 +230,7 @@ test(`actual recording passes retain source evidence and separate learner comple
     item.dispatchEvent(new Event('error'));
   });
   await expect(count('This session')).toHaveText('2', { timeout: 10_000 });
+  await waitForRecordingEnd();
   await expect(count('Minimum remaining')).toHaveText('0');
   await expect(progress).toContainText('2 listens this session · Not saved yet.');
   expect(
@@ -296,6 +307,7 @@ test(`actual recording passes retain source evidence and separate learner comple
     .toBe(true);
   await activate(page.getByRole('button', { name: 'Resume practice', exact: true }));
   await expect(count('This session')).toHaveText('3', { timeout: 10_000 });
+  await waitForRecordingEnd();
   await expectResponsive(page, `listening-passes-${viewport.width}`);
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -330,14 +342,16 @@ test(`actual recording passes retain source evidence and separate learner comple
   expect(recordings.find((item: { url: string }) => item.url === task.exercise.url)).toMatchObject({
     speedWpm: 10,
     passes: {
-      method: 'native-1x',
+      version: 2,
+      method: 'native-1x-time',
       durations: [{ durationSeconds: observedDuration, completedPasses: 2 }],
     },
   });
   expect(recordings.find((item: { url: string }) => item.url === faster)).toMatchObject({
     speedWpm: 13,
     passes: {
-      method: 'native-1x',
+      version: 2,
+      method: 'native-1x-time',
       durations: [{ durationSeconds: observedDuration, completedPasses: 1 }],
     },
   });

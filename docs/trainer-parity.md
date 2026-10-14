@@ -4683,6 +4683,51 @@ feedback in light and dark modes. The recording journey checks both modes at
 desktop and mobile widths; all ten combined appearance, recording and Today
 browser journeys pass, alongside the same TypeScript and fast-suite checks.
 
+## Listening-time pass credit — 2026-10-14
+
+The learner explicitly preferred forgiving personal pass counts over proof that
+every source interval was heard. New listens now count from the same accepted
+native 1x seconds used for listening time, with a five-second allowance. For
+clips shorter than ten seconds the allowance is capped at half their duration,
+so an unheard clip cannot earn a pass. A 120-second file earns a pass after
+115 seconds of listening, including reheard portions, without an end callback.
+More listening never invalidates a pass.
+
+Counts appear during playback and are included by Save or Finish. Pause,
+buffering and recall add no recording time; seeks add no time on their own.
+The old strict coverage jitter check and internal-gap rejection are removed
+from new pass measurement. The clock's existing native time accounting remains.
+Replaying an ended recording starts a fresh listening attempt; repeated
+terminal callbacks do not earn another pass. Files, loaded source generations
+and observed duration groups retain their ownership boundaries.
+
+Active MP3 duration estimates revise the pending count and denominator without
+discarding listened seconds. Retired and ended source facts stay immutable.
+New saved pass evidence is version 2 `native-1x-time`; existing version 1
+`native-1x` coverage evidence is read unchanged and retains its stricter
+validation. History labels the new counts as native 1x listening time.
+Worker retry, correction, alias/import and backup flows accept mixed versions.
+No historical pass counts are automatically rewritten.
+
+Fast tests cover five-second thresholds, short clips, admitted timing jitter,
+rehearing before end, independent replays, duration refinement, rate handling
+and source replacement. The native recording journey earns a pass by rehearing
+before the recording ends, then checks Save and reload at desktop/mobile widths.
+MP3, rewind, recall and recording-choice journeys retain their native boundaries.
+This change implements the learner's relaxed counting policy; physical phone
+lock-screen behavior remains unverified.
+
+Validation: `mise run check`, all 1,731 Vitest tests and 18 speech-generator
+tests, `mise run build`, and all 132 Chromium browser journeys pass. The focused
+native recording, MP3 and recording-choice recheck passes after the final
+five-second policy, alongside mixed old/new evidence validation and recovery.
+
+Rebased onto the current timezone-display update: all 1,735 fast tests and the
+eight focused recording/timezone journeys pass. The recording trace exposed
+a five-second test wait competing with a six-second native fixture after early
+pass credit; its wait now follows the fixture duration. The corrected native
+recording recheck passes without changing playback or pass-counting behavior.
+
 ## Native transport pass credit follow-up — 2026-10-14
 
 A completed ING-18 listen reported as uncounted prompted an audit of native

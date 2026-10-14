@@ -3665,8 +3665,8 @@ describe('assigned recording pass evidence', () => {
         effectiveWpm: 10,
         seconds: 36,
         passes: {
-          version: 1,
-          method: 'native-1x',
+          version: 2,
+          method: 'native-1x-time',
           durations: [
             { durationSeconds: 12, completedPasses: 2 },
             { durationSeconds: 6, completedPasses: 1 },
@@ -3763,7 +3763,7 @@ describe('assigned recording pass evidence', () => {
     exercise: { type: 'audio', url: firstUrl, minimumPasses: 4, maximumPasses: 5 },
   });
 
-  it('retains mixed-file facts through exact retries, corrections, merge and replace backups', async () => {
+  it('retains mixed coverage and listening-time pass facts through exact retries, corrections, merge and replace backups', async () => {
     const auth = await signIn('recording-pass-roundtrip@example.test');
     const frozen = measured();
     const frozenBody = JSON.stringify(frozen);
@@ -4002,7 +4002,8 @@ describe('assigned recording pass evidence', () => {
     const malformed = [
       { ...passes, coverage: [[0, 12]] },
       { ...passes, method: 'wall-clock' },
-      { ...passes, version: 2 },
+      { ...passes, version: 1 },
+      { ...passes, version: 3 },
       { ...passes, durations: [{ durationSeconds: 12, completedPasses: -1 }] },
       { ...passes, durations: [{ durationSeconds: 12, completedPasses: 1.5 }] },
       // Nonfinite values become null in HTTP JSON and must still be rejected.
@@ -4018,7 +4019,8 @@ describe('assigned recording pass evidence', () => {
           completedPasses: 0,
         })),
       },
-      { ...passes, durations: [{ durationSeconds: 12, completedPasses: 4 }] },
+      // Six 12-second time passes need at least 42 heard seconds, beyond this file's 36.
+      { ...passes, durations: [{ durationSeconds: 12, completedPasses: 6 }] },
     ];
     for (const value of malformed) {
       const invalid = {

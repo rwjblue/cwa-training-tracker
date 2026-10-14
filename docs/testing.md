@@ -185,8 +185,12 @@ behavior; do not replace assertions with a count or coverage-percentage target.
 round completion; `copy-practice.test.ts` owns all adaptive trial transitions.
 `runner-recovery.spec.ts` owns finished-run history, reports and device backup;
 `runner-next.spec.ts` owns save-next and exact retry, without another backup
-cycle. `listening-passes.spec.ts` owns observed complete/incomplete native passes,
-saved source evidence and completion independent of listening time.
+cycle. `listening-passes.spec.ts` owns native listening-time passes, rehearing
+credit before the end event, saved source evidence and independent learner
+completion. `recording-coverage.test.ts` and `practice-clock.test.ts` own the
+five-second allowance, short-clip bounds, source/duration budgets and admitted
+native timing jitter. Shared/Worker evidence tests preserve legacy coverage
+validation while accepting version 2 time-based pass counts.
 `recording-rewind.spec.ts` owns the compact native rewind, its early-position clamp
 and saved actual rehearing without seek or full-pass credit. Recording marks and
 automatic assigned replay have no active Studio controls; their stored-data,

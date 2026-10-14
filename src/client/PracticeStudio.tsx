@@ -1766,9 +1766,9 @@ export default function PracticeStudio({
                                 <div>
                                   <p role="status">
                                     {timer.recordingOutcome.completed
-                                      ? `Full listening pass complete. ${currentPasses} ${currentPasses === 1 ? 'listen' : 'listens'} this session, not saved yet.`
+                                      ? `Listening pass complete. ${currentPasses} ${currentPasses === 1 ? 'listen' : 'listens'} this session, not saved yet.`
                                       : timer.recordingOutcome.reason === 'incomplete'
-                                        ? 'Some material was skipped. Heard time is not saved yet, and this pass is incomplete. Play again for a full pass.'
+                                        ? 'Not enough listening time for a pass yet. Heard time is not saved yet. Play again to keep listening.'
                                         : 'Heard time is not saved yet, and this recording could not supply a complete pass measurement. Use Save or Finish practice to keep your time.'}
                                   </p>
                                   <div
